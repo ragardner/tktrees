@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tk-trees"
+description = "Tkinter hierarchy management tool"
+readme = "README.md"
+version = "1.0"
+authors = [{ name = "ragardner", email = "github@ragardner.simplelogin.com" }]
+requires-python = ">=3.8"
+license = {file = "LICENSE.txt"}
+keywords = ["tkinter", "table", "tree", "hierarchy"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Other/Nonlisted Topic",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ragardner/tk-trees-src"
+"Bug Reports" = "https://github.com/ragardner/tk-trees-src/issues"
+"Funding" = "https://github.com/ragardner"
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+line-length = 120
