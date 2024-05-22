@@ -3151,10 +3151,10 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.bind("<Escape>", self.cancel)
 
     def sheet_modified(self, event):
-        self.sheetdisplay.MT.data = self.C.new_sheet
+        self.C.new_sheet = self.sheetdisplay.MT.data
         self.sheetdisplay.refresh()
         if "move" in event.eventname:
-            self.selector.set_columns([h for h in self.C.new_sheet[0]])
+            self.selector.set_columns(self.C.new_sheet[0])
             self.selector.detect_id_col()
             self.selector.detect_par_cols()
         else:
