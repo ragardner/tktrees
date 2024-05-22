@@ -2694,7 +2694,8 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
 class View_Id_Popup(tk.Toplevel):
     def __init__(self, C, ids_row, width=800, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
-        self.C = new_toplevel_chores(self, C, f"Concise view of {self.C.sheet.MT.data[ids_row['rn']][self.C.ic]}")
+        self.C = new_toplevel_chores(self, C, "")
+        self.title(f"Concise view of {self.C.sheet.MT.data[ids_row['rn']][self.C.ic]}")
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.grid_columnconfigure(0, weight=1)
@@ -4605,7 +4606,9 @@ class Error_Sheet(tk.Toplevel):
 class Treeview_Id_Finder(tk.Toplevel):
     def __init__(self, C, hiers, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - ID is in multiple hierarchies, select a hierarchy to go to")
+        self.C = new_toplevel_chores(
+            self, C, f"{app_title} - ID is in multiple hierarchies, select a hierarchy to go to"
+        )
         self.GO = False
         self.selected = 0
         self.grid_columnconfigure(0, weight=1)

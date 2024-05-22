@@ -467,7 +467,9 @@ It must be run with the following paramters with a space in-between each paramet
 | -r      | Reverse order (top-base)    |
 | -i      | Add an index column         |
 
-Some examples of the flatten command line below which would flatten the hierarchy at column index 2, column C (ignore <> characters):
+Some examples:
+
+flatten command line which would flatten the hierarchy at column index 2, column C (ignore <> characters):
 
 ```
 flatten <"input filepath here.xlsx"> <"output filepath here.xlsx"> 0,2,4,6 -id-0 -parent-2 
