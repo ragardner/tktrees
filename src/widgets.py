@@ -1315,7 +1315,7 @@ class Working_Text(tk.Text):
         self,
         parent,
         wrap,
-        font=("Calibri", std_font_size),
+        font=("Calibri", std_font_size, "normal"),
         theme="dark",
         use_entry_bg=True,
         override_bg=None,
@@ -1345,6 +1345,79 @@ class Working_Text(tk.Text):
         self.bind(rc_button, self.rc)
         self.bind(f"<{ctrl_button}-a>", self.select_all)
         self.bind(f"<{ctrl_button}-A>", self.select_all)
+    #     self.font = font
+    #     em = 20
+    #     default_size = std_font_size
+    #     bold_font = (self.font[0], self.font[1], "bold")
+    #     italic_font = (self.font[0], self.font[1], "italic")
+    #     # Small subset of markdown. Just enough to make text look nice.
+    #     self.tag_configure("**", font=bold_font)
+    #     self.tag_configure("*", font=italic_font)
+    #     self.tag_configure("_", font=italic_font)
+    #     self.tag_chars = "*_"
+    #     self.tag_char_re = re.compile(r"[*_]")
+
+    #     max_heading = 3
+    #     for i in range(1, max_heading + 1):
+    #         header_font = (self.font[0], int(default_size * i + 3), "bold")
+    #         self.tag_configure(
+    #             "#" * (max_heading - i), font=header_font, spacing3=default_size
+    #         )
+    #     self.tag_configure("bullet", lmargin1=em, lmargin2=20)
+    #     self.tag_configure("numbered", lmargin1=em, lmargin2=20)
+    #     self.numbered_index = 1
+        
+    # def insert_markdown(self, text: str):
+    #     for line in text.split("\n"):
+    #         if line == "":
+    #             # Blank lines reset numbering
+    #             self.numbered_index = 1
+    #             self.insert("end", line)
+
+    #         elif line.startswith("#"):
+    #             tag = re.match(r"(#+) (.*)", line)
+    #             line = tag.group(2)
+    #             self.insert("end", line, tag.group(1))
+
+    #         elif line.startswith("* "):
+    #             line = line[2:]
+    #             self.insert("end", f"\u2022 {text}", "bullet")
+
+    #         elif line.startswith("1. "):
+    #             line = line[2:]
+    #             self.insert("end", f"{self.numbered_index}. {text}", "numbered")
+    #             self.numbered_index += 1
+
+    #         elif not self.tag_char_re.search(line):
+    #             self.insert("end", line)
+
+    #         else:
+    #             tag = None
+    #             accumulated = []
+    #             skip_next = False
+    #             for i, c in enumerate(line):
+    #                 if skip_next:
+    #                     skip_next = False
+    #                     continue
+    #                 if c in self.tag_chars and (not tag or c == tag[0]):
+    #                     if tag:
+    #                         self.insert("end", "".join(accumulated), tag)
+    #                         accumulated = []
+    #                         tag = None
+    #                     else:
+    #                         self.insert("end", "".join(accumulated))
+    #                         accumulated = []
+    #                         tag = c
+    #                         next_i = i + 1
+    #                         if len(line) > next_i and line[next_i] == tag:
+    #                             tag = line[i : next_i + 1]
+    #                             skip_next = True
+
+    #                 else:
+    #                     accumulated.append(c)
+    #             self.insert("end", "".join(accumulated), tag)
+
+    #         self.insert("end", "\n")
 
     def rc(self, event):
         self.focus_set()

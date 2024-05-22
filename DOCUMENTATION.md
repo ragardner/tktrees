@@ -159,14 +159,16 @@ Conditions must have spaces in between statements.
 
 ## MENU BAR
 
-Under the File Menu there are the following options:
+#### File Menu
+
 - New: Create a new sheet.
 - Open: Open a file.
 - Compare sheets: This option takes you to a tree comparison window. For more information find the help section "Tree Compare".
 - Save: Options are Save (Ctrl + S), Save as, Save as with username-date- time (saves with the users login name, current date and time added to end of the filename) and Save new version (adds one to any detected file of the same name found in the chosen folder).
 - Quit: Quits the program.
 
-Under the Edit Menu there are the following options:
+#### Edit Menu
+
 - Undo (Ctrl + Z): there are a maximum of 75 undos. Although the changelog can be saved with any filetype other than .csv the changes cannot be undone across saves.
 - Copy to clipboard copies the underlying sheet to your computers clipboard to be pasted as a string, Copy as json will use the json format you have selected under the Options menu.
 - Tag/Untag IDs tags the selected IDs, tagged IDs will be displayed in a dropdown box at the top of the window so you can find them later.
@@ -178,14 +180,16 @@ Under the Edit Menu there are the following options:
 
 Please note that when you undo a change not related to details such as copying or deleting an ID any IDs without parents and children in any hierarchy will be placed into the FIRST hierarchy.
 
-Under the Format Menu there are the following options:
+#### Format Menu
+
 - Sort sheet gives you two options for sorting the sheet:
     - Sort by tree: This button sorts the sheet in the order that the IDs occur in the tree.
     - Sort by column: Using this button and the two drop-down boxes to its right you can sort the sheet using a basic natrual sorting order, numbers taking priority.
 - Autosort treeview IDs re-sorts the order of all treeview IDs and children, this is on by default but if you disable it the order of IDs will not longer be automatically alphanumerically maintained. You can manually set your own treeview IDs order by uncheck-ing this option and then pressing right click and holding over the desired ID and then dragging it to the desired location.
 - Date format switches the date format for the program, it will try to change formats for conditional formatting and details for all date columns.
 
-Under the View Menu there are 9 options and 4 panel configurations:
+#### View Menu
+
 - View changelog shows an enumerated view of all changes made to the sheet, it is bound to Ctrl + L.
 - View build warnings shows all warnings and issues that occurred and were fixed during first construction of the tree.
 - Treeview IDs information shows the tree's currently selected IDs full information.
@@ -199,7 +203,8 @@ Under the View Menu there are 9 options and 4 panel configurations:
 - Layout gives four choices for viewing the treeview/sheet.
 - Set all column widths changes the size of the columns in the tree and sheet panels to be wide enough to show the whole of the widest cell.
 
-Under the Import Menu there are the following options:
+#### Import Menu
+
 - Import changes allows an exported/saved changelog to be imported and the individual changes are then attempted on the currently open sheet. Supported changes are:
 
 ```
@@ -241,11 +246,13 @@ You can also recycle the imported changes, importing them again into another fil
 - Get sheet from clipboard and overwrite allows you to get copied data from your devices clipboard and overwrite all current data. This action can be undone.
 - Merge sheets allows you to merge one sheet with another, you have options to overwrite details, parents, add new ids etc. You also can simply add multiple additional rows by pasting into the sheet on the right hand side of the pop-up.
 
-Under the Export Menu there are the following options:
+#### Export Menu
+
 - Export changes gives a view of the changelog and allows saving/exporting of changes.
 - Export flattened sheet allows you to add all IDs flattened levels for any hierarchies to a sheet and then gives options for saving as .xlsx or .csv or copying to clipboard.
 
-Under the Options Menu there are the following options:
+#### Options Menu
+
 - Auto-resize row indexes allows width adjustment of the row indexes in the treeview and sheet.
 - Auto-select sheet ID toggles auto selecting of a row in the sheet when you select it in the treeview.
 - Allow spaces in ID names allows spaces in ID names, disabling this will not remove existing spaces from ID names. This option is saved on a per file basis with the program data.
@@ -418,13 +425,13 @@ Program data is only included if Save is used as opposed to Copy to clipboard. I
 
 ## USING THE API
 
-The app can be run using an API without triggering a user interface to get different outputs and file conversions.
+The app can be run using the command line without triggering a user interface to get different outputs and file conversions.
 
-The input file must be either .xlsx, .xls, .xlsm, .csv or .tsv.
+The input file must be either .xlsx, .xls, .xlsm, .csv, .tsv or .json.
 
 Please note that if any of the parameters include spaces then they may need to be surrounded by double quotes e.g. "my xlsx sheet name" depending on how you choose to start the API.
 
-It must be run with the following paramters with a space in-between each parameter, ignore the <> symbols:
+It must be run with the following arguments with a space in-between each:
 
 #### Required parameters:
 
@@ -432,26 +439,27 @@ It must be run with the following paramters with a space in-between each paramet
     - flatten
     - unflatten-top-base
     - unflatten-base-top
-2. Input filepath, must be the full filepath
-3. Output filepath, including new filename
-4. All the parent column indexes, 0 being the lowest number
+2. Input filepath, usually the full filepath including the filename
+3. Output filepath
+4. All the parent column indexes, 0 being the lowest number e.g:
+    - -all-parent-columns-2,3
+    - -all-parent-columns-C,D
 
 #### Required **only** for `flatten` action:
 
-5. ID column index, **required** for flatten action, e.g.:
+5. ID column index, **required** for flatten action, e.g:
     - -id-0
     - -id-A
-6. Parent column index, **required** for flatten action, e.g.:
+6. Parent column index, **required** for flatten action, e.g:
     - -parent-2
     - -parent-C
 
 #### Optional (but important) parameters:
 
-7. Input sheet name, if not provided defaults to first sheet of the input file if it's an xlsx file, e.g.:
+7. Input sheet name, if not provided defaults to first sheet of the input file if it's an xlsx file, e.g:
     - -input-sheet-Sheet1
-8. Output sheet name, if not provided uses the input sheet name or Sheet1, e.g.:
+8. Output sheet name, if not provided uses the input sheet name or Sheet1, e.g:
     - "-output-sheet-New Sheet"
-
 7. Delimiter, a delimiter character for the output file if it's a csv or tsv, defaults to comma, examples below:
     - -delim-tab
     - -delim-,
@@ -459,18 +467,23 @@ It must be run with the following paramters with a space in-between each paramet
 8. Flags (can be used one after the other):
     - e.g. -odjr
 
-| Flag    | Used for                    |
-|---------|-------------                |
-| -o      | Overwrite new file          |
-| -d      | Include detail columns      |
-| -j      | Justify output cells left   |
-| -r      | Reverse order (top-base)    |
-| -i      | Add an index column         |
+| Flag    | Used for                    | Applicable to    |
+|---------|-----------------------------|------------------|
+| -o      | Overwrite new file          | All actions      |
+| -d      | Include detail columns      | flatten          |
+| -j      | Justify output cells left   | flatten          |
+| -r      | Reverse order (top-base)    | flatten          |
+| -i      | Add an index column         | flatten          |
 
 Some examples:
 
-flatten command line which would flatten the hierarchy at column index 2, column C (ignore <> characters):
+Flatten xlsx files which would flatten the hierarchy at column index 2, column C with the output order top-base:
+```
+python TK-TREES.pyw flatten "input filepath here.xlsx" "output filepath here.xlsx" -all-parent-columns-2,3 -id-0 -parent-2 -input-sheet-Sheet1 "-output-sheet-New Sheet" -odjr
+```
 
+Unflatten a file where the flattened id columns are in the order of right to left is top to base:
 ```
-flatten <"input filepath here.xlsx"> <"output filepath here.xlsx"> 0,2,4,6 -id-0 -parent-2 
+python TK-TREES.pyw unflatten-top-base "input filepath here.csv" "output filepath here.csv" -all-parent-columns-0,2,4,6 -delim-tab -o
 ```
+

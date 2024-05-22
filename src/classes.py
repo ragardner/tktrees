@@ -13,9 +13,6 @@ from typing import Literal
 
 from openpyxl import load_workbook
 
-from .constants import (
-    upone_dir,
-)
 from .functions import (
     csv_str_x_data,
     equalize_sublist_lens,
@@ -27,6 +24,7 @@ from .functions import (
     to_csv,
     to_json,
     to_xlsx,
+    try_write_error_log,
     ws_x_data,
 )
 
@@ -692,15 +690,15 @@ def tk_trees_api(
                 rowlen=row_len,
                 order=order,
             )[0]
-
-        if output_filepath.endswith((".csv, .tsv")):
+        if output_filepath.endswith((".csv", ".tsv")):
             to_csv(
                 filepath=output_filepath,
                 overwrite=overwrite_file,
                 dialect=dialect,
                 data=data,
             )
-        elif output_filepath.endswith("xlsx"):
+        elif output_filepath.endswith(".xlsx"):
+            
             if output_sheet is None:
                 if isinstance(input_sheet, str):
                     output_sheet = input_sheet
@@ -712,7 +710,7 @@ def tk_trees_api(
                 data=data,
             )
 
-        elif output_filepath.endswith("json"):
+        elif output_filepath.endswith(".json"):
             to_json(
                 filepath=output_filepath,
                 data=data,
@@ -720,8 +718,4 @@ def tk_trees_api(
             )
 
     except Exception as error:
-        try:
-            with open(upone_dir + "TK-TREES-ERROR.txt", "w") as fh:
-                fh.write(f"{error}")
-        except Exception:
-            pass
+        try_write_error_log(f"{error}")

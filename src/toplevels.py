@@ -7,6 +7,7 @@ import json
 import os
 import re
 import tkinter as tk
+import webbrowser
 from itertools import islice, repeat
 from tkinter import filedialog, ttk
 
@@ -34,6 +35,7 @@ from .constants import (
     std_font_size,
     themes,
     top_left_icon,
+    upone_dir,
     validation_allowed_date_chars,
     validation_allowed_num_chars,
 )
@@ -5014,6 +5016,14 @@ class Help_Popup(tk.Toplevel):
         self.find_down_button.pack(side="left", fill="x")
         self.buttonframe = Frame(self, theme=theme)
         self.buttonframe.grid(row=1, column=0, rowspan=2, padx=10, pady=10, sticky="nswe")
+        
+        self.open_in_browser = Button(
+            self.buttonframe,
+            text="Open in Browser",
+            style="EF.Std.TButton",
+            command=self.open_docs_in_browser,
+        )
+        self.open_in_browser.pack(side="top", pady=2, fill="x")
 
         self.basics = Button(
             self.buttonframe,
@@ -5097,7 +5107,7 @@ class Help_Popup(tk.Toplevel):
 
         self.textbox = Working_Text(
             self,
-            font=("Calibri", std_font_size),
+            font=("Mono", std_font_size, "normal"),
             wrap="word",
             theme=theme,
             use_entry_bg=False,
@@ -5114,6 +5124,13 @@ class Help_Popup(tk.Toplevel):
         center(self, 975, 650)
         self.deiconify()
         self.wait_window()
+        
+    def open_docs_in_browser(self):
+        try:
+            url = f"file://{upone_dir + "DOCUMENTATION.html"}"
+            webbrowser.open(url)
+        except Exception:
+            pass
 
     def scrollto(self, option):
         if option == "programbasics":

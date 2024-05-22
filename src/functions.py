@@ -31,7 +31,16 @@ from .constants import (
     isintre,
     isrealre,
     red_remove_fill,
+    upone_dir,
 )
+
+
+def try_write_error_log(error: str) -> bool:
+    try:
+        with open(upone_dir + "TK-TREES-ERROR.txt", "w") as fh:
+            fh.write(f"{error}")
+    except Exception:
+        pass
 
 
 def to_clipboard(widget: tk.Misc, s: str) -> None:

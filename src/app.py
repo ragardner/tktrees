@@ -44,6 +44,7 @@ from .functions import (
     get_json_from_file,
     json_to_sheet,
     load_cfg,
+    try_write_error_log,
     write_cfg,
     ws_x_data,
     ws_x_program_data_str,
@@ -615,7 +616,7 @@ class AppGUI(tk.Tk):
                 theme=self.theme,
             )
             self.create_new_at_start()
-            
+
     def json_go_to_column_selection(self, d: dict) -> bool:
         try:
             json_format = get_json_format(d)
@@ -759,71 +760,81 @@ class AppGUI(tk.Tk):
 
 def run_app(startup_args):
     if len(startup_args) > 4 and allow_api_use:
-        kwargs = DotDict()
-        for ctr, arg in enumerate(startup_args):
-            # 1, 2, 3, 4 are required
-            # -id-<int> and -parent-<int> required for flatten operations
-            if ctr == 1:
-                api_action = arg
+        try:
+            kwargs = DotDict()
+            for ctr, arg in enumerate(startup_args):
+                # 1, 2, 3, 4 are required
+                # -id-<int> and -parent-<int> required for flatten operations
+                if ctr == 1:
+                    api_action = arg
 
-            elif ctr == 2:
-                input_filepath = os.path.normpath(arg)
+                elif ctr == 2:
+                    input_filepath = os.path.normpath(arg)
 
-            elif ctr == 3:
-                output_filepath = os.path.normpath(arg)
+                elif ctr == 3:
+                    output_filepath = os.path.normpath(arg)
 
-            elif ctr == 4:
-                all_parent_column_indexes = sorted(int(c) if c.isdigit() else alpha2idx(c) for c in arg.split(","))
+                elif arg.startswith("-all-parent-columns-"):
+                    all_parent_column_indexes = sorted(
+                        int(c) if c.isdigit() else alpha2idx(c) for c in arg.split("-all-parent-columns-")[1].split(",")
+                    )
+                    for i in all_parent_column_indexes:
+                        if i < 0:
+                            raise ValueError(
+                                f"Parent column index must be number of letter representing column, not '{i}'"
+                            )
 
-            # defaults to first sheet
-            elif arg.startswith("-input-sheet-"):
-                kwargs["input_sheet"] = arg.split("-input-sheet-")[1]
+                # defaults to first sheet
+                elif arg.startswith("-input-sheet-"):
+                    kwargs["input_sheet"] = arg.split("-input-sheet-")[1]
 
-            # defaults to input-sheet name
-            elif arg.startswith("-output-sheet-"):
-                kwargs["output_sheet"] = arg.split("-output-sheet-")[1]
+                # defaults to input-sheet name
+                elif arg.startswith("-output-sheet-"):
+                    kwargs["output_sheet"] = arg.split("-output-sheet-")[1]
 
-            # defaults to comma
-            elif arg.startswith("-delim-"):
-                kwargs["csv_delimiter"] = arg.split("-delim-")[1]
+                # defaults to comma
+                elif arg.startswith("-delim-"):
+                    kwargs["csv_delimiter"] = arg.split("-delim-")[1]
 
-            # -id- and -parent- required for flatten, not for unflatten
-            elif arg.startswith("-id-"):
-                _arg = arg.split("-id-")[1]
-                if _arg.isdigit():
-                    kwargs["flatten_id_column"] = int(_arg)
-                else:
-                    kwargs["flatten_id_column"] = alpha2idx(_arg)
-
-            elif arg.startswith("-parent-"):
-                _arg = arg.split("-parent-")[1]
-                if _arg.isdigit():
-                    kwargs["flatten_parent_column"] = int(_arg)
-                else:
-                    kwargs["flatten_parent_column"] = alpha2idx(_arg)
-
-            # optional flags, e.g. -odjr
-            elif arg.startswith("-"):
-                # flags
-                # o overwrite
-                # d detail_columns
-                # j justify_left
-                # r reverse
-                # i add index
-                flags = arg.split("-")[1]
-                for c in flags:
-                    if c == "o":
-                        kwargs["overwrite_file"] = True
-                    elif c == "d":
-                        kwargs["detail_columns"] = True
-                    elif c == "j":
-                        kwargs["justify_left"] = True
-                    elif c == "r":
-                        kwargs["reverse"] = True
-                    elif c == "i":
-                        kwargs["add_index"] = True
+                # -id- and -parent- required for flatten, not for unflatten
+                elif arg.startswith("-id-"):
+                    _arg = arg.split("-id-")[1]
+                    if _arg.isdigit():
+                        kwargs["flatten_id_column"] = int(_arg)
                     else:
-                        break
+                        kwargs["flatten_id_column"] = alpha2idx(_arg)
+
+                elif arg.startswith("-parent-"):
+                    _arg = arg.split("-parent-")[1]
+                    if _arg.isdigit():
+                        kwargs["flatten_parent_column"] = int(_arg)
+                    else:
+                        kwargs["flatten_parent_column"] = alpha2idx(_arg)
+
+                # optional flags, e.g. -odjr
+                elif arg.startswith("-"):
+                    # flags
+                    # o overwrite
+                    # d detail_columns
+                    # j justify_left
+                    # r reverse
+                    # i add index
+                    flags = arg.split("-")[1]
+                    for c in flags:
+                        if c == "o":
+                            kwargs["overwrite_file"] = True
+                        elif c == "d":
+                            kwargs["detail_columns"] = True
+                        elif c == "j":
+                            kwargs["justify_left"] = True
+                        elif c == "r":
+                            kwargs["reverse"] = True
+                        elif c == "i":
+                            kwargs["add_index"] = True
+                        else:
+                            break
+        except Exception as error_msg:
+            try_write_error_log(f"{error_msg}")
 
         tk_trees_api(
             api_action=api_action,
