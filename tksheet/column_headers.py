@@ -771,11 +771,9 @@ class ColumnHeaders(tk.Canvas):
         return False
 
     def b1_release(self, event: object) -> None:
-        if self.being_drawn_item is not None:
-            to_sel = self.MT.coords_and_type(self.being_drawn_item)
+        if self.being_drawn_item is not None and (to_sel := self.MT.coords_and_type(self.being_drawn_item)):
             r_to_sel, c_to_sel = self.MT.selected.row, self.MT.selected.column
             self.MT.hide_selection_box(self.being_drawn_item)
-            self.being_drawn_item = None
             self.MT.set_currently_selected(
                 r_to_sel,
                 c_to_sel,
@@ -784,6 +782,8 @@ class ColumnHeaders(tk.Canvas):
             sel_event = self.MT.get_select_event(being_drawn_item=self.being_drawn_item)
             try_binding(self.drag_selection_binding_func, sel_event)
             self.PAR.emit_event("<<SheetSelect>>", data=sel_event)
+        else:
+            self.being_drawn_item = None
         self.MT.bind("<MouseWheel>", self.MT.mousewheel)
         if self.width_resizing_enabled and self.rsz_w is not None and self.currently_resizing_width:
             self.currently_resizing_width = False
@@ -903,12 +903,13 @@ class ColumnHeaders(tk.Canvas):
 
     def toggle_select_col(
         self,
-        column,
-        add_selection=True,
-        redraw=True,
-        run_binding_func=True,
-        set_as_current=True,
-    ):
+        column: int,
+        add_selection: bool = True,
+        redraw: bool = True,
+        run_binding_func: bool = True,
+        set_as_current: bool = True,
+        ext: bool = False,
+    ) -> int:
         if add_selection:
             if self.MT.col_selected(column):
                 fill_iid = self.MT.deselect(c=column, redraw=redraw)
@@ -918,26 +919,40 @@ class ColumnHeaders(tk.Canvas):
                     redraw=redraw,
                     run_binding_func=run_binding_func,
                     set_as_current=set_as_current,
+                    ext=ext,
                 )
         else:
             if self.MT.col_selected(column):
                 fill_iid = self.MT.deselect(c=column, redraw=redraw)
             else:
-                fill_iid = self.select_col(column, redraw=redraw)
+                fill_iid = self.select_col(column, redraw=redraw, ext=ext)
         return fill_iid
 
-    def select_col(self, c, redraw=False, run_binding_func=True):
+    def select_col(
+        self,
+        c: int,
+        redraw: bool = False,
+        run_binding_func: bool = True,
+        ext: bool = False,
+    ) -> int:
         self.MT.deselect("all", redraw=False)
-        fill_iid = self.MT.create_selection_box(0, c, len(self.MT.row_positions) - 1, c + 1, "columns")
+        fill_iid = self.MT.create_selection_box(0, c, len(self.MT.row_positions) - 1, c + 1, "columns", ext=ext)
         if redraw:
             self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
         if run_binding_func:
             self.MT.run_selection_binding("columns")
         return fill_iid
 
-    def add_selection(self, c, redraw=False, run_binding_func=True, set_as_current=True):
+    def add_selection(
+        self,
+        c: int,
+        redraw: bool = False,
+        run_binding_func: bool = True,
+        set_as_current: bool = True,
+        ext: bool = False,
+    ) -> int:
         box = (0, c, len(self.MT.row_positions) - 1, c + 1, "columns")
-        fill_iid = self.MT.create_selection_box(*box, set_current=set_as_current)
+        fill_iid = self.MT.create_selection_box(*box, set_current=set_as_current, ext=ext)
         if redraw:
             self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
         if run_binding_func:

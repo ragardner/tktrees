@@ -1667,14 +1667,14 @@ class Tree_Editor(tk.Frame):
             self.auto_sort_nodes_bool.set(bool(program_data.auto_sort_nodes_bool))
             self.tv_label_col = int(program_data.tv_label_col)
             self.sheet.set_row_heights(
-                row_heights=map(self.sheet.check_height, map(int, program_data.row_heights)),
+                row_heights=map(self.sheet.valid_row_height, map(int, program_data.row_heights)),
             )
             self.sheet.set_column_widths(
                 column_widths=map(int, program_data.column_widths),
             )
             self.saved_info = DotDict({int(k): v for k, v in program_data.saved_info.items()})
             for h, dct in self.saved_info.items():
-                dct["theights"] = {k: self.tree.check_height(int(v)) for k, v in dct["theights"].items()}
+                dct["theights"] = {k: self.tree.valid_row_height(int(v)) for k, v in dct["theights"].items()}
                 dct["twidths"] = {k: int(v) for k, v in dct["twidths"].items()}
             self.renew_rns_undo()
             self.fix_associate_sort()
