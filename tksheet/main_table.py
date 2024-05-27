@@ -3642,7 +3642,7 @@ class MainTable(tk.Canvas):
             return w + self.table_txt_height, h
         return w, h
 
-    def set_cell_size_to_text(self, r, c, only_set_if_too_small=False, redraw: bool = True, run_binding=False):
+    def set_cell_size_to_text(self, r, c, only_if_too_small=False, redraw: bool = True, run_binding=False):
         min_column_width = int(self.min_column_width)
         min_rh = int(self.min_row_height)
         w = min_column_width
@@ -3662,7 +3662,7 @@ class MainTable(tk.Canvas):
             w = int(self.max_column_width)
         cell_needs_resize_w = False
         cell_needs_resize_h = False
-        if only_set_if_too_small:
+        if only_if_too_small:
             if w > self.col_positions[c + 1] - self.col_positions[c]:
                 cell_needs_resize_w = True
             if h > self.row_positions[r + 1] - self.row_positions[r]:
@@ -3792,24 +3792,26 @@ class MainTable(tk.Canvas):
 
     def reset_col_positions(self, ncols: int | None = None):
         colpos = self.PAR.ops.default_column_width
-        if self.all_columns_displayed:
-            self.set_col_positions(itr=(colpos for c in range(ncols if ncols is not None else self.total_data_cols())))
+        if isinstance(ncols, int):
+            self.set_col_positions(itr=repeat(colpos, ncols))
         else:
-            self.set_col_positions(
-                itr=(colpos for c in range(ncols if ncols is not None else len(self.displayed_columns)))
-            )
+            if self.all_columns_displayed:
+                self.set_col_positions(itr=repeat(colpos, self.total_data_cols()))
+            else:
+                self.set_col_positions(itr=repeat(colpos, len(self.displayed_columns)))
 
     def set_row_positions(self, itr: Iterator[float]) -> None:
         self.row_positions = list(accumulate(chain([0], itr)))
 
     def reset_row_positions(self, nrows: int | None = None):
         rowpos = self.get_default_row_height()
-        if self.all_rows_displayed:
-            self.set_row_positions(itr=(rowpos for r in range(nrows if nrows is not None else self.total_data_rows())))
+        if isinstance(nrows, int):
+            self.set_row_positions(itr=repeat(rowpos, nrows))
         else:
-            self.set_row_positions(
-                itr=(rowpos for r in range(nrows if nrows is not None else len(self.displayed_rows)))
-            )
+            if self.all_rows_displayed:
+                self.set_row_positions(itr=repeat(rowpos, self.total_data_rows()))
+            else:
+                self.set_row_positions(itr=repeat(rowpos, len(self.displayed_rows)))
 
     def del_col_position(self, idx: int, deselect_all: bool = False):
         if deselect_all:
@@ -4339,7 +4341,7 @@ class MainTable(tk.Canvas):
             self.set_row_positions(
                 itr=chain(
                     self.gen_row_heights(),
-                    (default_row_height for i in range(len(self.row_positions) - 1, maxrn + 1)),
+                    repeat(default_row_height, len(self.row_positions) - 1, maxrn + 1),
                 )
             )
         if isinstance(self._headers, list) and header:
@@ -4474,7 +4476,7 @@ class MainTable(tk.Canvas):
             self.set_col_positions(
                 itr=chain(
                     self.gen_column_widths(),
-                    (self.PAR.ops.default_column_width for i in range(len(self.col_positions) - 1, maxcn + 1)),
+                    repeat(self.PAR.ops.default_column_width, len(self.col_positions) - 1, maxcn + 1),
                 )
             )
         if push_ops:
@@ -5015,19 +5017,21 @@ class MainTable(tk.Canvas):
             self.canvasy(self.winfo_height()),
         )
 
-    def get_visible_rows(self, y1: int | float, y2: int | float) -> tuple[int, int]:
-        start_row = bisect_left(self.row_positions, y1)
-        end_row = bisect_right(self.row_positions, y2)
-        if not y2 >= self.row_positions[-1]:
-            end_row += 1
-        return start_row, end_row
+    @property
+    def visible_text_rows(self) -> tuple[int, int]:
+        start = bisect_left(self.row_positions, self.canvasy(0))
+        end = bisect_right(self.row_positions, self.canvasy(self.winfo_height()))
+        start = start - 1 if start else start
+        end = end - 1 if end == len(self.row_positions) else end
+        return start, end
 
-    def get_visible_columns(self, x1: int | float, x2: int | float) -> tuple[int, int]:
-        start_col = bisect_left(self.col_positions, x1)
-        end_col = bisect_right(self.col_positions, x2)
-        if not x2 >= self.col_positions[-1]:
-            end_col += 1
-        return start_col, end_col
+    @property
+    def visible_text_columns(self) -> tuple[int, int]:
+        start = bisect_left(self.col_positions, self.canvasx(0))
+        end = bisect_right(self.col_positions, self.canvasx(self.winfo_width()))
+        start = start - 1 if start else start
+        end = end - 1 if end == len(self.col_positions) else end
+        return start, end
 
     def redraw_highlight_get_text_fg(
         self,
@@ -5374,21 +5378,26 @@ class MainTable(tk.Canvas):
             self.RI.configure_scrollregion(last_row_line_pos)
             if setting_views:
                 return False
-        scrollpos_bot = self.canvasy(can_height)
-        end_row = bisect_right(self.row_positions, scrollpos_bot)
-        if not scrollpos_bot >= self.row_positions[-1]:
-            end_row += 1
-        scrollpos_left = self.canvasx(0)
         scrollpos_top = self.canvasy(0)
+        scrollpos_bot = self.canvasy(can_height)
+        scrollpos_left = self.canvasx(0)
         scrollpos_right = self.canvasx(can_width)
-        start_row = bisect_left(self.row_positions, scrollpos_top)
-        start_col = bisect_left(self.col_positions, scrollpos_left)
-        end_col = bisect_right(self.col_positions, scrollpos_right)
+
+        grid_start_row = bisect_left(self.row_positions, scrollpos_top)
+        grid_end_row = bisect_right(self.row_positions, scrollpos_bot)
+        grid_start_col = bisect_left(self.col_positions, scrollpos_left)
+        grid_end_col = bisect_right(self.col_positions, scrollpos_right)
+
+        text_start_row = grid_start_row - 1 if grid_start_row else grid_start_row
+        text_end_row = grid_end_row - 1 if grid_end_row == len(self.row_positions) else grid_end_row
+        text_start_col = grid_start_col - 1 if grid_start_col else grid_start_col
+        text_end_col = grid_end_col - 1 if grid_end_col == len(self.col_positions) else grid_end_col
+
         changed_w = False
         if self.PAR.ops.auto_resize_row_index and redraw_row_index and self.show_index:
             changed_w = self.RI.auto_set_index_width(
-                end_row=end_row - 1,
-                only_rows=[self.datarn(r) for r in range(start_row if not start_row else start_row - 1, end_row - 1)],
+                end_row=grid_end_row,
+                only_rows=[self.datarn(r) for r in range(text_start_row, text_end_row)],
             )
         if resized_cols or resized_rows or changed_w:
             self.recreate_all_selection_boxes()
@@ -5408,8 +5417,6 @@ class MainTable(tk.Canvas):
         self.disp_dropdown = {}
         self.hidd_checkbox.update(self.disp_checkbox)
         self.disp_checkbox = {}
-        if not scrollpos_right >= self.col_positions[-1]:
-            end_col += 1
         if last_col_line_pos > scrollpos_right:
             x_stop = scrollpos_right
         else:
@@ -5439,7 +5446,7 @@ class MainTable(tk.Canvas):
                             self.canvasx(0) - 1,
                             self.row_positions[r + 1] if len(self.row_positions) - 1 > r else self.row_positions[r],
                         )
-                        for r in range(start_row - 1, end_row)
+                        for r in range(grid_start_row, grid_end_row)
                     ]
                 )
             )
@@ -5471,7 +5478,7 @@ class MainTable(tk.Canvas):
                             self.col_positions[c + 1] if len(self.col_positions) - 1 > c else self.col_positions[c],
                             scrollpos_top - 1,
                         )
-                        for c in range(start_col - 1, end_col)
+                        for c in range(grid_start_col, grid_end_col)
                     ]
                 )
             )
@@ -5482,13 +5489,8 @@ class MainTable(tk.Canvas):
                     width=1,
                     tag="g",
                 )
-        if start_row > 0:
-            start_row -= 1
-        if start_col > 0:
-            start_col -= 1
-        end_row -= 1
         if redraw_table:
-            selections = self.get_redraw_selections(start_row, end_row, start_col, end_col)
+            selections = self.get_redraw_selections(text_start_row, grid_end_row, text_start_col, grid_end_col)
             c_2 = (
                 self.PAR.ops.table_selected_cells_bg
                 if self.PAR.ops.table_selected_cells_bg.startswith("#")
@@ -5507,10 +5509,10 @@ class MainTable(tk.Canvas):
                 else color_map[self.PAR.ops.table_selected_rows_bg]
             )
             c_4_ = (int(c_4[1:3], 16), int(c_4[3:5], 16), int(c_4[5:], 16))
-            rows_ = tuple(range(start_row, end_row))
+            rows_ = tuple(range(text_start_row, text_end_row))
             font = self.PAR.ops.table_font
             dd_coords = self.dropdown.get_coords()
-            for c in range(start_col, end_col - 1):
+            for c in range(text_start_col, text_end_col):
                 for r in rows_:
                     rtopgridln = self.row_positions[r]
                     rbotgridln = self.row_positions[r + 1]
@@ -5718,23 +5720,27 @@ class MainTable(tk.Canvas):
                     self.tag_raise(self.selected.iid)
         if redraw_header and self.show_header:
             self.CH.redraw_grid_and_text(
-                last_col_line_pos,
-                scrollpos_left,
-                x_stop,
-                start_col,
-                end_col,
-                scrollpos_right,
-                col_pos_exists,
+                last_col_line_pos=last_col_line_pos,
+                scrollpos_left=scrollpos_left,
+                x_stop=x_stop,
+                grid_start_col=grid_start_col,
+                grid_end_col=grid_end_col,
+                text_start_col=text_start_col,
+                text_end_col=text_end_col,
+                scrollpos_right=scrollpos_right,
+                col_pos_exists=col_pos_exists,
             )
         if redraw_row_index and self.show_index:
             self.RI.redraw_grid_and_text(
-                last_row_line_pos,
-                scrollpos_top,
-                y_stop,
-                start_row,
-                end_row + 1,
-                scrollpos_bot,
-                row_pos_exists,
+                last_row_line_pos=last_row_line_pos,
+                scrollpos_top=scrollpos_top,
+                y_stop=y_stop,
+                grid_start_row=grid_start_row,
+                grid_end_row=grid_end_row,
+                text_start_row=text_start_row,
+                text_end_row=text_end_row,
+                scrollpos_bot=scrollpos_bot,
+                row_pos_exists=row_pos_exists,
             )
         event_data = {"sheetname": "", "header": redraw_header, "row_index": redraw_row_index, "table": redraw_table}
         self.PAR.emit_event("<<SheetRedrawn>>", data=event_data)
@@ -6489,7 +6495,7 @@ class MainTable(tk.Canvas):
                 text = text if isinstance(text, str) else f"{text}"
         text = "" if text is None else text
         if self.PAR.ops.cell_auto_resize_enabled:
-            self.set_cell_size_to_text(r, c, only_set_if_too_small=True, redraw=True, run_binding=True)
+            self.set_cell_size_to_text(r, c, only_if_too_small=True, redraw=True, run_binding=True)
         if self.text_editor.open and (r, c) == self.text_editor.coords:
             self.text_editor.window.set_text(self.text_editor.get() + "" if not isinstance(text, str) else text)
             return
@@ -7106,7 +7112,7 @@ class MainTable(tk.Canvas):
                 self.undo_stack.append(pickled_event_dict(event_data))
             self.set_cell_data(datarn, datacn, value)
             if cell_resize and self.PAR.ops.cell_auto_resize_enabled:
-                self.set_cell_size_to_text(r, c, only_set_if_too_small=True, redraw=redraw, run_binding=True)
+                self.set_cell_size_to_text(r, c, only_if_too_small=True, redraw=redraw, run_binding=True)
             self.sheet_modified(event_data)
             return True
         return False

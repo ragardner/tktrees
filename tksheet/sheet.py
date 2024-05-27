@@ -4,7 +4,7 @@ import tkinter as tk
 from bisect import bisect_left
 from collections import defaultdict, deque
 from collections.abc import Callable, Generator, Iterator, Sequence
-from itertools import accumulate, chain, islice, product
+from itertools import accumulate, chain, islice, product, repeat
 from timeit import default_timer
 from tkinter import ttk
 from typing import Literal
@@ -592,7 +592,7 @@ class Sheet(tk.Frame):
         self.MT.enable_bindings(bindings)
         return self
 
-    def disable_bindings(self, *bindings) -> Sheet:
+    def disable_bindings(self, *bindings: str) -> Sheet:
         self.MT.disable_bindings(bindings)
         return self
 
@@ -1081,8 +1081,11 @@ class Sheet(tk.Frame):
         Includes child widgets such as scroll bars
         Returns bool
         """
-        widget = self.focus_get()
-        return widget == self or any(widget == c for c in self.children.values())
+        try:
+            widget = self.focus_get()
+            return widget == self or any(widget == c for c in self.children.values())
+        except Exception:
+            return False
 
     def focus_set(
         self,
@@ -1289,8 +1292,6 @@ class Sheet(tk.Frame):
         self,
         *key: CreateSpanTypes,
     ) -> object:
-        span = self.span_from_key(*key)
-        rows, cols = self.ranges_from_span(span)
         """
         e.g. retrieves entire table as pandas dataframe
         sheet["A1"].expand().options(pandas.DataFrame).data
@@ -1350,6 +1351,8 @@ class Sheet(tk.Frame):
           convert(data) - sends the data to an optional convert function
 
         """
+        span = self.span_from_key(*key)
+        rows, cols = self.ranges_from_span(span)
         tdisp, idisp, hdisp = span.tdisp, span.idisp, span.hdisp
         table, index, header = span.table, span.index, span.header
         fmt_kw = span.kwargs if span.type_ == "format" and span.kwargs else None
@@ -1546,16 +1549,12 @@ class Sheet(tk.Frame):
         emit_event: bool | None = None,
         redraw: bool = True,
     ) -> EventDataDict:
-        span = self.span_from_key(*key)
-        if data is None:
-            data = []
         """
         e.g.
         df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
         sheet["A1"] = df.values.tolist()
 
-        can't use slices or expand
-        just uses the from_r, from_c values
+        just uses the spans from_r, from_c values
 
         'data' parameter could be:
         - list of lists
@@ -1599,6 +1598,9 @@ class Sheet(tk.Frame):
         - h stands for header
 
         """
+        span = self.span_from_key(*key)
+        if data is None:
+            data = []
         startr, startc = span_froms(span)
         table, index, header = span.table, span.index, span.header
         fmt_kw = span.kwargs if span.type_ == "format" and span.kwargs else None
@@ -2266,16 +2268,14 @@ class Sheet(tk.Frame):
         mod_positions: bool = True,
         mod_data: bool = True,
     ) -> int | Sheet:
+        total_rows = self.MT.total_data_rows()
         if number is None:
-            return self.MT.total_data_rows()
+            return total_rows
         if not isinstance(number, int) or number < 0:
             raise ValueError("number argument must be integer and > 0")
-        if number > len(self.MT.data):
-            if mod_positions:
-                height = self.MT.get_default_row_height()
-                for r in range(number - len(self.MT.data)):
-                    self.MT.insert_row_position("end", height)
-        elif number < len(self.MT.data):
+        if number > total_rows and mod_positions:
+            self.MT.insert_row_positions(heights=number - total_rows)
+        elif number < total_rows:
             if not self.MT.all_rows_displayed:
                 self.MT.display_rows(enable=False, reset_row_positions=False, deselect_all=True)
             self.MT.row_positions[number + 1 :] = []
@@ -2294,11 +2294,8 @@ class Sheet(tk.Frame):
             return total_cols
         if not isinstance(number, int) or number < 0:
             raise ValueError("number argument must be integer and > 0")
-        if number > total_cols:
-            if mod_positions:
-                width = self.ops.default_column_width
-                for c in range(number - total_cols):
-                    self.MT.insert_col_position("end", width)
+        if number > total_cols and mod_positions:
+            self.MT.insert_col_positions(widths=number - total_cols)
         elif number < total_cols:
             if not self.MT.all_columns_displayed:
                 self.MT.display_columns(enable=False, reset_col_positions=False, deselect_all=True)
@@ -3334,7 +3331,7 @@ class Sheet(tk.Frame):
         only_set_if_too_small: bool = False,
         redraw: bool = True,
     ) -> Sheet:
-        self.MT.set_cell_size_to_text(r=row, c=column, only_set_if_too_small=only_set_if_too_small)
+        self.MT.set_cell_size_to_text(r=row, c=column, only_if_too_small=only_set_if_too_small)
         return self.set_refresh_timer(redraw)
 
     def set_all_cell_sizes_to_text(
@@ -3356,7 +3353,7 @@ class Sheet(tk.Frame):
     ) -> Sheet:
         self.CH.set_width_of_all_cols(
             width=width,
-            only_set_if_too_small=only_set_if_too_small,
+            only_if_too_small=only_set_if_too_small,
             recreate=recreate_selection_boxes,
         )
         return self.set_refresh_timer(redraw)
@@ -3370,7 +3367,7 @@ class Sheet(tk.Frame):
     ) -> Sheet:
         self.RI.set_height_of_all_rows(
             height=height,
-            only_set_if_too_small=only_set_if_too_small,
+            only_if_too_small=only_set_if_too_small,
             recreate=recreate_selection_boxes,
         )
         return self.set_refresh_timer(redraw)
@@ -3385,13 +3382,12 @@ class Sheet(tk.Frame):
         if column == "all" and width == "default":
             self.MT.reset_col_positions()
         elif column == "displayed" and width == "text":
-            sc, ec = self.MT.get_visible_columns(self.MT.canvasx(0), self.MT.canvasx(self.winfo_width()))
-            for c in range(sc, ec - 1):
+            for c in range(*self.MT.visible_text_columns):
                 self.CH.set_col_width(c)
         elif width == "text" and isinstance(column, int):
-            self.CH.set_col_width(col=column, width=None, only_set_if_too_small=only_set_if_too_small)
+            self.CH.set_col_width(col=column, width=None, only_if_too_small=only_set_if_too_small)
         elif isinstance(width, int) and isinstance(column, int):
-            self.CH.set_col_width(col=column, width=width, only_set_if_too_small=only_set_if_too_small)
+            self.CH.set_col_width(col=column, width=width, only_if_too_small=only_set_if_too_small)
         elif isinstance(column, int):
             return int(self.MT.col_positions[column + 1] - self.MT.col_positions[column])
         return self.set_refresh_timer(redraw)
@@ -3406,13 +3402,12 @@ class Sheet(tk.Frame):
         if row == "all" and height == "default":
             self.MT.reset_row_positions()
         elif row == "displayed" and height == "text":
-            sr, er = self.MT.get_visible_rows(self.MT.canvasy(0), self.MT.canvasy(self.winfo_width()))
-            for r in range(sr, er - 1):
+            for r in range(*self.MT.visible_text_rows):
                 self.RI.set_row_height(r)
         elif height == "text" and isinstance(row, int):
-            self.RI.set_row_height(row=row, height=None, only_set_if_too_small=only_set_if_too_small)
+            self.RI.set_row_height(row=row, height=None, only_if_too_small=only_set_if_too_small)
         elif isinstance(height, int) and isinstance(row, int):
-            self.RI.set_row_height(row=row, height=height, only_set_if_too_small=only_set_if_too_small)
+            self.RI.set_row_height(row=row, height=height, only_if_too_small=only_set_if_too_small)
         elif isinstance(row, int):
             return int(self.MT.row_positions[row + 1] - self.MT.row_positions[row])
         return self.set_refresh_timer(redraw)
@@ -3427,9 +3422,33 @@ class Sheet(tk.Frame):
             return self.MT.row_positions
         return self.MT.get_row_heights()
 
+    def get_row_text_height(
+        self,
+        row: int,
+        visible_only: bool = False,
+        only_if_too_small: bool = False,
+    ) -> int:
+        return self.RI.get_row_text_height(
+            row=row,
+            visible_only=visible_only,
+            only_if_too_small=only_if_too_small,
+        )
+
+    def get_column_text_width(
+        self,
+        column: int,
+        visible_only: bool = False,
+        only_if_too_small: bool = False,
+    ) -> int:
+        return self.CH.get_col_text_width(
+            col=column,
+            visible_only=visible_only,
+            only_if_too_small=only_if_too_small,
+        )
+
     def set_column_widths(
         self,
-        column_widths: Iterator[int, float] | None = None,
+        column_widths: Iterator[float] | None = None,
         canvas_positions: bool = False,
         reset: bool = False,
     ) -> Sheet:
@@ -3439,12 +3458,12 @@ class Sheet(tk.Frame):
             if canvas_positions and isinstance(column_widths, list):
                 self.MT.col_positions = column_widths
             else:
-                self.MT.col_positions = list(accumulate(chain([0], (width for width in column_widths))))
+                self.MT.col_positions = list(accumulate(chain([0], column_widths)))
         return self
 
     def set_row_heights(
         self,
-        row_heights: Iterator[int, float] | None = None,
+        row_heights: Iterator[float] | None = None,
         canvas_positions: bool = False,
         reset: bool = False,
     ) -> Sheet:
@@ -3454,7 +3473,7 @@ class Sheet(tk.Frame):
             if canvas_positions and isinstance(row_heights, list):
                 self.MT.row_positions = row_heights
             else:
-                self.MT.row_positions = list(accumulate(chain([0], (height for height in row_heights))))
+                self.MT.row_positions = list(accumulate(chain([0], row_heights)))
         return self
 
     def set_width_of_index_to_text(self, text: None | str = None, *args, **kwargs) -> Sheet:
@@ -3556,10 +3575,10 @@ class Sheet(tk.Frame):
             return len(self.MT.row_positions) - 1, len(self.MT.col_positions) - 1
         if isinstance(total_rows, int):
             height = self.MT.get_default_row_height()
-            self.MT.row_positions = list(accumulate(chain([0], (height for row in range(total_rows)))))
+            self.MT.row_positions = list(accumulate(chain([0], repeat(height, total_rows))))
         if isinstance(total_columns, int):
             width = self.ops.default_column_width
-            self.MT.col_positions = list(accumulate(chain([0], (width for column in range(total_columns)))))
+            self.MT.col_positions = list(accumulate(chain([0], repeat(width, total_columns))))
         return self
 
     def move_row_position(self, row: int, moveto: int) -> Sheet:
@@ -3573,14 +3592,14 @@ class Sheet(tk.Frame):
     def get_example_canvas_column_widths(self, total_cols: int | None = None) -> list[float]:
         colpos = int(self.ops.default_column_width)
         if isinstance(total_cols, int):
-            return list(accumulate(chain([0], (colpos for c in range(total_cols)))))
-        return list(accumulate(chain([0], (colpos for c in range(len(self.MT.col_positions) - 1)))))
+            return list(accumulate(chain([0], repeat(colpos, total_cols))))
+        return list(accumulate(chain([0], repeat(colpos, len(self.MT.col_positions) - 1))))
 
     def get_example_canvas_row_heights(self, total_rows: int | None = None) -> list[float]:
         rowpos = self.MT.get_default_row_height()
         if isinstance(total_rows, int):
-            return list(accumulate(chain([0], (rowpos for c in range(total_rows)))))
-        return list(accumulate(chain([0], (rowpos for c in range(len(self.MT.row_positions) - 1)))))
+            return list(accumulate(chain([0], repeat(rowpos, total_rows))))
+        return list(accumulate(chain([0], repeat(rowpos, len(self.MT.row_positions) - 1))))
 
     def verify_row_heights(self, row_heights: list[float], canvas_positions: bool = False) -> bool:
         if not isinstance(row_heights, list):
@@ -3590,7 +3609,7 @@ class Sheet(tk.Frame):
                 return False
             return not any(
                 x - z < self.MT.min_row_height or not isinstance(x, int) or isinstance(x, bool)
-                for z, x in zip(islice(row_heights, 0, None), islice(row_heights, 1, None))
+                for z, x in zip(row_heights, islice(row_heights, 1, None))
             )
         return not any(z < self.MT.min_row_height or not isinstance(z, int) or isinstance(z, bool) for z in row_heights)
 
@@ -3602,7 +3621,7 @@ class Sheet(tk.Frame):
                 return False
             return not any(
                 x - z < self.MT.min_column_width or not isinstance(x, int) or isinstance(x, bool)
-                for z, x in zip(islice(column_widths, 0, None), islice(column_widths, 1, None))
+                for z, x in zip(column_widths, islice(column_widths, 1, None))
             )
         return not any(
             z < self.MT.min_column_width or not isinstance(z, int) or isinstance(z, bool) for z in column_widths
@@ -3621,6 +3640,20 @@ class Sheet(tk.Frame):
         elif width > self.MT.max_column_width:
             return self.MT.max_column_width
         return width
+
+    @property
+    def visible_rows(self) -> tuple[int, int]:
+        """
+        returns: tuple[visible start row int, visible end row int]
+        """
+        return self.MT.visible_text_rows
+
+    @property
+    def visible_columns(self) -> tuple[int, int]:
+        """
+        returns: tuple[visible start column int, visible end column int]
+        """
+        return self.MT.visible_text_columns
 
     # Identifying Bound Event Mouse Position
 
