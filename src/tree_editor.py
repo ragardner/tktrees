@@ -1885,7 +1885,9 @@ class Tree_Editor(tk.Frame):
         self.sheet.reset_all_options()
         self.headers = []
         self.set_headers()
-
+        self.auto_sort_nodes_bool.set(True)
+        self.nodes_order = {}
+        self.topnodes_order = {}
         self.nodes = {}
         self.rns = {}
         self.sheet.MT.data = []
@@ -3918,14 +3920,14 @@ class Tree_Editor(tk.Frame):
                 else:
                     self.tree_rc_menu_empty.tk_popup(event.x_root, event.y_root)
         self.reset_tree_drag_vars()
-        
+
     def reset_tree_drag_vars(self):
         self.drag_pc = None
         self.drag_iid = None
         self.drag_pariid = None
         self.drag_start_index = None
         self.drag_end_index = None
-        
+
     def tree_drop_iid(self):
         self.reset_tree_drag_vars()
         self.redo_tree_display()
@@ -5168,16 +5170,13 @@ class Tree_Editor(tk.Frame):
                         for cld in v:
                             d[cld.k] = cld
                             s.add(cld.k)
-                        try:
-                            if s != set(self.nodes_order[n.k][k]):
-                                self.warnings.append(
-                                    f" - Order of treeview IDs lost due to error with ID: {n.name} in column #{k + 1}"
-                                )
-                                self.restart_startup_fix()
-                                return
-                        except Exception as error_msg:
+                        if (
+                            n.k not in self.nodes_order
+                            or k not in self.nodes_order[n.k]
+                            or s != set(self.nodes_order[n.k][k])
+                        ):
                             self.warnings.append(
-                                f" - Order of treeview IDs lost due to error: {error_msg} in column #{k + 1}"
+                                f" - Order of treeview IDs lost due to error with ID: {n.name} in column #{k + 1}"
                             )
                             self.restart_startup_fix()
                             return
@@ -5313,6 +5312,9 @@ class Tree_Editor(tk.Frame):
     def sort_node_key(self, n):
         return [int(e) if e.isdigit() else e for e in re.split("([0-9]+)", n.k)]
 
+    def sort_key(self, s: str):
+        return [int(e) if e.isdigit() else e for e in re.split("([0-9]+)", s)]
+
     def sort_node_cn(self, cn, h):
         wc = []
         woc = []
@@ -5403,12 +5405,10 @@ class Tree_Editor(tk.Frame):
             for n in self.nodes.values():
                 if n.ps[h] == "":
                     if n.cn[h]:
-                        wc.append(n)
+                        wc.append(n.k)
                     else:
-                        woc.append(n)
-            wc.sort(key=self.sort_node_key)
-            woc.sort(key=self.sort_node_key)
-            self.topnodes_order[h] = [n.k for n in wc] + [n.k for n in woc]
+                        woc.append(n.k)
+            self.topnodes_order[h] = sorted(wc, key=self.sort_key) + sorted(woc, key=self.sort_key)
 
     def output_(self):
         yield [h.name for h in self.headers]
@@ -11448,7 +11448,8 @@ class Tree_Editor(tk.Frame):
             ns_hiers = popup.pcols
             ns_hiers_set = set(ns_hiers)
             ns_row_len = popup.row_len
-            ns_headers = self.fix_headers(self.new_sheet.pop(0), ns_row_len)
+            ns_headers = self.new_sheet.pop(0)
+            ns_headers = self.fix_headers(ns_headers, ns_row_len)
             ns_num_hdrs = len(ns_headers)
             equalize_sublist_lens(seq=self.new_sheet, len_=ns_num_hdrs)
             ns_pcol_names = {cell.lower(): i for i, cell in enumerate(ns_headers) if i in ns_hiers_set}
@@ -11804,40 +11805,40 @@ class Tree_Editor(tk.Frame):
                     "",
                     "",
                 )
+                self.new_sheet = []
+                self.nodes = {}
+                self.clear_copied_details()
+                self.auto_sort_nodes_bool.set(True)
+                self.toggle_sort_all_nodes(snapshot=False)
+                self.sheet.MT.data, self.nodes, self.warnings = TreeBuilder().build(
+                    self.sheet.MT.data,
+                    self.new_sheet,
+                    self.row_len,
+                    self.ic,
+                    self.hiers,
+                    self.nodes,
+                    warnings=self.warnings,
+                    add_warnings=True,
+                    strip=not self.allow_spaces_ids_var.get(),
+                )
+                self.new_sheet = []
+                self.fix_associate_sort(startup=False)
+                self.refresh_hier_dropdown(self.hiers.index(self.pc))
+                self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+                self.sheet.deselect()
+                self.set_headers()
+                self.refresh_all_formatting()
+                self.reset_tagged_ids_dropdowns()
+                self.rehighlight_tagged_ids()
+                self.redo_tree_display()
+                self.refresh_dropdowns()
+                self.show_warnings("n/a - Data imported from: " + popup.file_opened, popup.sheet_opened)
             else:
                 self.vs.pop()
                 self.vp -= 1
                 self.set_undo_label()
                 Error(self, "No applicable changes were made", theme=self.C.theme)
-            self.new_sheet = []
-            self.nodes = {}
-            self.clear_copied_details()
-            self.auto_sort_nodes_bool.set(True)
-            self.toggle_sort_all_nodes(snapshot=False)
-            self.sheet.MT.data, self.nodes, self.warnings = TreeBuilder().build(
-                self.sheet.MT.data,
-                self.new_sheet,
-                self.row_len,
-                self.ic,
-                self.hiers,
-                self.nodes,
-                warnings=self.warnings,
-                add_warnings=True,
-                strip=not self.allow_spaces_ids_var.get(),
-            )
-            self.new_sheet = []
-            self.fix_associate_sort(startup=False)
-            self.refresh_hier_dropdown(self.hiers.index(self.pc))
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.sheet.deselect()
-            self.set_headers()
-            self.refresh_all_formatting()
-            self.reset_tagged_ids_dropdowns()
-            self.rehighlight_tagged_ids()
-            self.redo_tree_display()
             self.stop_work(self.get_tree_editor_status_bar_text())
-            self.show_warnings("n/a - Data imported from: " + popup.file_opened, popup.sheet_opened)
-            self.refresh_dropdowns()
             self.focus_sheet()
         except Exception as error_msg:
             Error(self, f"Error: {error_msg}", theme=self.C.theme)

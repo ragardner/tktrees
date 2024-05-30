@@ -161,14 +161,14 @@ class Column_Selection(tk.Frame):
     def populate(self, columns):
         self.sheetdisplay.deselect("all")
         self.rowlen = len(columns)
-        self.selector.set_columns([h for h in self.C.frames["tree_edit"].sheet.data[0]])
-        self.flattened_selector.set_columns([h for h in self.C.frames["tree_edit"].sheet.data[0]])
-        self.C.frames["tree_edit"].sheet.MT.data = self.sheetdisplay.set_sheet_data(
-            data=self.C.frames["tree_edit"].sheet.MT.data,
+        self.selector.set_columns([h for h in self.C.frames.tree_edit.sheet.data[0]])
+        self.flattened_selector.set_columns([h for h in self.C.frames.tree_edit.sheet.data[0]])
+        self.C.frames.tree_edit.sheet.MT.data = self.sheetdisplay.set_sheet_data(
+            data=self.C.frames.tree_edit.sheet.MT.data,
             redraw=True,
         )
         self.sheetdisplay.headers(newheaders=0)
-        if len(self.C.frames["tree_edit"].sheet.data) < 3000:
+        if len(self.C.frames.tree_edit.sheet.data) < 3000:
             self.sheetdisplay.set_all_cell_sizes_to_text()
         self.selector.detect_id_col()
         self.selector.detect_par_cols()
@@ -189,47 +189,47 @@ class Column_Selection(tk.Frame):
             return
         self.C.status_bar.change_text("Loading...   ")
         self.C.disable_at_start()
-        self.C.frames["tree_edit"].sheet.MT.data = self.sheetdisplay.get_sheet_data()
-        equalize_sublist_lens(self.C.frames["tree_edit"].sheet.MT.data, self.rowlen)
+        self.C.frames.tree_edit.sheet.MT.data = self.sheetdisplay.get_sheet_data()
+        equalize_sublist_lens(self.C.frames.tree_edit.sheet.MT.data, self.rowlen)
         if flattened:
             (
-                self.C.frames["tree_edit"].sheet.MT.data,
+                self.C.frames.tree_edit.sheet.MT.data,
                 self.rowlen,
                 idcol,
                 hier_cols,
             ) = TreeBuilder().convert_flattened_to_normal(
-                data=self.C.frames["tree_edit"].sheet.MT.data,
+                data=self.C.frames.tree_edit.sheet.MT.data,
                 hier_cols=hier_cols,
                 rowlen=self.rowlen,
                 order=order,
-                warnings=self.C.frames["tree_edit"].warnings,
+                warnings=self.C.frames.tree_edit.warnings,
             )
-        self.C.frames["tree_edit"].ic = idcol
-        self.C.frames["tree_edit"].hiers = hier_cols
-        self.C.frames["tree_edit"].pc = hier_cols[0]
-        self.C.frames["tree_edit"].row_len = int(self.rowlen)
-        self.C.frames["tree_edit"].headers = [
+        self.C.frames.tree_edit.ic = idcol
+        self.C.frames.tree_edit.hiers = hier_cols
+        self.C.frames.tree_edit.pc = hier_cols[0]
+        self.C.frames.tree_edit.row_len = int(self.rowlen)
+        self.C.frames.tree_edit.headers = [
             Header(name, type_="ID" if i == idcol else "Parent" if i in hier_cols else "Text Detail")
             for i, name in enumerate(
-                self.C.frames["tree_edit"].fix_headers(self.C.frames["tree_edit"].sheet.MT.data.pop(0), self.rowlen)
+                self.C.frames.tree_edit.fix_headers(self.C.frames.tree_edit.sheet.MT.data.pop(0), self.rowlen)
             )
         ]
         (
-            self.C.frames["tree_edit"].sheet.MT.data,
-            self.C.frames["tree_edit"].nodes,
-            self.C.frames["tree_edit"].warnings,
+            self.C.frames.tree_edit.sheet.MT.data,
+            self.C.frames.tree_edit.nodes,
+            self.C.frames.tree_edit.warnings,
         ) = TreeBuilder().build(
-            input_sheet=self.C.frames["tree_edit"].sheet.MT.data,
-            output_sheet=self.C.frames["tree_edit"].new_sheet,
-            row_len=self.C.frames["tree_edit"].row_len,
-            ic=self.C.frames["tree_edit"].ic,
-            hiers=self.C.frames["tree_edit"].hiers,
-            nodes=self.C.frames["tree_edit"].nodes,
-            warnings=self.C.frames["tree_edit"].warnings,
-            strip=not self.C.frames["tree_edit"].allow_spaces_ids_var.get(),
+            input_sheet=self.C.frames.tree_edit.sheet.MT.data,
+            output_sheet=self.C.frames.tree_edit.new_sheet,
+            row_len=self.C.frames.tree_edit.row_len,
+            ic=self.C.frames.tree_edit.ic,
+            hiers=self.C.frames.tree_edit.hiers,
+            nodes=self.C.frames.tree_edit.nodes,
+            warnings=self.C.frames.tree_edit.warnings,
+            strip=not self.C.frames.tree_edit.allow_spaces_ids_var.get(),
         )
-        self.C.frames["tree_edit"].populate()
-        self.C.frames["tree_edit"].show_warnings(str(self.C.open_dict["filepath"]), str(self.C.open_dict["sheet"]))
+        self.C.frames.tree_edit.populate()
+        self.C.frames.tree_edit.show_warnings(str(self.C.open_dict["filepath"]), str(self.C.open_dict["sheet"]))
 
 
 class Workbook_Sheet_Selection(tk.Frame):
@@ -1221,7 +1221,7 @@ class Condition_Normal_Entry(tk.Entry):
         self.rc_popup_menu.tk_popup(event.x_root, event.y_root)
 
     def select_all(self, event: object = None) -> Literal["break"]:
-        self.select_range(0, 'end')
+        self.select_range(0, "end")
         return "break"
 
     def cut(self, event=None):
@@ -1345,6 +1345,7 @@ class Working_Text(tk.Text):
         self.bind(rc_button, self.rc)
         self.bind(f"<{ctrl_button}-a>", self.select_all)
         self.bind(f"<{ctrl_button}-A>", self.select_all)
+
     #     self.font = font
     #     em = 20
     #     default_size = std_font_size
@@ -1366,7 +1367,7 @@ class Working_Text(tk.Text):
     #     self.tag_configure("bullet", lmargin1=em, lmargin2=20)
     #     self.tag_configure("numbered", lmargin1=em, lmargin2=20)
     #     self.numbered_index = 1
-        
+
     # def insert_markdown(self, text: str):
     #     for line in text.split("\n"):
     #         if line == "":
@@ -1687,7 +1688,7 @@ class Readonly_Entry(tk.Entry):
         self.rc_popup_menu.tk_popup(event.x_root, event.y_root)
 
     def select_all(self, event: object = None) -> Literal["break"]:
-        self.select_range(0, 'end')
+        self.select_range(0, "end")
         return "break"
 
     def cut(self, event=None):
@@ -1756,7 +1757,7 @@ class Normal_Entry(tk.Entry):
         self.rc_popup_menu.tk_popup(event.x_root, event.y_root)
 
     def select_all(self, event: object = None) -> Literal["break"]:
-        self.select_range(0, 'end')
+        self.select_range(0, "end")
         return "break"
 
     def cut(self, event=None):
@@ -1926,7 +1927,7 @@ class Numerical_Normal_Entry(tk.Entry):
         self.rc_popup_menu.tk_popup(event.x_root, event.y_root)
 
     def select_all(self, event: object = None) -> Literal["break"]:
-        self.select_range(0, 'end')
+        self.select_range(0, "end")
         return "break"
 
     def cut(self, event=None):

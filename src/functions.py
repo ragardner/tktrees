@@ -257,21 +257,17 @@ def get_json_format(j):
     for key in ("records", "sheet", "data", "table"):
         if key in records:
             try:
-                return next(
-                    (i, key)
-                    for i, func in enumerate(
-                        (
-                            is_json_one,
-                            is_json_two,
-                            is_json_three,
-                            is_json_four,
-                        ),
-                        1,
-                    )
-                    if func(j[key])
-                )
+                if is_json_one(j[key]):
+                    return 1, key
+                elif is_json_two(j[key]):
+                    return 2, key
+                elif is_json_three(j[key]):
+                    return 3, key
+                elif is_json_four(j[key]):
+                    return 4, key
             except Exception:
-                return None
+                continue
+    return None
 
 
 def json_to_sheet(
@@ -295,7 +291,7 @@ def json_to_sheet(
             return new_sheet, 0
     elif format_ == 1:
         new_sheet = [list(j[key])]
-        keys = [hdr for hdr in new_sheet[0]]
+        keys = new_sheet[0]
         rowlen, numrows = len(keys), max(map(len, j[key].values()), default=0)
         for hdr in keys:
             if len(j[key][hdr]) < numrows:
@@ -324,7 +320,7 @@ def json_to_sheet(
         rowlen = len(headers)
         if rowlen >= 2:
             new_sheet = [list(headers)]
-            for rn, dct in enumerate(j[key], 1):
+            for dct in j[key]:
                 row = []
                 for k, v in dct.items():
                     if isinstance(v, str):
@@ -360,8 +356,7 @@ def json_to_sheet(
         rowlen = equalize_sublist_lens(new_sheet)
     if return_rowlen:
         return new_sheet, rowlen
-    else:
-        return new_sheet
+    return new_sheet
 
 
 def json_get_header_strings(obj):
@@ -422,8 +417,8 @@ def to_json(
         )
     with open(filepath, "w") as fh:
         fh.write(json.dumps(d, indent=4))
-        
-        
+
+
 def path_without_numbers(full_path):
     if full_path.lower().endswith((".csv", ".xls", ".tsv")):
         ext = full_path[-4:]
@@ -442,6 +437,7 @@ def path_without_numbers(full_path):
     else:
         return path[:-last_index] + ext
 
+
 def path_numbers(full_path):
     if full_path.lower().endswith((".csv", ".xls", ".tsv")):
         path = full_path[:-4]
@@ -457,6 +453,7 @@ def path_numbers(full_path):
         return int("".join(numbers[::-1]))
     else:
         return 0
+
 
 def increment_file_version(full_path):
     if full_path.lower().endswith((".csv", ".xls", ".tsv")):
@@ -481,6 +478,7 @@ def increment_file_version(full_path):
     else:
         newfile = path + "1" + ext
     return newfile
+
 
 def convert_old_xl_to_xlsx(path_):
     if not path_.lower().endswith(".xlsx"):

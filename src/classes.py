@@ -698,7 +698,6 @@ def tk_trees_api(
                 data=data,
             )
         elif output_filepath.endswith(".xlsx"):
-            
             if output_sheet is None:
                 if isinstance(input_sheet, str):
                     output_sheet = input_sheet

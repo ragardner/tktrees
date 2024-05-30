@@ -557,15 +557,15 @@ class AppGUI(tk.Tk):
                 return
             if "program_data" in j:
                 try:
-                    j = b32_x_dict(j["program_data"])
-                    self.frames["tree_edit"].sheet.MT.data = j["records"]
+                    program_data = b32_x_dict(j["program_data"])
+                    self.frames["tree_edit"].sheet.MT.data = program_data["records"]
                     self.open_dict["sheet"] = "Sheet1"
                 except Exception as error_msg:
                     Error(self, f"Error: {error_msg}", theme=self.theme)
                     self.create_new_at_start()
                     return
                 try:
-                    self.frames["tree_edit"].populate(program_data=j)
+                    self.frames["tree_edit"].populate(program_data=program_data)
                     self.frames["tree_edit"].show_warnings(self.open_dict["filepath"], self.open_dict["sheet"])
                 except Exception as error_msg:
                     Error(self, f"Error opening program data: {error_msg}", theme=self.theme)

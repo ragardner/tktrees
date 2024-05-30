@@ -2697,7 +2697,7 @@ class View_Id_Popup(tk.Toplevel):
     def __init__(self, C, ids_row, width=800, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - {C.sheet.MT.data[ids_row['rn']][C.ic]}")
-        
+
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.grid_columnconfigure(0, weight=1)
@@ -3024,6 +3024,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             text="Add any new detail columns ",
             style="x_button.Std.TButton",
             compound="right",
+            checked=True,
         )
         self.add_new_dcols_button.grid(row=1, column=0, padx=10, pady=5, sticky="we")
         self.add_new_pcols_button = X_Checkbutton(
@@ -3031,6 +3032,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             text="Add any new parent columns ",
             style="x_button.Std.TButton",
             compound="right",
+            checked=True,
         )
         self.add_new_pcols_button.grid(row=2, column=0, padx=10, pady=5, sticky="we")
         self.overwrite_details_button = X_Checkbutton(
@@ -3038,6 +3040,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             text="Overwrite details for same IDs ",
             style="x_button.Std.TButton",
             compound="right",
+            checked=True,
         )
         self.overwrite_details_button.grid(row=3, column=0, padx=10, pady=5, sticky="we")
         self.overwrite_parents_button = X_Checkbutton(
@@ -3045,6 +3048,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             text="Overwrite parents for same IDs ",
             style="x_button.Std.TButton",
             compound="right",
+            checked=True,
         )
         self.overwrite_parents_button.grid(row=4, column=0, padx=10, pady=5, sticky="we")
 
@@ -5016,7 +5020,7 @@ class Help_Popup(tk.Toplevel):
         self.find_down_button.pack(side="left", fill="x")
         self.buttonframe = Frame(self, theme=theme)
         self.buttonframe.grid(row=1, column=0, rowspan=2, padx=10, pady=10, sticky="nswe")
-        
+
         self.open_in_browser = Button(
             self.buttonframe,
             text="Open in Browser",
@@ -5124,7 +5128,7 @@ class Help_Popup(tk.Toplevel):
         center(self, 975, 650)
         self.deiconify()
         self.wait_window()
-        
+
     def open_docs_in_browser(self):
         try:
             url = f"file://{upone_dir + "DOCUMENTATION.html"}"
