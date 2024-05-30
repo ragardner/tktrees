@@ -1659,7 +1659,6 @@ class Tree_Editor(tk.Frame):
             self.sheet.row_index_align(program_data.sheet_index_align, redraw=False)
             self.sheet.header_align(program_data.sheet_header_align, redraw=False)
             self.tree.align(program_data.tree_table_align, redraw=False)
-            self.tree.row_index_align(program_data.tree_index_align, redraw=False)
             self.tree.header_align(program_data.tree_header_align, redraw=False)
             self.tagged_ids = set(program_data.tagged_ids)
             self.nodes_order = {k: {int(h): cn for h, cn in v.items()} for k, v in program_data.nodes_order.items()}
@@ -11917,7 +11916,6 @@ class Tree_Editor(tk.Frame):
         d["sheet_index_align"] = self.sheet.index_align()
         d["tree_table_align"] = self.tree.table_align()
         d["tree_header_align"] = self.tree.header_align()
-        d["tree_index_align"] = self.tree.index_align()
         d["saved_info"] = self.save_info_get_saved_info()
         d["tv_label_col"] = self.tv_label_col
         d["nodes_order"] = {ik: {h: [c.k for c in cnl] for h, cnl in n.cn.items()} for ik, n in self.nodes.items()}

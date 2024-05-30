@@ -2722,6 +2722,14 @@ class View_Id_Popup(tk.Toplevel):
             ]
         )
         self.redo_display()
+        for c, hdr in enumerate(self.C.headers):
+            if hdr.validation:
+                self.sheetdisplay.dropdown(
+                    (c, 0),
+                    values=hdr.validation,
+                    edit_data=False,
+                    redraw=False,
+                )
         self.sheetdisplay.set_width_of_index_to_text()
         self.sheetdisplay.set_xview(0.0)
         self.sheetdisplay.set_yview(0.0)
@@ -2749,14 +2757,6 @@ class View_Id_Popup(tk.Toplevel):
         for tup1, tup2 in self.C.sheet.get_highlighted_cells().items():
             if tup1[0] == self.ids_rn:
                 self.sheetdisplay.highlight_cells(row=tup1[1], column=0, bg=tup2[0], fg=tup2[1])
-        for c, hdr in enumerate(self.C.headers):
-            if hdr.validation:
-                self.sheetdisplay.dropdown(
-                    (c, 0),
-                    values=hdr.validation,
-                    edit_data=False,
-                    redraw=False,
-                )
         self.sheetdisplay.set_all_cell_sizes_to_text()
         self.sheetdisplay.refresh()
         self.sheetdisplay.recreate_all_selection_boxes()
@@ -4722,7 +4722,6 @@ class Sheet_Settings_Chooser(tk.Toplevel):
             align = "center"
         elif x == "Right":
             align = "e"
-        self.C.tree.row_index_align(align, redraw=False)
         self.C.sheet.row_index_align(align, redraw=False)
 
         x = self.dd_4.displayed.get()
