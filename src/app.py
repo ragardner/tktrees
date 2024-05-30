@@ -166,10 +166,6 @@ class AppGUI(tk.Tk):
         self.status_bar = Status_Bar(self.status_frame, text="")
         self.status_bar.grid(row=0, column=0, sticky="ew", padx=(20, 10), pady=0)
 
-        self.sheet_status_bar = Status_Bar(self.status_frame, text="")
-        self.sheet_status_bar.config(anchor="e")
-        self.sheet_status_bar.grid(row=0, column=1, sticky="ew", padx=(10, 20), pady=0)
-
         self.file.entryconfig("Compare sheets", command=self.compare_at_start)
         self.file.entryconfig("Open", command=self.open_file_at_start)
         self.file.entryconfig("New", command=self.create_new_at_start)

@@ -2722,15 +2722,6 @@ class View_Id_Popup(tk.Toplevel):
             ]
         )
         self.redo_display()
-        for c, hdr in enumerate(self.C.headers):
-            if hdr.validation:
-                self.sheetdisplay.create_dropdown(
-                    r=c,
-                    c=0,
-                    values=hdr.validation,
-                    set_value=self.C.sheet.MT.data[self.ids_rn][c],
-                    redraw=False,
-                )
         self.sheetdisplay.set_width_of_index_to_text()
         self.sheetdisplay.set_xview(0.0)
         self.sheetdisplay.set_yview(0.0)
@@ -2758,6 +2749,14 @@ class View_Id_Popup(tk.Toplevel):
         for tup1, tup2 in self.C.sheet.get_highlighted_cells().items():
             if tup1[0] == self.ids_rn:
                 self.sheetdisplay.highlight_cells(row=tup1[1], column=0, bg=tup2[0], fg=tup2[1])
+        for c, hdr in enumerate(self.C.headers):
+            if hdr.validation:
+                self.sheetdisplay.dropdown(
+                    (c, 0),
+                    values=hdr.validation,
+                    edit_data=False,
+                    redraw=False,
+                )
         self.sheetdisplay.set_all_cell_sizes_to_text()
         self.sheetdisplay.refresh()
         self.sheetdisplay.recreate_all_selection_boxes()
@@ -2892,8 +2891,6 @@ class View_Id_Popup(tk.Toplevel):
             self.C.snapshot_ctrl_x_v_del_key()
             self.C.vs[-1]["cells"][(y1, x1)] = f"{self.C.sheet.MT.data[y1][x1]}"
             self.C.sheet.MT.data[y1][x1] = f"{newtext}"
-            self.C.sheet.RI.set_row_height(y1)
-            self.C.sheet.CH.set_col_width(0, only_set_if_too_small=True)
             self.C.refresh_all_formatting(rows=[y1])
             self.C.refresh_tree_item(ID)
             self.C.disable_paste()
