@@ -434,7 +434,7 @@ class Id_Parent_Column_Selector(tk.Frame):
                 self.detect_id_col()
                 if not isinstance(self.id_col, int):
                     return
-            ids = {r[self.id_col].lower().rstrip() for r in self.sheet.data}
+            ids = {r[self.id_col].lower().rstrip() for r in self.sheet.data if len(r) > self.id_col}
             ids.add("")
             for c in range(self.sheet.total_columns()):
                 if (
@@ -1659,7 +1659,15 @@ class Scrollbar(ttk.Scrollbar):
 
 
 class Readonly_Entry(tk.Entry):
-    def __init__(self, parent, font, width_=None, theme="dark", use_status_fg=False):
+    def __init__(
+        self,
+        parent,
+        font,
+        width_=None,
+        theme="dark",
+        use_status_fg=False,
+        outline=1,
+    ):
         tk.Entry.__init__(
             self,
             parent,
@@ -1671,6 +1679,8 @@ class Readonly_Entry(tk.Entry):
             disabledforeground=themes[theme].table_selected_box_cells_fg if use_status_fg else themes[theme].table_fg,
             insertbackground=themes[theme].table_fg,
             readonlybackground=themes[theme].table_bg,
+            highlightthickness=outline,
+            relief="flat",
         )
         if width_:
             self.config(width=width_)

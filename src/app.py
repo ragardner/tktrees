@@ -61,6 +61,7 @@ from .tree_editor import Tree_Editor
 from .widgets import (
     Column_Selection,
     Frame,
+    Readonly_Entry,
     Status_Bar,
     Workbook_Sheet_Selection,
 )
@@ -159,12 +160,19 @@ class AppGUI(tk.Tk):
         self.status_frame = Frame(self)
         self.status_frame.grid_rowconfigure(0, weight=1)
         self.status_frame.grid_columnconfigure(0, weight=1)
-        self.status_frame.grid_rowconfigure(1, weight=1)
         self.status_frame.grid_columnconfigure(1, weight=1)
         self.status_frame.grid(row=1, column=0, sticky="ew")
 
         self.status_bar = Status_Bar(self.status_frame, text="")
-        self.status_bar.grid(row=0, column=0, sticky="ew", padx=(20, 10), pady=0)
+        self.status_bar.grid(row=0, column=0, sticky="nsw", padx=(0, 5), pady=0)
+        self.selection_info = Readonly_Entry(
+            self.status_frame,
+            font=BF,
+            theme="light_green",
+            use_status_fg=True,
+            outline=0,
+        )
+        self.selection_info.grid(row=0, column=1, sticky="nse", padx=(5, 5), pady=0)
 
         self.file.entryconfig("Compare sheets", command=self.compare_at_start)
         self.file.entryconfig("Open", command=self.open_file_at_start)

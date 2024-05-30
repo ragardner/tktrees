@@ -1819,6 +1819,7 @@ class Tree_Editor(tk.Frame):
         #     insertbackground=themes["light_green"].table_fg,
         #     readonlybackground=themes["light_green"].table_bg,
         # )
+        self.C.selection_info.change_theme(theme)
 
         self.btns_tree.config(bg=themes[theme].table_bg)
         self.btns_sheet.config(bg=themes[theme].table_bg)
@@ -3745,9 +3746,46 @@ class Tree_Editor(tk.Frame):
             self.i = ""
             self.p = ""
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        self.C.selection_info.set_my_value(self.get_tree_selection_info())
 
     def sheet_select_event(self, event=None):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        self.C.selection_info.set_my_value(self.get_sheet_selection_info())
+        
+    def get_tree_selection_info(self):
+        count = 0
+        _sum = 0.0
+        quick_data = self.tree.MT.data
+        quick_displayed_rows = self.tree.MT.displayed_rows
+        for r, c in self.tree.gen_selected_cells(get_rows=True, get_columns=True):
+            count += 1
+            try:
+                _sum += float(quick_data[quick_displayed_rows[r]][c])
+            except Exception:
+                continue
+        if _sum.is_integer():
+            s = f"Count {count} Sum {int(_sum)}"
+        else:
+            s = f"Count {count} Sum {_sum}"
+        self.C.selection_info.config(width=len(s))
+        return s
+        
+    def get_sheet_selection_info(self):
+        count = 0
+        _sum = 0.0
+        quick_data = self.sheet.MT.data
+        for r, c in self.sheet.gen_selected_cells(get_rows=True, get_columns=True):
+            count += 1
+            try:
+                _sum += float(quick_data[r][c])
+            except Exception:
+                continue
+        if _sum.is_integer():
+            s = f"Count {count} Sum {int(_sum)}"
+        else:
+            s = f"Count {count} Sum {_sum}"
+        self.C.selection_info.config(width=len(s))
+        return s
 
     def get_tree_editor_status_bar_text(self):
         if self.tree.selected:
@@ -3796,9 +3834,9 @@ class Tree_Editor(tk.Frame):
         else:
             cc_add = ""
         if self.changelog:
-            end = f"|   Last edit: {self.changelog[-1][2]}{cc_add}"
+            end = f"|   Last Edit: {self.changelog[-1][2]}{cc_add}"
         else:
-            end = f"|   No changes made{cc_add}"
+            end = f"|   No Changes Made{cc_add}"
         return f"{len(self.sheet.MT.data)} IDs   {tree_addition}{sheet_addition}{end}"
 
     def tree_rc_press(self, event):
