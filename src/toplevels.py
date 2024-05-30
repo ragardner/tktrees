@@ -416,9 +416,9 @@ class Post_Import_Changes_Popup(tk.Toplevel):
                 for c in range(6):
                     self.sheetdisplay.highlight_cells(row=i, column=c, bg="#40bd59", fg="black")
             else:
-                self.sheetdisplay.highlight_cells(row=i, canvas="row_index", bg="#c45b49", fg="black")
+                self.sheetdisplay.highlight_cells(row=i, canvas="row_index", bg="#db7463", fg="black")
                 for c in range(6):
-                    self.sheetdisplay.highlight_cells(row=i, column=c, bg="#c45b49", fg="black")
+                    self.sheetdisplay.highlight_cells(row=i, column=c, bg="#db7463", fg="black")
         self.sheetdisplay.grid(row=0, column=0, sticky="nswe")
         self.status_bar = Status_Bar(self, text=self.total_changes, theme=theme)
         self.status_bar.grid(row=1, column=0, sticky="nswe")
@@ -488,7 +488,7 @@ class Changelog_Popup(tk.Toplevel):
             "row_select",
             "arrowkeys",
         )
-        self.red_bg = "#c45b49"
+        self.red_bg = "#db7463"
         self.green_bg = "#40bd59"
         self.red_fg = "black"
         self.green_fg = "black"
