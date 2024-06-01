@@ -1284,7 +1284,7 @@ class MainTable(tk.Canvas):
                 len(self.row_positions) - 1,
                 max(data_new_idxs.values(), default=0),
             )
-            self.fix_data_len(totalrows)
+            self.fix_data_len(totalrows - 1)
         if event_data is None:
             event_data = event_dict(
                 name="move_rows",

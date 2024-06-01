@@ -162,8 +162,6 @@ class Tree_Editor(tk.Frame):
         self.pc = 0
         self.hiers = []
         self.warnings = []
-        self.drag_start_index = None
-        self.drag_end_index = None
         self.last_rced = None
         self.row_cut_updated = False
         self.mirror_sels_disabler = False
@@ -3763,10 +3761,7 @@ class Tree_Editor(tk.Frame):
                 _sum += float(quick_data[quick_displayed_rows[r]][c])
             except Exception:
                 continue
-        if _sum.is_integer():
-            s = f"Count {count} Sum {int(_sum)}"
-        else:
-            s = f"Count {count} Sum {_sum}"
+        s = f"Count {count} Sum {int(_sum) if _sum.is_integer() else _sum}"
         self.C.selection_info.config(width=len(s))
         return s
         
@@ -3780,10 +3775,7 @@ class Tree_Editor(tk.Frame):
                 _sum += float(quick_data[r][c])
             except Exception:
                 continue
-        if _sum.is_integer():
-            s = f"Count {count} Sum {int(_sum)}"
-        else:
-            s = f"Count {count} Sum {_sum}"
+        s = f"Count {count} Sum {int(_sum) if _sum.is_integer() else _sum}"
         self.C.selection_info.config(width=len(s))
         return s
 
@@ -3834,9 +3826,9 @@ class Tree_Editor(tk.Frame):
         else:
             cc_add = ""
         if self.changelog:
-            end = f"|   Last Edit: {self.changelog[-1][2]}{cc_add}"
+            end = f"|   Last Edit: {self.changelog[-1][2]}   {cc_add}"
         else:
-            end = f"|   No Changes Made{cc_add}"
+            end = f"|   No Changes Made   {cc_add}"
         return f"{len(self.sheet.MT.data)} IDs   {tree_addition}{sheet_addition}{end}"
 
     def tree_rc_press(self, event):
@@ -3865,7 +3857,6 @@ class Tree_Editor(tk.Frame):
                 self.drag_pc = int(self.pc)
                 self.drag_iid = iid
                 self.drag_pariid = self.tree.parent(iid)
-                self.drag_start_index = self.tree.index(iid)
                 self.last_rced = iid
         else:
             self.tree.deselect()
@@ -3883,7 +3874,7 @@ class Tree_Editor(tk.Frame):
         if not selections or selections[0] != self.drag_iid:
             self.tree_drop_iid()
             return
-        if self.pc != self.drag_pc or len(selections) > 1 or self.drag_start_index is None:
+        if self.pc != self.drag_pc or len(selections) > 1:
             self.reset_tree_drag_vars()
             return
         if iid:
@@ -3894,14 +3885,16 @@ class Tree_Editor(tk.Frame):
             move_to_index = self.tree.index(iid)
             parik = self.drag_pariid.lower()
             if parik:
+                pop_index = self.nodes[parik].cn[self.pc].index(self.nodes[self.drag_iid])
                 self.nodes[parik].cn[self.pc].insert(
                     move_to_index,
-                    self.nodes[parik].cn[self.pc].pop(self.drag_start_index),
+                    self.nodes[parik].cn[self.pc].pop(pop_index),
                 )
             else:
+                pop_index = self.topnodes_order[self.pc].index(self.drag_iid)
                 self.topnodes_order[self.pc].insert(
                     move_to_index,
-                    self.topnodes_order[self.pc].pop(self.drag_start_index),
+                    self.topnodes_order[self.pc].pop(pop_index),
                 )
             self.tree.move(self.drag_iid, self.drag_pariid, move_to_index)
             self.tree.selection_set(self.drag_iid)
@@ -3917,9 +3910,7 @@ class Tree_Editor(tk.Frame):
             self.tree_sheet_rc_menu_single_col.entryconfig("Validation", state="normal")
 
     def tree_rc_release(self, event):
-        if self.drag_iid is not None:
-            self.drag_end_index = self.tree.index(self.drag_iid)
-        if self.auto_sort_nodes_bool.get() or self.drag_iid is None or self.drag_end_index == self.drag_start_index:
+        if self.auto_sort_nodes_bool.get() or self.drag_iid is None:
             row = self.tree.identify_row(event, allow_end=False)
             col = self.tree.identify_column(event, allow_end=False)
             self.tree_sheet_rc_menu_option_enabler_disabler(col)
@@ -3961,8 +3952,6 @@ class Tree_Editor(tk.Frame):
         self.drag_pc = None
         self.drag_iid = None
         self.drag_pariid = None
-        self.drag_start_index = None
-        self.drag_end_index = None
 
     def tree_drop_iid(self):
         self.reset_tree_drag_vars()
@@ -7127,7 +7116,7 @@ class Tree_Editor(tk.Frame):
         new_locs = ",".join(f"{r}" for r in event_data["moved"]["rows"]["data"].values())
         self.changelog_append(
             "Move rows",
-            f"{len(event_data["moved"]["rows"]["data"])} rows",
+            f"{len(event_data['moved']['rows']['data'])} rows",
             f"Old locations: {old_locs}",
             f"New locations: {new_locs}",
         )
@@ -7144,14 +7133,56 @@ class Tree_Editor(tk.Frame):
     def tree_drag_drop_ids(self, event=None):
         if not event.moved.rows.data:
             return
-        move_under = self.tree.parent(self.tree.rowitem(event.value))
-        iids = [self.tree.rowitem(r, data_index=True) for r in event.moved.rows.data]
-        self.cut_ids(iids)
-        if move_under:
-            self.i = move_under
-            self.paste_cut_child_all()
-        else:
-            self.paste_cut_empty_all()
+        as_sibling = []
+        index_only = []
+        move_to_iid = self.tree.rowitem(event.value)
+        new_parent = self.tree.parent(move_to_iid)
+        for r in event.moved.rows.data:
+            iid = self.tree.rowitem(r, data_index=True)
+            iid_parent = self.tree.parent(iid)
+            if iid_parent == new_parent:
+                index_only.append(iid)
+            else:
+                as_sibling.append(iid)
+        all_iids = index_only + as_sibling
+        if index_only:
+            self.auto_sort_nodes_bool.set(False)
+            move_to_index = self.tree.index(move_to_iid)
+            if parik := self.tree.parent(index_only[0]):
+                self.nodes[parik].cn[self.pc].insert(
+                    move_to_index,
+                    self.nodes[parik].cn[self.pc].pop(self.tree.index(index_only[0])),
+                )
+            else:
+                self.topnodes_order[self.pc].insert(
+                    move_to_index,
+                    self.topnodes_order[self.pc].pop(self.tree.index(index_only[0])),
+                )
+            self.tree.move(index_only[0], parik, move_to_index)
+            if len(index_only) > 1:
+                last_iid = index_only[0]
+                for iid in islice(index_only, 1, None):
+                    current_index = self.tree.index(iid)
+                    new_index = self.tree.index(last_iid) + 1
+                    if parik := self.tree.parent(iid):
+                        self.nodes[parik].cn[self.pc].insert(
+                            new_index,
+                            self.nodes[parik].cn[self.pc].pop(current_index),
+                        )
+                    else:
+                        self.topnodes_order[self.pc].insert(
+                            new_index,
+                            self.topnodes_order[self.pc].pop(current_index),
+                        )
+                    self.tree.move(iid, parik, new_index)
+                    last_iid = iid
+        if as_sibling:
+            self.cut_ids(as_sibling)
+            self.i = move_to_iid
+            self.p = self.tree.parent(move_to_iid)
+            self.paste_cut_sibling_all()
+        self.redo_tree_display()
+        self.tree.selection_set(all_iids)
 
     def snapshot_begin_drag_cols(self, event=None):
         self.snapshot_chore()
@@ -7181,7 +7212,7 @@ class Tree_Editor(tk.Frame):
         new_locs = ",".join(f"{c}" for c in event_data["moved"]["columns"]["data"].values())
         self.changelog_append(
             "Move columns",
-            f"{len(event_data["moved"]["columns"]["data"])} columns",
+            f"{len(event_data['moved']['columns']['data'])} columns",
             f"Old locations: {old_locs}",
             f"New locations: {new_locs}",
         )

@@ -2440,23 +2440,29 @@ class Sheet(tk.Frame):
             include_header=include_header,
         )
 
-    def full_move_rows_idxs(self, data_idxs: dict[int, int]) -> dict[int, int]:
+    def full_move_rows_idxs(self, data_idxs: dict[int, int], max_idx: int | None = None) -> dict[int, int]:
         """
         Converts the dict provided by moving rows event data
         Under the keys ['moved']['rows']['data']
         Into a dict of {old index: new index} for every row
         Includes row numbers in cell options, spans, etc.
         """
-        return self.MT.get_full_new_idxs(self.MT.get_max_row_idx(), data_idxs)
+        return self.MT.get_full_new_idxs(
+            self.MT.get_max_row_idx() if max_idx is None else max_idx,
+            data_idxs,
+        )
 
-    def full_move_columns_idxs(self, data_idxs: dict[int, int]) -> dict[int, int]:
+    def full_move_columns_idxs(self, data_idxs: dict[int, int], max_idx: int | None = None) -> dict[int, int]:
         """
         Converts the dict provided by moving columns event data
         Under the keys ['moved']['columns']['data']
         Into a dict of {old index: new index} for every column
         Includes column numbers in cell options, spans, etc.
         """
-        return self.MT.get_full_new_idxs(self.MT.get_max_column_idx(), data_idxs)
+        return self.MT.get_full_new_idxs(
+            self.MT.get_max_column_idx() if max_idx is None else max_idx,
+            data_idxs,
+        )
 
     # Highlighting Cells
 
@@ -3052,7 +3058,7 @@ class Sheet(tk.Frame):
                 key=lambda t: t[1],
             )
         return self.MT.get_selected_cells(get_rows=get_rows, get_cols=get_columns)
-    
+
     def gen_selected_cells(
         self,
         get_rows: bool = False,
@@ -4998,13 +5004,11 @@ class Sheet(tk.Frame):
             self.move(iid, parent)
         return self
 
-    def find_rn_at_top_index(self, index: int) -> int:
-        wo_par = 0
-        for rn, n in enumerate(self.MT._row_index):
-            if not n.parent:
-                if wo_par == index:
-                    return rn
-                wo_par += 1
+    def top_index_row(self, index: int) -> int:
+        try:
+            return next(self.RI.tree_rns[n.iid] for i, n in enumerate(self.RI.gen_top_nodes()) if i == index)
+        except Exception:
+            return None
 
     def move(self, item: str, parent: str, index: int | None = None) -> Sheet:
         """
@@ -5046,11 +5050,19 @@ class Sheet(tk.Frame):
                 if to_show and self.RI.ancestors_all_open(did, item_node.parent):
                     to_show.append(r_ctr)
                 r_ctr += 1
-            self.RI.remove_node_from_parents_children(item_node)
-            item_node.parent = parent_node
-            parent_node.children.append(item_node)
+            if parent == item_node.parent.iid:
+                pop_index = parent_node.children.index(item_node)
+                parent_node.children.insert(index, parent_node.children.pop(pop_index))
+            else:
+                self.RI.remove_node_from_parents_children(item_node)
+                item_node.parent = parent_node
+                parent_node.children.append(item_node)
         else:
-            new_r = self.find_rn_at_top_index((sum(1 for _ in self.get_children("")) - 1) if index is None else index)
+            if index is None:
+                new_r = self.top_index_row((sum(1 for _ in self.RI.gen_top_nodes()) - 1))
+            else:
+                if (new_r := self.top_index_row(index)) is None:
+                    new_r = self.top_index_row((sum(1 for _ in self.RI.gen_top_nodes()) - 1))
             item_r = self.RI.tree_rns[item]
             if item_r < new_r:
                 par_desc = sum(1 for _ in self.RI.get_iid_descendants(self.rowitem(new_r, data_index=True)))
@@ -5093,7 +5105,7 @@ class Sheet(tk.Frame):
         if (item := item.lower()) not in self.RI.tree:
             raise ValueError(f"Item '{item}' does not exist.")
         if not self.RI.tree[item].parent:
-            return sorted(self.RI.tree_rns[iid] for iid in self.get_children("")).index(self.RI.tree_rns[item])
+            return next(index for index, node in enumerate(self.RI.gen_top_nodes()) if node == self.RI.tree[item])
         return self.RI.tree[item].parent.children.index(self.RI.tree[item])
 
     def item_displayed(self, item: str) -> bool:

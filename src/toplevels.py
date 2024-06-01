@@ -5127,7 +5127,7 @@ class Help_Popup(tk.Toplevel):
 
     def open_docs_in_browser(self):
         try:
-            url = f"file://{upone_dir + "DOCUMENTATION.html"}"
+            url = f"file://{upone_dir + 'DOCUMENTATION.html'}"
             webbrowser.open(url)
         except Exception:
             pass
