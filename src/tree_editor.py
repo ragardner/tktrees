@@ -162,7 +162,7 @@ class Tree_Editor(tk.Frame):
         self.pc = 0
         self.hiers = []
         self.warnings = []
-        self.last_rced = None
+        self.reset_tree_drag_vars()
         self.row_cut_updated = False
         self.mirror_sels_disabler = False
         self.tagged_ids = set()
@@ -3749,7 +3749,7 @@ class Tree_Editor(tk.Frame):
     def sheet_select_event(self, event=None):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.C.selection_info.set_my_value(self.get_sheet_selection_info())
-        
+
     def get_tree_selection_info(self):
         count = 0
         _sum = 0.0
@@ -3764,7 +3764,7 @@ class Tree_Editor(tk.Frame):
         s = f"Count {count} Sum {int(_sum) if _sum.is_integer() else _sum}"
         self.C.selection_info.config(width=len(s))
         return s
-        
+
     def get_sheet_selection_info(self):
         count = 0
         _sum = 0.0
@@ -3858,6 +3858,7 @@ class Tree_Editor(tk.Frame):
                 self.drag_iid = iid
                 self.drag_pariid = self.tree.parent(iid)
                 self.last_rced = iid
+                self.drag_start_index = self.tree.index(iid)
         else:
             self.tree.deselect()
 
@@ -3910,7 +3911,9 @@ class Tree_Editor(tk.Frame):
             self.tree_sheet_rc_menu_single_col.entryconfig("Validation", state="normal")
 
     def tree_rc_release(self, event):
-        if self.auto_sort_nodes_bool.get() or self.drag_iid is None:
+        if self.drag_iid is not None:
+            self.drag_end_index = self.tree.index(self.drag_iid)
+        if self.auto_sort_nodes_bool.get() or self.drag_iid is None or self.drag_end_index == self.drag_start_index:
             row = self.tree.identify_row(event, allow_end=False)
             col = self.tree.identify_column(event, allow_end=False)
             self.tree_sheet_rc_menu_option_enabler_disabler(col)
@@ -3925,6 +3928,28 @@ class Tree_Editor(tk.Frame):
                 else:
                     self.tree_rc_menu_empty.tk_popup(event.x_root, event.y_root)
             elif region == "index":
+                if self.auto_sort_nodes_bool.get():
+                    try:
+                        self.tree_rc_menu_single_row.delete("Sort children")
+                    except Exception:
+                        pass
+                    try:
+                        self.tree_rc_menu_multi_row.delete("Sort children")
+                    except Exception:
+                        pass
+                else:
+                    if not self.tree_rc_menu_single_row.entrycget("end", "label") == "Sort children":
+                        self.tree_rc_menu_single_row.add_command(
+                            label="Sort children",
+                            command=self.tree_sort_children,
+                            **menu_kwargs,
+                        )
+                    if not self.tree_rc_menu_multi_row.entrycget("end", "label") == "Sort children":
+                        self.tree_rc_menu_multi_row.add_command(
+                            label="Sort children",
+                            command=self.tree_sort_children,
+                            **menu_kwargs,
+                        )
                 self.treecolsel = self.ic
                 if isinstance(row, int):
                     if len(self.tree.get_selected_rows()) > 1:
@@ -3948,10 +3973,19 @@ class Tree_Editor(tk.Frame):
                     self.tree_rc_menu_empty.tk_popup(event.x_root, event.y_root)
         self.reset_tree_drag_vars()
 
+    def tree_sort_children(self, event=None):
+        for iid in self.tree.selection():
+            self.nodes[iid].cn[self.pc] = self.sort_node_cn(self.nodes[iid].cn[self.pc], self.pc)
+        self.save_info_get_saved_info()
+        self.redo_tree_display()
+
     def reset_tree_drag_vars(self):
         self.drag_pc = None
         self.drag_iid = None
         self.drag_pariid = None
+        self.drag_start_index = None
+        self.drag_end_index = None
+        self.last_rced = None
 
     def tree_drop_iid(self):
         self.reset_tree_drag_vars()
