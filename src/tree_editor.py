@@ -7181,6 +7181,7 @@ class Tree_Editor(tk.Frame):
         all_iids = index_only + as_sibling
         if index_only:
             self.auto_sort_nodes_bool.set(False)
+            self.remake_topnodes_order()
             move_to_index = self.tree.index(move_to_iid)
             if parik := self.tree.parent(index_only[0]):
                 self.nodes[parik].cn[self.pc].insert(
