@@ -29,6 +29,7 @@ from .constants import (
     app_title,
     changelog_header,
     ctrl_button,
+    lge_font_size,
     menu_kwargs,
     rc_button,
     sheet_header_font,
@@ -378,7 +379,7 @@ class Export_Flattened_Popup(tk.Toplevel):
 
 
 class Post_Import_Changes_Popup(tk.Toplevel):
-    def __init__(self, C, changes, successful, width=1200, height=800, theme="dark"):
+    def __init__(self, C, changes, successful, width=1000, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Successful changes")
         self.total_changes = f"Total changes: {len(changes)}"
@@ -843,7 +844,7 @@ class Changelog_Popup(tk.Toplevel):
 
 
 class Compare_Report_Popup(tk.Toplevel):
-    def __init__(self, C, width=1200, height=800, theme="dark"):
+    def __init__(self, C, width=1000, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Comparison Report")
         self.USER_HAS_QUIT = False
@@ -4924,6 +4925,57 @@ class Text_Popup(tk.Toplevel):
         for tag in self.textbox.tag_names():
             self.textbox.tag_delete(tag)
         self.find_results_label.config(text="0/0")
+
+    def cancel(self, event=None):
+        self.destroy()
+
+
+class First_Start_Popup(tk.Toplevel):
+    def __init__(
+        self,
+        C,
+        text,
+        width_=700,
+        height_=460,
+        theme="dark",
+        use_entry_bg=False,
+        wrap="word",
+    ):
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        self.C = new_toplevel_chores(self, C, f"{app_title}")
+        self.theme = theme
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        self.textbox = Working_Text(
+            self,
+            wrap=wrap,
+            font=("Calibri", lge_font_size, "normal"),
+            theme=theme,
+            use_entry_bg=use_entry_bg,
+            override_bg=None,
+        )
+        self.yscrollb = Scrollbar(self, self.textbox.yview, "vertical", self.textbox)
+        self.xscrollb = Scrollbar(self, self.textbox.xview, "horizontal", self.textbox)
+        self.textbox.delete(1.0, "end")
+        self.textbox.insert(1.0, text)
+        self.textbox.config(state="disabled")
+        self.textbox.grid(row=1, column=0, sticky="nswe")
+        self.yscrollb.grid(row=1, column=1, sticky="nswe")
+        if wrap == "none":
+            self.xscrollb.grid(row=2, column=0, columnspan=2, sticky="nswe")
+        self.buttonframe = Frame(self, theme=theme)
+        self.buttonframe.grid(row=3, column=0, columnspan=2, sticky="nswe")
+        self.cancel_button = Button(
+            self.buttonframe,
+            text="Okay",
+            style="EF.Std.TButton",
+            command=self.cancel,
+        )
+        self.cancel_button.pack(side="right", fill="x", padx=20, pady=20)
+        self.bind("<Escape>", self.cancel)
+        center(self, width_, height_)
+        self.deiconify()
+        self.wait_window()
 
     def cancel(self, event=None):
         self.destroy()

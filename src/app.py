@@ -29,7 +29,6 @@ from .constants import (
     about_system,
     app_title,
     ctrl_button,
-    lge_font_size,
     menu_kwargs,
     std_font_size,
     top_left_icon,
@@ -52,6 +51,7 @@ from .functions import (
 from .toplevels import (
     Ask_Confirm_Quit,
     Error,
+    First_Start_Popup,
     Help_Popup,
     License_Popup,  # noqa: F401
     Text_Popup,
@@ -211,15 +211,27 @@ class AppGUI(tk.Tk):
         else:
             self.create_new_at_start()
 
+        self.bind("<Configure>", self.frames["tree_edit"].WINDOW_DIMENSIONS_CHANGED)
+        self.deiconify()
         if self.configsettings["First GUI start"]:
-            self.status_bar.change_text(
-                "Welcome to Tk-Trees! Right click in the empty space above, go to File or Help to get started. License: GPL-3.0",
-                font=("Calibri", lge_font_size, "normal"),
+            First_Start_Popup(
+                self,
+                text="""
+Welcome to Tk-Trees!
+
+This program is for management of tree/hierarchy data which is in table format.
+
+It is licensed under GPL-3.0.
+
+To get started once you have closed this popup, either:
+- Right click in the empty space in the table.
+- Go to the File menu and select a desired option.
+- Or go to the Help menu for documentation.
+                """,
+                theme=self.theme,
             )
         self.configsettings["First GUI start"] = False
         self.save_cfg()
-        self.bind("<Configure>", self.frames["tree_edit"].WINDOW_DIMENSIONS_CHANGED)
-        self.deiconify()
 
     def USER_HAS_CLOSED_WINDOW(self, callback=None):
         self.USER_HAS_QUIT = True
@@ -290,7 +302,7 @@ class AppGUI(tk.Tk):
             "Theme": self.theme,
             "Window state": "zoomed",
             "Window size": (1020, 760),
-            "Window coords": center(self, desired_height=760, desired_width=1020, get=True),
+            "Window coords": center(self, desired_height=760, desired_width=1000, get=True),
             # left, 50/50, adjustable, right
             "Editor display option": "left",
         }
