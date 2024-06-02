@@ -7183,7 +7183,7 @@ class Tree_Editor(tk.Frame):
         if as_sibling:
             self.i = move_to_iid
             self.p = self.tree.parent(move_to_iid)
-            self.cut_ids(as_sibling)
+            self.cut_ids(as_sibling, status_bar=False)
             self.paste_cut_sibling_all(redo_tree=False)
             self.redo_tree_display(selections=False)
         combined = False
@@ -7216,7 +7216,7 @@ class Tree_Editor(tk.Frame):
             self.tree.move(index_only[0], parik, move_to_index)
             if len(index_only) > 1:
                 last_iid = index_only[0]
-                for iid in islice(index_only, 1, None):
+                for itr, iid in enumerate(islice(index_only, 1, None)):
                     current_index = self.tree.index(iid)
                     new_index = self.tree.index(last_iid)
                     if new_index < current_index:
@@ -7233,6 +7233,9 @@ class Tree_Editor(tk.Frame):
                         )
                     self.tree.move(iid, parik, new_index)
                     last_iid = iid
+                    if not itr % 50:
+                        self.C.status_bar.change_text(f"Moved {itr} IDs")
+                        self.C.update()
         self.redo_tree_display()
         self.redraw_sheets()
         all_iids = index_only + as_sibling
@@ -8592,7 +8595,7 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         return "break"
 
-    def cut_ids(self, iids: list[str] | None = None):
+    def cut_ids(self, iids: list[str] | None = None, status_bar=True):
         if not self.i:
             return
         if self.copied:
@@ -8625,7 +8628,8 @@ class Tree_Editor(tk.Frame):
         self.tree.selection_remove(tr)
         self.enable_cut_paste()
         self.levels = defaultdict(list)
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        if status_bar:
+            self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         return "break"
 
     def add_child_node(self):

@@ -5010,6 +5010,10 @@ class Sheet(tk.Frame):
             return next(self.RI.tree_rns[n.iid] for i, n in enumerate(self.RI.gen_top_nodes()) if i == index)
         except Exception:
             return None
+        
+    def move_items(self, items: Iterator[str], parent: str, index: int | None = None) -> Sheet:
+        
+        return self.set_refresh_timer()
 
     def move(self, item: str, parent: str, index: int | None = None) -> Sheet:
         """
