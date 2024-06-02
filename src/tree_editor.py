@@ -7219,9 +7219,9 @@ class Tree_Editor(tk.Frame):
                     self.tree.move(iid, parik, new_index)
                     last_iid = iid
         if as_sibling:
-            self.cut_ids(as_sibling)
             self.i = move_to_iid
             self.p = self.tree.parent(move_to_iid)
+            self.cut_ids(as_sibling)
             self.paste_cut_sibling_all()
         self.redo_tree_display()
         self.tree.selection_set(index_only + as_sibling)
