@@ -412,8 +412,8 @@ def consecutive_ranges(seq: Sequence[int]) -> Generator[tuple[int, int]]:
             yield seq[start], seq[-1] + 1
 
 
-def is_contiguous(seq: list[int]) -> bool:
-    itr = iter(seq)
+def is_contiguous(iterable: Iterator[int]) -> bool:
+    itr = iter(iterable)
     prev = next(itr)
     return all(i == (prev := prev + 1) for i in itr)
 

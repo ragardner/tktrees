@@ -31,6 +31,7 @@ from tksheet import (
     num2alpha,
 )
 from tksheet import (
+    is_contiguous,
     num2alpha as _n2a,
 )
 
@@ -7183,6 +7184,10 @@ class Tree_Editor(tk.Frame):
                 self.auto_sort_nodes_bool.set(False)
                 self.remake_topnodes_order()
             move_to_index = self.tree.index(move_to_iid)
+            if not is_contiguous(event.moved.rows.displayed) and max(event.moved.rows.data) > self.tree.data_r(
+                event.value
+            ):
+                move_to_index -= 1
             if parik := self.tree.parent(index_only[0]):
                 self.nodes[parik].cn[self.pc].insert(
                     move_to_index,
@@ -7198,7 +7203,9 @@ class Tree_Editor(tk.Frame):
                 last_iid = index_only[0]
                 for iid in islice(index_only, 1, None):
                     current_index = self.tree.index(iid)
-                    new_index = self.tree.index(last_iid) + 1
+                    new_index = self.tree.index(last_iid)
+                    if new_index < current_index:
+                        new_index += 1
                     if parik := self.tree.parent(iid):
                         self.nodes[parik].cn[self.pc].insert(
                             new_index,
