@@ -7179,13 +7179,26 @@ class Tree_Editor(tk.Frame):
                 index_only.append(iid)
             else:
                 as_sibling.append(iid)
+        if as_sibling:
+            self.i = move_to_iid
+            self.p = self.tree.parent(move_to_iid)
+            self.cut_ids(as_sibling)
+            self.paste_cut_sibling_all()
+        combined = False
+        if not self.auto_sort_nodes_bool.get() or index_only:
+            if index_only:
+                combined = True
+            index_only = index_only + as_sibling
         if index_only:
             if self.auto_sort_nodes_bool.get():
                 self.auto_sort_nodes_bool.set(False)
                 self.remake_topnodes_order()
             move_to_index = self.tree.index(move_to_iid)
-            if not is_contiguous(event.moved.rows.displayed) and max(event.moved.rows.data) > self.tree.data_r(
-                event.value
+            if (
+                combined
+                and not is_contiguous(event.moved.rows.displayed)
+                and max(event.moved.rows.data) > self.tree.data_r(event.value)
+                and min(event.moved.rows.data) < self.tree.data_r(event.value)
             ):
                 move_to_index -= 1
             if parik := self.tree.parent(index_only[0]):
@@ -7218,11 +7231,6 @@ class Tree_Editor(tk.Frame):
                         )
                     self.tree.move(iid, parik, new_index)
                     last_iid = iid
-        if as_sibling:
-            self.i = move_to_iid
-            self.p = self.tree.parent(move_to_iid)
-            self.cut_ids(as_sibling)
-            self.paste_cut_sibling_all()
         self.redo_tree_display()
         self.tree.selection_set(index_only + as_sibling)
 
