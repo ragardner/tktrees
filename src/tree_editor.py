@@ -7178,10 +7178,10 @@ class Tree_Editor(tk.Frame):
                 index_only.append(iid)
             else:
                 as_sibling.append(iid)
-        all_iids = index_only + as_sibling
         if index_only:
-            self.auto_sort_nodes_bool.set(False)
-            self.remake_topnodes_order()
+            if self.auto_sort_nodes_bool.get():
+                self.auto_sort_nodes_bool.set(False)
+                self.remake_topnodes_order()
             move_to_index = self.tree.index(move_to_iid)
             if parik := self.tree.parent(index_only[0]):
                 self.nodes[parik].cn[self.pc].insert(
@@ -7217,7 +7217,7 @@ class Tree_Editor(tk.Frame):
             self.p = self.tree.parent(move_to_iid)
             self.paste_cut_sibling_all()
         self.redo_tree_display()
-        self.tree.selection_set(all_iids)
+        self.tree.selection_set(index_only + as_sibling)
 
     def snapshot_begin_drag_cols(self, event=None):
         self.snapshot_chore()
