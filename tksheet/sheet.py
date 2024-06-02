@@ -3011,8 +3011,8 @@ class Sheet(tk.Frame):
                 box=selected[3],
             )
         else:
-            self.MT.deselect()
-        return self
+            self.MT.deselect(redraw=False)
+        return self.set_refresh_timer()
 
     def get_selected_rows(
         self,
@@ -3078,11 +3078,11 @@ class Sheet(tk.Frame):
 
     @boxes.setter
     def boxes(self, boxes: Sequence[tuple[tuple[int, int, int, int], str]]) -> Sheet:
-        self.MT.deselect()
+        self.MT.deselect(redraw=False)
         self.MT.reselect_from_get_boxes(
             boxes={box[0] if isinstance(box[0], tuple) else tuple(box[0]): box[1] for box in boxes}
         )
-        return self
+        return self.set_refresh_timer()
 
     @property
     def canvas_boxes(self) -> dict[int, SelectionBox]:
