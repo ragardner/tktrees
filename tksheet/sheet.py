@@ -4713,6 +4713,7 @@ class Sheet(tk.Frame):
             create_selections=False,
             fill=False,
             push_ops=push_ops,
+            redraw=False,
         )
         self.MT.all_rows_displayed = False
         self.MT.displayed_rows = list(range(len(self.MT._row_index)))

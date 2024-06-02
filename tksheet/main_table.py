@@ -4373,7 +4373,7 @@ class MainTable(tk.Canvas):
                 create_ops=create_ops,
             )
         if create_selections:
-            self.deselect("all")
+            self.deselect("all", redraw=False)
             for boxst, boxend in consecutive_ranges(tuple(reversed(column_widths))):
                 self.create_selection_box(
                     0,
@@ -4517,7 +4517,7 @@ class MainTable(tk.Canvas):
                 create_ops=create_ops,
             )
         if create_selections:
-            self.deselect("all")
+            self.deselect("all", redraw=False)
             for boxst, boxend in consecutive_ranges(tuple(reversed(row_heights))):
                 self.create_selection_box(
                     boxst,

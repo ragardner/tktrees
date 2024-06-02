@@ -7168,6 +7168,7 @@ class Tree_Editor(tk.Frame):
     def tree_drag_drop_ids(self, event=None):
         if not event.moved.rows.data:
             return
+        self.start_work("Moving IDs...")
         as_sibling = []
         index_only = []
         move_to_iid = self.tree.rowitem(event.value)
@@ -7183,7 +7184,8 @@ class Tree_Editor(tk.Frame):
             self.i = move_to_iid
             self.p = self.tree.parent(move_to_iid)
             self.cut_ids(as_sibling)
-            self.paste_cut_sibling_all()
+            self.paste_cut_sibling_all(redo_tree=False)
+            self.redo_tree_display(selections=False)
         combined = False
         if not self.auto_sort_nodes_bool.get() or index_only:
             if index_only:
@@ -7232,7 +7234,11 @@ class Tree_Editor(tk.Frame):
                     self.tree.move(iid, parik, new_index)
                     last_iid = iid
         self.redo_tree_display()
-        self.tree.selection_set(index_only + as_sibling)
+        self.redraw_sheets()
+        all_iids = index_only + as_sibling
+        self.tree.selection_set(all_iids)
+        self.tree.scroll_to_item(all_iids[0])
+        self.stop_work(self.get_tree_editor_status_bar_text())
 
     def snapshot_begin_drag_cols(self, event=None):
         self.snapshot_chore()
@@ -8429,10 +8435,11 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
-    def paste_cut_sibling_all(self):
+    def paste_cut_sibling_all(self, redo_tree=True):
         if not self.cut or not self.i:
             return
-        self.start_work(f"Pasting {len(self.cut)} IDs...")
+        if redo_tree:
+            self.start_work(f"Pasting {len(self.cut)} IDs...")
         successful = []
         self.sort_later_dct = None
         self.snapshot_paste_id()
@@ -8482,13 +8489,14 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Cut and paste ID + children")
-        self.redo_tree_display()
         self.refresh_rows = set()
-        self.redraw_sheets()
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-        self.tree.scroll_to_item(iid)
-        self.disable_paste()
-        self.stop_work(self.get_tree_editor_status_bar_text())
+        if redo_tree:
+            self.redo_tree_display()
+            self.redraw_sheets()
+            self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+            self.tree.scroll_to_item(iid)
+            self.disable_paste()
+            self.stop_work(self.get_tree_editor_status_bar_text())
 
     def paste_cut_empty_all(self):
         if not self.cut:
@@ -8614,7 +8622,7 @@ class Tree_Editor(tk.Frame):
                 )
             else:
                 tr.append(iid)
-        self.tree.selection_remove(tuple(tr))
+        self.tree.selection_remove(tr)
         self.enable_cut_paste()
         self.levels = defaultdict(list)
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
@@ -10322,7 +10330,7 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_displayed.set("")
         self.sheet_search_results = []
 
-    def redo_tree_display(self, undo=False):
+    def redo_tree_display(self, undo=False, selections=True):
         if self.saved_info[self.pc].twidths:
             self.tree.set_column_widths(self.tree_gen_widths_from_saved())
         else:
@@ -10353,12 +10361,13 @@ class Tree_Editor(tk.Frame):
             self.tree.set_row_heights(self.tree_gen_heights_from_saved())
         else:
             self.tree.set_row_heights()
-        try:
-            self.tree.boxes = self.saved_info[self.pc].boxes
-            self.tree.selected = self.saved_info[self.pc].selected
-        except Exception:
-            self.saved_info[self.pc].boxes = tuple()
-            self.saved_info[self.pc].selected = tuple()
+        if selections:
+            try:
+                self.tree.boxes = self.saved_info[self.pc].boxes
+                self.tree.selected = self.saved_info[self.pc].selected
+            except Exception:
+                self.saved_info[self.pc].boxes = tuple()
+                self.saved_info[self.pc].selected = tuple()
         options = self.tree.RI.cell_options
         tree_rns = self.tree.RI.tree_rns
         for ik in filter(self.tree.RI.tree.__contains__, self.tagged_ids):
