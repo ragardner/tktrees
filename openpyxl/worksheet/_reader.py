@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2023 openpyxl
+# Copyright (c) 2010-2024 openpyxl
 
 """Reader for a single worksheet."""
 from copy import copy
@@ -387,7 +387,7 @@ class WorksheetReader(object):
 
     def bind_tables(self):
         for t in self.parser.tables.tablePart:
-            rel = self.ws._rels[t.id]
+            rel = self.ws._rels.get(t.id)
             self.tables.append(rel.Target)
 
 
@@ -408,7 +408,7 @@ class WorksheetReader(object):
     def bind_hyperlinks(self):
         for link in self.parser.hyperlinks.hyperlink:
             if link.id:
-                rel = self.ws._rels[link.id]
+                rel = self.ws._rels.get(link.id)
                 link.target = rel.Target
             if ":" in link.ref:
                 # range of cells

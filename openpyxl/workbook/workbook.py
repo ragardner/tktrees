@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2023 openpyxl
+# Copyright (c) 2010-2024 openpyxl
 
 """Workbook is the top-level container for all document information."""
 from copy import copy
@@ -231,6 +231,7 @@ class Workbook(object):
 
     def remove(self, worksheet):
         """Remove `worksheet` from this workbook."""
+        idx = self._sheets.index(worksheet)
         self._sheets.remove(worksheet)
 
 

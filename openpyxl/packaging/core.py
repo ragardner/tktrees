@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2023 openpyxl
+# Copyright (c) 2010-2024 openpyxl
 
 import datetime
 
@@ -30,6 +30,7 @@ class NestedDateTime(DateTime, NestedText):
             tagname = "{%s}%s" % (namespace, tagname)
         el = Element(tagname)
         if value is not None:
+            value = value.replace(tzinfo=None)
             el.text = value.isoformat(timespec="seconds") + 'Z'
             return el
 
@@ -70,8 +71,8 @@ class DocumentProperties(Serialisable):
     identifier = NestedText(expected_type=str, allow_none=True, namespace=DCORE_NS)
     language = NestedText(expected_type=str, allow_none=True, namespace=DCORE_NS)
     # Dublin Core Terms
-    created = QualifiedDateTime(allow_none=True, namespace=DCTERMS_NS)
-    modified = QualifiedDateTime(allow_none=True, namespace=DCTERMS_NS)
+    created = QualifiedDateTime(allow_none=True, namespace=DCTERMS_NS) # assumed to be UTC
+    modified = QualifiedDateTime(allow_none=True, namespace=DCTERMS_NS) # assumed to be UTC
 
     __elements__ = ("creator", "title", "description", "subject","identifier",
                     "language", "created", "modified", "lastModifiedBy", "category",
@@ -96,7 +97,7 @@ class DocumentProperties(Serialisable):
                  subject=None,
                  title=None,
                  ):
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(tz=datetime.timezone.utc).replace(tzinfo=None)
         self.contentStatus = contentStatus
         self.lastPrinted = lastPrinted
         self.revision = revision

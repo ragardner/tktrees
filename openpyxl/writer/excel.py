@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2023 openpyxl
+# Copyright (c) 2010-2024 openpyxl
 
 
 # Python stdlib imports
@@ -217,7 +217,7 @@ class ExcelWriter(object):
             if ws._drawing:
                 self._write_drawing(ws._drawing)
 
-                for r in ws._rels.Relationship:
+                for r in ws._rels:
                     if "drawing" in r.Type:
                         r.Target = ws._drawing.path
 
@@ -234,7 +234,7 @@ class ExcelWriter(object):
                 t.id = len(self._tables)
                 t._write(self._archive)
                 self.manifest.append(t)
-                ws._rels[t._rel_id].Target = t.path
+                ws._rels.get(t._rel_id).Target = t.path
 
             for p in ws._pivots:
                 if p.cache not in pivot_caches:
@@ -289,7 +289,7 @@ def save_workbook(workbook, filename):
 
     """
     archive = ZipFile(filename, 'w', ZIP_DEFLATED, allowZip64=True)
-    workbook.properties.modified = datetime.datetime.utcnow()
+    workbook.properties.modified = datetime.datetime.now(tz=datetime.timezone.utc).replace(tzinfo=None)
     writer = ExcelWriter(workbook, archive)
     writer.save()
     return True

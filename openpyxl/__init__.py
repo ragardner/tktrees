@@ -1,5 +1,4 @@
-# Copyright (c) 2010-2023 openpyxl
-# ruff: noqa
+# Copyright (c) 2010-2024 openpyxl
 
 DEBUG = False
 

@@ -1,5 +1,5 @@
-# Copyright (c) 2010-2023 openpyxl
-# ruff: noqa: F401
+# Copyright (c) 2010-2024 openpyxl
+
 
 from .alignment import Alignment
 from .borders import Border, Side

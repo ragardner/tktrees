@@ -1,5 +1,5 @@
 
-# Copyright (c) 2010-2023 openpyxl
+# Copyright (c) 2010-2024 openpyxl
 
 from openpyxl.descriptors import (
     Float,
@@ -7,6 +7,7 @@ from openpyxl.descriptors import (
     Alias,
     NoneSet,
     Sequence,
+    Integer,
     MinMax,
 )
 from openpyxl.descriptors.serialisable import Serialisable
@@ -15,6 +16,7 @@ from openpyxl.compat import safe_string
 from .colors import ColorDescriptor, Color
 
 from openpyxl.xml.functions import Element, localname
+from openpyxl.xml.constants import SHEET_MAIN_NS
 
 
 FILL_NONE = 'none'

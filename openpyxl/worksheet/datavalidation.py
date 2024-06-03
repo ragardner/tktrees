@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2023 openpyxl
+# Copyright (c) 2010-2024 openpyxl
 
 from collections import defaultdict
 from itertools import chain
@@ -119,7 +119,7 @@ class DataValidation(Serialisable):
                  errorTitle=None,
                  imeMode=None,
                  operator=None,
-                 allow_blank=False,
+                 allow_blank=None,
                  ):
         self.sqref = sqref
         self.showDropDown = showDropDown
