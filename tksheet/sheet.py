@@ -19,6 +19,7 @@ from .column_headers import ColumnHeaders
 from .functions import (
     add_highlight,
     add_to_options,
+    consecutive_ranges,
     convert_align,
     data_to_displayed_idxs,
     del_from_options,
@@ -5010,9 +5011,85 @@ class Sheet(tk.Frame):
             return next(self.RI.tree_rns[n.iid] for i, n in enumerate(self.RI.gen_top_nodes()) if i == index)
         except Exception:
             return None
-        
-    def move_items(self, items: Iterator[str], parent: str, index: int | None = None) -> Sheet:
-        
+
+    def move_items(self, items: Iterator[str] | str, parent: str, index: int | None = None) -> Sheet:
+        if (parent := parent.lower()) and parent not in self.RI.tree:
+            raise ValueError(f"Parent '{parent}' does not exist.")
+        mapping = {}
+        to_show = []
+        if isinstance(items, str):
+            items = (items,)
+        for item in items:
+            if (item := item.lower()) and item not in self.RI.tree:
+                raise ValueError(f"Item '{item}' does not exist.")
+            item_node = self.RI.tree[item]
+            if parent:
+                if self.RI.pid_causes_recursive_loop(item, parent):
+                    raise ValueError(f"iid '{item}' causes a recursive loop with parent '{parent}'.")
+                parent_node = self.RI.tree[parent]
+                if parent_node.children:
+                    if index is None or index >= len(parent_node.children):
+                        index = len(parent_node.children) - 1
+                    item_r = self.RI.tree_rns[item]
+                    new_r = self.RI.tree_rns[parent_node.children[index].iid]
+                    if item_node not in parent_node.children:
+                        new_r += 1
+                    new_r_desc = sum(1 for _ in self.RI.get_iid_descendants(parent_node.children[index].iid))
+                    item_desc = sum(1 for _ in self.RI.get_iid_descendants(item))
+                    if item_r < new_r:
+                        r_ctr = new_r + new_r_desc - item_desc
+                    else:
+                        r_ctr = new_r
+                else:
+                    r_ctr = self.RI.tree_rns[parent_node.iid] + 1
+                mapping[item_r] = r_ctr
+                if parent in self.RI.tree_open_ids and self.item_displayed(parent):
+                    to_show.append(r_ctr)
+                r_ctr += 1
+                for did in self.RI.get_iid_descendants(item):
+                    mapping[self.RI.tree_rns[did]] = r_ctr
+                    if to_show and self.RI.ancestors_all_open(did, item_node.parent):
+                        to_show.append(r_ctr)
+                    r_ctr += 1
+                if parent == item_node.parent.iid:
+                    pop_index = parent_node.children.index(item_node)
+                    parent_node.children.insert(index, parent_node.children.pop(pop_index))
+                else:
+                    self.RI.remove_node_from_parents_children(item_node)
+                    item_node.parent = parent_node
+                    parent_node.children.append(item_node)
+            else:
+                if index is None:
+                    new_r = self.top_index_row((sum(1 for _ in self.RI.gen_top_nodes()) - 1))
+                else:
+                    if (new_r := self.top_index_row(index)) is None:
+                        new_r = self.top_index_row((sum(1 for _ in self.RI.gen_top_nodes()) - 1))
+                item_r = self.RI.tree_rns[item]
+                if item_r < new_r:
+                    par_desc = sum(1 for _ in self.RI.get_iid_descendants(self.rowitem(new_r, data_index=True)))
+                    item_desc = sum(1 for _ in self.RI.get_iid_descendants(item))
+                    r_ctr = new_r + par_desc - item_desc
+                else:
+                    r_ctr = new_r
+                mapping[item_r] = r_ctr
+                to_show.append(r_ctr)
+                r_ctr += 1
+                for did in self.RI.get_iid_descendants(item):
+                    mapping[self.RI.tree_rns[did]] = r_ctr
+                    if to_show and self.RI.ancestors_all_open(did, item_node.parent):
+                        to_show.append(r_ctr)
+                    r_ctr += 1
+                self.RI.remove_node_from_parents_children(item_node)
+                self.RI.tree[item].parent = ""
+        self.mapping_move_rows(
+            data_new_idxs=mapping,
+            data_indexes=True,
+            create_selections=False,
+            redraw=False,
+        )
+        if parent and (parent not in self.RI.tree_open_ids or not self.item_displayed(parent)):
+            self.hide_rows(set(mapping.values()), data_indexes=True)
+        self.show_rows(to_show)
         return self.set_refresh_timer()
 
     def move(self, item: str, parent: str, index: int | None = None) -> Sheet:
@@ -5153,20 +5230,36 @@ class Sheet(tk.Frame):
             for rn in self.get_selected_rows(get_cells_as_rows=cells)
         ]
 
-    def selection_set(self, *items) -> Sheet:
+    def selection_set(self, *items, redraw: bool = True) -> Sheet:
         if any(item.lower() in self.RI.tree for item in unpack(items)):
-            self.deselect()
-            self.selection_add(*items)
-        return self
+            self.deselect(redraw=False)
+            self.selection_add(*items, redraw=False)
+        return self.set_refresh_timer(redraw)
 
-    def selection_add(self, *items) -> Sheet:
+    def selection_add(self, *items, redraw: bool = True) -> Sheet:
         for item in unpack(items):
-            if (item := item.lower()) not in self.RI.tree:
-                continue
             if not self.item_displayed(item):
                 self.display_item(item)
-            self.add_row_selection(bisect_left(self.MT.displayed_rows, self.RI.tree_rns[item]))
-        return self
+        for startr, endr in consecutive_ranges(
+            sorted(
+                bisect_left(
+                    self.MT.displayed_rows,
+                    self.RI.tree_rns[item.lower()],
+                )
+                for item in unpack(items)
+            )
+        ):
+            self.MT.create_selection_box(
+                startr,
+                0,
+                endr,
+                len(self.MT.col_positions) - 1,
+                "rows",
+                set_current=True,
+                ext=True,
+            )
+        self.MT.run_selection_binding("rows")
+        return self.set_refresh_timer(redraw)
 
     def selection_remove(self, *items) -> Sheet:
         for item in unpack(items):

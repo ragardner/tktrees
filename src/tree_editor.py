@@ -7165,6 +7165,11 @@ class Tree_Editor(tk.Frame):
     def begin_tree_drag_drop_ids(self, event=None):
         self.save_info_get_saved_info()
 
+    def get_ids_parent(self, iid) -> str:
+        if self.nodes[iid.lower()].ps[self.pc]:
+            return self.nodes[iid.lower()].ps[self.pc].k
+        return ""
+
     def tree_drag_drop_ids(self, event=None):
         if not event.moved.rows.data:
             return
@@ -7180,30 +7185,27 @@ class Tree_Editor(tk.Frame):
                 index_only.append(iid)
             else:
                 as_sibling.append(iid)
+        successful = []
         if as_sibling:
             self.i = move_to_iid
-            self.p = self.tree.parent(move_to_iid)
             self.cut_ids(as_sibling, status_bar=False)
-            self.paste_cut_sibling_all(redo_tree=False)
-            self.redo_tree_display(selections=False)
-        combined = False
-        if not self.auto_sort_nodes_bool.get() or index_only:
-            if index_only:
-                combined = True
-            index_only = index_only + as_sibling
+            self.p = new_parent
+            successful = [dct["id"] for dct in self.paste_cut_sibling_all(redo_tree=False)]
+        if successful and (not self.auto_sort_nodes_bool.get() or index_only):
+            index_only += successful
         if index_only:
             if self.auto_sort_nodes_bool.get():
                 self.auto_sort_nodes_bool.set(False)
                 self.remake_topnodes_order()
+            self.redo_tree_display(selections=False)
             move_to_index = self.tree.index(move_to_iid)
             if (
-                combined
-                and not is_contiguous(event.moved.rows.displayed)
+                not is_contiguous(event.moved.rows.displayed)
                 and max(event.moved.rows.data) > self.tree.data_r(event.value)
                 and min(event.moved.rows.data) < self.tree.data_r(event.value)
             ):
                 move_to_index -= 1
-            if parik := self.tree.parent(index_only[0]):
+            if parik := self.get_ids_parent(index_only[0]):
                 self.nodes[parik].cn[self.pc].insert(
                     move_to_index,
                     self.nodes[parik].cn[self.pc].pop(self.tree.index(index_only[0])),
@@ -7213,32 +7215,28 @@ class Tree_Editor(tk.Frame):
                     move_to_index,
                     self.topnodes_order[self.pc].pop(self.tree.index(index_only[0])),
                 )
-            self.tree.move(index_only[0], parik, move_to_index)
             if len(index_only) > 1:
-                last_iid = index_only[0]
-                for itr, iid in enumerate(islice(index_only, 1, None)):
-                    current_index = self.tree.index(iid)
-                    new_index = self.tree.index(last_iid)
-                    if new_index < current_index:
-                        new_index += 1
-                    if parik := self.tree.parent(iid):
+                new_index = move_to_index
+                for iid in islice(index_only, 1, None):
+                    if parik := self.get_ids_parent(iid):
+                        current_index = self.nodes[parik].cn[self.pc].index(self.nodes[iid])
+                        if new_index < current_index:
+                            new_index += 1
                         self.nodes[parik].cn[self.pc].insert(
                             new_index,
                             self.nodes[parik].cn[self.pc].pop(current_index),
                         )
                     else:
+                        current_index = self.topnodes_order[self.pc].index(iid)
+                        if new_index < current_index:
+                            new_index += 1
                         self.topnodes_order[self.pc].insert(
                             new_index,
                             self.topnodes_order[self.pc].pop(current_index),
                         )
-                    self.tree.move(iid, parik, new_index)
-                    last_iid = iid
-                    if not itr % 50:
-                        self.C.status_bar.change_text(f"Moved {itr} IDs")
-                        self.C.update()
-        self.redo_tree_display()
+        self.redo_tree_display(selections=False)
         self.redraw_sheets()
-        all_iids = index_only + as_sibling
+        all_iids = index_only + successful
         self.tree.selection_set(all_iids)
         self.tree.scroll_to_item(all_iids[0])
         self.stop_work(self.get_tree_editor_status_bar_text())
@@ -8438,12 +8436,12 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
-    def paste_cut_sibling_all(self, redo_tree=True):
+    def paste_cut_sibling_all(self, redo_tree=True) -> bool:
+        successful = []
         if not self.cut or not self.i:
-            return
+            return successful
         if redo_tree:
             self.start_work(f"Pasting {len(self.cut)} IDs...")
-        successful = []
         self.sort_later_dct = None
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
@@ -8456,7 +8454,7 @@ class Tree_Editor(tk.Frame):
                     self.C.update()
         if not successful:
             self.unsuccessful_paste()
-            return
+            return successful
         for k, v in self.sort_later_dct.items():
             if v and isinstance(v, set):
                 for idk in v:
@@ -8500,6 +8498,7 @@ class Tree_Editor(tk.Frame):
             self.tree.scroll_to_item(iid)
             self.disable_paste()
             self.stop_work(self.get_tree_editor_status_bar_text())
+        return successful
 
     def paste_cut_empty_all(self):
         if not self.cut:
@@ -8625,7 +8624,8 @@ class Tree_Editor(tk.Frame):
                 )
             else:
                 tr.append(iid)
-        self.tree.selection_remove(tr)
+        if tr:
+            self.tree.selection_remove(tr)
         self.enable_cut_paste()
         self.levels = defaultdict(list)
         if status_bar:
