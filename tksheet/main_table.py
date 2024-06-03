@@ -999,7 +999,10 @@ class MainTable(tk.Canvas):
             disp_new_idxs = get_new_indexes(move_to=move_to, to_move=to_move)
         else:
             disp_new_idxs = {}
-        totalcols = self.equalize_data_row_lengths(at_least_cols=move_to + 1)
+        if not self.all_columns_displayed and not data_indexes:
+            totalcols = self.equalize_data_row_lengths(at_least_cols=self.datacn(move_to) + 1)
+        else:
+            totalcols = self.equalize_data_row_lengths(at_least_cols=move_to + 1)
         data_new_idxs = get_new_indexes(move_to=move_to, to_move=to_move)
         if not self.all_columns_displayed and not data_indexes:
             moved = {self.displayed_columns[i] for i in to_move}
