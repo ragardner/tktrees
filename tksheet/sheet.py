@@ -5237,9 +5237,17 @@ class Sheet(tk.Frame):
         return self.set_refresh_timer(redraw)
 
     def selection_add(self, *items, redraw: bool = True) -> Sheet:
+        to_open = []
+        quick_displayed_check = set(self.MT.displayed_rows)
         for item in unpack(items):
-            if not self.item_displayed(item):
-                self.display_item(item)
+            if self.RI.tree_rns[(item := item.lower())] not in quick_displayed_check and self.RI.tree[item].parent:
+                to_open.extend(list(self.RI.get_iid_ancestors(item)))
+        if to_open:
+            self.show_rows(
+                rows=self._tree_open(to_open),
+                redraw=False,
+                deselect_all=False,
+            )
         for startr, endr in consecutive_ranges(
             sorted(
                 bisect_left(
