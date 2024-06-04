@@ -143,6 +143,7 @@ class Tree_Editor(tk.Frame):
     def __init__(self, parent, C):
         tk.Frame.__init__(self, parent)
         self.C = C
+        self.undo_unsaved_changes_passed_0 = False
         self.l_frame_proportion = float(0.35)
         self.last_width = 0
         self.last_height = 0
@@ -1869,6 +1870,7 @@ class Tree_Editor(tk.Frame):
             self.C.menubar_state("disabled")
             self.bind_or_unbind_save("disabled")
         self.C.number_unsaved_changes = 0
+        self.undo_unsaved_changes_passed_0 = False
         self.sheet_changes = 0
         self.tv_label_col = 0
         self.i = ""
@@ -6603,10 +6605,16 @@ class Tree_Editor(tk.Frame):
         self.vp -= 1
         new_vs = self.vs.pop()
         new_vs["required_data"]["pickled"] = pickle.loads(zlib.decompress(new_vs["required_data"]["pickled"]))
-        if self.C.number_unsaved_changes:
-            self.C.number_unsaved_changes -= 1
-        if not self.C.number_unsaved_changes:
-            self.C.change_app_title(star="remove")
+        if self.undo_unsaved_changes_passed_0:
+            self.increment_unsaved()
+        else:
+            if self.C.number_unsaved_changes:
+                self.C.number_unsaved_changes -= 1
+                if not self.C.number_unsaved_changes:
+                    self.C.change_app_title(star="remove")
+            else:
+                self.undo_unsaved_changes_passed_0 = True
+                self.increment_unsaved()
         self.ic = new_vs["required_data"]["pickled"]["ic"]
         self.pc = new_vs["required_data"]["pickled"]["pc"]
         self.hiers = new_vs["required_data"]["pickled"]["hiers"]
@@ -12278,6 +12286,7 @@ class Tree_Editor(tk.Frame):
             self.C.created_new = False
             self.bind_or_unbind_save("normal")
             self.C.number_unsaved_changes = 0
+            self.undo_unsaved_changes_passed_0 = False
         if not quitting:
             self.stop_work(self.get_tree_editor_status_bar_text())
             self.focus_tree()
@@ -12343,6 +12352,7 @@ class Tree_Editor(tk.Frame):
             self.C.created_new = False
             self.bind_or_unbind_save("normal")
             self.C.number_unsaved_changes = 0
+            self.undo_unsaved_changes_passed_0 = False
         if not quitting:
             self.stop_work(self.get_tree_editor_status_bar_text())
             self.focus_tree()
@@ -12440,6 +12450,7 @@ class Tree_Editor(tk.Frame):
             Error(self, f"Error: {error_msg}", theme=self.C.theme)
         if successful:
             self.C.number_unsaved_changes = 0
+            self.undo_unsaved_changes_passed_0 = False
             popup = Save_New_Version_Postsave_Popup(self, folder, os.path.basename(newfile), theme=self.C.theme)
         self.stop_work(self.get_tree_editor_status_bar_text())
         self.focus_tree()
