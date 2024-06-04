@@ -847,8 +847,10 @@ class ColumnHeaders(tk.Canvas):
                     and is_contiguous(self.dragged_col.to_move)
                 )
             ):
-                if c >= len(self.MT.col_positions) - 1:
-                    c -= 1
+                if c > self.dragged_col.to_move[-1]:
+                    c += 1
+                if c > len(self.MT.col_positions) - 1:
+                    c = len(self.MT.col_positions) - 1
                 event_data = event_dict(
                     name="move_columns",
                     sheet=self.PAR.name,
