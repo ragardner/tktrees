@@ -7174,13 +7174,14 @@ class Tree_Editor(tk.Frame):
         if not event.moved.rows.data:
             return
         self.start_work("Moving IDs...")
+        moved_rows = [self.tree.data_r(r) for r in event.moved.rows.displayed]
         as_sibling = []
         index_only = []
         if event.value > max(event.moved.rows.displayed):
             event.value -= 1
         move_to_iid = self.tree.rowitem(event.value)
         new_parent = self.tree.parent(move_to_iid)
-        for r in event.moved.rows.data:
+        for r in moved_rows:
             iid = self.tree.rowitem(r, data_index=True)
             iid_parent = self.tree.parent(iid)
             if iid_parent == new_parent:
@@ -7203,8 +7204,8 @@ class Tree_Editor(tk.Frame):
             move_to_index = self.tree.index(move_to_iid)
             if (
                 not is_contiguous(event.moved.rows.displayed)
-                and max(event.moved.rows.data) > self.tree.data_r(event.value)
-                and min(event.moved.rows.data) < self.tree.data_r(event.value)
+                and max(moved_rows) > self.tree.data_r(event.value)
+                and min(moved_rows) < self.tree.data_r(event.value)
             ):
                 move_to_index -= 1
             if parik := self.get_ids_parent(index_only[0]):
