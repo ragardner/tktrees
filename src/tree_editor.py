@@ -8898,6 +8898,7 @@ class Tree_Editor(tk.Frame):
             return
         self.start_work(f"Deleting {len(iids)} IDs")
         self.snapshot_delete_ids()
+        to_del = []
         for iid in iids:
             if self.nodes[iid].ps[self.pc]:
                 par = self.nodes[iid].ps[self.pc].name
@@ -8948,6 +8949,7 @@ class Tree_Editor(tk.Frame):
                 self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
                 del self.nodes[iid]
                 self.untag_id(iid)
+                to_del.append(iid)
             else:
                 self.vs[-1]["rows"].append(
                     Del_stre(
@@ -8980,7 +8982,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Delete ID")
-        self.sheet.del_rows(map(self.rns.get, iids), redraw=False)
+        self.sheet.del_rows(map(self.rns.get, to_del), redraw=False)
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}

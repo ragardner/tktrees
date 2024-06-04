@@ -4950,7 +4950,7 @@ class Sheet(tk.Frame):
         try:
             return self.RI.tree_rns[item.lower()]
         except Exception:
-            raise ValueError(f"item '{item.lower()}' does not exist.")
+            return None
 
     def rowitem(self, row: int, data_index: bool = False) -> str | None:
         try:
