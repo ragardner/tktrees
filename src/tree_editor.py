@@ -7176,6 +7176,8 @@ class Tree_Editor(tk.Frame):
         self.start_work("Moving IDs...")
         as_sibling = []
         index_only = []
+        if event.value > max(event.moved.rows.displayed):
+            event.value -= 1
         move_to_iid = self.tree.rowitem(event.value)
         new_parent = self.tree.parent(move_to_iid)
         for r in event.moved.rows.data:

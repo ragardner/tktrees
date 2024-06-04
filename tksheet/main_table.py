@@ -1000,10 +1000,10 @@ class MainTable(tk.Canvas):
         else:
             disp_new_idxs = {}
         # at_least_cols should not be len in this case as move_to can be len
+        fix_len = (move_to - 1) if move_to else move_to
         if not self.all_columns_displayed and not data_indexes:
-            totalcols = self.equalize_data_row_lengths(at_least_cols=self.datacn(move_to))
-        else:
-            totalcols = self.equalize_data_row_lengths(at_least_cols=move_to)
+            fix_len = self.datacn(fix_len)
+        totalcols = self.equalize_data_row_lengths(at_least_cols=fix_len)
         data_new_idxs = get_new_indexes(move_to=move_to, to_move=to_move)
         if not self.all_columns_displayed and not data_indexes:
             moved = {self.displayed_columns[i] for i in to_move}
@@ -1235,10 +1235,9 @@ class MainTable(tk.Canvas):
         else:
             disp_new_idxs = {}
         # move_to can be len and fix_data_len() takes index so - 1
+        fix_len = (move_to - 1) if move_to else move_to
         if not self.all_rows_displayed and not data_indexes:
-            fix_len = self.datarn(move_to) - 1
-        else:
-            fix_len = move_to - 1
+            fix_len = self.datarn(fix_len)
         self.fix_data_len(fix_len)
         totalrows = max(self.total_data_rows(), len(self.row_positions) - 1)
         data_new_idxs = get_new_indexes(move_to=move_to, to_move=to_move)
