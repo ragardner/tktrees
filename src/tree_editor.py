@@ -9724,26 +9724,47 @@ class Tree_Editor(tk.Frame):
         self.redraw_sheets()
 
     def tree_sheet_align(self, align):
-        widget = self.sheet if self.sheet.has_focus() else self.tree
-        for box in widget.boxes:
-            if box.type_ == "cells":
-                widget.align(
-                    box.coords.from_r,
-                    box.coords.from_c,
-                    box.coords.upto_r,
-                    box.coords.upto_c,
-                    align=align,
-                )
-            elif box.type_ == "rows":
-                widget.align(
-                    slice(box.coords.from_r, box.coords.upto_r),
-                    align=align,
-                )
-            elif box.type_ == "columns":
-                widget.align(
-                    f"{num2alpha(box.coords.from_c)}:{num2alpha(box.coords.upto_c - 1)}",
-                    align=align,
-                )
+        if self.sheet.has_focus():
+            for box in self.sheet.boxes:
+                if box.type_ == "cells":
+                    self.sheet.align(
+                        box.coords.from_r,
+                        box.coords.from_c,
+                        box.coords.upto_r,
+                        box.coords.upto_c,
+                        align=align,
+                    )
+                elif box.type_ == "rows":
+                    self.sheet.align(
+                        slice(box.coords.from_r, box.coords.upto_r),
+                        align=align,
+                    )
+                elif box.type_ == "columns":
+                    self.sheet.align(
+                        f"{num2alpha(box.coords.from_c)}:{num2alpha(box.coords.upto_c - 1)}",
+                        align=align,
+                    )
+        elif self.tree.has_focus():
+            for box in self.tree.boxes:
+                if box.type_ == "cells":
+                    self.tree.align_cells(
+                        cells=(
+                            (r, c)
+                            for r in range(box.coords.from_r, box.coords.upto_r)
+                            for c in range(box.coords.from_c, box.coords.upto_c)
+                        ),
+                        align=align,
+                    )
+                elif box.type_ == "rows":
+                    self.tree.align_rows(
+                        rows=(self.tree.data_r(r) for r in range(box.coords.from_r, box.coords.upto_r)),
+                        align=align,
+                    )
+                elif box.type_ == "columns":
+                    self.tree.align_columns(
+                        columns=range(box.coords.from_c, box.coords.upto_c),
+                        align=align,
+                    )
 
     def untag_id(self, ik):
         if ik in self.tagged_ids:
