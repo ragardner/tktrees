@@ -1012,7 +1012,9 @@ class ColumnHeaders(tk.Canvas):
         txt = self.get_valid_cell_data_as_str(datacn, fix=False)
         if txt:
             self.MT.txt_measure_canvas.itemconfig(
-                self.MT.txt_measure_canvas_text, text=txt, font=self.PAR.ops.header_font
+                self.MT.txt_measure_canvas_text,
+                text=txt,
+                font=self.PAR.ops.header_font,
             )
             b = self.MT.txt_measure_canvas.bbox(self.MT.txt_measure_canvas_text)
             w = b[2] - b[0] + 7

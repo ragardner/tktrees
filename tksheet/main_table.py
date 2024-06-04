@@ -3691,10 +3691,9 @@ class MainTable(tk.Canvas):
             else:
                 return False
 
-    def set_all_cell_sizes_to_text(self, w: int | None = None, slim: bool = False) -> tuple[list[float], list[float]]:
+    def set_all_cell_sizes_to_text(self, width: int | None = None, slim: bool = False) -> tuple[list[float], list[float]]:
         min_column_width = int(self.min_column_width)
         min_rh = int(self.min_row_height)
-        w = min_column_width if w is None else w
         h = min_rh
         rhs = defaultdict(lambda: int(min_rh))
         cws = []
@@ -3724,6 +3723,7 @@ class MainTable(tk.Canvas):
                     rhs[datarn] = h
         added_w_space = 1 if slim else 7
         for datacn in itercols:
+            w = min_column_width if width is None else width
             if (hw := self.CH.get_cell_dimensions(datacn)[0]) > w:
                 w = hw
             else:
