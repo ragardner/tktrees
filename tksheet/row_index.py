@@ -1418,21 +1418,21 @@ class RowIndex(tk.Canvas):
             if open_:
                 # up arrow
                 points = (
-                    x2 - 3 - small_mod - small_mod - small_mod - small_mod,
+                    x2 - 4 - small_mod - small_mod - small_mod - small_mod,
                     y1 + mid_y + small_mod,
-                    x2 - 3 - small_mod - small_mod,
+                    x2 - 4 - small_mod - small_mod,
                     y1 + mid_y - small_mod,
-                    x2 - 3,
+                    x2 - 4,
                     y1 + mid_y + small_mod,
                 )
             else:
                 # down arrow
                 points = (
-                    x2 - 3 - small_mod - small_mod - small_mod - small_mod,
+                    x2 - 4 - small_mod - small_mod - small_mod - small_mod,
                     y1 + mid_y - small_mod,
-                    x2 - 3 - small_mod - small_mod,
+                    x2 - 4 - small_mod - small_mod,
                     y1 + mid_y + small_mod,
-                    x2 - 3,
+                    x2 - 4,
                     y1 + mid_y - small_mod,
                 )
             if self.hidd_dropdown:
@@ -1444,10 +1444,13 @@ class RowIndex(tk.Canvas):
                     self.itemconfig(t, fill=fill, tag=tag, state="normal")
                 self.lift(t)
             else:
-                t = self.create_polygon(
+                t = self.create_line(
                     points,
                     fill=fill,
                     tag=tag,
+                    width=2,
+                    capstyle=tk.ROUND,
+                    joinstyle=tk.BEVEL,
                 )
             self.disp_dropdown[t] = True
 
