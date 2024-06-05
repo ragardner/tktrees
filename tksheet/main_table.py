@@ -5234,32 +5234,33 @@ class MainTable(tk.Canvas):
         tag,
         draw_outline=True,
         draw_arrow=True,
-        dd_is_open=False,
+        open_=False,
     ):
         if draw_outline and self.PAR.ops.show_dropdown_borders:
             self.redraw_highlight(x1 + 1, y1 + 1, x2, y2, fill="", outline=self.PAR.ops.table_fg, tag=tag)
         if draw_arrow:
             mod = (self.table_txt_height - 1) if self.table_txt_height % 2 else self.table_txt_height
-            half_mod = mod / 2
-            qtr_mod = mod / 4
-            mid_y = (self.table_first_ln_ins - 1) if self.table_first_ln_ins % 2 else self.table_first_ln_ins
-            if dd_is_open:
+            small_mod = int(mod / 5)
+            mid_y = floor(self.min_row_height / 2)
+            if open_:
+                # up arrow
                 points = (
-                    x2 - 3 - mod,
-                    y1 + mid_y + qtr_mod,
-                    x2 - 3 - half_mod,
-                    y1 + mid_y - qtr_mod,
+                    x2 - 3 - small_mod - small_mod - small_mod - small_mod,
+                    y1 + mid_y + small_mod,
+                    x2 - 3 - small_mod - small_mod,
+                    y1 + mid_y - small_mod,
                     x2 - 3,
-                    y1 + mid_y + qtr_mod,
+                    y1 + mid_y + small_mod,
                 )
             else:
+                # down arrow
                 points = (
-                    x2 - 3 - mod,
-                    y1 + mid_y - qtr_mod,
-                    x2 - 3 - half_mod,
-                    y1 + mid_y + qtr_mod,
+                    x2 - 3 - small_mod - small_mod - small_mod - small_mod,
+                    y1 + mid_y - small_mod,
+                    x2 - 3 - small_mod - small_mod,
+                    y1 + mid_y + small_mod,
                     x2 - 3,
-                    y1 + mid_y - qtr_mod,
+                    y1 + mid_y - small_mod,
                 )
             if self.hidd_dropdown:
                 t, sh = self.hidd_dropdown.popitem()
@@ -5604,7 +5605,7 @@ class MainTable(tk.Canvas):
                                 tag=f"dd_{r}_{c}",
                                 draw_outline=not dd_drawn,
                                 draw_arrow=mw >= 5,
-                                dd_is_open=dd_coords == (r, c),
+                                open_=dd_coords == (r, c),
                             )
                         else:
                             mw = crightgridln - cleftgridln - 1
@@ -5622,7 +5623,7 @@ class MainTable(tk.Canvas):
                                 tag=f"dd_{r}_{c}",
                                 draw_outline=not dd_drawn,
                                 draw_arrow=mw >= 5,
-                                dd_is_open=dd_coords == (r, c),
+                                open_=dd_coords == (r, c),
                             )
                         else:
                             mw = crightgridln - cleftgridln - 1
@@ -5641,7 +5642,7 @@ class MainTable(tk.Canvas):
                                 tag=f"dd_{r}_{c}",
                                 draw_outline=not dd_drawn,
                                 draw_arrow=mw >= 5,
-                                dd_is_open=dd_coords == (r, c),
+                                open_=dd_coords == (r, c),
                             )
                         else:
                             mw = crightgridln - cleftgridln - 1

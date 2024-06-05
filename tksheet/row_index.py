@@ -1413,26 +1413,27 @@ class RowIndex(tk.Canvas):
             self.redraw_highlight(x1 + 1, y1 + 1, x2, y2, fill="", outline=self.PAR.ops.index_fg, tag=tag)
         if draw_arrow:
             mod = (self.MT.index_txt_height - 1) if self.MT.index_txt_height % 2 else self.MT.index_txt_height
-            half_mod = mod / 2
-            qtr_mod = mod / 4
-            mid_y = (self.MT.index_first_ln_ins - 1) if self.MT.index_first_ln_ins % 2 else self.MT.index_first_ln_ins
+            small_mod = int(mod / 5)
+            mid_y = floor(self.MT.min_row_height / 2)
             if open_:
+                # up arrow
                 points = (
-                    x2 - 3 - mod,
-                    y1 + mid_y + qtr_mod,
-                    x2 - 3 - half_mod,
-                    y1 + mid_y - qtr_mod,
+                    x2 - 3 - small_mod - small_mod - small_mod - small_mod,
+                    y1 + mid_y + small_mod,
+                    x2 - 3 - small_mod - small_mod,
+                    y1 + mid_y - small_mod,
                     x2 - 3,
-                    y1 + mid_y + qtr_mod,
+                    y1 + mid_y + small_mod,
                 )
             else:
+                # down arrow
                 points = (
-                    x2 - 3 - mod,
-                    y1 + mid_y - qtr_mod,
-                    x2 - 3 - half_mod,
-                    y1 + mid_y + qtr_mod,
+                    x2 - 3 - small_mod - small_mod - small_mod - small_mod,
+                    y1 + mid_y - small_mod,
+                    x2 - 3 - small_mod - small_mod,
+                    y1 + mid_y + small_mod,
                     x2 - 3,
-                    y1 + mid_y - qtr_mod,
+                    y1 + mid_y - small_mod,
                 )
             if self.hidd_dropdown:
                 t, sh = self.hidd_dropdown.popitem()
@@ -2154,7 +2155,7 @@ class RowIndex(tk.Canvas):
             "height": win_h,
             "font": self.PAR.ops.index_font,
             "ops": self.PAR.ops,
-            "outline_color": self.PAR.ops.popup_menu_fg,
+            "outline_color": self.PAR.ops.index_selected_rows_bg,
             "align": self.get_cell_align(r),
             "values": kwargs["values"],
         }
