@@ -10035,10 +10035,14 @@ class Tree_Editor(tk.Frame):
         if sel:
             ik = self.sheet.MT.data[sel[0]][self.ic].lower()
             Text_Popup(self, self.details(ik), theme=self.C.theme)
+        else:
+            Error(self, "Select an ID in the sheet", theme=self.C.theme)
 
     def show_ids_full_info_tree(self, event=None):
         if self.i:
             Text_Popup(self, self.details(self.i.lower()), theme=self.C.theme)
+        else:
+            Error(self, "Select an ID in the tree", theme=self.C.theme)
 
     def show_warnings(self, filepath=None, sheetname=None, show_regardless=False):
         if filepath and sheetname:
