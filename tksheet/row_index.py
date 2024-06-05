@@ -1345,29 +1345,37 @@ class RowIndex(tk.Canvas):
         open_: bool = False,
     ) -> None:
         mod = (self.MT.index_txt_height - 1) if self.MT.index_txt_height % 2 else self.MT.index_txt_height
-        half_mod = mod / 2
-        qtr_mod = mod / 4
-        small_mod = int(half_mod / 3) - 1
-        mid_y = int(self.MT.min_row_height / 2)
+        small_mod = int(mod / 5)
+        mid_y = floor(self.MT.min_row_height / 2)
         # up arrow
         if open_:
             points = (
-                x1 + 2 + indent + small_mod,
-                y1 + mid_y + qtr_mod - small_mod,
-                x1 + 2 + half_mod + indent,
-                y1 + mid_y - qtr_mod,
-                x1 + 2 + mod + indent - small_mod,
-                y1 + mid_y + qtr_mod - small_mod,
+                # the left hand downward point
+                x1 + 5 + indent,
+                y1 + mid_y + small_mod,
+                
+                # the middle upward point
+                x1 + 5 + indent + small_mod + small_mod,
+                y1 + mid_y - small_mod,
+                
+                # the right hand downward point
+                x1 + 5 + indent + small_mod + small_mod + small_mod + small_mod,
+                y1 + mid_y + small_mod,
             )
         # right pointing arrow
         else:
             points = (
-                x1 + 2 + half_mod + indent,
-                y1 + mid_y - half_mod + small_mod,
-                x1 + 2 + mod + indent - small_mod,
+                # the upper point
+                x1 + 5 + indent + small_mod + small_mod,
+                y1 + mid_y - small_mod - small_mod,
+                
+                # the middle point
+                x1 + 5 + indent + small_mod + small_mod + small_mod + small_mod,
                 y1 + mid_y,
-                x1 + 2 + half_mod + indent,
-                y1 + mid_y + half_mod - small_mod,
+                
+                # the bottom point
+                x1 + 5 + indent + small_mod + small_mod,
+                y1 + mid_y + small_mod + small_mod,
             )
         if self.hidd_tree_arrow:
             t, sh = self.hidd_tree_arrow.popitem()
