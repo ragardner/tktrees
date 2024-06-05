@@ -1346,26 +1346,26 @@ class RowIndex(tk.Canvas):
         mod = (self.MT.index_txt_height - 1) if self.MT.index_txt_height % 2 else self.MT.index_txt_height
         half_mod = mod / 2
         qtr_mod = mod / 4
-        small_mod = int(half_mod / 4) - 1
+        small_mod = int(half_mod / 3) - 1
         mid_y = int(self.MT.min_row_height / 2)
         # up arrow
         if open_:
             points = (
-                x1 + 2 + indent,
-                y1 + mid_y + qtr_mod,
+                x1 + 2 + indent + small_mod,
+                y1 + mid_y + qtr_mod - small_mod,
                 x1 + 2 + half_mod + indent,
                 y1 + mid_y - qtr_mod,
-                x1 + 2 + mod + indent,
-                y1 + mid_y + qtr_mod,
+                x1 + 2 + mod + indent - small_mod,
+                y1 + mid_y + qtr_mod - small_mod,
             )
         # right pointing arrow
         else:
             points = (
-                x1 + half_mod + indent,
+                x1 + 2 + half_mod + indent,
                 y1 + mid_y - half_mod + small_mod,
-                x1 + mod + indent - small_mod,
+                x1 + 2 + mod + indent - small_mod,
                 y1 + mid_y,
-                x1 + half_mod + indent,
+                x1 + 2 + half_mod + indent,
                 y1 + mid_y + half_mod - small_mod,
             )
         if self.hidd_tree_arrow:
@@ -1683,12 +1683,12 @@ class RowIndex(tk.Canvas):
                 iid = self.MT._row_index[datarn].iid
                 mw -= self.MT.index_txt_height
                 if align == "w":
-                    draw_x += self.MT.index_txt_height + 1
+                    draw_x += self.MT.index_txt_height + 3
                 indent = self.get_treeview_indent(iid)
                 draw_x += indent + 5
                 if self.tree[iid].children:
                     self.redraw_tree_arrow(
-                        0,
+                        2,
                         rtopgridln,
                         r=r,
                         fill=tree_arrow_fg,
