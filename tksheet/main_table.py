@@ -6044,7 +6044,7 @@ class MainTable(tk.Canvas):
             mt_border_col = self.PAR.ops.table_selected_columns_border_fg
         if self.selection_boxes:
             self.itemconfig(next(reversed(self.selection_boxes)), state="normal")
-        x1, y1, x2, y2 = self.box_sheet_coords_x_canvas_coords(r1, c1, r2, c2, type_)
+        x1, y1, x2, y2 = self.box_coords_x_canvas_coords(r1, c1, r2, c2, type_)
         fill_iid = self.display_box(
             x1,
             y1,
@@ -6057,7 +6057,7 @@ class MainTable(tk.Canvas):
             width=1,
         )
         index_iid = self.RI.display_box(
-            1,
+            0,
             y1,
             self.RI.current_width - 1,
             y2,
@@ -6131,7 +6131,7 @@ class MainTable(tk.Canvas):
             if self.PAR.ops.show_selected_cells_border:
                 self.tag_raise(self.selected.iid)
 
-    def box_sheet_coords_x_canvas_coords(
+    def box_coords_x_canvas_coords(
         self,
         r1: int,
         c1: int,
@@ -6178,7 +6178,7 @@ class MainTable(tk.Canvas):
                 state = "normal"
         if self.selected.fill_iid == fill_iid:
             self.selected = self.selected._replace(box=Box_nt(r1, c1, r2, c2))
-        x1, y1, x2, y2 = self.box_sheet_coords_x_canvas_coords(r1, c1, r2, c2, type_)
+        x1, y1, x2, y2 = self.box_coords_x_canvas_coords(r1, c1, r2, c2, type_)
         self.display_box(x1, y1, x2, y2, fill=mt_bg, outline="", state=state, tags=type_, width=1, iid=fill_iid)
         self.RI.display_box(
             1,

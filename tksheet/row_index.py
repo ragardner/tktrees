@@ -893,7 +893,7 @@ class RowIndex(tk.Canvas):
                     self.open_cell(event)
                 elif (iid := self.event_over_tree_arrow(r, canvasy, event.x)) is not None:
                     if self.MT.selection_boxes:
-                        self.select_row(r, redraw=False)
+                        self.select_row(r, ext=True, redraw=False)
                     self.PAR.item(iid, open_=iid not in self.tree_open_ids)
             else:
                 self.mouseclick_outside_editor_or_dropdown_all_canvases(inside=True)
@@ -957,9 +957,10 @@ class RowIndex(tk.Canvas):
         run_binding_func: bool = True,
         ext: bool = False,
     ) -> int:
-        self.MT.deselect("all", redraw=False)
-        box = (r, 0, r + 1, len(self.MT.col_positions) - 1, "rows")
-        fill_iid = self.MT.create_selection_box(*box, ext=ext)
+        boxes_to_hide = tuple(iid for iid in self.MT.selection_boxes)
+        fill_iid = self.MT.create_selection_box(r, 0, r + 1, len(self.MT.col_positions) - 1, "rows", ext=ext)
+        for iid in boxes_to_hide:
+            self.MT.hide_selection_box(iid)
         if redraw:
             self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
         if run_binding_func:

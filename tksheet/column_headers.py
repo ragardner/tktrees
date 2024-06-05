@@ -946,8 +946,10 @@ class ColumnHeaders(tk.Canvas):
         run_binding_func: bool = True,
         ext: bool = False,
     ) -> int:
-        self.MT.deselect("all", redraw=False)
+        boxes_to_hide = tuple(iid for iid in self.MT.selection_boxes)
         fill_iid = self.MT.create_selection_box(0, c, len(self.MT.row_positions) - 1, c + 1, "columns", ext=ext)
+        for iid in boxes_to_hide:
+            self.MT.hide_selection_box(iid)
         if redraw:
             self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
         if run_binding_func:
