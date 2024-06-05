@@ -9721,18 +9721,34 @@ class Tree_Editor(tk.Frame):
             rn = self.rns[ik]
             if ik in self.tagged_ids:
                 self.tagged_ids.discard(ik)
-                self.sheet.dehighlight_cells(row=rn, canvas="row_index", redraw=False)
-                self.tree.dehighlight_cells(row=self.tree.itemrow(ik), canvas="row_index", redraw=False)
+                self.sheet.dehighlight_cells(
+                    row=rn,
+                    canvas="row_index",
+                    redraw=False,
+                )
+                if self.tree.exists(ik):
+                    self.tree.dehighlight_cells(
+                        row=self.tree.itemrow(ik),
+                        canvas="row_index",
+                        redraw=False,
+                    )
             else:
                 self.tagged_ids.add(ik)
-                self.sheet.highlight_cells(row=rn, bg="orange", fg="black", canvas="row_index", redraw=False)
-                self.tree.highlight_cells(
-                    row=self.tree.itemrow(ik),
+                self.sheet.highlight_cells(
+                    row=rn,
                     bg="orange",
                     fg="black",
                     canvas="row_index",
                     redraw=False,
                 )
+                if self.tree.exists(ik):
+                    self.tree.highlight_cells(
+                        row=self.tree.itemrow(ik),
+                        bg="orange",
+                        fg="black",
+                        canvas="row_index",
+                        redraw=False,
+                    )
         self.reset_tagged_ids_dropdowns()
         self.redraw_sheets()
 
@@ -9783,7 +9799,8 @@ class Tree_Editor(tk.Frame):
         if ik in self.tagged_ids:
             self.tagged_ids.discard(ik)
             self.sheet.dehighlight_cells(row=self.rns[ik], canvas="row_index")
-            self.tree.dehighlight_rows(self.tree.itemrow(ik))
+            if self.tree.exists(ik):
+                self.tree.dehighlight_rows(self.tree.itemrow(ik))
 
     def clear_tagged_ids(self, event=None):
         self.tagged_ids = set()
@@ -9817,9 +9834,14 @@ class Tree_Editor(tk.Frame):
                 )
             except Exception:
                 self.tagged_ids.discard(ik)
-        for ik in self.tagged_ids:
-            if (row := self.tree.itemrow(ik)) is not None:
-                self.tree.highlight_cells(row=row, bg="orange", fg="black", canvas="row_index", redraw=False)
+        for ik in filter(self.tree.RI.tree.__contains__, self.tagged_ids):
+            self.tree.highlight_cells(
+                row=self.tree.itemrow(ik),
+                bg="orange",
+                fg="black",
+                canvas="row_index",
+                redraw=False,
+            )
         return "break"
 
     def tree_go_to_tagged_id(self, event=None):
