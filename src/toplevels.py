@@ -3808,20 +3808,21 @@ class Sort_Sheet_Popup(tk.Toplevel):
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.sort_decision = {"type": None, "col": None, "order": None}
-        self.sort_by_col_button = Button(self, style="EF.Std.TButton", text="Sort by column", command=self.sort_by_col)
-        self.sort_by_col_button.grid(row=0, column=1, sticky="nswe", pady=(15, 5), padx=70)
+
         self.order_label = Label(self, text="Order:", font=EF, theme=theme)
-        self.order_label.grid(row=1, column=0, sticky="nswe", pady=5, padx=(50, 10))
+        self.order_label.grid(row=0, column=0, sticky="nswe", pady=(20, 5), padx=(50, 10))
         self.order_dropdown = Ez_Dropdown(self, EF)
         self.order_dropdown["values"] = ["ASCENDING", "DESCENDING"]
         self.order_dropdown.set_my_value("ASCENDING")
-        self.order_dropdown.grid(row=1, column=1, sticky="nswe", pady=5, padx=(0, 70))
+        self.order_dropdown.grid(row=0, column=1, sticky="nswe", pady=(20, 5), padx=(0, 70))
         self.col_label = Label(self, text="Column:", font=EF, theme=theme)
-        self.col_label.grid(row=2, column=0, sticky="nswe", pady=5, padx=(50, 10))
+        self.col_label.grid(row=1, column=0, sticky="nswe", pady=5, padx=(50, 10))
         self.col_dropdown = Ez_Dropdown(self, EF)
         self.col_dropdown["values"] = headers
         self.col_dropdown.set_my_value(headers[0])
-        self.col_dropdown.grid(row=2, column=1, sticky="nswe", pady=5, padx=(0, 70))
+        self.col_dropdown.grid(row=1, column=1, sticky="nswe", pady=5, padx=(0, 70))
+        self.sort_by_col_button = Button(self, style="EF.Std.TButton", text="Sort by column", command=self.sort_by_col)
+        self.sort_by_col_button.grid(row=2, column=1, sticky="nswe", pady=(15, 5), padx=70)
         self.divider = Frame(self)
         self.divider.config(bg=themes[theme].table_fg)
         self.divider.config(height=5)
@@ -3833,7 +3834,7 @@ class Sort_Sheet_Popup(tk.Toplevel):
         self.bind("<Escape>", self.go_back)
         self.order_dropdown.bind("<<ComboboxSelected>>", lambda event: self.focus_set())
         self.col_dropdown.bind("<<ComboboxSelected>>", lambda event: self.focus_set())
-        center(self, 550, 215)
+        center(self, 550, 235)
         self.deiconify()
         self.wait_window()
 
@@ -4791,7 +4792,7 @@ class Text_Popup(tk.Toplevel):
         self.textbox.delete(1.0, "end")
         self.textbox.insert(1.0, text)
         self.textbox.config(state="disabled")
-        self.textbox.grid(row=1, column=0, sticky="nswe")
+        self.textbox.grid(row=1, column=0, padx=(5, 0), sticky="nswe")
         self.yscrollb.grid(row=1, column=1, sticky="nswe")
         if wrap == "none":
             self.xscrollb.grid(row=2, column=0, columnspan=2, sticky="nswe")

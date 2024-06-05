@@ -3310,7 +3310,7 @@ class MainTable(tk.Canvas):
             self.yview_scroll(-1, "units")
             self.RI.yview_scroll(-1, "units")
             self.y_move_synced_scrolls("moveto", self.yview()[0])
-        self.main_table_redraw_grid_and_text(redraw_row_index=True)
+        self.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
 
     def shift_mousewheel(self, event: object) -> None:
         if event.delta < 0 or event.num == 5:
@@ -3323,7 +3323,7 @@ class MainTable(tk.Canvas):
             self.xview_scroll(-1, "units")
             self.CH.xview_scroll(-1, "units")
             self.x_move_synced_scrolls("moveto", self.xview()[0])
-        self.main_table_redraw_grid_and_text(redraw_header=True)
+        self.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
 
     def ctrl_mousewheel(self, event):
         if event.delta < 0 or event.num == 5:
