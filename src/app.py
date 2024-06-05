@@ -90,6 +90,7 @@ class AppGUI(tk.Tk):
         style.configure("TNotebook.Tab", font=("Calibri", std_font_size, "bold"))
         style.configure("Std.TButton", font=BF, borderwidth=0)
         style.configure("EF.Std.TButton", font=EF)
+        style.configure("EFW.Std.TButton", font=EF, anchor="w")
         style.configure("TF.Std.TButton", font=TF)
         style.configure("STSF.Std.TButton", font=STSF)
         style.configure("EFB.Std.TButton", font=EFB)
@@ -301,7 +302,7 @@ To get started once you have closed this popup, either:
             "PC user": f"{USER_NAME}",
             "Theme": self.theme,
             "Window state": "zoomed",
-            "Window size": (1020, 760),
+            "Window size": (1170, 760),
             "Window coords": center(self, desired_height=760, desired_width=1000, get=True),
             # left, 50/50, adjustable, right
             "Editor display option": "left",

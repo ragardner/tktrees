@@ -100,7 +100,7 @@ def new_toplevel_chores(toplevel, parent, title, grab=True):
 
 class Export_Flattened_Popup(tk.Toplevel):
     def __init__(self, C, width=1280, height=800, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Flatten sheet")
 
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
@@ -380,7 +380,7 @@ class Export_Flattened_Popup(tk.Toplevel):
 
 class Post_Import_Changes_Popup(tk.Toplevel):
     def __init__(self, C, changes, successful, width=1000, height=800, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Successful changes")
         self.total_changes = f"Total changes: {len(changes)}"
         self.grid_columnconfigure(0, weight=1)
@@ -434,7 +434,7 @@ class Post_Import_Changes_Popup(tk.Toplevel):
 
 class Changelog_Popup(tk.Toplevel):
     def __init__(self, C, width=999, height=800, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Changelog")
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
@@ -845,7 +845,7 @@ class Changelog_Popup(tk.Toplevel):
 
 class Compare_Report_Popup(tk.Toplevel):
     def __init__(self, C, width=1000, height=800, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Comparison Report")
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
@@ -1179,7 +1179,7 @@ class Compare_Report_Popup(tk.Toplevel):
 
 class Find_And_Replace_Popup(tk.Toplevel):
     def __init__(self, C, sheet_selection, theme="dark", within=False, pars=False):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.withdraw()
         self.resizable(False, False)
         self.tk.call("wm", "iconphoto", self._w, tk.PhotoImage(format="gif", data=top_left_icon))
@@ -2216,7 +2216,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
 class Edit_Conditional_Formatting_Popup(tk.Toplevel):
     def __init__(self, C, column, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.window_destroyed = False
         self.C = new_toplevel_chores(self, C, f"{app_title} - Edit conditional formatting")
 
@@ -2696,7 +2696,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
 
 class View_Id_Popup(tk.Toplevel):
     def __init__(self, C, ids_row, width=800, height=800, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - {C.sheet.MT.data[ids_row['rn']][C.ic]}")
 
         self.USER_HAS_QUIT = False
@@ -2961,7 +2961,7 @@ class View_Id_Popup(tk.Toplevel):
 
 class Merge_Sheets_Popup(tk.Toplevel):
     def __init__(self, C, theme="dark", add_rows=False):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Merge sheets")
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.USER_HAS_QUIT = False
@@ -3463,7 +3463,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
 
 class Get_Clipboard_Data_Popup(tk.Toplevel):
     def __init__(self, C, cols, row_len, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Overwrite sheet using data from clipboard")
         # self.grid_columnconfigure(0,weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -3605,7 +3605,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
 
 class Ask_Confirm_Quit(tk.Toplevel):
     def __init__(self, C, changes, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Quit")
         self.action_label = Label(
             self,
@@ -3665,7 +3665,7 @@ class Ask_Confirm_Quit(tk.Toplevel):
 
 class Ask_Confirm(tk.Toplevel):
     def __init__(self, C, action, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Confirm Action")
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -3697,7 +3697,7 @@ class Ask_Confirm(tk.Toplevel):
 
 class Save_New_Version_Presave_Popup(tk.Toplevel):
     def __init__(self, C, file_location, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Save new version")
         self.grid_columnconfigure(1, weight=1)
         self.file_loc_label = Label(self, text="Your new version\nwill be saved here:", font=EF, theme=theme)
@@ -3743,7 +3743,7 @@ class Save_New_Version_Presave_Popup(tk.Toplevel):
 
 class Save_New_Version_Postsave_Popup(tk.Toplevel):
     def __init__(self, C, file_location, filename, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", background=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", background=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Success! New version saved")
         self.grid_columnconfigure(1, weight=1)
         self.file_loc_label = Label(self, text="Your new version\nwas saved here:", font=EF, theme=theme)
@@ -3772,7 +3772,7 @@ class Save_New_Version_Postsave_Popup(tk.Toplevel):
 
 class Save_New_Version_Error_Popup(tk.Toplevel):
     def __init__(self, C, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", background=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", background=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Error locating folder")
         self.grid_columnconfigure(0, weight=1)
         self.info_label = Label(
@@ -3803,7 +3803,7 @@ class Save_New_Version_Error_Popup(tk.Toplevel):
 
 class Sort_Sheet_Popup(tk.Toplevel):
     def __init__(self, C, headers, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", background=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", background=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Sort sheet")
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -3855,7 +3855,7 @@ class Sort_Sheet_Popup(tk.Toplevel):
 
 class Edit_Detail_Date_Popup(tk.Toplevel):
     def __init__(self, C, ID, column, current_detail, DATE_FORM, validation_values=[], set_value=None, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Change date detail")
         self.grid_columnconfigure(1, weight=1)
         self.id_label = Label(self, text="ID:", font=EF, theme=theme)
@@ -3952,7 +3952,7 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
 
 class Edit_Detail_Numerical_Popup(tk.Toplevel):
     def __init__(self, C, ID, column, current_detail, validation_values=[], set_value=None, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Change numerical detail")
         self.grid_columnconfigure(1, weight=1)
         self.id_label = Label(self, text="ID:", font=EF, theme=theme)
@@ -4085,7 +4085,7 @@ class Edit_Detail_Text_Popup(tk.Toplevel):
 
 class View_Column_Text_Popup(tk.Toplevel):
     def __init__(self, C, ID, column, text, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - View text")
         self.grid_columnconfigure(1, weight=1)
         self.id_label = Label(self, text="ID:", font=EF, theme=theme)
@@ -4115,7 +4115,7 @@ class View_Column_Text_Popup(tk.Toplevel):
 
 class Add_Top_Id_Popup(tk.Toplevel):
     def __init__(self, C, sheet_selection, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Add top ID")
         self.grid_columnconfigure(1, weight=1)
         self.id_name_label = Label(self, text="ID name:", font=EF, theme=theme)
@@ -4187,7 +4187,7 @@ class Add_Top_Id_Popup(tk.Toplevel):
 
 class Add_Child_Or_Sibling_Id_Popup(tk.Toplevel):
     def __init__(self, C, chld_or_sib, desired_parent, sheet_selection, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", background=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", background=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(
             self, C, f"{app_title} - Add sibling ID" if chld_or_sib == "sibling" else f"{app_title} - Add child ID"
         )
@@ -4268,7 +4268,7 @@ class Add_Child_Or_Sibling_Id_Popup(tk.Toplevel):
 
 class Edit_Validation_Popup(tk.Toplevel):
     def __init__(self, C, coltype, colname, validation, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Edit validation")
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -4332,7 +4332,7 @@ class Edit_Validation_Popup(tk.Toplevel):
 
 class Rename_Column_Popup(tk.Toplevel):
     def __init__(self, C, current_col_name, type_of_col, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"Rename {type_of_col} column")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
@@ -4373,7 +4373,7 @@ class Rename_Column_Popup(tk.Toplevel):
 
 class Add_Hierarchy_Column_Popup(tk.Toplevel):
     def __init__(self, C, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Add Hierarchy Column")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -4414,7 +4414,7 @@ class Add_Hierarchy_Column_Popup(tk.Toplevel):
 
 class Add_Detail_Column_Popup(tk.Toplevel):
     def __init__(self, C, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Add Detail Column")
         self.grid_columnconfigure(2, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -4462,7 +4462,7 @@ class Add_Detail_Column_Popup(tk.Toplevel):
 
 class Rename_Id_Popup(tk.Toplevel):
     def __init__(self, C, ID, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Rename ID")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
@@ -4505,7 +4505,7 @@ class Rename_Id_Popup(tk.Toplevel):
 
 class Enter_Sheet_Name_Popup(tk.Toplevel):
     def __init__(self, C, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Enter sheet name")
         self.grid_columnconfigure(1, weight=1)
         self.sheet_name_label = Label(self, text="New sheet\nname:", font=EF, theme=theme)
@@ -4539,7 +4539,7 @@ class Enter_Sheet_Name_Popup(tk.Toplevel):
 
 class Error(tk.Toplevel):
     def __init__(self, C, msg, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Error")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -4563,7 +4563,7 @@ class Error(tk.Toplevel):
 
 class Error_Sheet(tk.Toplevel):
     def __init__(self, C, sheet_data, theme="dark", highlight_rows=None):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Error")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -4609,7 +4609,7 @@ class Error_Sheet(tk.Toplevel):
 
 class Treeview_Id_Finder(tk.Toplevel):
     def __init__(self, C, hiers, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(
             self, C, f"{app_title} - ID is in multiple hierarchies, select a hierarchy to go to"
         )
@@ -4646,7 +4646,7 @@ class Treeview_Id_Finder(tk.Toplevel):
 
 class Sheet_Settings_Chooser(tk.Toplevel):
     def __init__(self, C, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Sheet settings")
         self.changed = False
         self.grid_columnconfigure(0, weight=1)
@@ -4754,7 +4754,7 @@ class Text_Popup(tk.Toplevel):
         wrap="none",
         show_finder=True,
     ):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title}")
         self.theme = theme
         self.word = ""
@@ -4935,13 +4935,13 @@ class First_Start_Popup(tk.Toplevel):
         self,
         C,
         text,
-        width_=700,
-        height_=460,
+        width_=720,
+        height_=450,
         theme="dark",
         use_entry_bg=False,
         wrap="word",
     ):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title}")
         self.theme = theme
         self.grid_columnconfigure(0, weight=1)
@@ -4953,16 +4953,12 @@ class First_Start_Popup(tk.Toplevel):
             theme=theme,
             use_entry_bg=use_entry_bg,
             override_bg=None,
+            highlightthickness=0,
         )
-        self.yscrollb = Scrollbar(self, self.textbox.yview, "vertical", self.textbox)
-        self.xscrollb = Scrollbar(self, self.textbox.xview, "horizontal", self.textbox)
         self.textbox.delete(1.0, "end")
         self.textbox.insert(1.0, text)
         self.textbox.config(state="disabled")
-        self.textbox.grid(row=1, column=0, sticky="nswe")
-        self.yscrollb.grid(row=1, column=1, sticky="nswe")
-        if wrap == "none":
-            self.xscrollb.grid(row=2, column=0, columnspan=2, sticky="nswe")
+        self.textbox.grid(row=1, column=0, padx=20, sticky="nswe")
         self.buttonframe = Frame(self, theme=theme)
         self.buttonframe.grid(row=3, column=0, columnspan=2, sticky="nswe")
         self.cancel_button = Button(
@@ -4983,7 +4979,7 @@ class First_Start_Popup(tk.Toplevel):
 
 class License_Popup(tk.Toplevel):
     def __init__(self, C, text, show_buttons=True, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} license")
         self.has_agreed = False
         self.grid_columnconfigure(0, weight=1, uniform="y")
@@ -5041,7 +5037,7 @@ class License_Popup(tk.Toplevel):
 
 class Help_Popup(tk.Toplevel):
     def __init__(self, C, text, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].table_bg)
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} help", grab=False)
         self.word = ""
         self.findpos_start = "1.0"

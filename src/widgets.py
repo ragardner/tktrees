@@ -275,7 +275,7 @@ class Id_Parent_Column_Selector(tk.Frame):
         tk.Frame.__init__(
             self,
             parent,
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             highlightbackground=themes[theme].table_fg,
             highlightthickness=0,
         )
@@ -529,28 +529,28 @@ class Id_Parent_Column_Selector(tk.Frame):
             header_selected_cells_bg="#79A158",
             index_selected_cells_bg="#79A158",
         )
-        self.config(background=themes[theme].table_bg, highlightbackground=themes[theme].table_fg)
+        self.config(background=themes[theme].top_left_bg, highlightbackground=themes[theme].table_fg)
         self.id_col_display.my_entry.config(
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             foreground=themes[theme].table_fg,
-            disabledbackground=themes[theme].table_bg,
+            disabledbackground=themes[theme].top_left_bg,
             disabledforeground=themes[theme].table_fg,
             insertbackground=themes[theme].table_fg,
-            readonlybackground=themes[theme].table_bg,
+            readonlybackground=themes[theme].top_left_bg,
         )
         self.par_col_display.my_entry.config(
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             foreground=themes[theme].table_fg,
-            disabledbackground=themes[theme].table_bg,
+            disabledbackground=themes[theme].top_left_bg,
             disabledforeground=themes[theme].table_fg,
             insertbackground=themes[theme].table_fg,
-            readonlybackground=themes[theme].table_bg,
+            readonlybackground=themes[theme].top_left_bg,
         )
 
 
 class FlattenedToggleAndOrder(tk.Frame):
     def __init__(self, parent, command, theme="dark"):
-        tk.Frame.__init__(self, parent, background=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, background=themes[theme].top_left_bg)
         self.C = parent
         self.extra_func = command
         self._flattened = False
@@ -591,12 +591,12 @@ class FlattenedToggleAndOrder(tk.Frame):
         return self.order_dropdown.get_my_value()
 
     def change_theme(self, theme="dark"):
-        self.config(bg=themes[theme].table_bg)
+        self.config(bg=themes[theme].top_left_bg)
 
 
 class Flattened_Column_Selector(tk.Frame):
     def __init__(self, parent, headers=[[]], theme="dark"):
-        tk.Frame.__init__(self, parent, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, bg=themes[theme].top_left_bg)
         self.grid_propagate(False)
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -705,7 +705,7 @@ class Flattened_Column_Selector(tk.Frame):
         return sorted(self.par_cols)
 
     def change_theme(self, theme="dark"):
-        self.config(bg=themes[theme].table_bg)
+        self.config(bg=themes[theme].top_left_bg)
         self.par_col_selection.change_theme(theme)
         self.par_col_selection.set_options(
             table_selected_cells_bg="#79A158",
@@ -717,18 +717,18 @@ class Flattened_Column_Selector(tk.Frame):
             table_selected_cells_fg="white",
         )
         self.par_col_display.my_entry.config(
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             foreground=themes[theme].table_fg,
-            disabledbackground=themes[theme].table_bg,
+            disabledbackground=themes[theme].top_left_bg,
             disabledforeground=themes[theme].table_fg,
             insertbackground=themes[theme].table_fg,
-            readonlybackground=themes[theme].table_bg,
+            readonlybackground=themes[theme].top_left_bg,
         )
 
 
 class Single_Column_Selector(tk.Frame):
     def __init__(self, parent, headers=[[]], width=250, height=350, theme="dark"):
-        tk.Frame.__init__(self, parent, width=width, height=height, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, width=width, height=height, bg=themes[theme].top_left_bg)
         self.grid_propagate(False)
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -859,7 +859,7 @@ class X_Checkbutton(ttk.Button):
 
 class Auto_Add_Condition_Num_Frame(tk.Frame):
     def __init__(self, parent, col_sel, sheet, theme="dark"):
-        tk.Frame.__init__(self, parent, height=200, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, height=200, bg=themes[theme].top_left_bg)
         self.grid_propagate(False)
         self.C = parent
         self.col_sel = col_sel
@@ -927,7 +927,7 @@ class Auto_Add_Condition_Num_Frame(tk.Frame):
 
 class Auto_Add_Condition_Date_Frame(tk.Frame):
     def __init__(self, parent, col_sel, sheet, DATE_FORM, theme="dark"):
-        tk.Frame.__init__(self, parent, height=225, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, height=225, bg=themes[theme].top_left_bg)
         self.grid_propagate(False)
         self.C = parent
         self.grid_columnconfigure(0, weight=1)
@@ -1037,7 +1037,7 @@ class Edit_Condition_Frame(tk.Frame):
     def __init__(
         self, parent, condition, colors, color=None, coltype="Text Detail", confirm_text="Save condition", theme="dark"
     ):
-        tk.Frame.__init__(self, parent, height=160, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, height=160, bg=themes[theme].top_left_bg)
         self.grid_propagate(False)
         self.C = parent
         self.grid_columnconfigure(1, weight=1)
@@ -1092,7 +1092,7 @@ class Edit_Condition_Frame(tk.Frame):
 class Condition_Entry_With_Scrollbar(tk.Frame):
     def __init__(self, parent, coltype="Text Detail", theme="dark"):
         tk.Frame.__init__(self, parent)
-        self.config(bg=themes[theme].table_bg)
+        self.config(bg=themes[theme].top_left_bg)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -1120,12 +1120,12 @@ class Condition_Normal_Entry(tk.Entry):
             self,
             parent,
             font=font,
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             foreground=themes[theme].table_fg,
-            disabledbackground=themes[theme].table_bg,
+            disabledbackground=themes[theme].top_left_bg,
             disabledforeground=themes[theme].table_fg,
             insertbackground=themes[theme].table_fg,
-            readonlybackground=themes[theme].table_bg,
+            readonlybackground=themes[theme].top_left_bg,
         )
         if width_:
             self.config(width=width_)
@@ -1262,7 +1262,7 @@ class Askconfirm_Frame(tk.Frame):
         fgcolor="white",
         theme="dark",
     ):
-        tk.Frame.__init__(self, parent, height=150, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, height=150, bg=themes[theme].top_left_bg)
         self.grid_propagate(False)
         self.C = parent
         self.grid_columnconfigure(0, weight=1)
@@ -1291,7 +1291,7 @@ class Askconfirm_Frame(tk.Frame):
 
 class Error_Frame(tk.Frame):
     def __init__(self, parent, msg, theme="dark"):
-        tk.Frame.__init__(self, parent, height=150, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, height=150, bg=themes[theme].top_left_bg)
         self.grid_propagate(False)
         self.C = parent
         self.grid_columnconfigure(1, weight=1)
@@ -1320,6 +1320,7 @@ class Working_Text(tk.Text):
         use_entry_bg=True,
         override_bg=None,
         bold=False,
+        highlightthickness=1,
     ):
         tk.Text.__init__(
             self,
@@ -1328,9 +1329,11 @@ class Working_Text(tk.Text):
             font=font if not bold else ("Calibri", 13, "bold"),
             spacing1=5,
             spacing2=5,
+            highlightthickness=1 if use_entry_bg else 0,
+            relief="flat",
         )
         self.config(
-            bg=themes[theme].table_bg if use_entry_bg else themes[theme].table_bg,
+            bg=themes[theme].table_bg if use_entry_bg else themes[theme].top_left_bg,
             fg=themes[theme].table_fg if use_entry_bg else themes[theme].table_fg,
             insertbackground=themes[theme].table_fg if use_entry_bg else themes[theme].table_fg,
         )
@@ -1444,12 +1447,12 @@ class Working_Text(tk.Text):
 
 class Display_Text(tk.Frame):
     def __init__(self, parent, text="", theme="dark", bold=False):
-        tk.Frame.__init__(self, parent, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, bg=themes[theme].top_left_bg)
         self.C = parent
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.textbox = Working_Text(self, wrap="word", theme=theme, use_entry_bg=False, bold=bold)
-        self.textbox.config(highlightbackground=themes[theme].table_bg, highlightcolor=themes[theme].table_bg)
+        self.textbox.config(highlightbackground=themes[theme].top_left_bg, highlightcolor=themes[theme].top_left_bg)
         self.textbox.grid_propagate(False)
         self.grid_propagate(False)
         self.yscrollb = Scrollbar(self, self.textbox.yview, "vertical", self.textbox)
@@ -1485,7 +1488,7 @@ class Display_Text(tk.Frame):
 
 class Wrapped_Text_With_Find_And_Yscroll(tk.Frame):
     def __init__(self, parent, text, current_state, height=None, theme="dark"):
-        tk.Frame.__init__(self, parent, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, bg=themes[theme].top_left_bg)
         self.C = parent
         self.theme = theme
         self.grid_rowconfigure(1, weight=1)
@@ -1673,12 +1676,12 @@ class Readonly_Entry(tk.Entry):
             parent,
             font=font,
             state="readonly",
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             foreground=themes[theme].table_selected_box_cells_fg if use_status_fg else themes[theme].table_fg,
-            disabledbackground=themes[theme].table_bg,
+            disabledbackground=themes[theme].top_left_bg,
             disabledforeground=themes[theme].table_selected_box_cells_fg if use_status_fg else themes[theme].table_fg,
             insertbackground=themes[theme].table_fg,
-            readonlybackground=themes[theme].table_bg,
+            readonlybackground=themes[theme].top_left_bg,
             highlightthickness=outline,
             relief="flat",
         )
@@ -1721,14 +1724,14 @@ class Readonly_Entry(tk.Entry):
 
     def change_theme(self, theme="dark"):
         self.config(
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             foreground=themes[theme].table_selected_box_cells_fg if self.use_status_fg else themes[theme].table_fg,
-            disabledbackground=themes[theme].table_bg,
+            disabledbackground=themes[theme].top_left_bg,
             disabledforeground=themes[theme].table_selected_box_cells_fg
             if self.use_status_fg
             else themes[theme].table_fg,
             insertbackground=themes[theme].table_fg,
-            readonlybackground=themes[theme].table_bg,
+            readonlybackground=themes[theme].top_left_bg,
         )
 
 
@@ -1743,10 +1746,10 @@ class Normal_Entry(tk.Entry):
             textvariable=textvariable,
             background=themes[theme].table_bg,
             foreground=themes[theme].table_fg,
-            disabledbackground=themes[theme].table_bg,
+            disabledbackground=themes[theme].top_left_bg,
             disabledforeground=themes[theme].table_fg,
             insertbackground=themes[theme].table_fg,
-            readonlybackground=themes[theme].table_bg,
+            readonlybackground=themes[theme].top_left_bg,
         )
         if width_:
             self.config(width=width_)
@@ -1799,7 +1802,7 @@ class Normal_Entry(tk.Entry):
 
 class Readonly_Entry_With_Scrollbar(tk.Frame):
     def __init__(self, parent, font=EF, theme="dark", use_status_fg=False):
-        tk.Frame.__init__(self, parent, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, bg=themes[theme].top_left_bg)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -1824,13 +1827,13 @@ class Readonly_Entry_With_Scrollbar(tk.Frame):
         self.my_entry.set_my_value(text)
 
     def change_theme(self, theme="dark"):
-        self.config(bg=themes[theme].table_bg)
+        self.config(bg=themes[theme].top_left_bg)
         self.my_entry.change_theme(theme)
 
 
 class Entry_With_Scrollbar(tk.Frame):
     def __init__(self, parent, theme="dark"):
-        tk.Frame.__init__(self, parent, bg=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, bg=themes[theme].top_left_bg)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -1868,7 +1871,7 @@ class Ez_Dropdown(ttk.Combobox):
 
 class Numerical_Entry_With_Scrollbar(tk.Frame):
     def __init__(self, parent, theme="dark"):
-        tk.Frame.__init__(self, parent, background=themes[theme].table_bg)
+        tk.Frame.__init__(self, parent, background=themes[theme].top_left_bg)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -1896,12 +1899,12 @@ class Numerical_Normal_Entry(tk.Entry):
             self,
             parent,
             font=font,
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             foreground=themes[theme].table_fg,
-            disabledbackground=themes[theme].table_bg,
+            disabledbackground=themes[theme].top_left_bg,
             disabledforeground=themes[theme].table_fg,
             insertbackground=themes[theme].table_fg,
-            readonlybackground=themes[theme].table_bg,
+            readonlybackground=themes[theme].top_left_bg,
         )
         if width_:
             self.config(width=width_)
@@ -1973,7 +1976,7 @@ class Date_Entry(tk.Frame):
             self,
             parent,
             relief="flat",
-            bg=themes[theme].table_bg,
+            bg=themes[theme].top_left_bg,
             highlightbackground=themes[theme].table_fg,
             highlightthickness=2,
             border=2,
@@ -1989,7 +1992,7 @@ class Date_Entry(tk.Frame):
         )
         self.sep = "/" if "/" in DATE_FORM else "-"
         self.label_1 = tk.Label(
-            self, font=("Calibri", 30, "bold"), text=self.sep, background=themes[theme].table_bg, relief="flat"
+            self, font=("Calibri", 30, "bold"), text=self.sep, background=themes[theme].top_left_bg, relief="flat"
         )
 
         self.entry_2 = Normal_Entry(
@@ -1997,7 +2000,7 @@ class Date_Entry(tk.Frame):
         )
 
         self.label_2 = tk.Label(
-            self, font=("Calibri", 30, "bold"), text=self.sep, background=themes[theme].table_bg, relief="flat"
+            self, font=("Calibri", 30, "bold"), text=self.sep, background=themes[theme].top_left_bg, relief="flat"
         )
 
         self.entry_3 = Normal_Entry(
@@ -2272,7 +2275,7 @@ class Frame(tk.Frame):
         tk.Frame.__init__(
             self,
             parent,
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             highlightbackground=highlightbackground,
             highlightthickness=highlightthickness,
         )
@@ -2294,7 +2297,7 @@ class Status_Bar(tk.Label):
             parent,
             text=text,
             font=font,
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             foreground=themes[theme].table_selected_box_cells_fg,
             anchor="w",
         )
@@ -2314,7 +2317,7 @@ class Label(tk.Label):
             parent,
             text=text,
             font=font,
-            background=themes[theme].table_bg,
+            background=themes[theme].top_left_bg,
             foreground=themes[theme].table_fg,
             anchor=anchor,
         )
@@ -2326,7 +2329,7 @@ class Label(tk.Label):
 
 class Display_Label(tk.Label):
     def __init__(self, parent, text, font, theme="dark"):
-        tk.Label.__init__(self, parent, background=themes[theme].table_bg, text=text, font=font)
+        tk.Label.__init__(self, parent, background=themes[theme].top_left_bg, text=text, font=font)
         self.config(anchor="w")
 
     def change_text(self, text):

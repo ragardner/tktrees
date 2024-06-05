@@ -1755,14 +1755,14 @@ class Tree_Editor(tk.Frame):
         self.dark_theme_bool.set(True if self.C.theme == "dark" else False)
         self.light_green_theme_bool.set(True if self.C.theme == "light_green" else False)
         self.light_blue_theme_bool.set(True if self.C.theme == "light_blue" else False)
-        self.config(bg=themes[theme].table_bg)
-        self.C.config(bg=themes[theme].table_bg)
-        self.main_canvas.config(bg=themes[theme].table_bg)
-        self.l_frame.config(bg=themes[theme].table_bg)
-        self.treeframe.config(bg=themes[theme].table_bg)
-        self.sts_tree.config(bg=themes[theme].table_bg)
-        self.r_frame.config(bg=themes[theme].table_bg)
-        self.sheetframe.config(bg=themes[theme].table_bg)
+        self.config(bg=themes[theme].top_left_bg)
+        self.C.config(bg=themes[theme].top_left_bg)
+        self.main_canvas.config(bg=themes[theme].top_left_bg)
+        self.l_frame.config(bg=themes[theme].top_left_bg)
+        self.treeframe.config(bg=themes[theme].top_left_bg)
+        self.sts_tree.config(bg=themes[theme].top_left_bg)
+        self.r_frame.config(bg=themes[theme].top_left_bg)
+        self.sheetframe.config(bg=themes[theme].top_left_bg)
         # if USER_OS == "darwin":
         # button_kwargs = {
         #     "background": themes["light_green"].table_bg,
@@ -1803,46 +1803,46 @@ class Tree_Editor(tk.Frame):
         #         ],
         #     )
 
-        # self.search_entry.config(
-        #     background=themes["light_green"].table_bg,
-        #     foreground=themes["light_green"].table_fg,
-        #     disabledbackground=themes["light_green"].table_bg,
-        #     disabledforeground=themes["light_green"].table_fg,
-        #     insertbackground=themes["light_green"].table_fg,
-        #     readonlybackground=themes["light_green"].table_bg,
-        # )
-        # self.sheet_search_entry.config(
-        #     background=themes["light_green"].table_bg,
-        #     foreground=themes["light_green"].table_fg,
-        #     disabledbackground=themes["light_green"].table_bg,
-        #     disabledforeground=themes["light_green"].table_fg,
-        #     insertbackground=themes["light_green"].table_fg,
-        #     readonlybackground=themes["light_green"].table_bg,
-        # )
+        self.search_entry.config(
+            background=themes["light_green"].table_bg,
+            foreground=themes["light_green"].table_fg,
+            disabledbackground=themes["light_green"].table_bg,
+            disabledforeground=themes["light_green"].table_fg,
+            insertbackground=themes["light_green"].table_fg,
+            readonlybackground=themes["light_green"].table_bg,
+        )
+        self.sheet_search_entry.config(
+            background=themes["light_green"].table_bg,
+            foreground=themes["light_green"].table_fg,
+            disabledbackground=themes["light_green"].table_bg,
+            disabledforeground=themes["light_green"].table_fg,
+            insertbackground=themes["light_green"].table_fg,
+            readonlybackground=themes["light_green"].table_bg,
+        )
         self.C.selection_info.change_theme(theme)
 
-        self.btns_tree.config(bg=themes[theme].table_bg)
-        self.btns_sheet.config(bg=themes[theme].table_bg)
+        self.btns_tree.config(bg=themes[theme].top_left_bg)
+        self.btns_sheet.config(bg=themes[theme].top_left_bg)
 
-        self.C.status_bar.config(bg=themes[theme].table_bg, fg=themes[theme].table_selected_box_cells_fg)
-        self.C.status_frame.config(bg=themes[theme].table_bg)
+        self.C.status_bar.config(bg=themes[theme].top_left_bg, fg=themes[theme].table_selected_box_cells_fg)
+        self.C.status_frame.config(bg=themes[theme].top_left_bg)
 
-        self.C.frames["sheet_selection"].config(bg=themes[theme].table_bg)
-        self.C.frames["sheet_selection"].sheets_label.config(bg=themes[theme].table_bg, fg=themes[theme].table_fg)
-        self.C.frames["column_selection"].config(bg=themes[theme].table_bg)
+        self.C.frames["sheet_selection"].config(bg=themes[theme].top_left_bg)
+        self.C.frames["sheet_selection"].sheets_label.config(bg=themes[theme].top_left_bg, fg=themes[theme].table_fg)
+        self.C.frames["column_selection"].config(bg=themes[theme].top_left_bg)
         self.C.frames["column_selection"].flattened_choices.change_theme(theme)
         self.C.frames["column_selection"].selector.change_theme(theme)
         self.C.frames["column_selection"].flattened_selector.change_theme(theme)
         self.C.frames["tree_compare"].sheet_filename1.change_theme(theme)
         self.C.frames["tree_compare"].sheet_filename2.change_theme(theme)
         self.C.frames["tree_compare"].l_frame.config(
-            highlightbackground=themes[theme].table_fg, background=themes[theme].table_bg
+            highlightbackground=themes[theme].table_fg, background=themes[theme].top_left_bg
         )
-        self.C.frames["tree_compare"].l_frame_btns.config(background=themes[theme].table_bg)
+        self.C.frames["tree_compare"].l_frame_btns.config(background=themes[theme].top_left_bg)
         self.C.frames["tree_compare"].r_frame.config(
-            highlightbackground=themes[theme].table_fg, background=themes[theme].table_bg
+            highlightbackground=themes[theme].table_fg, background=themes[theme].top_left_bg
         )
-        self.C.frames["tree_compare"].r_frame_btns.config(background=themes[theme].table_bg)
+        self.C.frames["tree_compare"].r_frame_btns.config(background=themes[theme].top_left_bg)
         self.C.frames["tree_compare"].selector_1.change_theme(theme)
         self.C.frames["tree_compare"].selector_2.change_theme(theme)
         self.C.frames["tree_compare"].sheetdisplay1.change_theme(theme)

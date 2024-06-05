@@ -83,13 +83,16 @@ class Tree_Compare(tk.Frame):
         self.r_frame_btns.pack(side="top", fill="both")
 
         self.sheet_filename1 = Readonly_Entry(self.l_frame_btns, font=EF, theme=self.C.theme)
-        self.sheet_filename1.grid(row=1, column=0, padx=2, pady=2, sticky="nswe")
+        self.sheet_filename1.grid(row=1, column=0, padx=2, pady=5, sticky="nswe")
 
         self.open_sheet1_button = Button(
-            self.l_frame_btns, text="⯇ Open file", style="EF.Std.TButton", command=self.open_sheet1
+            self.l_frame_btns,
+            text="⯇ Open file",
+            style="EFW.Std.TButton",
+            command=self.open_sheet1,
         )
-        self.open_sheet1_button.grid(row=1, column=1, padx=20, pady=2, sticky="nsw")
-        self.open_sheet1_button.config(width=30)
+        self.open_sheet1_button.grid(row=1, column=1, padx=10, pady=5, sticky="nsw")
+        self.open_sheet1_button.config(width=15)
 
         self.sheet_dropdown_displayed1 = tk.StringVar(self.l_frame_btns)
         self.sheet_dropdown1 = ttk.Combobox(
@@ -100,25 +103,31 @@ class Tree_Compare(tk.Frame):
             background="white",
         )
         self.sheet_dropdown1.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
-        self.sheet_dropdown1.grid(row=2, padx=2, pady=2, column=0, sticky="nswe")
+        self.sheet_dropdown1.grid(row=2, padx=2, pady=5, column=0, sticky="nswe")
 
         self.load_sheet1 = Button(
-            self.l_frame_btns, text="⯇ Load sheet", style="EF.Std.TButton", command=self.load_sheet1
+            self.l_frame_btns,
+            text="⯇ Load sheet",
+            style="EFW.Std.TButton",
+            command=self.load_sheet1,
         )
         self.load_sheet1.config(state="disabled")
-        self.load_sheet1.config(width=30)
+        self.load_sheet1.config(width=15)
         self.load_sheet1_STATE = "disabled"
-        self.load_sheet1.grid(row=2, column=1, padx=20, pady=2, sticky="nsw")
+        self.load_sheet1.grid(row=2, column=1, padx=10, pady=5, sticky="nsw")
 
         self.selector_1 = Id_Parent_Column_Selector(self.l_frame_btns, expand=True)
         self.selector_1.config(width=400, height=330)
         self.selector_1.grid(row=3, column=0, sticky="nswe")
 
         self.run_compare_button = Button(
-            self.l_frame_btns, text="Create Report", style="TF.Std.TButton", command=self.run_comparison
+            self.l_frame_btns,
+            text="Create Report",
+            style="TF.Std.TButton",
+            command=self.run_comparison,
         )
 
-        self.run_compare_button.grid(row=3, column=1, padx=20, pady=20, sticky="ews")
+        self.run_compare_button.grid(row=3, column=1, padx=10, pady=20, sticky="ews")
 
         self.sheetdisplay1 = Sheet(
             self.l_frame,
@@ -150,13 +159,16 @@ class Tree_Compare(tk.Frame):
         # __________________ R FRAME ______________________________________________________________
 
         self.sheet_filename2 = Readonly_Entry(self.r_frame_btns, font=EF, theme=self.C.theme)
-        self.sheet_filename2.grid(row=1, column=0, padx=2, pady=2, sticky="nswe")
+        self.sheet_filename2.grid(row=1, column=0, padx=2, pady=5, sticky="nswe")
 
         self.open_sheet2_button = Button(
-            self.r_frame_btns, text="⯇ Open file", style="EF.Std.TButton", command=self.open_sheet2
+            self.r_frame_btns,
+            text="⯇ Open file",
+            style="EFW.Std.TButton",
+            command=self.open_sheet2,
         )
-        self.open_sheet2_button.config(width=30)
-        self.open_sheet2_button.grid(row=1, column=1, padx=20, pady=2, sticky="nsw")
+        self.open_sheet2_button.config(width=15)
+        self.open_sheet2_button.grid(row=1, column=1, padx=10, pady=5, sticky="nsw")
 
         self.sheet_dropdown_displayed2 = tk.StringVar(self.r_frame_btns)
         self.sheet_dropdown2 = ttk.Combobox(
@@ -167,15 +179,18 @@ class Tree_Compare(tk.Frame):
             background="white",
         )
         self.sheet_dropdown2.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
-        self.sheet_dropdown2.grid(row=2, column=0, padx=2, pady=2, sticky="nswe")
+        self.sheet_dropdown2.grid(row=2, column=0, padx=2, pady=5, sticky="nswe")
 
         self.load_sheet2 = Button(
-            self.r_frame_btns, text="⯇ Load sheet", style="EF.Std.TButton", command=self.load_sheet2
+            self.r_frame_btns,
+            text="⯇ Load sheet",
+            style="EFW.Std.TButton",
+            command=self.load_sheet2,
         )
         self.load_sheet2.config(state="disabled")
-        self.load_sheet2.config(width=30)
+        self.load_sheet2.config(width=15)
         self.load_sheet2_STATE = "disabled"
-        self.load_sheet2.grid(row=2, column=1, padx=20, pady=2, sticky="nsw")
+        self.load_sheet2.grid(row=2, column=1, padx=10, pady=5, sticky="nsw")
 
         self.selector_2 = Id_Parent_Column_Selector(self.r_frame_btns, expand=True)
         self.selector_2.config(width=400, height=330)

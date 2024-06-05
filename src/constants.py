@@ -81,7 +81,7 @@ if USER_OS == "darwin":
     EFB = ("Calibri", 14, "bold")
     ERR_ASK_FNT = ("Calibri", 13, "bold")
     std_font_size = 13
-    lge_font_size = 15
+    lge_font_size = 16
     sheet_header_font = ("Calibri", std_font_size, "normal")
 else:
     TF = ("Calibri", 15, "bold")
@@ -91,7 +91,7 @@ else:
     EFB = ("Calibri", 13, "bold")
     ERR_ASK_FNT = ("Calibri", 12, "bold")
     std_font_size = 11
-    lge_font_size = 13
+    lge_font_size = 14
     sheet_header_font = ("Calibri", std_font_size, "normal")
 
 tree_bindings = (
