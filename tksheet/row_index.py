@@ -957,7 +957,7 @@ class RowIndex(tk.Canvas):
         run_binding_func: bool = True,
         ext: bool = False,
     ) -> int:
-        boxes_to_hide = tuple(iid for iid in self.MT.selection_boxes)
+        boxes_to_hide = tuple(self.MT.selection_boxes)
         fill_iid = self.MT.create_selection_box(r, 0, r + 1, len(self.MT.col_positions) - 1, "rows", ext=ext)
         for iid in boxes_to_hide:
             self.MT.hide_selection_box(iid)
@@ -1000,7 +1000,7 @@ class RowIndex(tk.Canvas):
             y1,
             x2,
             y2,
-            radius=8 if self.PAR.ops.rounded_boxes else 0,
+            radius=5 if self.PAR.ops.rounded_boxes else 0,
         )
         if isinstance(iid, int):
             self.coords(iid, coords)
@@ -1353,11 +1353,9 @@ class RowIndex(tk.Canvas):
                 # the left hand downward point
                 x1 + 5 + indent,
                 y1 + mid_y + small_mod,
-                
                 # the middle upward point
                 x1 + 5 + indent + small_mod + small_mod,
                 y1 + mid_y - small_mod,
-                
                 # the right hand downward point
                 x1 + 5 + indent + small_mod + small_mod + small_mod + small_mod,
                 y1 + mid_y + small_mod,
@@ -1368,11 +1366,9 @@ class RowIndex(tk.Canvas):
                 # the upper point
                 x1 + 5 + indent + small_mod + small_mod,
                 y1 + mid_y - small_mod - small_mod,
-                
                 # the middle point
                 x1 + 5 + indent + small_mod + small_mod + small_mod + small_mod,
                 y1 + mid_y,
-                
                 # the bottom point
                 x1 + 5 + indent + small_mod + small_mod,
                 y1 + mid_y + small_mod + small_mod,

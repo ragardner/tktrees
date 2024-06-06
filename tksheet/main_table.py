@@ -25,6 +25,7 @@ from itertools import (
     accumulate,
     chain,
     cycle,
+    filterfalse,
     islice,
     repeat,
 )
@@ -696,8 +697,9 @@ class MainTable(tk.Canvas):
             selected=self.selected,
         )
         if self.selected:
-            selected_r = self.selected.row
-            selected_c = self.selected.column
+            selected_r = self.selected.box.from_r
+            selected_c = self.selected.box.from_c
+            curr_coords = (self.selected.row, self.selected.column)
         elif not self.selected and not self.PAR.ops.paste_can_expand_x and not self.PAR.ops.paste_can_expand_y:
             return
         else:
@@ -710,6 +712,7 @@ class MainTable(tk.Canvas):
                     selected_c, selected_r = len(self.col_positions) - 1, 0
                 elif len(self.row_positions) > 1 and len(self.col_positions) > 1:
                     selected_c, selected_r = 0, len(self.row_positions) - 1
+                curr_coords = (selected_r, selected_c)
         try:
             data = get_data_from_clipboard(
                 widget=self,
@@ -915,13 +918,17 @@ class MainTable(tk.Canvas):
         else:
             selboxc = selected_c_adjusted_new_data_numcols
         self.deselect("all", redraw=False)
-        self.create_selection_box(
-            selected_r,
-            selected_c,
-            selboxr,
-            selboxc,
-            "cells",
-            run_binding=True,
+        self.set_currently_selected(
+            *curr_coords,
+            item=self.create_selection_box(
+                selected_r,
+                selected_c,
+                selboxr,
+                selboxc,
+                type_="cells",
+                set_current=False,
+                run_binding=True,
+            ),
         )
         event_data["selection_boxes"] = self.get_boxes()
         event_data["selected"] = self.selected
@@ -3773,11 +3780,10 @@ class MainTable(tk.Canvas):
         colpos = self.PAR.ops.default_column_width
         if isinstance(ncols, int):
             self.set_col_positions(itr=repeat(colpos, ncols))
+        elif self.all_columns_displayed:
+            self.set_col_positions(itr=repeat(colpos, self.total_data_cols()))
         else:
-            if self.all_columns_displayed:
-                self.set_col_positions(itr=repeat(colpos, self.total_data_cols()))
-            else:
-                self.set_col_positions(itr=repeat(colpos, len(self.displayed_columns)))
+            self.set_col_positions(itr=repeat(colpos, len(self.displayed_columns)))
 
     def set_row_positions(self, itr: Iterator[float]) -> None:
         self.row_positions = list(accumulate(chain([0], itr)))
@@ -3786,11 +3792,10 @@ class MainTable(tk.Canvas):
         rowpos = self.get_default_row_height()
         if isinstance(nrows, int):
             self.set_row_positions(itr=repeat(rowpos, nrows))
+        elif self.all_rows_displayed:
+            self.set_row_positions(itr=repeat(rowpos, self.total_data_rows()))
         else:
-            if self.all_rows_displayed:
-                self.set_row_positions(itr=repeat(rowpos, self.total_data_rows()))
-            else:
-                self.set_row_positions(itr=repeat(rowpos, len(self.displayed_rows)))
+            self.set_row_positions(itr=repeat(rowpos, len(self.displayed_rows)))
 
     def del_col_position(self, idx: int, deselect_all: bool = False):
         if deselect_all:
@@ -4453,7 +4458,7 @@ class MainTable(tk.Canvas):
         if isinstance(displayed_rows, list):
             self.displayed_rows = displayed_rows
         elif not self.all_rows_displayed:
-            # push displayed indexes by one for every inserted column
+            # push displayed indexes by one for every inserted row
             self.displayed_rows.sort()
             # highest index is first in rows
             up_to = len(self.displayed_rows)
@@ -4718,9 +4723,10 @@ class MainTable(tk.Canvas):
             named_spans=self.get_spans_to_del_from_cols(cols=cols_set),
         )
         if not self.all_columns_displayed:
-            self.displayed_columns = [c for c in self.displayed_columns if c not in cols_set]
-            for c in cols:
-                self.displayed_columns = [dc if c > dc else dc - 1 for dc in self.displayed_columns]
+            self.displayed_columns = [
+                c if not (num := bisect_left(cols, c)) else c - num
+                for c in filterfalse(cols_set.__contains__, self.displayed_columns)
+            ]
         return event_data
 
     def delete_columns_displayed(self, cols: list, event_data: dict) -> EventDataDict:
@@ -4773,9 +4779,10 @@ class MainTable(tk.Canvas):
             named_spans=self.get_spans_to_del_from_rows(rows=rows_set),
         )
         if not self.all_rows_displayed:
-            self.displayed_rows = [r for r in self.displayed_rows if r not in rows_set]
-            for r in rows:
-                self.displayed_rows = [dr if r > dr else dr - 1 for dr in self.displayed_rows]
+            self.displayed_rows = [
+                r if not (num := bisect_left(rows, r)) else r - num
+                for r in filterfalse(rows_set.__contains__, self.displayed_rows)
+            ]
         return event_data
 
     def delete_rows_displayed(self, rows: list, event_data: dict) -> EventDataDict:
@@ -4847,20 +4854,23 @@ class MainTable(tk.Canvas):
     ) -> list[int] | None:
         if rows is None and all_rows_displayed is None:
             return list(range(self.total_data_rows())) if self.all_rows_displayed else self.displayed_rows
-        total_data_rows = None
-        if (rows is not None and rows != self.displayed_rows) or (all_rows_displayed and not self.all_rows_displayed):
-            self.purge_undo_and_redo_stack()
         if rows is not None and rows != self.displayed_rows:
+            self.purge_undo_and_redo_stack()
             self.displayed_rows = sorted(rows)
-        if all_rows_displayed:
-            if not self.all_rows_displayed:
-                total_data_rows = self.total_data_rows()
-                self.displayed_rows = list(range(total_data_rows))
-            self.all_rows_displayed = True
-        elif all_rows_displayed is not None and not all_rows_displayed:
-            self.all_rows_displayed = False
+        # setting all_rows_displayed
+        if all_rows_displayed is not None:
+            # setting it to True and it's currently False
+            if all_rows_displayed and not self.all_rows_displayed:
+                self.purge_undo_and_redo_stack()
+                self.all_rows_displayed = True
+            # setting it to False and it's currently True
+            elif not all_rows_displayed and self.all_rows_displayed:
+                # if rows is None then displayed_rows needs to be reset
+                if rows is None:
+                    self.displayed_rows = list(range(self.total_data_rows()))
+                self.all_rows_displayed = False
         if reset_row_positions:
-            self.reset_row_positions(nrows=total_data_rows)
+            self.reset_row_positions()
         if deselect_all:
             self.deselect("all", redraw=False)
 
@@ -4873,22 +4883,23 @@ class MainTable(tk.Canvas):
     ) -> list[int] | None:
         if columns is None and all_columns_displayed is None:
             return list(range(self.total_data_cols())) if self.all_columns_displayed else self.displayed_columns
-        total_data_cols = None
-        if (columns is not None and columns != self.displayed_columns) or (
-            all_columns_displayed and not self.all_columns_displayed
-        ):
-            self.purge_undo_and_redo_stack()
         if columns is not None and columns != self.displayed_columns:
+            self.purge_undo_and_redo_stack()
             self.displayed_columns = sorted(columns)
-        if all_columns_displayed:
-            if not self.all_columns_displayed:
-                total_data_cols = self.total_data_cols()
-                self.displayed_columns = list(range(total_data_cols))
-            self.all_columns_displayed = True
-        elif all_columns_displayed is not None and not all_columns_displayed:
-            self.all_columns_displayed = False
+        # setting all_columns_displayed
+        if all_columns_displayed is not None:
+            # setting it to True and it's currently False
+            if all_columns_displayed and not self.all_columns_displayed:
+                self.purge_undo_and_redo_stack()
+                self.all_columns_displayed = True
+            # setting it to False and it's currently True
+            elif not all_columns_displayed and self.all_columns_displayed:
+                # if columns is None then displayed_columns needs to be reset
+                if columns is None:
+                    self.displayed_columns = list(range(self.total_data_cols()))
+                self.all_columns_displayed = False
         if reset_col_positions:
-            self.reset_col_positions(ncols=total_data_cols)
+            self.reset_col_positions()
         if deselect_all:
             self.deselect("all", redraw=False)
 
@@ -5960,7 +5971,7 @@ class MainTable(tk.Canvas):
         if not self.PAR.ops.rounded_boxes or not x2 - x1 or not y2 - y1:
             radius = 0
         else:
-            radius = 8
+            radius = 5
         coords = rounded_box_coords(
             x1,
             y1,
@@ -6185,7 +6196,7 @@ class MainTable(tk.Canvas):
         x1, y1, x2, y2 = self.box_coords_x_canvas_coords(r1, c1, r2, c2, type_)
         self.display_box(x1, y1, x2, y2, fill=mt_bg, outline="", state=state, tags=type_, width=1, iid=fill_iid)
         self.RI.display_box(
-            1,
+            0,
             y1,
             self.RI.current_width - 1,
             y2,

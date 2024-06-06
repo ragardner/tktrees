@@ -946,7 +946,7 @@ class ColumnHeaders(tk.Canvas):
         run_binding_func: bool = True,
         ext: bool = False,
     ) -> int:
-        boxes_to_hide = tuple(iid for iid in self.MT.selection_boxes)
+        boxes_to_hide = tuple(self.MT.selection_boxes)
         fill_iid = self.MT.create_selection_box(0, c, len(self.MT.row_positions) - 1, c + 1, "columns", ext=ext)
         for iid in boxes_to_hide:
             self.MT.hide_selection_box(iid)
@@ -989,7 +989,7 @@ class ColumnHeaders(tk.Canvas):
             y1,
             x2,
             y2,
-            radius=8 if self.PAR.ops.rounded_boxes else 0,
+            radius=5 if self.PAR.ops.rounded_boxes else 0,
         )
         if isinstance(iid, int):
             self.coords(iid, coords)
@@ -1331,7 +1331,6 @@ class ColumnHeaders(tk.Canvas):
                     x2 - 4,
                     y1 + mid_y - small_mod,
                 )
-            
             if self.hidd_dropdown:
                 t, sh = self.hidd_dropdown.popitem()
                 self.coords(t, points)
