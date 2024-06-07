@@ -2903,21 +2903,21 @@ class Tree_Editor(tk.Frame):
                     else:
                         self.tree_paste(
                             selected=selected,
-                            id_col=(self.tree.rowitem(selected.row), selected.column),
+                            id_col=(self.tree.rowitem(selected.box.from_r), selected.box.from_c),
                         )
                 elif self.winfo_containing(event.x_root, event.y_root) is not None:
                     self.tree_rc_menu_empty.tk_popup(self.C.winfo_pointerx(), self.C.winfo_pointery())
             elif selected := self.tree.selected:
                 self.tree_paste(
                     selected=selected,
-                    id_col=(self.tree.rowitem(selected.row), selected.column),
+                    id_col=(self.tree.rowitem(selected.box.from_r), selected.box.from_c),
                 )
         elif self.sheet.has_focus() and (selected := self.sheet.selected):
             self.sheet_paste(
                 selected=selected,
                 id_col=(
-                    self.sheet.data[selected.row][self.ic].lower(),
-                    selected.column,
+                    self.sheet.data[selected.box.from_r][self.ic].lower(),
+                    selected.box.from_c,
                 ),
             )
 
@@ -2960,7 +2960,7 @@ class Tree_Editor(tk.Frame):
         self.start_work("Pasting cells... ")
         numcols = equalize_sublist_lens(data)
         numrows, numcols, data = self.extend_data(data, len(data), numcols, selected)
-        tree_disprn, x1 = selected.row, id_col[1]
+        tree_disprn, x1 = selected.box.from_r, id_col[1]
         tree_datarn = self.tree.itemrow(id_col[0])
         if x1 + numcols > self.row_len:
             numcols = self.row_len - x1
