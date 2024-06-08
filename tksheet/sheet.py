@@ -5056,23 +5056,22 @@ class Sheet(tk.Frame):
                 raise ValueError(f"iid '{item}' causes a recursive loop with parent '{parent}'.")
             parent_node = self.RI.tree[parent]
             if parent_node.children:
-                item_desc = sum(1 for _ in self.RI.get_iid_descendants(item))
                 if index is None or index >= len(parent_node.children):
                     index = len(parent_node.children)
-                    new_r = self.RI.tree_rns[parent]
-                    new_r_desc = sum(1 for _ in self.RI.get_iid_descendants(parent))
+                    new_r = self.RI.tree_rns[parent] + sum(1 for _ in self.RI.get_iid_descendants(parent))
 
                     # new parent has children
                     # index is on end
                     # item row is less than move to row
                     if item_r < new_r:
-                        r_ctr = new_r + new_r_desc - item_desc
+                        item_desc = sum(1 for _ in self.RI.get_iid_descendants(item))
+                        r_ctr = new_r - item_desc
 
                     # new parent has children
                     # index is on end
                     # item row is greater than move to row
                     else:
-                        r_ctr = new_r + new_r_desc
+                        r_ctr = new_r + 1
                 else:
                     new_r = self.RI.tree_rns[parent_node.children[index].iid]
 
@@ -5081,6 +5080,7 @@ class Sheet(tk.Frame):
                     # item row is less than move to row
                     if item_r < new_r:
                         new_r_desc = sum(1 for _ in self.RI.get_iid_descendants(parent_node.children[index].iid))
+                        item_desc = sum(1 for _ in self.RI.get_iid_descendants(item))
                         r_ctr = new_r + new_r_desc - item_desc
 
                     # new parent has children
@@ -5096,8 +5096,7 @@ class Sheet(tk.Frame):
                 # index always start
                 # item row is less than move to row
                 if item_r < new_r:
-                    item_desc = sum(1 for _ in self.RI.get_iid_descendants(item))
-                    r_ctr = new_r - item_desc
+                    r_ctr = new_r - sum(1 for _ in self.RI.get_iid_descendants(item))
 
                 # new parent doesn't have children
                 # index always start
