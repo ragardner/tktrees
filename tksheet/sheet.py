@@ -5041,7 +5041,8 @@ class Sheet(tk.Frame):
     def move(self, item: str, parent: str, index: int | None = None) -> Sheet:
         """
         Moves item to be under parent as child at index
-        'parent' can be empty string which will make item a top node
+        'parent' can be an empty str which will put the item at top level
+        Performance is not great
         """
         if (item := item.lower()) and item not in self.RI.tree:
             raise ValueError(f"Item '{item}' does not exist.")
@@ -5059,13 +5060,11 @@ class Sheet(tk.Frame):
                 if index is None or index >= len(parent_node.children):
                     index = len(parent_node.children)
                     new_r = self.RI.tree_rns[parent] + sum(1 for _ in self.RI.get_iid_descendants(parent))
-
                     # new parent has children
                     # index is on end
                     # item row is less than move to row
                     if item_r < new_r:
-                        item_desc = sum(1 for _ in self.RI.get_iid_descendants(item))
-                        r_ctr = new_r - item_desc
+                        r_ctr = new_r - sum(1 for _ in self.RI.get_iid_descendants(item))
 
                     # new parent has children
                     # index is on end
@@ -5074,14 +5073,15 @@ class Sheet(tk.Frame):
                         r_ctr = new_r + 1
                 else:
                     new_r = self.RI.tree_rns[parent_node.children[index].iid]
-
                     # new parent has children
                     # index is not end
                     # item row is less than move to row
                     if item_r < new_r:
-                        new_r_desc = sum(1 for _ in self.RI.get_iid_descendants(parent_node.children[index].iid))
-                        item_desc = sum(1 for _ in self.RI.get_iid_descendants(item))
-                        r_ctr = new_r + new_r_desc - item_desc
+                        r_ctr = (
+                            new_r
+                            + sum(1 for _ in self.RI.get_iid_descendants(parent_node.children[index].iid))
+                            - sum(1 for _ in self.RI.get_iid_descendants(item))
+                        )
 
                     # new parent has children
                     # index is not end
@@ -5126,9 +5126,11 @@ class Sheet(tk.Frame):
                 if (new_r := self.top_index_row(index)) is None:
                     new_r = self.top_index_row((sum(1 for _ in self.RI.gen_top_nodes()) - 1))
             if item_r < new_r:
-                par_desc = sum(1 for _ in self.RI.get_iid_descendants(self.rowitem(new_r, data_index=True)))
-                item_desc = sum(1 for _ in self.RI.get_iid_descendants(item))
-                r_ctr = new_r + par_desc - item_desc
+                r_ctr = (
+                    new_r
+                    + sum(1 for _ in self.RI.get_iid_descendants(self.rowitem(new_r, data_index=True)))
+                    - sum(1 for _ in self.RI.get_iid_descendants(item))
+                )
             else:
                 r_ctr = new_r
             mapping[item_r] = r_ctr
