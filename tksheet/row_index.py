@@ -358,7 +358,11 @@ class RowIndex(tk.Canvas):
                         self.MT.current_cursor = "sb_v_double_arrow"
                 else:
                     self.rsz_h = None
-            if self.width_resizing_enabled and not mouse_over_resize:
+            if (
+                self.width_resizing_enabled
+                and not mouse_over_resize
+                and (isinstance(self.MT._row_index, int) or self.MT._row_index)
+            ):
                 try:
                     x1, y1, x2, y2 = (
                         self.row_width_resize_bbox[0],

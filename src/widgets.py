@@ -316,6 +316,7 @@ class Id_Parent_Column_Selector(tk.Frame):
             column_width=170,
             row_index_width=60,
             headers=["SELECT ID"],
+            default_row_index="letters",
         )
         self.id_col_selection.data_reference(newdataref=self.headers)
         self.id_col_selection.enable_bindings(("single", "column_width_resize", "double_click_column_resize"))
@@ -345,6 +346,7 @@ class Id_Parent_Column_Selector(tk.Frame):
             column_width=170,
             row_index_width=60,
             headers=["SELECT PARENTS"],
+            default_row_index="letters",
         )
         self.par_col_selection.data_reference(newdataref=self.headers)
         self.par_col_selection.extra_bindings(
@@ -629,6 +631,7 @@ class Flattened_Column_Selector(tk.Frame):
             column_width=350,
             row_index_width=60,
             headers=["SELECT ALL HIERARCHY COLUMNS"],
+            default_row_index="letters",
         )
         self.par_col_selection.data_reference(newdataref=self.headers)
         self.par_col_selection.extra_bindings(
@@ -757,6 +760,7 @@ class Single_Column_Selector(tk.Frame):
             column_width=180,
             row_index_width=50,
             headers=["SELECT A COLUMN"],
+            default_row_index="letters",
         )
         self.col_selection.data_reference(newdataref=self.headers)
         self.col_selection.extra_bindings([("cell_select", self.col_selection_B1), ("deselect", self.col_deselect)])
