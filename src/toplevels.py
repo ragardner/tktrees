@@ -3203,7 +3203,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         equalize_sublist_lens(self.C.new_sheet)
         self.ic = None
         self.pcols = []
-        self.load_display([h for h in self.C.new_sheet[0]])
+        self.load_display(self.C.new_sheet[0])
         self.stop_work("Select ID column and Parent columns")
         self.sheetdisplay.deselect("all")
         self.sheetdisplay.data_reference(
@@ -3260,7 +3260,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
                     temp_data = fh.read()
                 self.C.new_sheet = csv_str_x_data(temp_data)
                 equalize_sublist_lens(self.C.new_sheet)
-                self.load_display([h for h in self.C.new_sheet[0]])
+                self.load_display(self.C.new_sheet[0])
                 self.stop_work("Ready to merge sheets")
             elif filepath.lower().endswith(".json"):
                 j = get_json_from_file(filepath)
@@ -3281,7 +3281,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
                     self.select_sheet_button.config(state="disabled")
                     return
                 equalize_sublist_lens(self.C.new_sheet)
-                self.load_display([h for h in self.C.new_sheet[0]])
+                self.load_display(self.C.new_sheet[0])
                 self.stop_work("Ready to merge sheets")
             elif filepath.lower().endswith((".xlsx", ".xls", ".xlsm")):
                 in_mem = bytes_io_wb(filepath)
@@ -3300,7 +3300,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
                         self.wb_.close()
                         self.select_sheet_button.config(state="disabled")
                         self.load_display(
-                            cols=[h for h in self.C.new_sheet[0]],
+                            cols=self.C.new_sheet[0],
                             idcol=(
                                 next(c for c, h in enumerate(d["headers"]) if h["type"] == "ID")
                                 if d["headers"]
@@ -3353,12 +3353,15 @@ class Merge_Sheets_Popup(tk.Toplevel):
             return
         equalize_sublist_lens(self.C.new_sheet)
         self.select_sheet_button.config(state="disabled")
-        self.load_display([h for h in self.C.new_sheet[0]])
+        self.load_display(self.C.new_sheet[0])
 
     def load_display(self, cols, idcol=None, parcols=None, set_sheet=True):
         if set_sheet:
             self.sheetdisplay.data_reference(
-                newdataref=self.C.new_sheet, reset_col_positions=True, reset_row_positions=True, redraw=True
+                newdataref=self.C.new_sheet,
+                reset_col_positions=True,
+                reset_row_positions=True,
+                redraw=True,
             )
         self.selector.set_columns(cols)
         if idcol is not None and parcols is not None:
