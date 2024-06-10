@@ -10475,7 +10475,7 @@ class Tree_Editor(tk.Frame):
         if not self.new_sheet:
             self.new_sheet = []
             self.stop_work(self.get_tree_editor_status_bar_text())
-            Error(self, "No appropriate data found on clipboard    ", theme=self.C.theme)
+            Error(self, "No data found on clipboard", theme=self.C.theme)
             return
         new_row_len = equalize_sublist_lens(self.new_sheet)
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
@@ -10602,7 +10602,7 @@ class Tree_Editor(tk.Frame):
                 if not temp_data:
                     Error(
                         self,
-                        "File contained no appropriate data   ",
+                        "No data found in file",
                         theme=self.C.theme,
                     )
                     self.stop_work(self.get_tree_editor_status_bar_text())

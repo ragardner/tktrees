@@ -1429,7 +1429,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
             self.stop_work(f"Error: Error transforming clipboard data: {error_msg}")
             return
         if not self.C.new_sheet:
-            self.stop_work("Error: Clipboard contained no appropriate data")
+            self.stop_work("Error: No data found on clipboard")
             return
         self.sheetdisplay.deselect("all")
         self.C.new_sheet = [r + list(repeat("", 2 - len(r))) if len(r) < 2 else r[:2] for r in self.C.new_sheet]
@@ -1971,7 +1971,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
                 )
         else:
             self.stop_work(
-                f"Could not find an appropriate cell containing {self.find_display.get_my_value()} to replace with {self.rep_display.get_my_value()}"
+                f"Could not find a cell containing {self.find_display.get_my_value()} to replace with {self.rep_display.get_my_value()}"
             )
 
     def _sheet_row(self, widget, r):
@@ -2179,7 +2179,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
                 Error(self, "There were no successful cell conversions", theme=self.theme)
             else:
                 self.stop_work(
-                    f"Could not find an appropriate cell containing {self.find_display.get_my_value()} to replace with {self.rep_display.get_my_value()}"
+                    f"Could not find a cell containing {self.find_display.get_my_value()} to replace with {self.rep_display.get_my_value()}"
                 )
             return
         if cells_changed > 1:
@@ -3198,7 +3198,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             self.stop_work(f"Error: Error parsing clipboard data: {error_msg}", sels=True)
             return
         if not self.C.new_sheet:
-            self.stop_work("Error: Clipboard contained no appropriate data", sels=True)
+            self.stop_work("Error: No data found on clipboard", sels=True)
             return
         equalize_sublist_lens(self.C.new_sheet)
         self.ic = None
