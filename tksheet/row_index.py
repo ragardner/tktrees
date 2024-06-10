@@ -361,6 +361,7 @@ class RowIndex(tk.Canvas):
             if (
                 self.width_resizing_enabled
                 and not mouse_over_resize
+                and self.PAR.ops.auto_resize_row_index is not True
                 and (isinstance(self.MT._row_index, int) or self.MT._row_index)
             ):
                 try:
