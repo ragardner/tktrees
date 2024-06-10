@@ -11,18 +11,18 @@ github@ragardner.simplelogin.com
 
 ## PROGRAM BASICS
 
-If using the program for the first time you can go to the "File" menu or right click in the left or right panel to get started.
+If using the program for the first time you can go to the "File" menu or right click in the in the empty space to get started.
 
 This program is for management of hierarchy based master data which is stored in table format. Supported file formats are:
 - .xlsx, .xls, .xlsm
 - .json Javascript object notation where the full table is under the key 'records'
 - .csv/.tsv (comma or tab delimited)
 
-Any sheets opened with tk-trees must contain a single header row at the top of the sheet.
+Any sheets opened with tk-trees should contain a single header row at the top of the sheet.
 
 Additional settings and data such as the changelog, formatting and column types can be saved with the formats .xlsx and .json.
 
-Any changes made when using this program will not be saved unless you choose to do so. This can be done by going to the main menubar and choosing a save option under the 'File' menu while in the Treeview.
+Any changes made when using this program will not be saved unless you choose to do so. This can be done by going to the menu bar and choosing a save option under the 'File' menu while in the Treeview.
 
 Sheets must have an ID column and atleast one parent column, it does not matter in which order. e.g.
 

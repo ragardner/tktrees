@@ -129,11 +129,7 @@ themes = DotDict(
 )
 
 # BUILD START WARNINGS HEADER
-warnings_header = """## STARTUP TREE BUILD WARNINGS
- Note: Any spaces are automatically removed from headers,
-          IDs and IDs in parent columns. Changes not saved
-          to original sheet, to save use "Save", "Save as" or
-          "Save new version" options under "File" menu.\n\n"""
+warnings_header = """## TREE BUILD WARNINGS"""
 
 colors = (
     "white",

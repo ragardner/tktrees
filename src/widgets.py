@@ -132,6 +132,7 @@ class Column_Selection(tk.Frame):
             self.selector.detect_par_cols()
         else:
             self.reset_selectors()
+        self.sheetdisplay.focus_set()
 
     def enable_widgets(self):
         self.selector.enable_me()

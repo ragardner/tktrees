@@ -3164,6 +3164,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             self.selector.detect_par_cols()
         else:
             self.reset_selectors()
+        self.sheetdisplay.focus_set()
 
     def reset_selectors(self, event=None):
         idcol = self.selector.get_id_col()
@@ -3544,6 +3545,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
             self.selector.detect_par_cols()
         else:
             self.reset_selectors()
+        self.sheetdisplay.focus_set()
 
     def reset_selectors(self, event=None):
         idcol = self.selector.get_id_col()
