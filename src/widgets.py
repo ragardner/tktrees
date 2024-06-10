@@ -11,6 +11,7 @@ from typing import Literal
 
 from tksheet import (
     Sheet,
+    num2alpha,
 )
 
 from . import toplevels
@@ -292,7 +293,7 @@ class Id_Parent_Column_Selector(tk.Frame):
         self.id_col = None
         self.par_cols = set()
         self.id_col_display = Readonly_Entry_With_Scrollbar(self, font=EFB, theme=theme)
-        self.id_col_display.set_my_value("   ID column:   ")
+        self.id_col_display.set_my_value("ID:")
         if show_disp_1:
             self.id_col_display.grid(row=0, column=0, sticky="nswe")
         self.id_col_selection = Sheet(
@@ -356,7 +357,7 @@ class Id_Parent_Column_Selector(tk.Frame):
         if show_disp_2:
             self.par_col_selection.grid(row=1, column=1, sticky="nswe")
         self.par_col_display = Readonly_Entry_With_Scrollbar(self, font=EFB, theme=theme)
-        self.par_col_display.set_my_value("   Parent columns:   ")
+        self.par_col_display.set_my_value("Parents:")
         if show_disp_2:
             self.par_col_display.grid(row=0, column=1, sticky="nswe")
         self.detect_id_col_button = Button(
@@ -454,33 +455,29 @@ class Id_Parent_Column_Selector(tk.Frame):
             self.id_col = tuple(tup[0] for tup in self.id_col_selection.get_selected_cells())
             if self.id_col:
                 self.id_col = self.id_col[0]
-                self.id_col_display.set_my_value(f"   ID column:   {self.id_col + 1}")
+                self.id_col_display.set_my_value(f"ID: {num2alpha(self.id_col)}")
             else:
                 self.id_col = None
-                self.id_col_display.set_my_value("   ID column:   ")
+                self.id_col_display.set_my_value("ID:")
 
     def par_col_selection_B1(self, event=None):
         if event:
             self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
-            self.par_col_display.set_my_value(
-                "   Parent columns:   " + ", ".join([str(n) for n in sorted(p + 1 for p in self.par_cols)])
-            )
+            self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def par_col_deselection_B1(self, event=None):
         if event:
             self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
-            self.par_col_display.set_my_value(
-                "   Parent columns:   " + ", ".join([str(n) for n in sorted(p + 1 for p in self.par_cols)])
-            )
+            self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def clear_displays(self):
         self.headers = [[]]
         self.id_col = None
         self.id_col_selection.deselect("all")
-        self.id_col_display.set_my_value("   ID column:   ")
+        self.id_col_display.set_my_value("ID: ")
         self.par_cols = set()
         self.par_col_selection.deselect("all")
-        self.par_col_display.set_my_value("   Parent columns:   ")
+        self.par_col_display.set_my_value("Parents: ")
         self.id_col_selection.set_sheet_data()
         self.par_col_selection.set_sheet_data()
 
@@ -490,7 +487,7 @@ class Id_Parent_Column_Selector(tk.Frame):
         self.id_col_selection.refresh()
         self.id_col_selection.select_cell(row=col, column=0, redraw=True)
         self.id_col_selection.see(row=col, column=0)
-        self.id_col_display.set_my_value(f"   ID column:   {col + 1}")
+        self.id_col_display.set_my_value(f"ID: {num2alpha(col)}")
 
     def set_par_cols(self, cols):
         self.par_col_selection.deselect("all")
@@ -501,9 +498,7 @@ class Id_Parent_Column_Selector(tk.Frame):
                 self.par_col_selection.toggle_select_cell(r, 0, redraw=False)
             self.par_col_selection.see(row=cols[0], column=0, redraw=False)
             self.par_col_selection.redraw()
-            self.par_col_display.set_my_value(
-                "   Parent columns:   " + ", ".join([f"{n}" for n in sorted(p + 1 for p in self.par_cols)])
-            )
+            self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def get_id_col(self):
         return self.id_col
@@ -674,16 +669,12 @@ class Flattened_Column_Selector(tk.Frame):
     def par_col_selection_B1(self, event=None):
         if event:
             self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
-            self.par_col_display.set_my_value(
-                "   Parent columns:   " + ", ".join([str(n) for n in sorted(p + 1 for p in self.par_cols)])
-            )
+            self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def par_col_deselection_B1(self, event=None):
         if event:
             self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
-            self.par_col_display.set_my_value(
-                "   Parent columns:   " + ", ".join([str(n) for n in sorted(p + 1 for p in self.par_cols)])
-            )
+            self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def clear_displays(self):
         self.headers = [[]]
@@ -791,16 +782,14 @@ class Single_Column_Selector(tk.Frame):
     def par_col_deselection_B1(self, event=None):
         if event:
             self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
-            self.par_col_display.set_my_value(
-                f"   Parent columns:   {', '.join(str(n) for n in sorted(p + 1 for p in self.par_cols))}"
-            )
+            self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def clear_displays(self):
         self.headers = [[]]
         self.col_selection.data_reference(newdataref=[[]], redraw=True)
         self.col = 0
         self.col_selection.deselect("all")
-        self.col_display.set_my_value("   Hierarchy columns:   ")
+        self.col_display.set_my_value("Column:")
 
     def set_col(self, col=None):
         if col is not None:
@@ -809,7 +798,7 @@ class Single_Column_Selector(tk.Frame):
             self.col_selection.select_cell(col, 0, redraw=False)
             self.col_selection.see(row=col, column=0)
             self.col_selection.refresh()
-            self.col_display.set_my_value(f"   Column:   {col + 1}")
+            self.col_display.set_my_value(f"Column: {col + 1}")
 
     def get_col(self):
         return int(self.col)

@@ -3011,7 +3011,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
 
         self.add_new_ids_button = X_Checkbutton(
             self.options_frame,
-            text="Add any new IDs     ",
+            text="Add new IDs",
             style="x_button.Std.TButton",
             compound="right",
             checked=True,
@@ -3019,7 +3019,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.add_new_ids_button.grid(row=0, column=0, padx=10, pady=5, sticky="we")
         self.add_new_dcols_button = X_Checkbutton(
             self.options_frame,
-            text="Add any new detail columns ",
+            text="Add new detail columns",
             style="x_button.Std.TButton",
             compound="right",
             checked=True,
@@ -3027,7 +3027,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.add_new_dcols_button.grid(row=1, column=0, padx=10, pady=5, sticky="we")
         self.add_new_pcols_button = X_Checkbutton(
             self.options_frame,
-            text="Add any new parent columns ",
+            text="Add new parent columns",
             style="x_button.Std.TButton",
             compound="right",
             checked=True,
@@ -3035,7 +3035,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.add_new_pcols_button.grid(row=2, column=0, padx=10, pady=5, sticky="we")
         self.overwrite_details_button = X_Checkbutton(
             self.options_frame,
-            text="Overwrite details for same IDs ",
+            text="Overwrite details",
             style="x_button.Std.TButton",
             compound="right",
             checked=True,
@@ -3043,7 +3043,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.overwrite_details_button.grid(row=3, column=0, padx=10, pady=5, sticky="we")
         self.overwrite_parents_button = X_Checkbutton(
             self.options_frame,
-            text="Overwrite parents for same IDs ",
+            text="Overwrite parents",
             style="x_button.Std.TButton",
             compound="right",
             checked=True,
