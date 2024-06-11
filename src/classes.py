@@ -255,7 +255,7 @@ class TreeBuilder:
         self.n_lvls = 1
         rns = {r[ic].lower(): rn for rn, r in enumerate(input_sheet) if r[ic]}
         for node in nodes.values():
-            if not node.cn[pc]:
+            if node.ps[pc] is not None and not node.cn[pc]:
                 self.get_par_lvls(pc, node)
                 if justify_left and not reverse:
                     row = deque()
