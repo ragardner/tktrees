@@ -210,15 +210,15 @@ class TreeBuilder:
         justify_left: bool,
         reverse: bool,
     ) -> None:
-        if justify_left and reverse:
+        if justify_left and not reverse:
             if detail_columns:
                 row.extendleft(input_sheet[rns[node.k]][i] for i in reversed(detail_cols_idxs_names))
             row.appendleft(node.name)
-        elif (justify_left and not reverse) or (not justify_left and reverse):
+        elif (justify_left and reverse) or (not justify_left and not reverse):
             row.append(node.name)
             if detail_columns:
                 row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
-        elif not justify_left and not reverse:
+        elif not justify_left and reverse:
             if detail_columns:
                 row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
             row.append(node.name)
@@ -265,16 +265,16 @@ class TreeBuilder:
         rns = {r[ic].lower(): rn for rn, r in enumerate(input_sheet) if r[ic]}
         for node in nodes.values():
             if not node.cn[pc]:
-                if justify_left and reverse:
+                if justify_left and not reverse:
                     row = deque()
                     if detail_columns:
                         row = deque(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names) + row
                     row.appendleft(node.name)
-                elif (justify_left and not reverse) or (not justify_left and reverse):
+                elif (justify_left and reverse) or (not justify_left and not reverse):
                     row = [node.name]
                     if detail_columns:
                         row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
-                elif not justify_left and not reverse:
+                elif not justify_left and reverse:
                     row = []
                     if detail_columns:
                         row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
@@ -291,30 +291,30 @@ class TreeBuilder:
                         justify_left=justify_left,
                         reverse=reverse,
                     )
-                if justify_left and reverse:
+                if justify_left and not reverse:
                     output_sheet.append(list(row))
                 else:
                     output_sheet.append(row)
         equalize_sublist_lens(output_sheet)
-        if justify_left and reverse:
+        if justify_left and not reverse:
             output_sheet = list(map(shift_elements_to_start, output_sheet))
             for i in range(n_lvls + 2):
                 output_headers.append(f"{pc_name}_{i}")
                 if detail_columns:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
-        elif justify_left and not reverse:
+        elif justify_left and reverse:
             for i in reversed(range(n_lvls + 2)):
                 output_headers.append(f"{pc_name}_{i}")
                 if detail_columns:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
-        elif not justify_left and reverse:
+        elif not justify_left and not reverse:
             output_sheet = list(map(lambda r: r[::-1], output_sheet))
             for i in reversed(range(n_lvls + 2)):
                 output_headers.append(f"{pc_name}_{i}")
                 if detail_columns:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
             output_headers = output_headers[::-1]
-        elif not justify_left and not reverse:
+        elif not justify_left and reverse:
             output_sheet = list(map(shift_elements_to_end, output_sheet))
             for i in range(n_lvls + 2):
                 output_headers.append(f"{pc_name}_{i}")

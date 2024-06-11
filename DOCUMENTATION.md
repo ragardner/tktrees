@@ -472,7 +472,7 @@ It must be run with the following arguments with a space in-between each:
 | -o      | Overwrite new file          | All actions      |
 | -d      | Include detail columns      | flatten          |
 | -j      | Justify output cells left   | flatten          |
-| -r      | Reverse order (top-base)    | flatten          |
+| -r      | Reverse order (base-top)    | flatten          |
 | -i      | Add an index column         | flatten          |
 
 Some examples:

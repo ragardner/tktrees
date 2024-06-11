@@ -638,7 +638,7 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.xlsx_flattened_reverse_order = tk.BooleanVar()
-        self.xlsx_flattened_reverse_order.set(True)
+        self.xlsx_flattened_reverse_order.set(False)
         self.xlsx_flattened_menu.add_checkbutton(
             label="Reverse order",
             variable=self.xlsx_flattened_reverse_order,

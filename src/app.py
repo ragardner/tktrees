@@ -294,7 +294,7 @@ To get started once you have closed this popup, either:
             "Save xlsx with treeview": True,
             "Flatten include detail columns": True,
             "Flatten justify left": True,
-            "Flatten reverse order": True,
+            "Flatten reverse order": False,
             "Flatten add index": False,
             "Json output format": 1,
             "Save json with program data": True,
