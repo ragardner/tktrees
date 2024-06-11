@@ -1706,8 +1706,8 @@ class Tree_Editor(tk.Frame):
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.tree.set_column_widths()
             self.sheet.set_row_heights().set_column_widths()
-        self.i = ""
-        self.p = ""
+        self.selected_ID = ""
+        self.selected_PAR = ""
         self.new_sheet = []
         self.reset_tree_drag_vars()
         self.search_results = []
@@ -1873,8 +1873,8 @@ class Tree_Editor(tk.Frame):
         self.undo_unsaved_changes_passed_0 = False
         self.sheet_changes = 0
         self.tv_label_col = 0
-        self.i = ""
-        self.p = ""
+        self.selected_ID = ""
+        self.selected_PAR = ""
         self.disable_paste()
         self.changelog = []
         self.search_results = []
@@ -3734,18 +3734,18 @@ class Tree_Editor(tk.Frame):
         selected = event.selected
         if selected and self.tree.data:
             iid = self.tree.rowitem(selected.row)
-            self.i = self.nodes[iid].name
+            self.selected_ID = self.nodes[iid].name
             pariid = self.tree.parent(iid)
             if pariid == "":
-                self.p = ""
+                self.selected_PAR = ""
             else:
-                self.p = self.nodes[pariid].name
+                self.selected_PAR = self.nodes[pariid].name
             if self.mirror_var.get() and not self.mirror_sels_disabler:
                 self.go_to_row()
             self.mirror_sels_disabler = False
         else:
-            self.i = ""
-            self.p = ""
+            self.selected_ID = ""
+            self.selected_PAR = ""
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.C.selection_info.set_my_value(self.get_tree_selection_info())
 
@@ -7198,12 +7198,12 @@ class Tree_Editor(tk.Frame):
                 as_sibling.append(iid)
         successful = []
         if as_sibling:
-            self.i = self.nodes[move_to_iid].name
+            self.selected_ID = self.nodes[move_to_iid].name
             self.cut_ids(as_sibling, status_bar=False)
             if new_parent:
-                self.p = self.nodes[new_parent].name
+                self.selected_PAR = self.nodes[new_parent].name
             else:
-                self.p = new_parent
+                self.selected_PAR = new_parent
             successful = [dct["id"] for dct in self.paste_cut_sibling_all(redo_tree=False)]
         if successful and (not self.auto_sort_nodes_bool.get() or index_only):
             index_only += successful
@@ -7858,9 +7858,9 @@ class Tree_Editor(tk.Frame):
         return "break"
 
     def cut_children(self, event=None):
-        if not self.i:
+        if not self.selected_ID:
             return
-        self.cut_children_dct["id"] = str(self.i.lower())
+        self.cut_children_dct["id"] = f"{self.selected_ID.lower()}"
         self.cut_children_dct["hier"] = int(self.pc)
         self.enable_cut_paste_children()
 
@@ -7874,14 +7874,14 @@ class Tree_Editor(tk.Frame):
         else:
             see_iid = ""
             select_iids = tuple()
-        success = self.cut_paste_children(self.cut_children_dct["id"], str(self.i), self.cut_children_dct["hier"])
+        success = self.cut_paste_children(self.cut_children_dct["id"], f"{self.selected_ID}", self.cut_children_dct["hier"])
         if not success:
             self.vs.pop()
             self.vp -= 1
             self.set_undo_label()
             return
         iid = self.nodes[self.cut_children_dct["id"]].name
-        np = self.nodes[self.i.lower()].name
+        np = self.nodes[self.selected_ID.lower()].name
         self.changelog_append(
             "Cut and paste children",
             "",
@@ -7932,14 +7932,14 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def paste_copied_child(self):
-        if not self.copied or not self.i:
+        if not self.copied or not self.selected_ID:
             return
         self.start_work(f"Pasting {len(self.copied)} IDs...")
         successful = []
         self.sort_later_dct = None
         self.snapshot_paste_id()
         for i, dct in enumerate(self.copied, 1):
-            if self.copy_paste(dct["id"], dct["hier"], self.i, sort_later=True):
+            if self.copy_paste(dct["id"], dct["hier"], self.selected_ID, sort_later=True):
                 successful.append(dct)
                 if not i % 50:
                     self.C.status_bar.change_text(
@@ -7959,7 +7959,7 @@ class Tree_Editor(tk.Frame):
                 "Copy and paste ID |",
                 iid,
                 f"From column #{dct['hier'] + 1} named: {self.headers[dct['hier']].name}",
-                f"New parent: {self.nodes[self.i.lower()].name} new column #{self.pc + 1} named: {self.headers[self.pc].name}",
+                f"New parent: {self.nodes[self.selected_ID.lower()].name} new column #{self.pc + 1} named: {self.headers[self.pc].name}",
             )
         if len(successful) > 1:
             self.changelog_append(
@@ -7979,7 +7979,7 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def paste_copied_sibling(self):
-        if not self.copied or not self.i:
+        if not self.copied or not self.selected_ID:
             return
         self.start_work(f"Pasting {len(self.copied)} IDs...")
         successful = []
@@ -8002,7 +8002,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_all_formatting(rows=self.refresh_rows)
         for dct in successful:
             iid = self.nodes[dct["id"]].name
-            if self.p == "":
+            if self.selected_PAR == "":
                 self.changelog_append_no_unsaved(
                     "Copy and paste ID |",
                     iid,
@@ -8014,7 +8014,7 @@ class Tree_Editor(tk.Frame):
                     "Copy and paste ID |",
                     iid,
                     f"From column #{dct['hier'] + 1} named: {self.headers[dct['hier']].name}",
-                    f"New parent: {self.nodes[self.p.lower()].name} new column #{self.pc + 1} named: {self.headers[self.pc].name}",
+                    f"New parent: {self.nodes[self.selected_PAR.lower()].name} new column #{self.pc + 1} named: {self.headers[self.pc].name}",
                 )
         if len(successful) > 1:
             self.changelog_append(
@@ -8081,14 +8081,14 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def paste_copied_child_all(self):
-        if not self.copied or not self.i:
+        if not self.copied or not self.selected_ID:
             return
         self.start_work(f"Pasting {len(self.copied)} IDs...")
         successful = []
         self.sort_later_dct = None
         self.snapshot_paste_id()
         for i, dct in enumerate(self.copied, 1):
-            if self.copy_paste_all(dct["id"], dct["hier"], self.i, sort_later=True):
+            if self.copy_paste_all(dct["id"], dct["hier"], self.selected_ID, sort_later=True):
                 successful.append(dct)
                 if not i % 50:
                     self.C.status_bar.change_text(
@@ -8108,7 +8108,7 @@ class Tree_Editor(tk.Frame):
                 "Copy and paste ID + children |",
                 iid,
                 f"From column #{dct['hier'] + 1} named: {self.headers[dct['hier']].name}",
-                f"New parent: {self.nodes[self.i.lower()].name} new column #{self.pc + 1} named: {self.headers[self.pc].name}",
+                f"New parent: {self.nodes[self.selected_ID.lower()].name} new column #{self.pc + 1} named: {self.headers[self.pc].name}",
             )
         if len(successful) > 1:
             self.changelog_append(
@@ -8128,14 +8128,14 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def paste_copied_sibling_all(self):
-        if not self.copied or not self.i:
+        if not self.copied or not self.selected_ID:
             return
         self.start_work(f"Pasting {len(self.copied)} IDs...")
         successful = []
         self.sort_later_dct = None
         self.snapshot_paste_id()
         for i, dct in enumerate(self.copied, 1):
-            if self.copy_paste_all(dct["id"], dct["hier"], self.p, sort_later=True):
+            if self.copy_paste_all(dct["id"], dct["hier"], self.selected_PAR, sort_later=True):
                 successful.append(dct)
                 if not i % 50:
                     self.C.status_bar.change_text(
@@ -8151,7 +8151,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_all_formatting(rows=self.refresh_rows)
         for dct in successful:
             iid = self.nodes[dct["id"]].name
-            if self.p == "":
+            if self.selected_PAR == "":
                 self.changelog_append_no_unsaved(
                     "Copy and paste ID + children |",
                     iid,
@@ -8163,7 +8163,7 @@ class Tree_Editor(tk.Frame):
                     "Copy and paste ID + children |",
                     iid,
                     f"From column #{dct['hier'] + 1} named: {self.headers[dct['hier']].name}",
-                    f"New parent: {self.nodes[self.p.lower()].name} new column #{self.pc+1} named: {self.headers[self.pc].name}",
+                    f"New parent: {self.nodes[self.selected_PAR.lower()].name} new column #{self.pc+1} named: {self.headers[self.pc].name}",
                 )
         if len(successful) > 1:
             self.changelog_append(
@@ -8230,14 +8230,14 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def paste_cut_child(self):
-        if not self.cut or not self.i:
+        if not self.cut or not self.selected_ID:
             return
         self.start_work(f"Pasting {len(self.cut)} IDs...")
         successful = []
         self.sort_later_dct = None
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
-            if self.cut_paste(dct["id"], dct["parent"], dct["hier"], self.i, sort_later=True):
+            if self.cut_paste(dct["id"], dct["parent"], dct["hier"], self.selected_ID, sort_later=True):
                 successful.append(dct)
                 if not i % 50:
                     self.C.status_bar.change_text(
@@ -8263,7 +8263,7 @@ class Tree_Editor(tk.Frame):
                 "Cut and paste ID |",
                 iid,
                 f"Old parent: {self.nodes[dct['parent']].name if dct['parent'] else 'n/a - Top ID'} old column #{dct['hier']+1} named: {self.headers[dct['hier']].name}",
-                f"New parent: {self.nodes[self.i.lower()].name} new column #{self.pc+1} named: {self.headers[self.pc].name}",
+                f"New parent: {self.nodes[self.selected_ID.lower()].name} new column #{self.pc+1} named: {self.headers[self.pc].name}",
             )
         if len(successful) > 1:
             self.changelog_append(
@@ -8283,14 +8283,14 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def paste_cut_sibling(self):
-        if not self.cut or not self.i:
+        if not self.cut or not self.selected_ID:
             return
         self.start_work(f"Pasting {len(self.cut)} IDs...")
         successful = []
         self.sort_later_dct = None
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
-            if self.cut_paste(dct["id"], dct["parent"], dct["hier"], self.p, sort_later=True):
+            if self.cut_paste(dct["id"], dct["parent"], dct["hier"], self.selected_PAR, sort_later=True):
                 successful.append(dct)
                 if not i % 50:
                     self.C.status_bar.change_text(
@@ -8312,7 +8312,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_all_formatting(rows=self.refresh_rows)
         for dct in successful:
             iid = self.nodes[dct["id"]].name
-            if self.p == "":
+            if self.selected_PAR == "":
                 self.changelog_append_no_unsaved(
                     "Cut and paste ID |",
                     iid,
@@ -8324,7 +8324,7 @@ class Tree_Editor(tk.Frame):
                     "Cut and paste ID |",
                     iid,
                     f"Old parent: {self.nodes[dct['parent']].name if dct['parent'] else 'n/a - Top ID'} old column #{dct['hier']+1} named: {self.headers[dct['hier']].name}",
-                    f"New parent: {self.nodes[self.p.lower()].name} new column #{self.pc+1} named: {self.headers[self.pc].name}",
+                    f"New parent: {self.nodes[self.selected_PAR.lower()].name} new column #{self.pc+1} named: {self.headers[self.pc].name}",
                 )
         if len(successful) > 1:
             self.changelog_append(
@@ -8397,14 +8397,14 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def paste_cut_child_all(self):
-        if not self.cut or not self.i:
+        if not self.cut or not self.selected_ID:
             return
         self.start_work(f"Pasting {len(self.cut)} IDs...")
         successful = []
         self.sort_later_dct = None
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
-            if self.cut_paste_all(dct["id"], dct["parent"], dct["hier"], self.i, sort_later=True):
+            if self.cut_paste_all(dct["id"], dct["parent"], dct["hier"], self.selected_ID, sort_later=True):
                 successful.append(dct)
                 if not i % 50:
                     self.C.status_bar.change_text(
@@ -8430,7 +8430,7 @@ class Tree_Editor(tk.Frame):
                 "Cut and paste ID + children |",
                 iid,
                 f"Old parent: {self.nodes[dct['parent']].name if dct['parent'] else 'n/a - Top ID'} old column #{dct['hier']+1} named: {self.headers[dct['hier']].name}",
-                f"New parent: {self.nodes[self.i.lower()].name} new column #{self.pc+1} named: {self.headers[self.pc].name}",
+                f"New parent: {self.nodes[self.selected_ID.lower()].name} new column #{self.pc+1} named: {self.headers[self.pc].name}",
             )
         if len(successful) > 1:
             self.changelog_append(
@@ -8452,14 +8452,14 @@ class Tree_Editor(tk.Frame):
 
     def paste_cut_sibling_all(self, redo_tree=True) -> bool:
         successful = []
-        if not self.cut or not self.i:
+        if not self.cut or not self.selected_ID:
             return successful
         if redo_tree:
             self.start_work(f"Pasting {len(self.cut)} IDs...")
         self.sort_later_dct = None
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
-            if self.cut_paste_all(dct["id"], dct["parent"], dct["hier"], self.p, sort_later=True):
+            if self.cut_paste_all(dct["id"], dct["parent"], dct["hier"], self.selected_PAR, sort_later=True):
                 successful.append(dct)
                 if not i % 50:
                     self.C.status_bar.change_text(
@@ -8481,7 +8481,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_all_formatting(rows=self.refresh_rows)
         for dct in successful:
             iid = self.nodes[dct["id"]].name
-            if self.p == "":
+            if self.selected_PAR == "":
                 self.changelog_append_no_unsaved(
                     "Cut and paste ID + children |",
                     iid,
@@ -8493,7 +8493,7 @@ class Tree_Editor(tk.Frame):
                     "Cut and paste ID + children |",
                     iid,
                     f"Old parent: {self.nodes[dct['parent']].name if dct['parent'] else 'n/a - Top ID'} old column #{dct['hier']+1} named: {self.headers[dct['hier']].name}",
-                    f"New parent: {self.nodes[self.p.lower()].name} new column #{self.pc+1} named: {self.headers[self.pc].name}",
+                    f"New parent: {self.nodes[self.selected_PAR.lower()].name} new column #{self.pc+1} named: {self.headers[self.pc].name}",
                 )
         if len(successful) > 1:
             self.changelog_append(
@@ -8575,7 +8575,7 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def copy_ID(self, iids: Sequence[str]) -> None | Literal["break"]:
-        if not self.i:
+        if not self.selected_ID:
             return
         if self.cut:
             self.cut = []
@@ -8609,7 +8609,7 @@ class Tree_Editor(tk.Frame):
         return "break"
 
     def cut_ids(self, iids: list[str] | None = None, status_bar=True):
-        if not self.i:
+        if not self.selected_ID:
             return
         if self.copied:
             self.copied = []
@@ -8647,29 +8647,29 @@ class Tree_Editor(tk.Frame):
         return "break"
 
     def add_child_node(self):
-        if not self.i:
+        if not self.selected_ID:
             return
         sel = self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)
         if sel:
             popup = Add_Child_Or_Sibling_Id_Popup(
                 self,
                 "child",
-                self.i,
+                self.selected_ID,
                 self.sheet.MT.data[sel[0]][self.ic],
                 theme=self.C.theme,
             )
         else:
-            popup = Add_Child_Or_Sibling_Id_Popup(self, "child", self.i, None, theme=self.C.theme)
+            popup = Add_Child_Or_Sibling_Id_Popup(self, "child", self.selected_ID, None, theme=self.C.theme)
         if not popup.result:
             return
         new_id = popup.result
         new_ik = new_id.lower()
-        success = self.add(new_id, self.i)
+        success = self.add(new_id, self.selected_ID)
         if not success:
             return
         self.changelog_append(
             "Add ID",
-            f"Name: {new_id} Parent: {self.i} column #{self.pc+1} named: {self.headers[self.pc].name}",
+            f"Name: {new_id} Parent: {self.selected_ID} column #{self.pc+1} named: {self.headers[self.pc].name}",
             "",
             "",
         )
@@ -8693,27 +8693,27 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def add_sibling_node(self):
-        if not self.i:
+        if not self.selected_ID:
             return
         sel = self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)
         if sel:
             popup = Add_Child_Or_Sibling_Id_Popup(
                 self,
                 "sibling",
-                self.p,
+                self.selected_PAR,
                 self.sheet.MT.data[sel[0]][self.ic],
                 theme=self.C.theme,
             )
         else:
-            popup = Add_Child_Or_Sibling_Id_Popup(self, "sibling", self.p, None, theme=self.C.theme)
+            popup = Add_Child_Or_Sibling_Id_Popup(self, "sibling", self.selected_PAR, None, theme=self.C.theme)
         if not popup.result:
             return
         new_id = popup.result
         new_ik = new_id.lower()
-        success = self.add(new_id, self.p)
+        success = self.add(new_id, self.selected_PAR)
         if not success:
             return
-        if self.p == "":
+        if self.selected_PAR == "":
             self.changelog_append(
                 "Add ID",
                 f"Name: {new_id} Parent: n/a - Top ID column #{self.pc+1} named: {self.headers[self.pc].name}",
@@ -8723,7 +8723,7 @@ class Tree_Editor(tk.Frame):
         else:
             self.changelog_append(
                 "Add ID",
-                f"Name: {new_id} Parent: {self.p} column #{self.pc+1} named: {self.headers[self.pc].name}",
+                f"Name: {new_id} Parent: {self.selected_PAR} column #{self.pc+1} named: {self.headers[self.pc].name}",
                 "",
                 "",
             )
@@ -8866,19 +8866,19 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def rename_node(self):
-        if not self.i:
+        if not self.selected_ID:
             return
-        ik = self.i.lower()
-        popup = Rename_Id_Popup(self, self.i, theme=self.C.theme)
+        ik = self.selected_ID.lower()
+        popup = Rename_Id_Popup(self, self.selected_ID, theme=self.C.theme)
         if not popup.result:
             return
-        success = self.change_ID_name(self.i, popup.result)
+        success = self.change_ID_name(self.selected_ID, popup.result)
         if not success:
             return
         self.changelog_append(
             "Rename ID",
-            self.i,
-            self.i,
+            self.selected_ID,
+            self.selected_ID,
             f"{popup.result}",
         )
         new_ik = popup.result.lower()
@@ -9000,21 +9000,21 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def delete_selected_orphan(self, event=None):
-        if not self.i:
+        if not self.selected_ID:
             return
         self.changelog_append(
             "Delete ID, orphan children",
-            f"ID: {self.i} parent: {self.p if self.p else 'n/a - Top ID'} column #{self.pc+1} named: {self.headers[self.pc].name}",
+            f"ID: {self.selected_ID} parent: {self.selected_PAR if self.selected_PAR else 'n/a - Top ID'} column #{self.pc+1} named: {self.headers[self.pc].name}",
             "",
             "",
         )
         self.snapshot_delete_id()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        if self.p:
-            self.del_id_orphan(self.i, self.p)
+        if self.selected_PAR:
+            self.del_id_orphan(self.selected_ID, self.selected_PAR)
         else:
-            self.del_id_orphan(self.i, "")
+            self.del_id_orphan(self.selected_ID, "")
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
@@ -9026,23 +9026,23 @@ class Tree_Editor(tk.Frame):
         self.focus_tree()
 
     def delete_ID_and_all_children(self):
-        if not self.i:
+        if not self.selected_ID:
             return
-        ik = self.i.lower()
+        ik = self.selected_ID.lower()
         self.start_work(f"Deleting {ik} and all children...")
         self.changelog_append(
             "Delete ID + all children",
-            f"ID: {self.i} parent: {self.p if self.p else 'n/a - Top ID'} column #{self.pc+1} named: {self.headers[self.pc].name}",
+            f"ID: {self.selected_ID} parent: {self.selected_PAR if self.selected_PAR else 'n/a - Top ID'} column #{self.pc+1} named: {self.headers[self.pc].name}",
             "",
             "",
         )
         self.snapshot_delete_id()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        if self.p:
-            self.del_id_and_children(self.i, self.p)
+        if self.selected_PAR:
+            self.del_id_and_children(self.selected_ID, self.selected_PAR)
         else:
-            self.del_id_and_children(self.i, "")
+            self.del_id_and_children(self.selected_ID, "")
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
@@ -9054,23 +9054,23 @@ class Tree_Editor(tk.Frame):
         self.focus_tree()
 
     def delete_ID_and_all_children_all_hiers(self):
-        if not self.i:
+        if not self.selected_ID:
             return
-        ik = self.i.lower()
+        ik = self.selected_ID.lower()
         self.start_work(f"Deleting {ik} and all children...")
         self.changelog_append(
             "Delete ID + all children from all hierarchies",
-            f"ID: {self.i} parent: {self.p if self.p else 'n/a - Top ID'} column #{self.pc+1} named: {self.headers[self.pc].name}",
+            f"ID: {self.selected_ID} parent: {self.selected_PAR if self.selected_PAR else 'n/a - Top ID'} column #{self.pc+1} named: {self.headers[self.pc].name}",
             "",
             "",
         )
         self.snapshot_delete_id()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        if self.p:
-            self.del_id_and_children_all_hiers(self.i, self.p)
+        if self.selected_PAR:
+            self.del_id_and_children_all_hiers(self.selected_ID, self.selected_PAR)
         else:
-            self.del_id_and_children_all_hiers(self.i, "")
+            self.del_id_and_children_all_hiers(self.selected_ID, "")
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
@@ -9082,18 +9082,18 @@ class Tree_Editor(tk.Frame):
         self.focus_tree()
 
     def delete_all_of_ID(self):
-        if not self.i:
+        if not self.selected_ID:
             return
         self.changelog_append(
             "Delete ID from all hierarchies",
-            self.i,
+            self.selected_ID,
             "",
             "",
         )
         self.snapshot_delete_id()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        self.del_every_id_occurrence(self.i)
+        self.del_every_id_occurrence(self.selected_ID)
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
@@ -9106,18 +9106,18 @@ class Tree_Editor(tk.Frame):
         self.focus_tree()
 
     def delete_all_of_ID_orphan(self):
-        if not self.i:
+        if not self.selected_ID:
             return
         self.changelog_append(
             "Delete ID from all hierarchies, orphan children",
-            self.i,
+            self.selected_ID,
             "",
             "",
         )
         self.snapshot_delete_id()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        self.del_every_id_occurrence_orphan(self.i)
+        self.del_every_id_occurrence_orphan(self.selected_ID)
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
@@ -9162,10 +9162,10 @@ class Tree_Editor(tk.Frame):
             View_Column_Text_Popup(self, ID, heading, text, theme=self.C.theme)
 
     def view_column_text(self):
-        rn = self.rns[self.i.lower()]
+        rn = self.rns[self.selected_ID.lower()]
         text = self.sheet.MT.data[rn][self.treecolsel]
         heading = self.headers[self.treecolsel].name
-        View_Column_Text_Popup(self, self.i, heading, text, theme=self.C.theme)
+        View_Column_Text_Popup(self, self.selected_ID, heading, text, theme=self.C.theme)
 
     def tree_sheet_edit_detail(self):
         if self.tree.has_focus():
@@ -9371,11 +9371,11 @@ class Tree_Editor(tk.Frame):
         to_clipboard(widget=self, s=s.getvalue().rstrip())
 
     def copy_details(self):
-        if not self.i:
+        if not self.selected_ID:
             return
-        rn = self.rns[self.i.lower()]
+        rn = self.rns[self.selected_ID.lower()]
         self.copied_details["copied"] = self.sheet.MT.data[rn].copy()
-        self.copied_details["id"] = self.i.lower()
+        self.copied_details["id"] = self.selected_ID.lower()
         self.tree_rc_menu_single_row_paste.entryconfig("Paste details", state="normal")
         self.sheet_rc_menu_single_row.entryconfig("Paste details", state="normal")
         self.sheet_rc_menu_multi_row.entryconfig("Paste details", state="normal")
@@ -9466,10 +9466,10 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def copy_detail(self):
-        if not self.i:
+        if not self.selected_ID:
             return
         self.clipboard_clear()
-        self.clipboard_append(self.sheet.MT.data[self.rns[self.i.lower()]][self.treecolsel].rstrip())
+        self.clipboard_append(self.sheet.MT.data[self.rns[self.selected_ID.lower()]][self.treecolsel].rstrip())
         self.update()
 
     def paste_detail(self):
@@ -9504,7 +9504,7 @@ class Tree_Editor(tk.Frame):
                     theme=self.C.theme,
                 )
                 return
-        ID = f"{self.i}"
+        ID = f"{self.selected_ID}"
         ik = ID.lower()
         rn = self.rns[ik]
         if self.headers[self.treecolsel].type_ in ("ID", "Parent"):
@@ -9582,7 +9582,7 @@ class Tree_Editor(tk.Frame):
             if not newtext:
                 self.changelog_append(
                     "Edit cell",
-                    f"ID: {self.i} column #{self.treecolsel + 1} named: {self.headers[self.treecolsel].name} with type: {self.headers[self.treecolsel].type_}",
+                    f"ID: {self.selected_ID} column #{self.treecolsel + 1} named: {self.headers[self.treecolsel].name} with type: {self.headers[self.treecolsel].type_}",
                     f"{self.sheet.MT.data[rn][self.treecolsel]}",
                     "",
                 )
@@ -9612,11 +9612,11 @@ class Tree_Editor(tk.Frame):
                                 return
                 self.changelog_append(
                     "Edit cell",
-                    f"ID: {self.i} column #{self.treecolsel + 1} named: {self.headers[self.treecolsel].name} with type: {self.headers[self.treecolsel].type_}",
+                    f"ID: {self.selected_ID} column #{self.treecolsel + 1} named: {self.headers[self.treecolsel].name} with type: {self.headers[self.treecolsel].type_}",
                     f"{self.sheet.MT.data[rn][self.treecolsel]}",
                     f"{newtext}",
                 )
-            ik = self.i.lower()
+            ik = self.selected_ID.lower()
             rn = self.rns[ik]
             self.snapshot_ctrl_x_v_del_key()
             self.vs[-1]["cells"][(rn, self.treecolsel)] = f"{self.sheet.MT.data[rn][self.treecolsel]}"
@@ -9624,7 +9624,7 @@ class Tree_Editor(tk.Frame):
             self.disable_paste()
             self.refresh_all_formatting(rows=[rn])
             self.redraw_sheets()
-            self.refresh_tree_item(self.i)
+            self.refresh_tree_item(self.selected_ID)
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def sheet_del_all_details(self):
@@ -10025,8 +10025,8 @@ class Tree_Editor(tk.Frame):
             )
 
     def show_ids_details_tree(self, event=None):
-        if self.i:
-            rn = self.rns[self.i.lower()]
+        if self.selected_ID:
+            rn = self.rns[self.selected_ID.lower()]
             View_Id_Popup(
                 self,
                 ids_row={"row": self.sheet.MT.data[rn], "rn": rn},
@@ -10042,8 +10042,8 @@ class Tree_Editor(tk.Frame):
             Error(self, "Select an ID in the sheet", theme=self.C.theme)
 
     def show_ids_full_info_tree(self, event=None):
-        if self.i:
-            Text_Popup(self, self.details(self.i.lower()), theme=self.C.theme)
+        if self.selected_ID:
+            Text_Popup(self, self.details(self.selected_ID.lower()), theme=self.C.theme)
         else:
             Error(self, "Select an ID in the tree", theme=self.C.theme)
 
@@ -10186,9 +10186,9 @@ class Tree_Editor(tk.Frame):
                 self.stop_work("Success! Changelog saved")
 
     def go_to_row(self):
-        if not self.i:
+        if not self.selected_ID:
             return
-        rn, sheet_rn = self.rns[self.i.lower()], self.sheet.selected
+        rn, sheet_rn = self.rns[self.selected_ID.lower()], self.sheet.selected
         if not sheet_rn or rn != sheet_rn.row or not self.sheet.cell_visible(sheet_rn.row, sheet_rn.column):
             self.sheet.select_row(rn, redraw=False)
             self.sheet.see(row=rn, keep_xscroll=True, redraw=True)
@@ -10402,8 +10402,8 @@ class Tree_Editor(tk.Frame):
             self.tree.set_column_widths(self.tree_gen_widths_from_saved())
         else:
             self.tree.set_column_widths()
-        self.i = ""
-        self.p = ""
+        self.selected_ID = ""
+        self.selected_PAR = ""
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.reset_tree_search_dropdown()
         self.reset_sheet_search_dropdown()
@@ -10515,8 +10515,8 @@ class Tree_Editor(tk.Frame):
         else:
             self.ic = popup.ic
             self.hiers = popup.pcols
-        self.i = ""
-        self.p = ""
+        self.selected_ID = ""
+        self.selected_PAR = ""
         self.reset_tree_search_dropdown()
         self.reset_sheet_search_dropdown()
         self.tree.reset()
