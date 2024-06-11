@@ -1733,7 +1733,7 @@ class Tree_Editor(tk.Frame):
         self.copied = []
         self.cut_children_dct = {}
         self.sheet.row_index(self.ic)
-        self.tag_ids(self.tagged_ids)
+        self.tag_ids(selection=self.tagged_ids, toggle=False)
         self.refresh_all_formatting()
         self.redo_tree_display()
         self.disable_paste()
@@ -9709,7 +9709,7 @@ class Tree_Editor(tk.Frame):
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
-    def tag_ids(self, event=None, selection: Iterator[str] | None = None):
+    def tag_ids(self, event=None, selection: Iterator[str] | None = None, toggle: bool = True):
         if selection is None:
             if self.tree_has_focus:
                 selection = self.tree.selection(cells=True)
@@ -9724,7 +9724,7 @@ class Tree_Editor(tk.Frame):
                 self.tagged_ids.discard(ik)
                 continue
             rn = self.rns[ik]
-            if ik in self.tagged_ids:
+            if toggle and ik in self.tagged_ids:
                 self.tagged_ids.discard(ik)
                 self.sheet.dehighlight_cells(
                     row=rn,
