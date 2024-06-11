@@ -66,7 +66,7 @@ def to_xlsx(filepath: str, sheetname: str, data: list[list[str]]) -> None:
 
 def str_io_csv_writer(dialect: csv.Dialect):
     s = io.StringIO()
-    return s, csv.writer(s, dialect=dialect, lineterminator="\r\n")
+    return s, csv.writer(s, dialect=dialect, lineterminator="\n")
 
 
 def str_x_bool(s: str) -> bool:
@@ -181,7 +181,7 @@ def csv_str_x_data(s: str, discard_empty_rows: bool = True, paste: bool = False)
                 continue
         return data
     else:
-        if not paste or dialect.delimiter in s or "\r\n" in s:
+        if not paste or dialect.delimiter in s or "\n" in s:
             return list(
                 csv.reader(
                     io.StringIO(s),
