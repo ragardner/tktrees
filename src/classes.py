@@ -13,6 +13,8 @@ from typing import Literal
 
 from openpyxl import load_workbook
 
+from tksheet import move_elements_by_mapping
+
 from .functions import (
     csv_str_x_data,
     equalize_sublist_lens,
@@ -233,6 +235,13 @@ class TreeBuilder:
         if n.ps[h]:
             self.get_par_lvls(h, n.ps[h], lvl + 1)
 
+    def gen_pc_base_ids(
+        self,
+        nodes: dict[str, Node],
+        pc: int,
+    ) -> Generator[Node]:
+        yield from (node for node in nodes.values() if node.ps[pc] is not None and not node.cn[pc])
+
     def build_flattened(
         self,
         input_sheet: list[list[str]],
@@ -254,39 +263,41 @@ class TreeBuilder:
         pc_name = headers[pc]
         self.n_lvls = 1
         rns = {r[ic].lower(): rn for rn, r in enumerate(input_sheet) if r[ic]}
-        for node in nodes.values():
-            if node.ps[pc] is not None and not node.cn[pc]:
-                self.get_par_lvls(pc, node)
-                if justify_left and not reverse:
-                    row = deque()
-                    if detail_columns:
-                        row = deque(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names) + row
-                    row.appendleft(node.name)
-                elif (justify_left and reverse) or (not justify_left and not reverse):
-                    row = [node.name]
-                    if detail_columns:
-                        row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
-                elif not justify_left and reverse:
-                    row = []
-                    if detail_columns:
-                        row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
-                    row.append(node.name)
-                if node.ps[pc]:
-                    self.build_flattened_recur(
-                        node=node.ps[pc],
-                        pc=pc,
-                        row=row,
-                        rns=rns,
-                        input_sheet=input_sheet,
-                        detail_columns=detail_columns,
-                        detail_cols_idxs_names=detail_cols_idxs_names,
-                        justify_left=justify_left,
-                        reverse=reverse,
-                    )
-                if justify_left and not reverse:
-                    output_sheet.append(list(row))
-                else:
-                    output_sheet.append(row)
+        base_ids_rns = {}
+        for itr, node in enumerate(self.gen_pc_base_ids(nodes, pc)):
+            self.get_par_lvls(pc, node)
+            base_ids_rns[rns[node.k]] = itr
+            if justify_left and not reverse:
+                row = deque()
+                if detail_columns:
+                    row = deque(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names) + row
+                row.appendleft(node.name)
+            elif (justify_left and reverse) or (not justify_left and not reverse):
+                row = [node.name]
+                if detail_columns:
+                    row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
+            elif not justify_left and reverse:
+                row = []
+                if detail_columns:
+                    row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
+                row.append(node.name)
+            if node.ps[pc]:
+                self.build_flattened_recur(
+                    node=node.ps[pc],
+                    pc=pc,
+                    row=row,
+                    rns=rns,
+                    input_sheet=input_sheet,
+                    detail_columns=detail_columns,
+                    detail_cols_idxs_names=detail_cols_idxs_names,
+                    justify_left=justify_left,
+                    reverse=reverse,
+                )
+            if justify_left and not reverse:
+                output_sheet.append(list(row))
+            else:
+                output_sheet.append(row)
+
         equalize_sublist_lens(output_sheet)
 
         if justify_left and not reverse:
@@ -318,6 +329,12 @@ class TreeBuilder:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
             output_headers = output_headers[::-1]
 
+        output_sheet = move_elements_by_mapping(
+            seq=output_sheet,
+            new_idxs={
+                base_ids_rns[input_sheet_rn]: new_idx for new_idx, input_sheet_rn in enumerate(sorted(base_ids_rns))
+            },
+        )
         if add_index:
             return [["Index"] + output_headers] + [[f"{rn}"] + r for rn, r in enumerate(output_sheet)]
         return [output_headers] + output_sheet
