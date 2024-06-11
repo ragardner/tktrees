@@ -7874,7 +7874,9 @@ class Tree_Editor(tk.Frame):
         else:
             see_iid = ""
             select_iids = tuple()
-        success = self.cut_paste_children(self.cut_children_dct["id"], f"{self.selected_ID}", self.cut_children_dct["hier"])
+        success = self.cut_paste_children(
+            self.cut_children_dct["id"], f"{self.selected_ID}", self.cut_children_dct["hier"]
+        )
         if not success:
             self.vs.pop()
             self.vp -= 1

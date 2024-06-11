@@ -30,9 +30,6 @@ from .functions import (
 
 
 class TreeBuilder:
-    def __init__(self) -> None:
-        self.levels = {}
-
     def check_cn(self, n: Node, h: int) -> Generator[str]:
         yield n.k
         for c in n.cn[h]:
@@ -42,11 +39,6 @@ class TreeBuilder:
         yield n.k
         if n.ps[h]:
             yield from self.check_ps(n.ps[h], h)
-
-    def get_par_lvls(self, h: int, n: Node, lvl: int = 1):
-        if n.ps[h]:
-            self.levels[lvl] = n.ps[h].name
-            self.get_par_lvls(h, n.ps[h], lvl + 1)
 
     def build(
         self,
@@ -235,6 +227,12 @@ class TreeBuilder:
                 reverse=reverse,
             )
 
+    def get_par_lvls(self, h: int, n: Node, lvl: int = 1):
+        if lvl > self.n_lvls:
+            self.n_lvls = lvl
+        if n.ps[h]:
+            self.get_par_lvls(h, n.ps[h], lvl + 1)
+
     def build_flattened(
         self,
         input_sheet: list[list[str]],
@@ -254,17 +252,11 @@ class TreeBuilder:
         ic_plus_hiers = {ic} | set(hiers)
         detail_cols_idxs_names = {i: headers[i] for i in [i for i in range(len(headers)) if i not in ic_plus_hiers]}
         pc_name = headers[pc]
-        n_lvls = 1
-        for r in input_sheet:
-            self.levels = {}
-            if node := nodes[r[ic].lower()].ps[pc]:
-                self.get_par_lvls(pc, node)
-            if (max_k := max(self.levels, default=1)) > n_lvls:
-                n_lvls = max_k
-        self.levels = {}
+        self.n_lvls = 1
         rns = {r[ic].lower(): rn for rn, r in enumerate(input_sheet) if r[ic]}
         for node in nodes.values():
             if not node.cn[pc]:
+                self.get_par_lvls(pc, node)
                 if justify_left and not reverse:
                     row = deque()
                     if detail_columns:
@@ -296,31 +288,36 @@ class TreeBuilder:
                 else:
                     output_sheet.append(row)
         equalize_sublist_lens(output_sheet)
+
         if justify_left and not reverse:
             output_sheet = list(map(shift_elements_to_start, output_sheet))
-            for i in range(n_lvls + 2):
+            for i in range(self.n_lvls):
                 output_headers.append(f"{pc_name}_{i}")
                 if detail_columns:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
+
         elif justify_left and reverse:
-            for i in reversed(range(n_lvls + 2)):
+            for i in reversed(range(self.n_lvls)):
                 output_headers.append(f"{pc_name}_{i}")
                 if detail_columns:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
+
         elif not justify_left and not reverse:
             output_sheet = list(map(lambda r: r[::-1], output_sheet))
-            for i in reversed(range(n_lvls + 2)):
+            for i in reversed(range(self.n_lvls)):
                 output_headers.append(f"{pc_name}_{i}")
                 if detail_columns:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
             output_headers = output_headers[::-1]
+
         elif not justify_left and reverse:
             output_sheet = list(map(shift_elements_to_end, output_sheet))
-            for i in range(n_lvls + 2):
+            for i in range(self.n_lvls):
                 output_headers.append(f"{pc_name}_{i}")
                 if detail_columns:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
             output_headers = output_headers[::-1]
+
         if add_index:
             return [["Index"] + output_headers] + [[f"{rn}"] + r for rn, r in enumerate(output_sheet)]
         return [output_headers] + output_sheet
