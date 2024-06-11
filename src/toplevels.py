@@ -215,7 +215,7 @@ class Export_Flattened_Popup(tk.Toplevel):
 
     def begin_edit(self, event=None):
         self.unbind("<Escape>")
-        return event.text
+        return event.value
 
     def start_work(self, msg=""):
         self.status_bar.change_text(msg)
