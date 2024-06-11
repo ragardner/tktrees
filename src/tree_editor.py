@@ -1660,7 +1660,6 @@ class Tree_Editor(tk.Frame):
             self.sheet.header_align(program_data.sheet_header_align, redraw=False)
             self.tree.align(program_data.tree_table_align, redraw=False)
             self.tree.header_align(program_data.tree_header_align, redraw=False)
-            self.tagged_ids = set(program_data.tagged_ids)
             self.nodes_order = {k: {int(h): cn for h, cn in v.items()} for k, v in program_data.nodes_order.items()}
             self.topnodes_order = {int(h): v for h, v in program_data.topnodes_order.items()}
             self.auto_sort_nodes_bool.set(bool(program_data.auto_sort_nodes_bool))
@@ -1692,6 +1691,7 @@ class Tree_Editor(tk.Frame):
             self.allow_spaces_ids_var.set(bool(program_data.allow_spaces_ids))
             self.allow_spaces_columns_var.set(bool(program_data.allow_spaces_columns))
             self.set_headers()
+            self.tag_ids(selection=set(program_data.tagged_ids), toggle=False, do_tree=False)
         else:
             self.set_headers()
             self.tagged_ids = set()
@@ -1733,7 +1733,6 @@ class Tree_Editor(tk.Frame):
         self.copied = []
         self.cut_children_dct = {}
         self.sheet.row_index(self.ic)
-        self.tag_ids(selection=self.tagged_ids, toggle=False)
         self.refresh_all_formatting()
         self.redo_tree_display()
         self.disable_paste()
@@ -9709,7 +9708,13 @@ class Tree_Editor(tk.Frame):
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
-    def tag_ids(self, event=None, selection: Iterator[str] | None = None, toggle: bool = True):
+    def tag_ids(
+        self,
+        event=None,
+        selection: Iterator[str] | None = None,
+        toggle: bool = True,
+        do_tree: bool = True,
+    ):
         if selection is None:
             if self.tree_has_focus:
                 selection = self.tree.selection(cells=True)
@@ -9731,7 +9736,7 @@ class Tree_Editor(tk.Frame):
                     canvas="row_index",
                     redraw=False,
                 )
-                if self.tree.exists(ik):
+                if do_tree and self.tree.exists(ik):
                     self.tree.dehighlight_cells(
                         row=self.tree.itemrow(ik),
                         canvas="row_index",
@@ -9746,7 +9751,7 @@ class Tree_Editor(tk.Frame):
                     canvas="row_index",
                     redraw=False,
                 )
-                if self.tree.exists(ik):
+                if do_tree and self.tree.exists(ik):
                     self.tree.highlight_cells(
                         row=self.tree.itemrow(ik),
                         bg="orange",
