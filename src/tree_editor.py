@@ -3739,7 +3739,7 @@ class Tree_Editor(tk.Frame):
             if pariid == "":
                 self.p = ""
             else:
-                self.p = pariid
+                self.p = self.nodes[pariid].name
             if self.mirror_var.get() and not self.mirror_sels_disabler:
                 self.go_to_row()
             self.mirror_sels_disabler = False
@@ -7198,9 +7198,12 @@ class Tree_Editor(tk.Frame):
                 as_sibling.append(iid)
         successful = []
         if as_sibling:
-            self.i = move_to_iid
+            self.i = self.nodes[move_to_iid].name
             self.cut_ids(as_sibling, status_bar=False)
-            self.p = new_parent
+            if new_parent:
+                self.p = self.nodes[new_parent].name
+            else:
+                self.p = new_parent
             successful = [dct["id"] for dct in self.paste_cut_sibling_all(redo_tree=False)]
         if successful and (not self.auto_sort_nodes_bool.get() or index_only):
             index_only += successful
