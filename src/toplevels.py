@@ -1369,16 +1369,19 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
         self.result = False
         self.find_display.place_cursor()
-        center(self, 570, 480, move_left=True)
+        center(self, 570, self.window_height(), move_left=True)
         self.deiconify()
         self.starting_up = False
+        
+    def window_height(self) -> int:
+        return self.notebook.winfo_height() + self.status_bar.winfo_height()
 
     def notebook_tab_click(self, event=None):
         if not self.starting_up:
             if self.notebook.index(self.notebook.select()) != 1:
-                self.geometry("570x477")
+                self.geometry(f"570x{self.window_height()}")
             else:
-                self.geometry("720x477")
+                self.geometry(f"720x{self.window_height()}")
                 self.sheetdisplay.MT.focus_set()
 
     def enable_widgets(self):
