@@ -5438,7 +5438,7 @@ class Tree_Editor(tk.Frame):
                         woc.append(n.k)
             self.topnodes_order[h] = sorted(wc, key=self.sort_key) + sorted(woc, key=self.sort_key)
 
-    def output_(self):
+    def gen_sheet_w_headers(self):
         yield [h.name for h in self.headers]
         yield from self.sheet.MT.data
 
@@ -12217,7 +12217,7 @@ class Tree_Editor(tk.Frame):
             ws.freeze_panes = "B2"
         else:
             ws.freeze_panes = "A2"
-        for row in self.output_():
+        for row in self.gen_sheet_w_headers():
             ws.append(row)
         self.write_additional_sheets_to_workbook(sheetname)
         self.C.wb.active = self.C.wb[sheetname]
@@ -12234,7 +12234,7 @@ class Tree_Editor(tk.Frame):
                 dialect=csv.excel_tab if filepath.lower().endswith(".tsv") else csv.excel,
                 lineterminator="\n",
             )
-            writer.writerows(self.output_())
+            writer.writerows(self.gen_sheet_w_headers())
         self.C.open_dict["filepath"] = filepath
         self.C.change_app_title(title=os.path.basename(filepath))
         self.C.open_dict["sheet"] = "Sheet1"
