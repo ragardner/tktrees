@@ -1315,6 +1315,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
             expand_sheet_if_paste_too_big=True,
             paste_insert_column_limit=2,
             outline_thickness=1,
+            data=[["", ""] for r in range(20)],
         )
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.disable_bindings("rc_delete_column", "rc_insert_column")
@@ -1368,7 +1369,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
         self.result = False
         self.find_display.place_cursor()
-        center(self, 570, 477, move_left=True)
+        center(self, 570, 480, move_left=True)
         self.deiconify()
         self.starting_up = False
 
