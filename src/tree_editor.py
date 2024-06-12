@@ -6469,8 +6469,9 @@ class Tree_Editor(tk.Frame):
                 "",
                 "",
             )
-        for col in cols:
-            del self.headers[col]
+        cols_set = set(cols)
+        self.headers = [hdr for i, hdr in enumerate(self.headers) if i not in cols_set]
+        for col in sorted(cols, reverse=True):
             if col in self.hiers:
                 self.hiers.remove(col)
                 for node in self.nodes.values():
@@ -6526,6 +6527,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.sheet.row_index(newindex=self.ic)
         self.refresh_dropdowns()
+        self.redo_tree_display()
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         if focused == self.tree:

@@ -2213,7 +2213,7 @@ class Sheet(tk.Frame):
             self.MT.undo_stack.append(pickled_event_dict(event_data))
         if emit_event:
             self.emit_event("<<SheetModified>>", event_data)
-        self.MT.deselect("all", redraw=False)
+        self.MT.recreate_all_selection_boxes()
         self.set_refresh_timer(redraw)
         return event_data
 
@@ -2255,7 +2255,7 @@ class Sheet(tk.Frame):
             self.MT.undo_stack.append(pickled_event_dict(event_data))
         if emit_event:
             self.emit_event("<<SheetModified>>", event_data)
-        self.MT.deselect("all", redraw=False)
+        self.MT.recreate_all_selection_boxes()
         self.set_refresh_timer(redraw)
         return event_data
 
