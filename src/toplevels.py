@@ -1999,7 +1999,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
             ids = True
             dets = True
             match = True
-            mapping = {r[0].lower(): r[1] for r in self.sheetdisplay.get_sheet_data()}
+            mapping = {r[0].lower(): r[1] for r in self.sheetdisplay.get_sheet_data() if r[0] and r[1]}
             newtext = ""
             allcols = self.allcols_button2.get_checked()
         else:
