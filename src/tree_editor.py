@@ -11656,6 +11656,7 @@ class Tree_Editor(tk.Frame):
             ns_dcol_names = {
                 cell.lower(): i for i, cell in enumerate(ns_headers) if i not in ns_hiers_set and i != ns_ic
             }
+            os_header_names = {h.name.lower() for h in self.headers}
             ns_rns = {row[ns_ic].lower(): i for i, row in enumerate(self.new_sheet)}
             shared_ids = {i: ik for ik, i in self.rns.items() if ik in ns_rns}
             os_pcol_names = {h.name.lower(): i for i, h in enumerate(self.headers) if h.type_ == "Parent"}
@@ -11665,7 +11666,7 @@ class Tree_Editor(tk.Frame):
 
             # add new details columns option
             if popup.add_new_dcols:
-                new_dcols = [idx for colname, idx in ns_dcol_names.items() if colname not in os_dcol_names]
+                new_dcols = [idx for colname, idx in ns_dcol_names.items() if colname not in os_header_names]
                 num_new_dcols = len(new_dcols)
                 self.headers.extend([Header(ns_headers[idx], "Text Detail") for idx in new_dcols])
                 if num_new_dcols:
@@ -11698,7 +11699,7 @@ class Tree_Editor(tk.Frame):
 
             # add new parent columns option
             if popup.add_new_pcols:
-                new_pcols = [idx for colname, idx in ns_pcol_names.items() if colname not in os_pcol_names]
+                new_pcols = [idx for colname, idx in ns_pcol_names.items() if colname not in os_header_names]
                 num_new_pcols = len(new_pcols)
                 self.headers.extend([Header(ns_headers[idx], "Parent") for idx in new_pcols])
                 if num_new_pcols:
