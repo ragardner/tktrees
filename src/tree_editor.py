@@ -13,7 +13,7 @@ import zlib
 from bisect import bisect_left, bisect_right
 from collections import defaultdict, deque
 from collections.abc import Generator, Iterator, Sequence
-from itertools import islice, repeat
+from itertools import islice, repeat, filterfalse
 from locale import getdefaultlocale
 from math import floor
 from operator import itemgetter
@@ -6471,29 +6471,31 @@ class Tree_Editor(tk.Frame):
             )
         cols_set = set(cols)
         self.headers = [hdr for i, hdr in enumerate(self.headers) if i not in cols_set]
-        for col in sorted(cols, reverse=True):
-            if col in self.hiers:
-                self.hiers.remove(col)
+        self.hiers_orig = self.hiers.copy()
+        self.hiers = list(filterfalse(cols_set.__contains__, self.hiers))
+        hiers_to_del = list(filter(cols_set.__contains__, reversed(self.hiers_orig)))
+        if hiers_to_del:
+            for col in hiers_to_del:
                 for node in self.nodes.values():
                     del node.ps[col]
                     del node.cn[col]
                 del self.saved_info[col]
                 if not self.auto_sort_nodes_bool.get():
                     del self.topnodes_order[col]
-                self.associate()
-                if not self.auto_sort_nodes_bool.get():
-                    current_nodes = {n: None for n in self.topnodes_order[self.hiers[0]]}
-                    wc = []
-                    woc = []
-                    for n in self.nodes.values():
-                        if n.ps[self.hiers[0]] == "" and n.k not in current_nodes:
-                            if n.cn[self.hiers[0]]:
-                                wc.append(n)
-                            else:
-                                woc.append(n)
-                    wc.sort(key=self.sort_node_key)
-                    woc.sort(key=self.sort_node_key)
-                    self.topnodes_order[self.hiers[0]] = list(current_nodes) + [n.k for n in wc] + [n.k for n in woc]
+            self.associate()
+            if not self.auto_sort_nodes_bool.get():
+                current_nodes = {n: None for n in self.topnodes_order[self.hiers[0]]}
+                wc = []
+                woc = []
+                for n in self.nodes.values():
+                    if n.ps[self.hiers[0]] == "" and n.k not in current_nodes:
+                        if n.cn[self.hiers[0]]:
+                            wc.append(n)
+                        else:
+                            woc.append(n)
+                wc.sort(key=self.sort_node_key)
+                woc.sort(key=self.sort_node_key)
+                self.topnodes_order[self.hiers[0]] = list(current_nodes) + [n.k for n in wc] + [n.k for n in woc]
         self.row_len -= len(cols)
         self.adjust_hiers_del_cols(cols)
         if snapshot:
@@ -6540,8 +6542,6 @@ class Tree_Editor(tk.Frame):
 
     def change_sheet_settings(self, event=None):
         Sheet_Settings_Chooser(self, theme=self.C.theme)
-
-    def column_manager(self): ...
 
     def adjust_hiers_del_cols(self, cols):
         auto_sort_nodes_bool = self.auto_sort_nodes_bool.get()
