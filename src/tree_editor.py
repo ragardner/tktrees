@@ -804,7 +804,7 @@ class Tree_Editor(tk.Frame):
             name="tree",
             header_font=sheet_header_font,
             theme=self.C.theme,
-            auto_resize_columns=100,
+            auto_resize_columns=250,
             treeview=True,
             row_drag_and_drop_perform=False,
         )
