@@ -213,7 +213,7 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.edit_menu.add_command(
-            label="Undo  0/75",
+            label="Undo  0/30",
             accelerator="Ctrl+Z",
             state="disabled",
             command=self.undo,
@@ -1718,7 +1718,7 @@ class Tree_Editor(tk.Frame):
         self.C.file.entryconfig("New", command=self.create_new_from_within_treeframe)
         self.C.file.entryconfig("Open", command=self.open_from_within_treeframe)
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
-        self.edit_menu.entryconfig(0, label="Undo  0/75", state="disabled")
+        self.edit_menu.entryconfig(0, label="Undo  0/30", state="disabled")
         self.tree.unbind("<z>")
         self.tree.unbind("<Z>")
         self.sheet.unbind("<z>")
@@ -4913,7 +4913,7 @@ class Tree_Editor(tk.Frame):
             self.sheet.delete_out_of_bounds_options()
             self.refresh_all_formatting()
 
-    def del_every_id_occurrence_orphan(self, ID, snapshot=True):
+    def del_id_all_hiers_orphan(self, ID, snapshot=True):
         ik = ID.lower()
         pk = self.nodes[ik].ps[self.pc]
         self.untag_id(ik)
@@ -4953,7 +4953,7 @@ class Tree_Editor(tk.Frame):
                         self.nodes[pk].ps[self.pc].cn[self.pc], self.pc
                     )
 
-    def del_every_id_occurrence(self, ID, snapshot=True):
+    def del_id_all_hiers(self, ID, snapshot=True):
         ik = ID.lower()
         pk = self.nodes[ik].ps[self.pc]
         self.untag_id(ik)
@@ -5369,6 +5369,19 @@ class Tree_Editor(tk.Frame):
                 n.ps[qho] = ""
                 for h in quick_hiers:
                     n.ps[h] = None
+        if not self.auto_sort_nodes_bool.get():
+            current_nodes = {n: None for n in self.topnodes_order[self.hiers[0]]}
+            wc = []
+            woc = []
+            for n in self.nodes.values():
+                if n.ps[self.hiers[0]] == "" and n.k not in current_nodes:
+                    if n.cn[self.hiers[0]]:
+                        wc.append(n.k)
+                    else:
+                        woc.append(n.k)
+            self.topnodes_order[self.hiers[0]] = (
+                list(current_nodes) + sorted(wc, key=self.sort_key) + sorted(woc, key=self.sort_key)
+            )
 
     def sort_node_key(self, n):
         return [int(e) if e.isdigit() else e for e in re.split("([0-9]+)", n.k)]
@@ -5407,56 +5420,10 @@ class Tree_Editor(tk.Frame):
             yield child
             yield from self._pc_nodes_recur(child)
 
-    def pc_nodes(self, undo=False):
-        nodes = self.topnodes_undo if undo else self.topnodes
-        for node in nodes():
+    def pc_nodes(self):
+        for node in self.topnodes():
             yield node
             yield from self._pc_nodes_recur(node)
-
-    def topnodes_undo(self):
-        qho = self.hiers[0]
-        quick_hiers = self.hiers[1:]
-        lh = len(self.hiers)
-        pc = self.pc
-        if self.auto_sort_nodes_bool.get():
-            wc = []
-            woc = []
-            for n in self.nodes.values():
-                tlly = 0
-                for k, v in n.cn.items():
-                    if v:
-                        n.cn[k] = self.sort_node_cn(v, k)
-                    else:
-                        if not n.ps[k]:
-                            n.ps[k] = None
-                            tlly += 1
-                if tlly == lh:
-                    n.ps[qho] = ""
-                    for h in quick_hiers:
-                        n.ps[h] = None
-                if n.ps[pc] == "":
-                    if n.cn[pc]:
-                        wc.append(n)
-                    else:
-                        woc.append(n)
-            yield from sorted(wc, key=self.sort_node_key)
-            yield from sorted(woc, key=self.sort_node_key)
-        else:
-            for n in self.nodes.values():
-                tlly = 0
-                for k, v in n.cn.items():
-                    if v:
-                        d = {cld.k: cld for cld in v}
-                        n.cn[k] = [d[cldk] for cldk in self.nodes_order[n.k][k]]
-                    else:
-                        if not n.ps[k]:
-                            n.ps[k] = None
-                            tlly += 1
-                if tlly == lh:
-                    n.ps[qho] = ""
-                    for h in quick_hiers:
-                        n.ps[h] = None
-            yield from (self.nodes[nk] for nk in self.topnodes_order[pc])
 
     def remake_topnodes_order(self):
         self.topnodes_order = {}
@@ -6483,19 +6450,6 @@ class Tree_Editor(tk.Frame):
                 if not self.auto_sort_nodes_bool.get():
                     del self.topnodes_order[col]
             self.associate()
-            if not self.auto_sort_nodes_bool.get():
-                current_nodes = {n: None for n in self.topnodes_order[self.hiers[0]]}
-                wc = []
-                woc = []
-                for n in self.nodes.values():
-                    if n.ps[self.hiers[0]] == "" and n.k not in current_nodes:
-                        if n.cn[self.hiers[0]]:
-                            wc.append(n)
-                        else:
-                            woc.append(n)
-                wc.sort(key=self.sort_node_key)
-                woc.sort(key=self.sort_node_key)
-                self.topnodes_order[self.hiers[0]] = list(current_nodes) + [n.k for n in wc] + [n.k for n in woc]
         self.row_len -= len(cols)
         self.adjust_hiers_del_cols(cols)
         if snapshot:
@@ -6605,7 +6559,7 @@ class Tree_Editor(tk.Frame):
             return
         self.vp -= 1
         new_vs = self.vs.pop()
-        new_vs["required_data"]["pickled"] = pickle.loads(zlib.decompress(new_vs["required_data"]["pickled"]))
+        new_vs["required_data"]["pickled"] = pickle.loads(new_vs["required_data"]["pickled"])
         if self.undo_unsaved_changes_passed_0:
             self.increment_unsaved()
         else:
@@ -6619,6 +6573,7 @@ class Tree_Editor(tk.Frame):
         self.ic = new_vs["required_data"]["pickled"]["ic"]
         self.pc = new_vs["required_data"]["pickled"]["pc"]
         self.hiers = new_vs["required_data"]["pickled"]["hiers"]
+        self.nodes = new_vs["required_data"]["pickled"]["nodes"]
         self.tv_label_col = new_vs["required_data"]["pickled"]["tv_label_col"]
         self.row_len = new_vs["required_data"]["pickled"]["row_len"]
         self.mirror_var.set(new_vs["required_data"]["not_pickled"]["mirror_bool"])
@@ -6690,65 +6645,59 @@ class Tree_Editor(tk.Frame):
         else:
             del self.changelog[-1]
         if new_vs["type"] == "add id":
-            self.nodes = {}
             rn = new_vs["row"]["rn"]
             if new_vs["row"]["added_or_changed"] == "changed":
                 self.sheet.MT.data[rn] = new_vs["row"]["stored"]
             elif new_vs["row"]["added_or_changed"] == "added":
                 del self.sheet.MT.data[rn]
-            self.renew_rns_undo()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_all_formatting()
-            self.redo_tree_display(undo=True)
+            self.redo_tree_display()
 
         elif new_vs["type"] == "rename id":
-            self.nodes = {}
             for tup in new_vs["rows"]:
                 rn, h, v = pickle.loads(zlib.decompress(tup))
                 self.sheet.MT.data[rn][h] = v
             self.sheet.MT.data[new_vs["ikrow"][0]][self.ic] = new_vs["ikrow"][2]
-            self.renew_rns_undo()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_all_formatting()
-            self.redo_tree_display(undo=True)
+            self.redo_tree_display()
 
         elif new_vs["type"] == "paste id":
-            self.nodes = {}
             for tup in new_vs["rows"]:
                 rn, fromcol, frompar, tocol, topar = pickle.loads(zlib.decompress(tup))
                 self.sheet.MT.data[rn][fromcol] = frompar
                 self.sheet.MT.data[rn][tocol] = topar
-            self.renew_rns_undo()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_all_formatting()
-            self.redo_tree_display(undo=True)
+            self.redo_tree_display()
 
         elif new_vs["type"] == "delete id" or new_vs["type"] == "delete ids":
-            self.nodes = {}
             for obj in reversed(new_vs["rows"]):
                 if obj.t == 1:
                     self.sheet.MT.data.insert(obj.rn, obj.row)
                 else:
                     for h, par in zip(self.hiers, pickle.loads(zlib.decompress(obj.row))):
                         self.sheet.MT.data[obj.rn][h] = par
-            self.renew_rns_undo()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_all_formatting()
-            self.redo_tree_display(undo=True)
+            self.redo_tree_display()
 
         elif new_vs["type"] == "add col":
-            self.nodes = {}
             c = new_vs["treecolsel"]
             for r in range(len(self.sheet.MT.data)):
                 del self.sheet.MT.data[r][c]
-            self.renew_rns_undo()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_all_formatting()
-            self.redo_tree_display(undo=True)
+            self.redo_tree_display()
 
         elif new_vs["type"] == "del cols":
-            self.nodes = {}
             for cn, rowdict in reversed(new_vs["cols"].items()):
                 for rn, v in rowdict.items():
                     self.sheet.MT.data[rn].insert(cn, v)
-            self.renew_rns_undo()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_all_formatting()
-            self.redo_tree_display(undo=True)
+            self.redo_tree_display()
 
         elif new_vs["type"] == "edit validation":
             for rn, c in enumerate(pickle.loads(zlib.decompress(new_vs["col"]))):
@@ -6789,9 +6738,6 @@ class Tree_Editor(tk.Frame):
 
         elif new_vs["type"] == "drag cols":
             new_vs["column_mapping"] = dict(zip(new_vs["column_mapping"].values(), new_vs["column_mapping"]))
-            for node in self.nodes.values():
-                node.cn = {new_vs["column_mapping"][k]: v for k, v in node.cn.items()}
-                node.ps = {new_vs["column_mapping"][k]: v for k, v in node.ps.items()}
             self.sheet.mapping_move_columns(new_vs["column_mapping"])
             self.tree.mapping_move_columns(new_vs["column_mapping"])
             self.refresh_all_formatting()
@@ -6823,39 +6769,37 @@ class Tree_Editor(tk.Frame):
             self.warnings_filepath = new_vs["og_file"]
             self.warnings_sheet = new_vs["og_sheet"]
             self.warnings = new_vs["build_warnings"]
-            self.nodes = {}
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
-            self.renew_rns_undo()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_all_formatting()
-            self.redo_tree_display(undo=True)
+            self.redo_tree_display()
 
         elif new_vs["type"] == "get clipboard data":
             self.warnings_filepath = new_vs["og_file"]
             self.warnings_sheet = new_vs["og_sheet"]
             self.warnings = new_vs["build_warnings"]
-            self.nodes = {}
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
-            self.renew_rns_undo()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_all_formatting()
-            self.redo_tree_display(undo=True)
+            self.redo_tree_display()
 
         elif new_vs["type"] == "ctrl x, v, del key id par":
-            self.nodes = {}
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
-            self.renew_rns_undo()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_all_formatting()
-            self.redo_tree_display(undo=True)
+            self.redo_tree_display()
 
         elif new_vs["type"] == "ctrl x, v, del key":
             for k, v in new_vs["cells"].items():
                 self.sheet.MT.data[k[0]][k[1]] = v
             self.refresh_all_formatting(rows=(k[0] for k in new_vs["cells"]))
             self.redo_tree_display()
+
         self.sheet_set_heights_widths_from_undo(new_vs["required_data"]["pickled"])
         self.set_headers()
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.rehighlight_tagged_ids()
-        self.edit_menu.entryconfig(0, label=f"Undo {self.vp}/75")
+        self.edit_menu.entryconfig(0, label=f"Undo {self.vp}/30")
         if not self.vp:
             self.edit_menu.entryconfig(0, state="disabled")
         self.mirror_sels_disabler = True
@@ -6894,7 +6838,7 @@ class Tree_Editor(tk.Frame):
             self.undo()
 
     def set_undo_label(self, event=None):
-        self.edit_menu.entryconfig(0, label=f"Undo {self.vp}/75")
+        self.edit_menu.entryconfig(0, label=f"Undo {self.vp}/30")
         if not self.vp:
             self.edit_menu.entryconfig(0, state="disabled")
 
@@ -6929,31 +6873,30 @@ class Tree_Editor(tk.Frame):
 
     def get_required_snapshot_data(self):
         return {
-            "pickled": zlib.compress(
-                pickle.dumps(
-                    {
-                        "saved_info": self.save_info_get_saved_info(),
-                        "sheet_col_positions": self.sheet.get_column_widths(canvas_positions=True),
-                        "sheet_row_positions": self.sheet.get_row_heights(canvas_positions=True),
-                        "topnodes_order": self.topnodes_order,
-                        "nodes_order": {
-                            ik: {h: [c.k for c in cnl] for h, cnl in n.cn.items()} for ik, n in self.nodes.items()
-                        },
-                        "tv_label_col": self.tv_label_col,
-                        "tagged_ids": self.tagged_ids,
-                        "sheet_cell_alignments": self.sheet.get_cell_alignments(),
-                        "sheet_column_alignments": self.sheet.get_column_alignments(),
-                        "sheet_row_alignments": self.sheet.get_row_alignments(),
-                        "tree_cell_alignments": self.tree.get_cell_alignments(),
-                        "tree_column_alignments": self.tree.get_column_alignments(),
-                        "tree_row_alignments": self.tree.get_row_alignments(),
-                        "headers": self.copy_headers(),
-                        "ic": self.ic,
-                        "pc": self.pc,
-                        "hiers": self.hiers,
-                        "row_len": self.row_len,
-                    }
-                )
+            "pickled": pickle.dumps(
+                {
+                    "saved_info": self.save_info_get_saved_info(),
+                    "sheet_col_positions": self.sheet.get_column_widths(canvas_positions=True),
+                    "sheet_row_positions": self.sheet.get_row_heights(canvas_positions=True),
+                    "nodes": self.nodes,
+                    "topnodes_order": self.topnodes_order,
+                    "nodes_order": {
+                        ik: {h: [c.k for c in cnl] for h, cnl in n.cn.items()} for ik, n in self.nodes.items()
+                    },
+                    "tv_label_col": self.tv_label_col,
+                    "tagged_ids": self.tagged_ids,
+                    "sheet_cell_alignments": self.sheet.get_cell_alignments(),
+                    "sheet_column_alignments": self.sheet.get_column_alignments(),
+                    "sheet_row_alignments": self.sheet.get_row_alignments(),
+                    "tree_cell_alignments": self.tree.get_cell_alignments(),
+                    "tree_column_alignments": self.tree.get_column_alignments(),
+                    "tree_row_alignments": self.tree.get_row_alignments(),
+                    "headers": self.copy_headers(),
+                    "ic": self.ic,
+                    "pc": self.pc,
+                    "hiers": self.hiers,
+                    "row_len": self.row_len,
+                }
             ),
             "not_pickled": self.get_unpickleable_required_snapshot_data(),
         }
@@ -7391,9 +7334,9 @@ class Tree_Editor(tk.Frame):
 
     def snapshot_chore(self):
         self.save_info_get_saved_info()
-        if self.vp < 75:
+        if self.vp < 30:
             self.vp += 1
-        self.edit_menu.entryconfig(0, label=f"Undo {self.vp}/75", state="normal")
+        self.edit_menu.entryconfig(0, label=f"Undo {self.vp}/30", state="normal")
 
     def sort_sheet_choice(self):
         popup = Sort_Sheet_Popup(self, [h.name for h in self.headers], theme=self.C.theme)
@@ -9096,7 +9039,7 @@ class Tree_Editor(tk.Frame):
         self.snapshot_delete_id()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        self.del_every_id_occurrence(self.selected_ID)
+        self.del_id_all_hiers(self.selected_ID)
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
@@ -9120,7 +9063,7 @@ class Tree_Editor(tk.Frame):
         self.snapshot_delete_id()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        self.del_every_id_occurrence_orphan(self.selected_ID)
+        self.del_id_all_hiers_orphan(self.selected_ID)
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
@@ -10406,7 +10349,7 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_displayed.set("")
         self.sheet_search_results = []
 
-    def redo_tree_display(self, undo=False, selections=True):
+    def redo_tree_display(self, selections=True):
         if self.saved_info[self.pc].twidths:
             self.tree.set_column_widths(self.tree_gen_widths_from_saved())
         else:
@@ -10416,15 +10359,13 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.reset_tree_search_dropdown()
         self.reset_sheet_search_dropdown()
-        if undo:
-            self.topnodes_undo()
         if self.sheet.data:
             if self.saved_info[self.pc].opens:
                 open_ids = self.saved_info[self.pc].opens
             else:
                 open_ids = None
             self.tree.tree_build(
-                data=[self.sheet.data[self.rns[node.k]] for node in self.pc_nodes(undo=undo)],
+                data=[self.sheet.data[self.rns[node.k]] for node in self.pc_nodes()],
                 iid_column=self.ic,
                 parent_column=self.pc,
                 text_column=self.tv_label_col,
@@ -11490,7 +11431,7 @@ class Tree_Editor(tk.Frame):
                 elif ctyp == "Delete ID from all hierarchies |" or ctyp == "Delete ID from all hierarchies":
                     cid = change[3]
                     if cid.lower() in self.rns:
-                        self.del_every_id_occurrence(cid.lower(), snapshot=False)
+                        self.del_id_all_hiers(cid.lower(), snapshot=False)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID from all hierarchies",
@@ -11507,7 +11448,7 @@ class Tree_Editor(tk.Frame):
                 elif ctyp == "Delete ID from all hierarchies, orphan children":
                     cid = change[3]
                     if cid.lower() in self.rns:
-                        self.del_every_id_occurrence_orphan(cid.lower(), snapshot=False)
+                        self.del_id_all_hiers_orphan(cid.lower(), snapshot=False)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID from all hierarchies, orphan children",
