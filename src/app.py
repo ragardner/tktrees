@@ -194,13 +194,6 @@ class AppGUI(tk.Tk):
             self.save_cfg(get_settings=False)
             self.set_settings(d)
 
-        # if self.configsettings["First GUI start"]:
-        #     self.status_bar.change_text("Waiting for terms agreement")
-        #     terms = License_Popup(self, contact_info + "\n\n" + self.LICENSE, self.theme)
-        #     if not terms.has_agreed:
-        #         self.try_to_close_everything()
-        #         return
-
         if len(start_arg) > 1:
             try:
                 self.open_dict["filepath"] = os.path.normpath(start_arg[1])

@@ -12058,6 +12058,7 @@ class Tree_Editor(tk.Frame):
             add_index=self.xlsx_flattened_add_index.get(),
         ):
             ws.append(r)
+        self.new_sheet = []
 
     def write_treeview_to_workbook(self, wb, sheetnames_):
         sheetname = sheetnames_[1]
