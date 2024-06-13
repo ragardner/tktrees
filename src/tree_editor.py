@@ -2140,7 +2140,7 @@ class Tree_Editor(tk.Frame):
             self.redo_tree_display()
         else:
             self.remake_topnodes_order()
-            
+
     def sort_all_children(self):
         for n in self.nodes.values():
             for k, v in n.cn.items():
@@ -11992,13 +11992,14 @@ class Tree_Editor(tk.Frame):
         }
 
     def nodes_json_x_dict(self, njson, hiers):
-        nodes = {}
-        for nodek, nodedict in njson.items():
-            nodes[nodek] = Node(
+        nodes = {
+            nodek: Node(
                 name=nodedict["name"],
                 k=nodek,
                 hrs=hiers,
             )
+            for nodek, nodedict in njson.items()
+        }
         for nodek, nodedict in njson.items():
             nodes[nodek].ps = {int(h): nodes[pk] if pk else pk for h, pk in nodedict["ps"].items()}
             nodes[nodek].cn = {int(h): [nodes[ck] for ck in cnl] for h, cnl in nodedict["cn"].items()}
