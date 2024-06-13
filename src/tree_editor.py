@@ -10414,7 +10414,8 @@ class Tree_Editor(tk.Frame):
         self.set_headers()
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.sheet.set_row_heights().set_column_widths().row_index(newindex=self.ic).delete_out_of_bounds_options()
+        self.sheet.set_row_heights().set_column_widths().row_index(newindex=self.ic)
+        self.sheet.delete_out_of_bounds_options()
         for ik in tuple(self.tagged_ids):
             if ik not in self.rns:
                 self.tagged_ids.discard(ik)
