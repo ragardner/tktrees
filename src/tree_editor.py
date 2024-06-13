@@ -152,7 +152,6 @@ class Tree_Editor(tk.Frame):
         self.sheet_has_focus = False
         self.sheet_changes = 0
         self.nodes = {}
-        self.nodes_order = {}
         self.topnodes_order = {}
         self.levels = defaultdict(list)
         self.row_len = 0
@@ -1660,7 +1659,7 @@ class Tree_Editor(tk.Frame):
             self.sheet.header_align(program_data.sheet_header_align, redraw=False)
             self.tree.align(program_data.tree_table_align, redraw=False)
             self.tree.header_align(program_data.tree_header_align, redraw=False)
-            self.nodes_order = {k: {int(h): cn for h, cn in v.items()} for k, v in program_data.nodes_order.items()}
+            self.nodes = self.nodes_json_x_dict(program_data.nodes, hiers=self.hiers)
             self.topnodes_order = {int(h): v for h, v in program_data.topnodes_order.items()}
             self.auto_sort_nodes_bool.set(bool(program_data.auto_sort_nodes_bool))
             self.tv_label_col = int(program_data.tv_label_col)
@@ -1674,8 +1673,7 @@ class Tree_Editor(tk.Frame):
             for h, dct in self.saved_info.items():
                 dct["theights"] = {k: self.tree.valid_row_height(int(v)) for k, v in dct["theights"].items()}
                 dct["twidths"] = {k: int(v) for k, v in dct["twidths"].items()}
-            self.renew_rns_undo()
-            self.fix_associate_sort()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             for (r, c), align in program_data.sheet_cell_alignments.items():
                 self.sheet.align_cells(int(r), int(c), align=align, redraw=False)
             for c, align in program_data.sheet_column_alignments.items():
@@ -1698,12 +1696,11 @@ class Tree_Editor(tk.Frame):
             self.pc = int(self.hiers[0])
             self.tv_label_col = int(self.ic)
             self.saved_info = new_saved_info(self.hiers)
-            self.nodes_order = {}
             self.topnodes_order = {}
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             if not self.C.created_new:
                 self.fix_associate_sort()
             self.remake_topnodes_order()
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.tree.set_column_widths()
             self.sheet.set_row_heights().set_column_widths()
         self.selected_ID = ""
@@ -1885,7 +1882,6 @@ class Tree_Editor(tk.Frame):
         self.headers = []
         self.set_headers()
         self.auto_sort_nodes_bool.set(True)
-        self.nodes_order = {}
         self.topnodes_order = {}
         self.nodes = {}
         self.rns = {}
@@ -5181,18 +5177,8 @@ class Tree_Editor(tk.Frame):
                     allrows.append(spaces + cell)
         return "\n".join(allrows)
 
-    def redo_nodes_order(self):
-        for n in self.nodes.values():
-            for k, v in n.cn.items():
-                if v:
-                    d = {cld.k: cld for cld in v}
-                    try:
-                        n.cn[k] = [d[cldk] for cldk in self.nodes_order[n.k][k]]
-                    except Exception:
-                        continue
-
     def fix_associate_sort(self, startup=True):
-        qho = self.hiers[0]
+        first_hier = self.hiers[0]
         quick_hiers = self.hiers[1:]
         lh = len(self.hiers)
         if startup and self.auto_sort_nodes_bool.get():
@@ -5211,58 +5197,10 @@ class Tree_Editor(tk.Frame):
                         n.ps[k] = None
                         tlly += 1
                 if tlly == lh:
-                    n.ps[qho] = ""
+                    n.ps[first_hier] = ""
                     for h in quick_hiers:
                         n.ps[h] = None
-        elif startup and not self.auto_sort_nodes_bool.get():
-            st_check_topnodes_order = {k: set(v) for k, v in self.topnodes_order.items()}
-            for n in self.nodes.values():
-                if all(p is None for p in n.ps.values()):
-                    n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
-                    newrow = list(repeat("", self.row_len))
-                    newrow[self.ic] = n.name
-                    self.sheet.MT.data.append(newrow)
-                    self.warnings.append(f" - ID ({n.name}) missing from ID column, new row added")
-                tlly = 0
-                for k, v in n.cn.items():
-                    if v:
-                        d = {}
-                        s = set()
-                        for cld in v:
-                            d[cld.k] = cld
-                            s.add(cld.k)
-                        if (
-                            n.k not in self.nodes_order
-                            or k not in self.nodes_order[n.k]
-                            or s != set(self.nodes_order[n.k][k])
-                        ):
-                            self.warnings.append(
-                                f" - Order of treeview IDs lost due to error with ID: {n.name} in column #{k + 1}"
-                            )
-                            self.restart_startup_fix()
-                            return
-                        try:
-                            n.cn[k] = [d[cldk] for cldk in self.nodes_order[n.k][k]]
-                        except Exception as error_msg:
-                            self.warnings.append(
-                                f" - Order of treeview IDs lost due to error: {error_msg} in column #{k + 1}"
-                            )
-                            self.restart_startup_fix()
-                            return
-                    elif not v and not n.ps[k]:
-                        n.ps[k] = None
-                        tlly += 1
-                if tlly == lh:
-                    if all(n.k not in h for h in st_check_topnodes_order.values()):
-                        n.ps[qho] = ""
-                        for h in quick_hiers:
-                            n.ps[h] = None
-                        self.warnings.append(f" - ID: {n.name} moved to column #{qho + 1}")
-                        self.topnodes_order[qho].append(n.k)
-                    else:
-                        for h, v in st_check_topnodes_order.items():
-                            if n.k in v:
-                                n.ps[h] = ""
+
         elif not startup and self.auto_sort_nodes_bool.get():
             for n in self.nodes.values():
                 if all(p is None for p in n.ps.values()):
@@ -5278,9 +5216,10 @@ class Tree_Editor(tk.Frame):
                         n.ps[k] = None
                         tlly += 1
                 if tlly == lh:
-                    n.ps[qho] = ""
+                    n.ps[first_hier] = ""
                     for h in quick_hiers:
                         n.ps[h] = None
+
         elif not startup and not self.auto_sort_nodes_bool.get():
             st_check_topnodes_order = {k: set(v) for k, v in self.topnodes_order.items()}
             for n in self.nodes.values():
@@ -5291,29 +5230,22 @@ class Tree_Editor(tk.Frame):
                     self.sheet.insert_row(newrow)
                 tlly = 0
                 for k, v in n.cn.items():
-                    if v:
-                        d = {cld.k: cld for cld in v}
-                        n.cn[k] = [d[cldk] for cldk in self.nodes_order[n.k][k]]
-                    elif not v and not n.ps[k]:
+                    if not v and not n.ps[k]:
                         n.ps[k] = None
                         tlly += 1
                 if tlly == lh:
                     if all(n.k not in h for h in st_check_topnodes_order.values()):
-                        n.ps[qho] = ""
+                        n.ps[first_hier] = ""
                         for h in quick_hiers:
                             n.ps[h] = None
-                        self.topnodes_order[qho].append(n.k)
+                        self.topnodes_order[first_hier].append(n.k)
                     else:
                         for h, v in st_check_topnodes_order.items():
                             if n.k in v:
                                 n.ps[h] = ""
 
-    def restart_startup_fix(self):
-        self.auto_sort_nodes_bool.set(True)
-        self.fix_associate_sort()
-
     def fix_associate_sort_edit_cells(self):
-        qho = self.hiers[0]
+        first_hier = self.hiers[0]
         quick_hiers = self.hiers[1:]
         lh = len(self.hiers)
         if self.auto_sort_nodes_bool.get():
@@ -5331,7 +5263,7 @@ class Tree_Editor(tk.Frame):
                         n.ps[k] = None
                         tlly += 1
                 if tlly == lh:
-                    n.ps[qho] = ""
+                    n.ps[first_hier] = ""
                     for h in quick_hiers:
                         n.ps[h] = None
         elif not self.auto_sort_nodes_bool.get():
@@ -5343,20 +5275,17 @@ class Tree_Editor(tk.Frame):
                     self.sheet.insert_row(newrow)
                 tlly = 0
                 for k, v in n.cn.items():
-                    if v:
-                        d = {cld.k: cld for cld in v}
-                        n.cn[k] = [d[cldk] for cldk in self.nodes_order[n.k][k]]
-                    elif not v and not n.ps[k]:
+                    if not v and not n.ps[k]:
                         n.ps[k] = None
                         tlly += 1
                 if tlly == lh:
-                    n.ps[qho] = ""
+                    n.ps[first_hier] = ""
                     for h in quick_hiers:
                         n.ps[h] = None
         return "break"
 
     def associate(self):
-        qho = self.hiers[0]
+        first_hier = self.hiers[0]
         quick_hiers = self.hiers[1:]
         lh = len(self.hiers)
         for n in self.nodes.values():
@@ -5366,7 +5295,7 @@ class Tree_Editor(tk.Frame):
                     n.ps[k] = None
                     tlly += 1
             if tlly == lh:
-                n.ps[qho] = ""
+                n.ps[first_hier] = ""
                 for h in quick_hiers:
                     n.ps[h] = None
         if not self.auto_sort_nodes_bool.get():
@@ -6440,8 +6369,7 @@ class Tree_Editor(tk.Frame):
         self.headers = [hdr for i, hdr in enumerate(self.headers) if i not in cols_set]
         self.hiers_orig = self.hiers.copy()
         self.hiers = list(filterfalse(cols_set.__contains__, self.hiers))
-        hiers_to_del = list(filter(cols_set.__contains__, reversed(self.hiers_orig)))
-        if hiers_to_del:
+        if hiers_to_del := list(filter(cols_set.__contains__, reversed(self.hiers_orig))):
             for col in hiers_to_del:
                 for node in self.nodes.values():
                     del node.ps[col]
@@ -6579,7 +6507,6 @@ class Tree_Editor(tk.Frame):
         self.mirror_var.set(new_vs["required_data"]["not_pickled"]["mirror_bool"])
         self.auto_sort_nodes_bool.set(new_vs["required_data"]["not_pickled"]["auto_sort_nodes_bool"])
         self.topnodes_order = new_vs["required_data"]["pickled"]["topnodes_order"]
-        self.nodes_order = new_vs["required_data"]["pickled"]["nodes_order"]
         self.saved_info = new_vs["required_data"]["pickled"]["saved_info"]
         self.toggle_mirror(select_row=False)
         self.tagged_ids = new_vs["required_data"]["pickled"]["tagged_ids"]
@@ -6744,7 +6671,6 @@ class Tree_Editor(tk.Frame):
             self.redo_tree_display()
 
         elif new_vs["type"] == "node sort":
-            self.redo_nodes_order()
             self.refresh_all_formatting()
             self.redo_tree_display()
 
@@ -6880,9 +6806,6 @@ class Tree_Editor(tk.Frame):
                     "sheet_row_positions": self.sheet.get_row_heights(canvas_positions=True),
                     "nodes": self.nodes,
                     "topnodes_order": self.topnodes_order,
-                    "nodes_order": {
-                        ik: {h: [c.k for c in cnl] for h, cnl in n.cn.items()} for ik, n in self.nodes.items()
-                    },
                     "tv_label_col": self.tv_label_col,
                     "tagged_ids": self.tagged_ids,
                     "sheet_cell_alignments": self.sheet.get_cell_alignments(),
@@ -10297,24 +10220,6 @@ class Tree_Editor(tk.Frame):
         self.sheet.set_yview(self.saved_info[self.pc].scrolls.sheety)
         self.sheet.set_xview(self.saved_info[self.pc].scrolls.sheetx)
 
-    def renew_rns_undo(self):
-        self.rns = {}
-        for i, r in enumerate(self.sheet.MT.data):
-            ID = r[self.ic]
-            if (ik := ID.lower()) not in self.nodes:
-                self.nodes[ik] = Node(ID, ik, self.hiers)
-            for h in self.hiers:
-                p = r[h]
-                if p:
-                    pk = p.lower()
-                    if pk not in self.nodes:
-                        self.nodes[pk] = Node(p, pk, self.hiers)
-                    self.nodes[ik].ps[h] = self.nodes[pk]
-                    self.nodes[pk].cn[h].append(self.nodes[ik])
-                else:
-                    self.nodes[ik].ps[h] = ""
-            self.rns[ik] = i
-
     def refresh_tree_item(self, iid):
         if self.tree.exists(iid):
             rn = self.rns[(ik := iid.lower())]
@@ -12048,6 +11953,7 @@ class Tree_Editor(tk.Frame):
             }
             for h in self.headers
         ]
+        d["nodes"] = self.jsonify_nodes()
         d["changelog"] = self.changelog
         d["row_heights"] = self.sheet.get_row_heights()
         d["column_widths"] = self.sheet.get_column_widths()
@@ -12064,7 +11970,6 @@ class Tree_Editor(tk.Frame):
         d["tree_header_align"] = self.tree.header_align()
         d["saved_info"] = self.save_info_get_saved_info()
         d["tv_label_col"] = self.tv_label_col
-        d["nodes_order"] = {ik: {h: [c.k for c in cnl] for h, cnl in n.cn.items()} for ik, n in self.nodes.items()}
         d["topnodes_order"] = self.topnodes_order
         d["tagged_ids"] = list(self.tagged_ids)
         d["auto_sort_nodes_bool"] = self.auto_sort_nodes_bool.get()
@@ -12073,6 +11978,34 @@ class Tree_Editor(tk.Frame):
         d["allow_spaces_ids"] = self.allow_spaces_ids_var.get()
         d["allow_spaces_columns"] = self.allow_spaces_columns_var.get()
         return d
+
+    def jsonify_nodes(self):
+        return {
+            node.k: {
+                "name": node.name,
+                "cn": {h: [c.k for c in cnl] for h, cnl in node.cn.items()},
+                "ps": {h: p.k if p else p for h, p in node.ps.items()},
+            }
+            for node in self.nodes.values()
+        }
+
+    def nodes_json_x_dict(self, njson, hiers):
+        nodes = {}
+        for nodek, nodedict in njson.items():
+            nodes[nodek] = Node(
+                name=nodedict["name"],
+                k=nodek,
+                hrs=hiers,
+            )
+        for nodek, nodedict in njson.items():
+            for h, pk in nodedict["ps"].items():
+                if pk:
+                    nodes[nodek].ps[int(h)] = nodes[pk]
+                else:
+                    nodes[nodek].ps[int(h)] = pk
+            for h, cnl in nodedict["cn"].items():
+                nodes[nodek].cn[int(h)] = [nodes[ck] for ck in cnl]
+        return nodes
 
     def xlsx_chunker(self, seq):
         size = len(seq) if len(seq) <= 32000 else 32000
