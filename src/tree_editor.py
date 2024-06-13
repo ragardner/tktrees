@@ -10343,7 +10343,7 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         popup = Get_Clipboard_Data_Popup(
             self,
-            cols=[h for h in self.new_sheet[0]],
+            cols=self.new_sheet[0],
             row_len=new_row_len,
             theme=self.C.theme,
         )
