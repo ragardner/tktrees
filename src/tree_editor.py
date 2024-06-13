@@ -11902,12 +11902,6 @@ class Tree_Editor(tk.Frame):
         except Exception as error_msg:
             Error(self, f"Error: {error_msg}", theme=self.C.theme)
 
-    def is_base_level_id(self, ik, hiers):
-        for hier in hiers:
-            if not self.nodes[ik].cn[hier] and self.nodes[ik].ps[hier] is not None:
-                return True
-        return False
-
     def get_par_lvls(self, h, n, lvl=1):
         if n.ps[h]:
             self.levels[lvl] = n.ps[h].name
