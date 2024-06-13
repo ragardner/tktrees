@@ -11998,13 +11998,8 @@ class Tree_Editor(tk.Frame):
                 hrs=hiers,
             )
         for nodek, nodedict in njson.items():
-            for h, pk in nodedict["ps"].items():
-                if pk:
-                    nodes[nodek].ps[int(h)] = nodes[pk]
-                else:
-                    nodes[nodek].ps[int(h)] = pk
-            for h, cnl in nodedict["cn"].items():
-                nodes[nodek].cn[int(h)] = [nodes[ck] for ck in cnl]
+            nodes[nodek].ps = {int(h): nodes[pk] if pk else pk for h, pk in nodedict["ps"].items()}
+            nodes[nodek].cn = {int(h): [nodes[ck] for ck in cnl] for h, cnl in nodedict["cn"].items()}
         return nodes
 
     def xlsx_chunker(self, seq):
