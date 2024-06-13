@@ -169,7 +169,7 @@ Conditions must have spaces in between statements.
 
 #### Edit Menu
 
-- Undo (Ctrl + Z): there are a maximum of 75 undos. Although the changelog can be saved with any filetype other than .csv the changes cannot be undone across saves.
+- Undo (Ctrl + Z). Note that although the changelog can be saved with program data the changes cannot be undone across saves.
 - Copy to clipboard copies the underlying sheet to your computers clipboard to be pasted as a string, Copy as json will use the json format you have selected under the Options menu.
 - Tag/Untag IDs tags the selected IDs, tagged IDs will be displayed in a dropdown box at the top of the window so you can find them later.
 - Find, replace (Ctrl + F / Ctrl + H). This window also allows a large scale find and replace using a 2 column table, column 1 is the values to find and column 2 the corresponding values to replace them with.

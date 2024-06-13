@@ -1724,7 +1724,7 @@ class Tree_Editor(tk.Frame):
         self.copied_detail = {"copied": "", "id": ""}
         self.savedyscroll = 0
         self.savedxscroll = 0
-        self.vs = deque(maxlen=75)
+        self.vs = deque(maxlen=30)
         self.vp = 0
         self.cut = []
         self.copied = []
@@ -1887,7 +1887,7 @@ class Tree_Editor(tk.Frame):
         self.rns = {}
         self.sheet.MT.data = []
         self.new_sheet = []
-        self.vs = deque(maxlen=75)
+        self.vs = deque(maxlen=30)
         self.vp = 0
         self.levels = defaultdict(list)
         self.row_len = 0
