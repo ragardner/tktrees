@@ -5206,12 +5206,13 @@ class Tree_Editor(tk.Frame):
                         n.ps[h] = None
 
         elif not startup and self.auto_sort_nodes_bool.get():
+            to_insert = []
             for n in self.nodes.values():
                 if all(p is None for p in n.ps.values()):
                     n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
                     newrow = list(repeat("", self.row_len))
                     newrow[self.ic] = n.name
-                    self.sheet.insert_row(newrow)
+                    to_insert.append(newrow)
                 tlly = 0
                 for k, v in n.cn.items():
                     if v:
@@ -5223,15 +5224,18 @@ class Tree_Editor(tk.Frame):
                     n.ps[first_hier] = ""
                     for h in quick_hiers:
                         n.ps[h] = None
+            if to_insert:
+                self.sheet.insert_rows(rows=to_insert)
 
         elif not startup and not self.auto_sort_nodes_bool.get():
             st_check_topnodes_order = {k: set(v) for k, v in self.topnodes_order.items()}
+            to_insert = []
             for n in self.nodes.values():
                 if all(p is None for p in n.ps.values()):
                     n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
                     newrow = list(repeat("", self.row_len))
                     newrow[self.ic] = n.name
-                    self.sheet.insert_row(newrow)
+                    to_insert.append(newrow)
                 tlly = 0
                 for k, v in n.cn.items():
                     if not v and not n.ps[k]:
@@ -5247,18 +5251,21 @@ class Tree_Editor(tk.Frame):
                         for h, v in st_check_topnodes_order.items():
                             if n.k in v:
                                 n.ps[h] = ""
+            if to_insert:
+                self.sheet.insert_rows(rows=to_insert)
 
     def fix_associate_sort_edit_cells(self):
         first_hier = self.hiers[0]
         quick_hiers = self.hiers[1:]
         lh = len(self.hiers)
+        to_insert = []
         if self.auto_sort_nodes_bool.get():
             for n in self.nodes.values():
                 if all(p is None for p in n.ps.values()):
                     n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
                     newrow = list(repeat("", self.row_len))
                     newrow[self.ic] = n.name
-                    self.sheet.insert_row(newrow)
+                    to_insert.append(newrow)
                 tlly = 0
                 for k, v in n.cn.items():
                     if v:
@@ -5276,7 +5283,7 @@ class Tree_Editor(tk.Frame):
                     n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
                     newrow = list(repeat("", self.row_len))
                     newrow[self.ic] = n.name
-                    self.sheet.insert_row(newrow)
+                    to_insert.append(newrow)
                 tlly = 0
                 for k, v in n.cn.items():
                     if not v and not n.ps[k]:
@@ -5286,6 +5293,8 @@ class Tree_Editor(tk.Frame):
                     n.ps[first_hier] = ""
                     for h in quick_hiers:
                         n.ps[h] = None
+        if to_insert:
+            self.sheet.insert_rows(rows=to_insert)
         return "break"
 
     def associate(self):
