@@ -100,8 +100,8 @@ class Column_Selection(tk.Frame):
         idcol = self.selector.get_id_col()
         parcols = self.selector.get_par_cols()
         ancparcols = self.flattened_selector.get_par_cols()
-        self.selector.set_columns([h for h in self.sheetdisplay.data[0]] if self.sheetdisplay.data else [])
-        self.flattened_selector.set_columns([h for h in self.sheetdisplay.data[0]] if self.sheetdisplay.data else [])
+        self.selector.set_columns(self.sheetdisplay.data[0] if self.sheetdisplay.data else [])
+        self.flattened_selector.set_columns(self.sheetdisplay.data[0] if self.sheetdisplay.data else [])
         try:
             if idcol is not None and self.sheetdisplay.get_sheet_data():
                 self.selector.set_id_col(idcol)
@@ -163,8 +163,8 @@ class Column_Selection(tk.Frame):
     def populate(self, columns):
         self.sheetdisplay.deselect("all")
         self.rowlen = len(columns)
-        self.selector.set_columns([h for h in self.C.frames.tree_edit.sheet.data[0]])
-        self.flattened_selector.set_columns([h for h in self.C.frames.tree_edit.sheet.data[0]])
+        self.selector.set_columns(self.C.frames.tree_edit.sheet.data[0])
+        self.flattened_selector.set_columns(self.C.frames.tree_edit.sheet.data[0])
         self.C.frames.tree_edit.sheet.MT.data = self.sheetdisplay.set_sheet_data(
             data=self.C.frames.tree_edit.sheet.MT.data,
             redraw=True,

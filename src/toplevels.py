@@ -3136,7 +3136,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             list(repeat("", len(self.C.headers))) for r in range(2000)
         ]
         self.C.new_sheet = self.sheetdisplay.set_sheet_data(self.C.new_sheet, verify=False)
-        self.selector.set_columns([h for h in self.C.new_sheet[0]] if self.C.new_sheet else [])
+        self.selector.set_columns(self.C.new_sheet[0] if self.C.new_sheet else [])
 
     def toggle_left_panel(self, event=None):
         if self.showing_left:
@@ -3173,7 +3173,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
     def reset_selectors(self, event=None):
         idcol = self.selector.get_id_col()
         parcols = self.selector.get_par_cols()
-        self.selector.set_columns([h for h in self.C.new_sheet[0]] if self.C.new_sheet else [])
+        self.selector.set_columns(self.C.new_sheet[0] if self.C.new_sheet else [])
         try:
             if idcol is not None and self.C.new_sheet:
                 self.selector.set_id_col(idcol)
@@ -3472,7 +3472,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
 class Get_Clipboard_Data_Popup(tk.Toplevel):
     def __init__(self, C, cols, row_len, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Overwrite sheet using data from clipboard")
+        self.C = new_toplevel_chores(self, C, f"{app_title} - Overwrite the current sheet using data from the clipboard")
         # self.grid_columnconfigure(0,weight=1)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -3546,8 +3546,8 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.sheetdisplay.MT.data = self.C.new_sheet
         self.sheetdisplay.refresh()
         if "move" in event.eventname:
-            self.selector.set_columns([h for h in self.C.new_sheet[0]])
-            self.flattened_selector.set_columns([h for h in self.C.new_sheet[0]])
+            self.selector.set_columns(self.C.new_sheet[0])
+            self.flattened_selector.set_columns(self.C.new_sheet[0])
             self.selector.detect_id_col()
             self.selector.detect_par_cols()
         else:
@@ -3558,8 +3558,8 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         idcol = self.selector.get_id_col()
         parcols = self.selector.get_par_cols()
         ancparcols = self.flattened_selector.get_par_cols()
-        self.selector.set_columns([h for h in self.C.new_sheet[0]] if self.C.new_sheet else [])
-        self.flattened_selector.set_columns([h for h in self.C.new_sheet[0]] if self.C.new_sheet else [])
+        self.selector.set_columns(self.C.new_sheet[0] if self.C.new_sheet else [])
+        self.flattened_selector.set_columns(self.C.new_sheet[0] if self.C.new_sheet else [])
         try:
             if idcol is not None and self.C.new_sheet:
                 self.selector.set_id_col(idcol)

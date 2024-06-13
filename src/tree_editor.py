@@ -1889,7 +1889,6 @@ class Tree_Editor(tk.Frame):
         self.new_sheet = []
         self.vs = deque(maxlen=30)
         self.vp = 0
-        self.levels = defaultdict(list)
         self.row_len = 0
         self.headers = []
         self.ic = 0
@@ -2137,13 +2136,16 @@ class Tree_Editor(tk.Frame):
         if x:
             if snapshot:
                 self.snapshot_auto_sort_nodes()
-            for n in self.nodes.values():
-                for k, v in n.cn.items():
-                    if v:
-                        n.cn[k] = self.sort_node_cn(v, k)
+            self.sort_all_children()
             self.redo_tree_display()
         else:
             self.remake_topnodes_order()
+            
+    def sort_all_children(self):
+        for n in self.nodes.values():
+            for k, v in n.cn.items():
+                if v:
+                    n.cn[k] = self.sort_node_cn(v, k)
 
     def copy_ID_row(self, event=None):
         selections = self.tree.selection(cells=True)
@@ -5040,6 +5042,7 @@ class Tree_Editor(tk.Frame):
             qvsapp = self.vs[-1]["rows"].append
         ik = ID.lower()
         to_del = []
+        self.levels = defaultdict(list)
         self.get_lvls(self.nodes[ik])
         for lvl in sorted(((k, v) for k, v in self.levels.items()), key=itemgetter(0), reverse=True):
             for ik_ in lvl[1]:
@@ -5104,6 +5107,7 @@ class Tree_Editor(tk.Frame):
             qvsapp = self.vs[-1]["rows"].append
         ik = ID.lower()
         to_del = []
+        self.levels = defaultdict(list)
         self.get_lvls(self.nodes[ik])
         for lvl in sorted(((k, v) for k, v in self.levels.items()), key=itemgetter(0), reverse=True):
             for ik_ in lvl[1]:
@@ -5266,7 +5270,7 @@ class Tree_Editor(tk.Frame):
                     n.ps[first_hier] = ""
                     for h in quick_hiers:
                         n.ps[h] = None
-        elif not self.auto_sort_nodes_bool.get():
+        else:
             for n in self.nodes.values():
                 if all(p is None for p in n.ps.values()):
                     n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
@@ -10368,6 +10372,7 @@ class Tree_Editor(tk.Frame):
                 warnings=self.warnings,
             )
         else:
+            self.row_len = new_row_len
             self.ic = popup.ic
             self.hiers = popup.pcols
         self.selected_ID = ""
@@ -10377,16 +10382,15 @@ class Tree_Editor(tk.Frame):
         self.tree.reset()
         self.sheet.deselect("all", redraw=False)
         self.sheet.dehighlight_cells(all_=True, redraw=False)
-        self.levels = defaultdict(list)
-        self.sheet.MT.data = self.new_sheet
-        self.new_sheet = []
         self.pc = int(self.hiers[0])
         self.tv_label_col = self.ic
-        self.headers = [Header(name) for name in self.fix_headers(self.sheet.MT.data.pop(0), self.row_len)]
+        self.headers = self.fix_headers(self.new_sheet.pop(0), self.row_len)
+        self.headers = [Header(name) for name in self.headers]
         self.headers[self.ic].type_ = "ID"
         for h in self.hiers:
             self.headers[h].type_ = "Parent"
-        self.nodes = {}
+        self.sheet.MT.data = self.new_sheet
+        self.new_sheet = []
         self.saved_info = new_saved_info(self.hiers)
         self.clear_copied_details()
         self.savedyscroll = 0
@@ -10397,15 +10401,14 @@ class Tree_Editor(tk.Frame):
         self.sheet.set_xview(0.0)
         self.sheet.set_yview(0.0)
         self.auto_sort_nodes_bool.set(True)
-        self.toggle_sort_all_nodes(snapshot=False)
         self.sheet.MT.data, self.nodes, self.warnings = TreeBuilder().build(
-            self.sheet.MT.data,
-            self.new_sheet,
-            self.row_len,
-            self.ic,
-            self.hiers,
-            self.nodes,
-            self.warnings,
+            input_sheet=self.sheet.MT.data,
+            output_sheet=self.new_sheet,
+            row_len=self.row_len,
+            ic=self.ic,
+            hiers=self.hiers,
+            nodes={},
+            warnings=self.warnings,
             add_warnings=True,
             strip=not self.allow_spaces_ids_var.get(),
         )
@@ -10416,9 +10419,7 @@ class Tree_Editor(tk.Frame):
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.sheet.set_row_heights().set_column_widths().row_index(newindex=self.ic)
         self.sheet.delete_out_of_bounds_options()
-        for ik in tuple(self.tagged_ids):
-            if ik not in self.rns:
-                self.tagged_ids.discard(ik)
+        self.tagged_ids = set(filter(self.rns.__contains__, self.tagged_ids))
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
         self.redo_tree_display()
@@ -11859,7 +11860,6 @@ class Tree_Editor(tk.Frame):
                 self.nodes = {}
                 self.clear_copied_details()
                 self.auto_sort_nodes_bool.set(True)
-                self.toggle_sort_all_nodes(snapshot=False)
                 self.sheet.MT.data, self.nodes, self.warnings = TreeBuilder().build(
                     self.sheet.MT.data,
                     self.new_sheet,
@@ -11906,11 +11906,9 @@ class Tree_Editor(tk.Frame):
 
     def export_flattened(self, event=None):
         self.start_work("Flattening sheet...")
-        self.levels = {}
         self.new_sheet = []
         Export_Flattened_Popup(self, theme=self.C.theme)
         self.stop_work(self.get_tree_editor_status_bar_text())
-        self.levels = defaultdict(list)
         self.new_sheet = []
 
     def which_json(self) -> int:
