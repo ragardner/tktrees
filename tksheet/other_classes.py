@@ -199,7 +199,7 @@ class Span(dict):
         self["widget"].del_dropdown(self)
 
     def checkbox(self, *args, **kwargs) -> Span:
-        self["widget"].dropdown(self, *args, **kwargs)
+        self["widget"].checkbox(self, *args, **kwargs)
 
     def del_checkbox(self) -> Span:
         self["widget"].del_checkbox(self)
