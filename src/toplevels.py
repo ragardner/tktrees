@@ -9,6 +9,7 @@ import re
 import tkinter as tk
 import webbrowser
 from itertools import islice, repeat
+from operator import itemgetter
 from tkinter import filedialog, ttk
 
 from openpyxl import Workbook, load_workbook
@@ -1310,13 +1311,15 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.sheetdisplay = Sheet(
             self.f3,
             theme=theme,
-            headers=["Find", "Replace With"],
-            header_font=sheet_header_font,
+            headers=["Exact Find (case in-sensitive)", "Replace With"],
+            # font=self.C.tree.font(),
+            header_font=sheet_header_font, # self.C.tree.header_font()
             expand_sheet_if_paste_too_big=True,
             paste_insert_column_limit=2,
             outline_thickness=1,
             data=[["", ""] for r in range(20)],
         )
+        self.sheetdisplay.set_all_column_widths()
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.disable_bindings("rc_delete_column", "rc_insert_column")
         self.sheetdisplay.grid(row=2, column=0, sticky="ns")
@@ -1372,7 +1375,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         center(self, 570, self.window_height(), move_left=True)
         self.deiconify()
         self.starting_up = False
-        
+
     def window_height(self) -> int:
         return self.notebook.winfo_height() + self.status_bar.winfo_height()
 
@@ -1749,6 +1752,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
             self.see_and_set(rst, cst, just_see=True)
         found = False
         to_replace = None
+        allow_spaces = self.C.allow_spaces_ids_var.get()
         if where:
             sels = widget.get_selected_cells(
                 get_rows=True,
@@ -1873,7 +1877,8 @@ class Find_And_Replace_Popup(tk.Toplevel):
             if self.C.headers[c].type_ == "ID":
                 old_id = f"{widget.data[r][c]}"
                 ik = old_id.lower()
-                replacetext = newtext.replace(" ", "")
+                if not allow_spaces:
+                    replacetext = re.sub(r"[\n\t\s]*", "", newtext)
                 success = self.C.change_ID_name(f"{old_id}", replacetext, snapshot=False, errors=False)
                 if not success:
                     self.stop_work(f"Could not rename {old_id} to {replacetext}")
@@ -1896,7 +1901,8 @@ class Find_And_Replace_Popup(tk.Toplevel):
             elif self.C.headers[c].type_ == "Parent":
                 self.C.snapshot_paste_id()
                 oldparent = f"{widget.data[r][c]}"
-                replacetext = newtext.replace(" ", "")
+                if not allow_spaces:
+                    replacetext = re.sub(r"[\n\t\s]*", "", newtext)
                 successful = self.C.cut_paste_edit_cell(self.sheet[r][self.C.ic], oldparent, c, replacetext)
                 if successful:
                     self.status_bar.change_text(
@@ -1986,15 +1992,43 @@ class Find_And_Replace_Popup(tk.Toplevel):
     def get_cells(self, where=True, widget=None):
         if not widget:
             widget = self.C.sheet if self.C.sheet_has_focus else self.C.tree
-        if where:
-            for r, c in widget.get_selected_cells(
-                get_rows=True, get_columns=True, sort_by_row=True, sort_by_column=True
-            ):
-                yield r, c
+        
+        if widget == self.C.sheet:
+            if where:
+                return self.C.sheet.get_selected_cells(
+                    get_rows=True,
+                    get_columns=True,
+                    sort_by_row=True,
+                    sort_by_column=True,
+                )
+            else:
+                return [(r, c) for r, row in enumerate(self.C.sheet.data) for c in range(len(row))]
         else:
-            for r, row in enumerate(widget.data):
-                for c in range(len(row)):
-                    yield r, c
+            ic = self.C.ic
+            tree_data = self.C.tree.MT.data
+            rns = self.C.rns
+            if where:
+                return sorted(
+                    (
+                        (rns[tree_data[r][ic].lower()], c)
+                        for r, c in self.C.tree.get_selected_cells(
+                            get_rows=True,
+                            get_columns=True,
+                            sort_by_row=True,
+                            sort_by_column=True,
+                        )
+                    ),
+                    key=itemgetter(0),
+                )
+            else:
+                return sorted(
+                    (
+                        (rns[tree_data[r][ic].lower()], c)
+                        for r, row in enumerate(self.C.tree.data)
+                        for c in range(len(row))
+                    ),
+                    key=itemgetter(0),
+                )
 
     def replace_all(self, event=None):
         successful = set()
@@ -2027,7 +2061,8 @@ class Find_And_Replace_Popup(tk.Toplevel):
             self.C.disable_paste()
         ind = set(self.C.hiers) | {self.C.ic}
         qic = self.C.ic
-        cells_changed = 0
+        ids_changed = 0
+        details_changed = 0
         if ids:
             self.C.snapshot_ctrl_x_v_del_key_id_par()
         else:
@@ -2035,22 +2070,28 @@ class Find_And_Replace_Popup(tk.Toplevel):
         refresh_rows = set()
         newtext2 = ""
         if event == "mapping":
-            failed_conversions = set()
+            failed_name_changes = set()
+        allow_spaces = self.C.allow_spaces_ids_var.get()
+        sheet_data = self.C.sheet.MT.data
         for r, c in self.get_cells(where=where, widget=widget):
             do_replace = False
-            e = widget.data[r][c]
+            e = sheet_data[r][c]
             if ids and c in ind:
                 elow = e.lower()
                 if event == "mapping":
-                    if match and elow in mapping and elow != mapping[elow].lower() and mapping[elow].replace(" ", ""):
-                        newtext2 = mapping[elow].replace(" ", "")
-                        do_replace = True
+                    if elow in mapping and elow != mapping[elow].lower():
+                        if not allow_spaces:
+                            if re.sub(r"[\n\t\s]*", "", mapping[elow]):
+                                newtext2 = re.sub(r"[\n\t\s]*", "", mapping[elow])
+                                do_replace = True
+                        else:
+                            do_replace = True
                 else:
                     if match and elow == search and elow != newtext:
                         newtext2 = newtext
                         do_replace = True
                 if do_replace:
-                    old_id = f"{widget.data[r][self.C.ic]}"
+                    old_id = f"{sheet_data[r][self.C.ic]}"
                     self.C.changelog.append(
                         (
                             self.C.get_datetime_changelog(increment_unsaved=False),
@@ -2068,17 +2109,20 @@ class Find_And_Replace_Popup(tk.Toplevel):
                             self.C.tagged_ids.discard(ik)
                             self.C.tagged_ids.add(new_ik)
                         successful.add(elow)
-                        cells_changed += 1
+                        ids_changed += 1
                     elif c == qic:
-                        failed_conversions.add(elow)
+                        failed_name_changes.add(elow)
                     else:
-                        self.C.sheet.MT.data[self._sheet_row(widget, r)][c] = newtext2
+                        sheet_data[r][c] = newtext2
                         successful.add(elow)
-                        cells_changed += 1
+                        ids_changed += 1
                     do_replace = False
                 if not match and search in elow and elow != newtext:
-                    newtext2 = case_insensitive_replace(search, newtext.replace(" ", ""), e)
-                    old_id = f"{widget.MT.data[r][self.C.ic]}"
+                    if not allow_spaces:
+                        newtext2 = case_insensitive_replace(search, re.sub(r"[\n\t\s]*", "", newtext), e)
+                    else:
+                        newtext2 = case_insensitive_replace(search, newtext, e)
+                    old_id = f"{sheet_data[r][self.C.ic]}"
                     self.C.changelog.append(
                         (
                             self.C.get_datetime_changelog(increment_unsaved=False),
@@ -2095,9 +2139,10 @@ class Find_And_Replace_Popup(tk.Toplevel):
                         if ik in self.C.tagged_ids:
                             self.C.tagged_ids.discard(ik)
                             self.C.tagged_ids.add(new_ik)
+                        self.C.tree.item(iid=newtext2)
                     else:
-                        self.C.sheet.MT.data[self._sheet_row(widget, r)][c] = newtext2
-                    cells_changed += 1
+                        sheet_data[r][c] = newtext2
+                    ids_changed += 1
             if dets and c not in ind:
                 elow = e.lower()
                 if event == "mapping":
@@ -2116,25 +2161,23 @@ class Find_And_Replace_Popup(tk.Toplevel):
                         do_replace = True
                 if do_replace:
                     if not ids:
-                        self.C.vs[-1]["cells"][(self._sheet_row(widget, r), c)] = f"{e}"
+                        self.C.vs[-1]["cells"][(r, c)] = f"{e}"
                         refresh_rows.add(r)
                     self.C.changelog.append(
                         (
                             self.C.get_datetime_changelog(increment_unsaved=False),
                             USER_NAME,
                             "Edit cell |",
-                            f"ID: {widget.MT.data[r][self.C.ic]} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
+                            f"ID: {sheet_data[r][self.C.ic]} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
                             f"{e}",
                             newtext2,
                         )
                     )
                     if self.C.headers[c].type_ == "Date Detail":
-                        self.C.sheet.MT.data[self._sheet_row(widget, r)][c] = self.C.convert_date(
-                            newtext2, self.C.DATE_FORM
-                        )
+                        sheet_data[r][c] = self.C.convert_date(newtext2, self.C.DATE_FORM)
                     else:
-                        self.C.sheet.MT.data[self._sheet_row(widget, r)][c] = newtext2
-                    cells_changed += 1
+                        sheet_data[r][c] = newtext2
+                    details_changed += 1
                 if (
                     not match
                     and search in elow
@@ -2142,7 +2185,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
                     and self.C.detail_is_valid_for_col(c, case_insensitive_replace(search, newtext, e))
                 ):
                     if not ids:
-                        self.C.vs[-1]["cells"][(self._sheet_row(widget, r), c)] = f"{e}"
+                        self.C.vs[-1]["cells"][(r, c)] = f"{e}"
                         refresh_rows.add(r)
                     newtext2 = case_insensitive_replace(search, newtext, e)
                     self.C.changelog.append(
@@ -2150,30 +2193,29 @@ class Find_And_Replace_Popup(tk.Toplevel):
                             self.C.get_datetime_changelog(increment_unsaved=False),
                             USER_NAME,
                             "Edit cell |",
-                            f"ID: {widget.MT.data[r][self.C.ic]} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
+                            f"ID: {sheet_data[r][self.C.ic]} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
                             f"{e}",
                             newtext2,
                         )
                     )
                     if self.C.headers[c].type_ == "Date Detail":
-                        self.C.sheet.MT.data[self._sheet_row(widget, r)][c] = self.C.convert_date(
-                            newtext2, self.C.DATE_FORM
-                        )
+                        sheet_data[r][c] = self.C.convert_date(newtext2, self.C.DATE_FORM)
                     else:
-                        self.C.sheet.MT.data[self._sheet_row(widget, r)][c] = newtext2
-                    cells_changed += 1
+                        sheet_data[r][c] = newtext2
+                    details_changed += 1
         self.C.disable_paste()
-        if ids and cells_changed:
+        if ids and ids_changed:
             self.C.rebuild_tree(deselect=False)
-        elif not ids and cells_changed:
+        elif details_changed:
             self.C.refresh_all_formatting(rows=refresh_rows)
             for rn in refresh_rows:
-                self.C.refresh_tree_item(widget.MT.data[rn][self.C.ic])
+                self.C.refresh_tree_item(sheet_data[rn][self.C.ic])
             self.C.redraw_sheets()
         if event == "mapping":
-            num_unsuccessful = sum(1 for k in mapping if k not in successful or k in failed_conversions)
+            num_unsuccessful = sum(1 for k in mapping if k not in successful or k in failed_name_changes)
 
-        if not cells_changed:
+        total_changed = ids_changed + details_changed
+        if not total_changed:
             self.C.vp -= 1
             self.C.set_undo_label()
             self.C.vs.pop()
@@ -2186,32 +2228,34 @@ class Find_And_Replace_Popup(tk.Toplevel):
                     f"Could not find a cell containing {self.find_display.get_my_value()} to replace with {self.rep_display.get_my_value()}"
                 )
             return
-        if cells_changed > 1:
+        if total_changed > 1:
             self.C.changelog.append(
-                (self.C.get_datetime_changelog(), USER_NAME, f"Edit {cells_changed} cells", "", "", "")
+                (self.C.get_datetime_changelog(), USER_NAME, f"Edit {total_changed} cells", "", "", "")
             )
         else:
             self.C.changelog_singular("Edit cell")
         if event == "mapping" and num_unsuccessful:
-            self.stop_work(f"Sucessfully replaced {cells_changed} cells, {num_unsuccessful} unsuccessful")
-            if failed_conversions:
-                sheet_data = [["Failed to replace the following IDs"]]
-                sheet_data += [[elow, mapping[elow]] for elow in failed_conversions]
-                sheet_data += [["Full list of failed conversions:"]]
+            self.stop_work(f"Sucessfully replaced {total_changed} cells, {num_unsuccessful} unsuccessful")
+            if failed_name_changes:
+                failed_data = (
+                    [["Failed to replace the following IDs"]]
+                    + [[elow, mapping[elow]] for elow in failed_name_changes]
+                    + [["Full list of failed conversions:"]]
+                )
             else:
-                sheet_data = [["Full list of failed conversions:"]]
-            sheet_data += [[elow, mapping[elow]] for elow in mapping if elow not in successful]
+                failed_data = [["Full list of failed conversions:"]]
+            failed_data += [[elow, mapping[elow]] for elow in mapping if elow not in successful]
             Error_Sheet(
                 self,
-                sheet_data,
+                failed_data,
                 theme=self.theme,
-                highlight_rows=(0, len(failed_conversions) + 1) if failed_conversions else (0,),
+                highlight_rows=(0, len(failed_name_changes) + 1) if failed_name_changes else (0,),
             )
         elif event == "mapping" and not num_unsuccessful:
-            self.stop_work(f"Sucessfully replaced {cells_changed} cells, 0 unsuccessful")
+            self.stop_work(f"Sucessfully replaced {total_changed} cells, 0 unsuccessful")
         elif event != "mapping":
             self.stop_work(
-                f"Replaced {cells_changed} cells containing {self.find_display.get_my_value()} with {self.rep_display.get_my_value()}"
+                f"Replaced {total_changed} cells containing {self.find_display.get_my_value()} with {self.rep_display.get_my_value()}"
             )
 
     def cancel(self, event=None):
@@ -3472,7 +3516,9 @@ class Merge_Sheets_Popup(tk.Toplevel):
 class Get_Clipboard_Data_Popup(tk.Toplevel):
     def __init__(self, C, cols, row_len, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Overwrite the current sheet using data from the clipboard")
+        self.C = new_toplevel_chores(
+            self, C, f"{app_title} - Overwrite the current sheet using data from the clipboard"
+        )
         # self.grid_columnconfigure(0,weight=1)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)

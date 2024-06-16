@@ -2557,10 +2557,12 @@ class Sheet(tk.Frame):
         redraw: bool = True,
         selection_function: Callable | None = None,
         modified_function: Callable | None = None,
-        search_function: Callable = dropdown_search_function,
+        search_function: Callable | None = None,
         validate_input: bool = True,
         text: None | str = None,
     ) -> Span:
+        if not search_function:
+            search_function = dropdown_search_function
         v = set_value if set_value is not None else values[0] if values else ""
         kwargs = {
             "values": values,

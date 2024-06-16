@@ -9700,7 +9700,7 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
 
     def reset_tagged_ids_dropdowns(self, event=None):
-        x = sorted(self.tagged_ids)
+        x = sorted(self.nodes[ik].name for ik in self.tagged_ids)
         self.tree_tagged_ids_dropdown["values"] = x
         self.sheet_tagged_ids_dropdown["values"] = x
         if self.tagged_ids:
