@@ -9736,7 +9736,7 @@ class Tree_Editor(tk.Frame):
         return "break"
 
     def tree_go_to_tagged_id(self, event=None):
-        if not (ik := self.tree_tagged_ids_dropdown.get_my_value()):
+        if not (ik := self.tree_tagged_ids_dropdown.get_my_value().lower()):
             return
         if ik in self.rns:
             self.tree.scroll_to_item(ik)
@@ -9752,7 +9752,7 @@ class Tree_Editor(tk.Frame):
         self.redraw_sheets()
 
     def sheet_go_to_tagged_id(self, event=None):
-        if not (ik := self.sheet_tagged_ids_dropdown.get_my_value()):
+        if not (ik := self.sheet_tagged_ids_dropdown.get_my_value().lower()):
             return
         if ik in self.rns:
             self.sheet.select_row(self.rns[ik])
