@@ -8,7 +8,7 @@ import os
 import re
 import tkinter as tk
 import webbrowser
-from itertools import islice, repeat
+from itertools import chain, islice, repeat
 from operator import itemgetter
 from tkinter import filedialog, ttk
 
@@ -1192,9 +1192,6 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.USER_HAS_QUIT = False
         self.theme = theme
-
-        self.last_found = None
-        self.last_replaced = None
         self.starting_up = True
 
         self.notebook = ttk.Notebook(self)
@@ -1260,15 +1257,6 @@ class Find_And_Replace_Popup(tk.Toplevel):
             self.frframe, text="  Exact match", style="wx_button.Std.TButton", compound="left"
         )
         self.match_button.grid(row=5, column=1, padx=(30, 20), pady=(5, 30), sticky="we")
-
-        self.allcols_button = X_Checkbutton(
-            self.frframe,
-            text="  Show and include hidden columns",
-            style="wx_button.Std.TButton",
-            checked=False,
-            compound="left",
-        )
-        # self.allcols_button.grid(row=6,column=1,padx=(0, 20),pady=(5,10),sticky="we")
 
         self.bf2 = Frame(self.frframe, theme=theme)
         self.bf2.grid_columnconfigure(0, weight=1, uniform="x")
@@ -1346,15 +1334,6 @@ class Find_And_Replace_Popup(tk.Toplevel):
         )
         self.where2.grid(row=1, column=0, padx=15, pady=(5, 30), sticky="we")
 
-        self.allcols_button2 = X_Checkbutton(
-            self.options_frame,
-            text="  Show and include hidden columns",
-            style="wx_button.Std.TButton",
-            checked=False,
-            compound="left",
-        )
-        # self.allcols_button2.grid(row=2,column=0,padx=15,pady=5,sticky="we")
-
         self.confirm_button = Button(
             self.options_frame,
             text="Replace",
@@ -1397,7 +1376,6 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.open_file_button.config(state="normal")
         self.sheet_dropdown.config(state="readonly")
         self.where2.config(state="normal")
-        self.allcols_button2.config(state="normal")
         self.confirm_button.config(state="normal")
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.disable_bindings("rc_delete_column", "rc_insert_column")
@@ -1413,7 +1391,6 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.sheet_dropdown.config(state="disabled")
         self.select_sheet_button.config(state="disabled")
         self.where2.config(state="disabled")
-        self.allcols_button2.config(state="disabled")
         self.confirm_button.config(state="disabled")
         self.sheetdisplay.disable_bindings()
         self.update()
@@ -1591,8 +1568,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.sheet_dropdown.set("")
         self.select_sheet_button.config(state="disabled")
 
-    def see_and_set(self, r, c, just_see=False, lf=False, lr=False):
-        widget = self.C.sheet if self.C.sheet_has_focus else self.C.tree
+    def see_and_set(self, r, c, widget, just_see=False):
         if not just_see:
             if self.where.get_checked():
                 widget.set_currently_selected(r, c)
@@ -1606,14 +1582,43 @@ class Find_And_Replace_Popup(tk.Toplevel):
             bottom_right_corner=False,
             check_cell_visibility=True,
         )
-        if lf:
-            self.last_found = (r, c)
-        if lr:
-            self.last_replaced = (r, c)
-        return True
+        return r, c
 
-    def find_next(self, event=None):
-        self.find_display.place_cursor()
+    def gen_all_cells(self, start_row, start_col, widget):
+        return chain(
+            (
+                (r, c)
+                for r, c in islice(
+                    ((r, c) for r in range(0, len(widget.data)) for c in range(self.C.row_len)),
+                    (start_row * self.C.row_len) + start_col,
+                    None,
+                )
+            ),
+            (
+                (r, c)
+                for r, c in islice(
+                    ((r, c) for r in range(0, len(widget.data)) for c in range(self.C.row_len)),
+                    0,
+                    (start_row * self.C.row_len) + start_col,
+                )
+            ),
+        )
+        
+    def get_start_coords(self, widget):
+        selected = widget.selected
+        if not selected:
+            rst, cst = 0, 0
+        else:
+            rst, cst = selected.row, selected.column
+            cst += 1
+            if cst == self.C.row_len:
+                cst = 0
+                rst += 1
+            if rst == len(widget.data):
+                rst = 0
+        return rst, cst
+
+    def find_next(self, event=None, set_status_bar: bool = True):
         ids = self.ids_button.get_checked()
         dets = self.details_button.get_checked()
         if not ids and not dets:
@@ -1621,261 +1626,117 @@ class Find_And_Replace_Popup(tk.Toplevel):
             return
         search = self.find_display.get_my_value().lower()
         match = self.match_button.get_checked()
-        allcols = self.allcols_button.get_checked()
-        if allcols:
-            self.C.set_all_col_widths()
-            self.C.disable_paste()
         ind = set(self.C.hiers) | {self.C.ic}
         where = self.where.get_checked()
-        widget = self.C.sheet if self.C.sheet_has_focus else self.C.tree
-        currently_selected = widget.get_currently_selected()
-        if not currently_selected:
-            widget.deselect("all")
-            self.see_and_set(0, 0)
-            rst, cst = 0, 0
+
+        if self.C.sheet_has_focus:
+            widget = self.C.sheet
         else:
-            rst, cst = currently_selected.row, currently_selected.column
-            self.see_and_set(rst, cst, just_see=True)
-        found = False
+            widget = self.C.tree
+
+        rst, cst = self.get_start_coords(widget)
+        self.see_and_set(rst, cst, widget, just_see=True)
+
+        found_coords = tuple()
         if where:
             sels = widget.get_selected_cells(get_rows=True, get_columns=True, sort_by_row=True, sort_by_column=True)
-            curridx = next(i for i, t in enumerate(sels) if t[0] == rst and t[1] == cst)
-            if self.last_found == (rst, cst):
-                if curridx == len(sels) - 1:
-                    curridx = 0
-                else:
-                    curridx += 1
-            sels = sels[curridx:] + sels[:curridx]
-            for r, c in sels:
-                e = widget.MT.data[r][c]
-                if ids and c in ind:
-                    if match and e.lower() == search:
-                        found = self.see_and_set(r, c, lf=True)
-                        break
-                    elif not match and search in e.lower():
-                        found = self.see_and_set(r, c, lf=True)
-                        break
-                if dets and c not in ind:
-                    if match and e.lower() == search:
-                        found = self.see_and_set(r, c, lf=True)
-                        break
-                    elif not match and search in e.lower():
-                        found = self.see_and_set(r, c, lf=True)
-                        break
+            curridx = next(i for i, t in enumerate(sels) if t[0] == rst and t[1] == cst) + 1
+            if curridx == len(sels):
+                curridx = 0
+            iterable = chain(islice(sels, curridx, None), islice(sels, 0, curridx))
         else:
-            if self.last_found == (rst, cst):
-                if rst == len(widget.data) - 1 and cst == len(self.C.headers) - 1:
-                    rst, cst = 0, 0
-                elif cst == len(self.C.headers) - 1:
-                    rst += 1
-                    cst = 0
-                else:
-                    cst += 1
-            for c, e in enumerate(
-                islice(widget.data[rst], cst, len(widget.data[rst])),
-                cst,
+            iterable = self.gen_all_cells(start_row=rst, start_col=cst, widget=widget)
+
+        for r, c in iterable:
+            cell = widget.MT.data[r][c]
+            if (
+                ids and c in ind and ((match and cell.lower() == search) or (not match and search in cell.lower()))
+            ) or (
+                dets and c not in ind and ((match and cell.lower() == search) or (not match and search in cell.lower()))
             ):
-                if ids and c in ind:
-                    if match and e.lower() == search:
-                        found = self.see_and_set(rst, c, lf=True)
-                        break
-                    elif not match and search in e.lower():
-                        found = self.see_and_set(rst, c, lf=True)
-                        break
-                if dets and c not in ind:
-                    if match and e.lower() == search:
-                        found = self.see_and_set(rst, c, lf=True)
-                        break
-                    elif not match and search in e.lower():
-                        found = self.see_and_set(rst, c, lf=True)
-                        break
-            if not found:
-                if len(widget.data) - 1 == rst:
-                    rns = range(len(widget.data))
-                else:
-                    rns = tuple(range(rst + 1, len(widget.data))) + tuple(range(0, rst + 1))
-                for rn in rns:
-                    if found:
-                        break
-                    for c, e in enumerate(widget.data[rn]):
-                        if ids and c in ind:
-                            if match and e.lower() == search:
-                                found = self.see_and_set(rn, c, lf=True)
-                                break
-                            elif not match and search in e.lower():
-                                found = self.see_and_set(rn, c, lf=True)
-                                break
-                        if dets and c not in ind:
-                            if match and e.lower() == search:
-                                found = self.see_and_set(rn, c, lf=True)
-                                break
-                            elif not match and search in e.lower():
-                                found = self.see_and_set(rn, c, lf=True)
-                                break
-        if found:
-            self.status_bar.change_text(
-                f"Found {self.find_display.get_my_value()} for {widget.data[self.last_found[0]][self.C.ic]} in {self.C.headers[self.last_found[1]].name}"
-            )
-        else:
-            self.status_bar.change_text(f"Could not find {self.find_display.get_my_value()}")
+                found_coords = (r, c)
+                break
+
+        if found_coords:
+            self.see_and_set(*found_coords, widget)
+        if set_status_bar:
+            if found_coords:
+                self.status_bar.change_text(
+                    f"Found {self.find_display.get_my_value()} for {widget.data[found_coords[0]][self.C.ic]} in {self.C.headers[found_coords[1]].name}"
+                )
+            else:
+                self.status_bar.change_text(f"Could not find {self.find_display.get_my_value()}")
+        return found_coords
 
     def replace_next(self, event=None):
         ids = self.ids_button.get_checked()
         dets = self.details_button.get_checked()
-        if not ids and not dets:
-            self.status_bar.change_text("Select a search option, IDs and Parents and/or Details")
-            return
         search = self.find_display.get_my_value().lower()
         newtext = self.rep_display.get_my_value()
         if search == newtext:
             self.status_bar.change_text("Error: Find value is the same as replace value")
             return
-        widget = self.C.sheet if self.C.sheet_has_focus else self.C.tree
+
         self.start_work("Replacing...")
+
         replacetext = f"{newtext}"
         match = self.match_button.get_checked()
         where = self.where.get_checked()
-        allcols = self.allcols_button.get_checked()
-        if allcols:
-            self.C.set_all_col_widths()
-            self.C.disable_paste()
         valids = {c: self.C.detail_is_valid_for_col(c, replacetext) for c in range(len(self.C.headers))}
         ind = set(self.C.hiers) | {self.C.ic}
         qic = self.C.ic
-        currently_selected = widget.get_currently_selected()
-        if not currently_selected:
-            widget.deselect("all")
-            self.see_and_set(0, 0)
-            rst, cst = 0, 0
-        else:
-            rst, cst = currently_selected.row, currently_selected.column
-            self.see_and_set(rst, cst, just_see=True)
-        found = False
-        to_replace = None
         allow_spaces = self.C.allow_spaces_ids_var.get()
-        if where:
-            sels = widget.get_selected_cells(
-                get_rows=True,
-                get_columns=True,
-                sort_by_row=True,
-                sort_by_column=True,
-            )
-            curridx = next(i for i, t in enumerate(sels) if t[0] == rst and t[1] == cst)
-            if self.last_replaced == (rst, cst):
-                if curridx == len(sels) - 1:
-                    curridx = 0
-                else:
-                    curridx += 1
-            sels = sels[curridx:] + sels[:curridx]
-            for rn, c in sels:
-                e = widget.data[rn][c]
-                if ids and c in ind:
-                    elow = e.lower()
-                    if match and elow == search and elow != newtext:
-                        found = self.see_and_set(rn, c, lf=True, lr=True)
-                        to_replace = rn, c
-                        break
-                    elif not match and search in elow and elow != newtext:
-                        found = self.see_and_set(rn, c, lf=True, lr=True)
-                        to_replace = rn, c
-                        break
-                if dets and c not in ind:
-                    elow = e.lower()
-                    if match and elow == search and elow != newtext and valids[c]:
-                        found = self.see_and_set(rn, c, lf=True, lr=True)
-                        to_replace = rn, c
-                        break
-                    elif (
-                        not match
-                        and search in elow
-                        and elow != newtext
-                        and self.C.detail_is_valid_for_col(c, case_insensitive_replace(search, newtext, e))
-                    ):
-                        found = self.see_and_set(rn, c, lf=True, lr=True)
-                        to_replace = rn, c
-                        break
+        
+        if self.C.sheet_has_focus:
+            widget = self.C.sheet
         else:
-            if self.last_replaced == (rst, cst):
-                if rst == len(widget.data) - 1 and cst == len(self.C.headers) - 1:
-                    rst, cst = 0, 0
-                elif cst == len(self.C.headers) - 1:
-                    rst += 1
-                    cst = 0
-                else:
-                    cst += 1
-            for c, e in enumerate(
-                islice(widget.data[rst], cst, len(widget.data[rst])),
-                cst,
-            ):
-                if ids and c in ind:
-                    elow = e.lower()
-                    if match and elow == search and elow != newtext:
-                        found = self.see_and_set(rst, c, lf=True, lr=True)
-                        to_replace = rst, c
-                        break
-                    elif not match and search in elow and elow != newtext:
-                        found = self.see_and_set(rst, c, lf=True, lr=True)
-                        to_replace = rst, c
-                        break
-                if dets and c not in ind:
-                    elow = e.lower()
-                    if match and elow == search and elow != newtext and valids[c]:
-                        found = self.see_and_set(rst, c, lf=True, lr=True)
-                        to_replace = rst, c
-                        break
-                    elif (
-                        not match
-                        and search in elow
-                        and elow != newtext
-                        and self.C.detail_is_valid_for_col(c, case_insensitive_replace(search, newtext, e))
-                    ):
-                        found = self.see_and_set(rst, c, lf=True, lr=True)
-                        to_replace = rst, c
-                        break
-            if not found:
-                if len(widget.data) - 1 == rst:
-                    rns = range(len(widget.data))
-                else:
-                    rns = tuple(range(rst + 1, len(widget.data))) + tuple(range(0, rst + 1))
-                for rn in rns:
-                    if found:
-                        break
-                    for c, e in enumerate(widget.data[rn]):
-                        if c == qic:
-                            continue
-                        if ids and c in ind:
-                            elow = e.lower()
-                            if match and elow == search and elow != newtext:
-                                found = self.see_and_set(rn, c, lf=True, lr=True)
-                                to_replace = rn, c
-                                break
-                            elif not match and search in elow and elow != newtext:
-                                found = self.see_and_set(rn, c, lf=True, lr=True)
-                                to_replace = rn, c
-                                break
-                        if dets and c not in ind:
-                            elow = e.lower()
-                            if match and elow == search and elow != newtext and valids[c]:
-                                found = self.see_and_set(rn, c, lf=True, lr=True)
-                                to_replace = rn, c
-                                break
-                            elif (
-                                not match
-                                and search in elow
-                                and elow != newtext
-                                and self.C.detail_is_valid_for_col(c, case_insensitive_replace(search, newtext, e))
-                            ):
-                                found = self.see_and_set(rn, c, lf=True, lr=True)
-                                to_replace = rn, c
-                                break
+            widget = self.C.tree
 
-        if found:
-            r = to_replace[0]
-            c = to_replace[1]
+        rst, cst = self.get_start_coords(widget)
+        self.see_and_set(rst, cst, widget, just_see=True)
+        
+        found_coords = tuple()
+        if where:
+            sels = widget.get_selected_cells(get_rows=True, get_columns=True, sort_by_row=True, sort_by_column=True)
+            curridx = next(i for i, t in enumerate(sels) if t[0] == rst and t[1] == cst) + 1
+            if curridx == len(sels):
+                curridx = 0
+            iterable = chain(islice(sels, curridx, None), islice(sels, 0, curridx))
+        else:
+            iterable = self.gen_all_cells(start_row=rst, start_col=cst, widget=widget)
+            
+        for r, c in iterable:
+            cell = widget.MT.data[r][c]
+            cell_k = cell.lower()
+            if ids and c in ind:
+                if match and cell_k == search and cell_k != newtext:
+                    found_coords = (r, c)
+                    break
+                elif not match and search in cell_k and cell_k != newtext:
+                    found_coords = (r, c)
+                    break
+            if dets and c not in ind:
+                if match and cell_k == search and cell_k != newtext and valids[c]:
+                    found_coords = (r, c)
+                    break
+                elif (
+                    not match
+                    and search in cell_k
+                    and cell_k != newtext
+                    and self.C.detail_is_valid_for_col(c, case_insensitive_replace(search, newtext, cell))
+                ):
+                    found_coords = (r, c)
+                    break
+
+        if found_coords:
+            self.see_and_set(*found_coords, widget)
+            r, c = found_coords
+            if widget == self.C.tree:
+                r = self.C.rns[self.C.tree.MT.data[r][self.C.ic].lower()]
             if not match:
-                newtext = case_insensitive_replace(search, newtext, widget.data[r][c])
+                newtext = case_insensitive_replace(search, newtext, self.C.sheet.MT.data[r][c])
             if self.C.headers[c].type_ == "ID":
-                old_id = f"{widget.data[r][c]}"
+                old_id = f"{self.C.sheet.MT.data[r][c]}"
                 ik = old_id.lower()
                 if not allow_spaces:
                     replacetext = re.sub(r"[\n\t\s]*", "", newtext)
@@ -1900,13 +1761,13 @@ class Find_And_Replace_Popup(tk.Toplevel):
                 self.status_bar.change_text(f"Replaced ID name {old_id} with {replacetext}")
             elif self.C.headers[c].type_ == "Parent":
                 self.C.snapshot_paste_id()
-                oldparent = f"{widget.data[r][c]}"
+                oldparent = f"{self.C.sheet.MT.data[r][c]}"
                 if not allow_spaces:
                     replacetext = re.sub(r"[\n\t\s]*", "", newtext)
-                successful = self.C.cut_paste_edit_cell(self.sheet[r][self.C.ic], oldparent, c, replacetext)
+                successful = self.C.cut_paste_edit_cell(self.C.sheet.MT.data[r][self.C.ic], oldparent, c, replacetext)
                 if successful:
                     self.status_bar.change_text(
-                        f"Replaced {oldparent} with {replacetext} for {widget.data[r][self.C.ic]} in {self.C.headers[c].name}"
+                        f"Replaced {oldparent} with {replacetext} for {self.C.sheet.MT.data[r][self.C.ic]} in {self.C.headers[c].name}"
                     )
                     self.C.changelog.append(
                         (
@@ -1914,10 +1775,10 @@ class Find_And_Replace_Popup(tk.Toplevel):
                             USER_NAME,
                             (
                                 "Cut and paste ID + children"
-                                if self.C.nodes[widget.data[r][self.C.ic].lower()].cn[c]
+                                if self.C.nodes[self.C.sheet.MT.data[r][self.C.ic].lower()].cn[c]
                                 else "Cut and paste ID"
                             ),
-                            widget.data[r][self.C.ic],
+                            self.C.sheet.MT.data[r][self.C.ic],
                             f"Old parent: {oldparent} old column #{c + 1} named: {self.C.headers[c].name}",
                             f"New parent: {replacetext} new column #{c + 1} named: {self.C.headers[c].name}",
                         )
@@ -1926,8 +1787,8 @@ class Find_And_Replace_Popup(tk.Toplevel):
                     self.C.redo_tree_display()
                     self.C.redraw_sheets()
                     try:
-                        self.C.tree.selection_set(widget.data[r][self.C.ic])
-                        self.C.tree.scroll_to_item(self.sheet[r][self.C.ic])
+                        self.C.tree.selection_set(self.C.sheet.MT.data[r][self.C.ic])
+                        self.C.tree.scroll_to_item(self.C.sheet.MT.data[r][self.C.ic])
                     except Exception:
                         pass
                     self.C.disable_paste()
@@ -1937,57 +1798,52 @@ class Find_And_Replace_Popup(tk.Toplevel):
                     self.C.vs.pop()
                     self.C.vp -= 1
                     self.C.set_undo_label()
-                    oldvalue = f"{widget.data[r][c]}"
+                    oldvalue = f"{self.C.sheet.MT.data[r][c]}"
                     self.C.changelog.append(
                         (
                             self.C.get_datetime_changelog(),
                             USER_NAME,
                             "Edit cell",
-                            f"ID: {widget.data[r][self.C.ic]} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
+                            f"ID: {self.C.sheet.MT.data[r][self.C.ic]} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
                             oldvalue,
                             f"{replacetext}",
                         )
                     )
                     self.C.snapshot_ctrl_x_v_del_key_id_par()
-                    self.C.sheet.MT.data[self._sheet_row(widget, r)][c] = replacetext
+                    self.C.sheet.MT.data[r][c] = replacetext
                     self.C.rebuild_tree()
                     self.stop_work(
-                        f"Replaced {oldvalue} with {replacetext} for {widget.data[r][self.C.ic]} in {self.C.headers[c].name}"
+                        f"Replaced {oldvalue} with {replacetext} for {self.C.sheet.MT.data[r][self.C.ic]} in {self.C.headers[c].name}"
                     )
             else:
                 self.C.snapshot_ctrl_x_v_del_key()
-                oldvalue = f"{widget.data[r][c]}"
-                self.C.vs[-1]["cells"][(self._sheet_row(widget, r), c)] = oldvalue
+                oldvalue = f"{self.C.sheet.MT.data[r][c]}"
+                self.C.vs[-1]["cells"][(r, c)] = oldvalue
                 self.C.changelog.append(
                     (
                         self.C.get_datetime_changelog(),
                         USER_NAME,
                         "Edit cell",
-                        f"ID: {widget.data[r][self.C.ic]} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
+                        f"ID: {self.C.sheet.MT.data[r][self.C.ic]} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
                         oldvalue,
                         f"{newtext}",
                     )
                 )
                 if self.C.headers[c].type_ == "Date Detail":
-                    self.C.sheet.MT.data[self._sheet_row(widget, r)][c] = self.C.convert_date(newtext, self.C.DATE_FORM)
+                    self.C.sheet.MT.data[r][c] = self.C.convert_date(newtext, self.C.DATE_FORM)
                 else:
-                    self.C.sheet.MT.data[self._sheet_row(widget, r)][c] = newtext
+                    self.C.sheet.MT.data[r][c] = newtext
                 self.C.disable_paste()
                 self.C.refresh_all_formatting(rows=[r])
-                self.C.refresh_tree_item(widget.data[r][self.C.ic])
+                self.C.refresh_tree_item(self.C.sheet.MT.data[r][self.C.ic])
                 self.C.redraw_sheets()
                 self.stop_work(
-                    f"Replaced {oldvalue} with {newtext} for {widget.data[r][self.C.ic]} in {self.C.headers[c].name}"
+                    f"Replaced {oldvalue} with {newtext} for {self.C.sheet.MT.data[r][self.C.ic]} in {self.C.headers[c].name}"
                 )
         else:
             self.stop_work(
                 f"Could not find a cell containing {self.find_display.get_my_value()} to replace with {self.rep_display.get_my_value()}"
             )
-
-    def _sheet_row(self, widget, r):
-        if widget == self.C.sheet:
-            return r
-        return self.C.rns[self.C.tree.data[r][self.C.ic].lower()]
 
     def get_cells(self, where=True, widget=None):
         if not widget:
@@ -2038,7 +1894,6 @@ class Find_And_Replace_Popup(tk.Toplevel):
             exact_match = True
             mapping = {r[0].lower(): r[1] for r in self.sheetdisplay.get_sheet_data() if r[0] and r[1]}
             newtext = ""
-            allcols = self.allcols_button2.get_checked()
 
         else:
             ids = self.ids_button.get_checked()
@@ -2053,14 +1908,10 @@ class Find_And_Replace_Popup(tk.Toplevel):
                 return
             exact_match = self.match_button.get_checked()
             valids = {c: self.C.detail_is_valid_for_col(c, newtext) for c in range(len(self.C.headers))}
-            allcols = self.allcols_button.get_checked()
 
         self.start_work("Replacing...")
         widget = self.C.sheet if self.C.sheet_has_focus else self.C.tree
         where = self.where.get_checked()
-        if allcols:
-            self.C.set_all_col_widths()
-            self.C.disable_paste()
         ind = set(self.C.hiers) | {self.C.ic}
         qic = self.C.ic
 
@@ -2254,7 +2105,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         elif event == "mapping" and not num_unsuccessful:
             self.stop_work(f"Sucessfully replaced {total_changed} cells")
-            
+
         elif event != "mapping":
             self.stop_work(
                 f"Replaced {total_changed} cells containing {self.find_display.get_my_value()} with {self.rep_display.get_my_value()}"
