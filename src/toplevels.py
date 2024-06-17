@@ -1569,19 +1569,30 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.select_sheet_button.config(state="disabled")
 
     def see_and_set(self, r, c, widget, just_see=False):
+        if widget == self.C.sheet:
+            widget.see(
+                row=r,
+                column=c,
+                keep_yscroll=False,
+                keep_xscroll=False,
+                bottom_right_corner=False,
+                check_cell_visibility=True,
+            )
+        else:
+            self.C.tree.scroll_to_item(self.C.tree.rowitem(r, data_index=True))
+            self.C.tree.see(
+                row=None,
+                column=c,
+                keep_yscroll=True,
+                keep_xscroll=False,
+                bottom_right_corner=False,
+                check_cell_visibility=True,
+            )
         if not just_see:
             if self.where.get_checked():
                 widget.set_currently_selected(r, c)
             else:
                 widget.select_cell(row=r, column=c)
-        widget.see(
-            row=r,
-            column=c,
-            keep_yscroll=False,
-            keep_xscroll=False,
-            bottom_right_corner=False,
-            check_cell_visibility=True,
-        )
         return r, c
 
     def gen_all_cells(self, start_row, start_col, widget):

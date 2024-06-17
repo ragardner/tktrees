@@ -1137,9 +1137,6 @@ class RowIndex(tk.Canvas):
             isinstance(self.MT._row_index, int) and self.MT._row_index >= len(self.MT.data)
         ):
             return w
-        qconf = self.MT.txt_measure_canvas.itemconfig
-        qbbox = self.MT.txt_measure_canvas.bbox
-        qtxtm = self.MT.txt_measure_canvas_text
         if only_rows:
             iterable = only_rows
         elif self.MT.all_rows_displayed:
@@ -1149,19 +1146,8 @@ class RowIndex(tk.Canvas):
                 iterable = range(len(self.MT.data))
         else:
             iterable = self.MT.displayed_rows
-        if (
-            isinstance(self.MT._row_index, list)
-            and (tw := max(map(itemgetter(0), map(self.get_cell_dimensions, iterable)), default=w)) > w
-        ):
-            w = tw
-        elif isinstance(self.MT._row_index, int):
-            datacn = self.MT._row_index
-            for datarn in iterable:
-                if txt := self.MT.get_valid_cell_data_as_str(datarn, datacn, get_displayed=True):
-                    qconf(qtxtm, text=txt)
-                    b = qbbox(qtxtm)
-                    if (tw := b[2] - b[0] + 10) > w:
-                        w = tw
+        if (new_w := max(map(itemgetter(0), map(self.get_cell_dimensions, iterable)), default=w)) > w:
+            w = new_w
         if w > self.MT.max_index_width:
             w = int(self.MT.max_index_width)
         return w

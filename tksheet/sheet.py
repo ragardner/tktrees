@@ -3912,7 +3912,7 @@ class Sheet(tk.Frame):
             idx = bisect_left(self.MT.displayed_columns, column)
             if len(self.MT.displayed_columns) == idx or self.MT.displayed_columns[idx] != column:
                 self.MT.displayed_columns.insert(idx, column)
-                cws.insert(idx, self.MT.saved_column_widths.pop(column, self.PAR.ops.default_column_width))
+                cws.insert(idx, self.MT.saved_column_widths.pop(column, self.ops.default_column_width))
         self.MT.set_col_positions(cws)
         if deselect_all:
             self.MT.deselect(redraw=False)
