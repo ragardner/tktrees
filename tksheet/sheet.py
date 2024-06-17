@@ -1556,6 +1556,14 @@ class Sheet(tk.Frame):
     @data.setter
     def data(self, value: list[list[object]]) -> None:
         self.data_reference(value)
+        
+    def new_tksheet_event(self) -> EventDataDict:
+        return event_dict(
+            name="",
+            sheet=self.name,
+            widget=self,
+            selected=self.MT.selected,
+        )
 
     def set_data(
         self,
