@@ -112,9 +112,9 @@ class AppGUI(tk.Tk):
         self.file.add_command(label="Open", command=self.open_file_at_start, accelerator="Ctrl+O", **menu_kwargs)
         self.file.add_separator()
         self.file.add_command(label="Save", accelerator="Ctrl+S", state="disabled", **menu_kwargs)
-        self.file.add_command(label="Save as", **menu_kwargs)
-        self.file.add_command(label="Save as with username-date-time", **menu_kwargs)
         self.file.add_command(label="Save new version", state="disabled", **menu_kwargs)
+        self.file.add_separator()
+        self.file.add_command(label="Save as", **menu_kwargs)
         self.file.add_separator()
         self.file.add_command(label="Quit", command=self.USER_HAS_CLOSED_WINDOW, **menu_kwargs)
 

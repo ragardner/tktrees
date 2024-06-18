@@ -198,10 +198,6 @@ class Tree_Editor(tk.Frame):
             accelerator="Ctrl+Shift+S",
             command=self.save_as,
         )
-        self.C.file.entryconfig(
-            "Save as with username-date-time",
-            command=lambda: self.save_as(inc_date_username=True),
-        )
         self.C.file.entryconfig("Save new version", command=self.save_new_vrsn)
 
         self.edit_menu = tk.Menu(self.C.menubar, tearoff=0, **menu_kwargs)
@@ -1959,12 +1955,10 @@ class Tree_Editor(tk.Frame):
         self.C.unbind_class("all", f"<{ctrl_button}-Shift-s>")
         self.C.file.entryconfig("Save", state="disabled")
         self.C.file.entryconfig("Save as", state="disabled")
-        self.C.file.entryconfig("Save as with username-date-time", state="disabled")
         self.C.file.entryconfig("Save new version", state="disabled")
         if self.C.save_menu_state == "normal":
             self.C.file.entryconfig("Save", state="normal")
             self.C.file.entryconfig("Save as", state="normal")
-            self.C.file.entryconfig("Save as with username-date-time", state="normal")
             self.C.file.entryconfig("Save new version", state="normal")
             self.C.bind_class("all", f"<{ctrl_button}-s>", self.save_)
             self.C.bind_class("all", f"<{ctrl_button}-S>", self.save_)
@@ -1972,7 +1966,6 @@ class Tree_Editor(tk.Frame):
             self.C.bind_class("all", f"<{ctrl_button}-Shift-S>", self.save_as)
         elif self.C.save_menu_state == "save as":
             self.C.file.entryconfig("Save as", state="normal")
-            self.C.file.entryconfig("Save as with username-date-time", state="normal")
             self.C.bind_class("all", f"<{ctrl_button}-s>", self.save_as)
             self.C.bind_class("all", f"<{ctrl_button}-S>", self.save_as)
             self.C.bind_class("all", f"<{ctrl_button}-Shift-s>", self.save_as)
@@ -12206,7 +12199,7 @@ class Tree_Editor(tk.Frame):
             self.focus_tree()
         return successful
 
-    def save_as(self, event=None, inc_date_username=False, quitting=False):
+    def save_as(self, event=None, quitting=False):
         if self.C.current_frame != "tree_edit":
             return
         newfile = filedialog.asksaveasfilename(
@@ -12224,17 +12217,6 @@ class Tree_Editor(tk.Frame):
         if not newfile:
             return False
         newfile = os.path.normpath(newfile)
-        if inc_date_username:
-            name, ext = os.path.splitext(newfile)
-            dt = datetime.datetime.today()
-            name += " " + " ".join(
-                (
-                    self.C.user_name,
-                    str(dt.strftime("-".join(re.split(self.date_split_regex, self.DATE_FORM)))),
-                    str(dt.strftime("%H-%M-%S")),
-                )
-            )
-            newfile = name + ext
         if not newfile.lower().endswith((".json", ".csv", ".xlsx", ".tsv")):
             Error(self, "Can only write .json, .xlsx or .csv    ", theme=self.C.theme)
             return False
@@ -12358,7 +12340,7 @@ class Tree_Editor(tk.Frame):
             elif newfile.lower().endswith(".json"):
                 successful = self.save_json(newfile)
             elif newfile.lower().endswith((".xlsx", ".xls", ".xlsm")):
-                successful = self.save_workbook(newfile, popup.result)
+                successful = self.save_workbook(newfile, self.C.open_dict["sheet"])
                 self.C.try_to_close_workbook()
         except Exception as error_msg:
             Error(self, f"Error: {error_msg}", theme=self.C.theme)

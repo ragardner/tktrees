@@ -3571,11 +3571,11 @@ class Save_New_Version_Presave_Popup(tk.Toplevel):
         self.file_loc_display.grid(row=0, column=1, sticky="nswe", pady=(20, 0), padx=(0, 20))
         self.confirm_button = Button(
             self,
-            text="Confirm save a new version here",
+            text="Confirm",
             style="EF.Std.TButton",
             command=self.confirm,
         )
-        self.confirm_button.grid(row=1, column=1, sticky="e", padx=20, pady=(5, 20))
+        self.confirm_button.grid(row=1, column=1, sticky="e", padx=20, pady=20)
         self.choose_loc_button = Button(
             self,
             text="Choose another location instead",
@@ -3587,7 +3587,7 @@ class Save_New_Version_Presave_Popup(tk.Toplevel):
         self.bind("<Escape>", self.cancel)
         self.result = False
         self.file_loc_display.place_cursor()
-        center(self, 550, 170)
+        center(self, 550, 185)
         self.deiconify()
         self.wait_window()
 

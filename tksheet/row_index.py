@@ -780,7 +780,7 @@ class RowIndex(tk.Canvas):
             and self.get_cell_kwargs(datarn, key="checkbox")
             and event.x < self.MT.index_txt_height + 4
         )
-        
+
     def drag_width_resize(self) -> None:
         self.set_width(self.new_row_width, set_TL=True)
         self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
@@ -2296,7 +2296,16 @@ class RowIndex(tk.Canvas):
         )
         edited = False
         if isinstance(self.MT._row_index, int):
-            edited = self.MT.set_cell_data_undo(r=r, c=self.MT._row_index, datarn=datarn, value=value, undo=True)
+            dispcn = self.MT.try_dispcn(self.MT._row_index)
+            edited = self.MT.set_cell_data_undo(
+                r=r,
+                c=dispcn if isinstance(dispcn, int) else 0,
+                datarn=datarn,
+                datacn=self.MT._row_index,
+                value=value,
+                undo=True,
+                cell_resize=isinstance(dispcn, int),
+            )
         else:
             self.fix_index(datarn)
             if not check_input_valid or self.input_valid_for_cell(datarn, value):
@@ -2431,7 +2440,7 @@ class RowIndex(tk.Canvas):
             elif isinstance(self.MT._row_index, int):
                 value = (
                     not self.MT.data[datarn][self.MT._row_index]
-                    if type(self.MT.data[datarn][self.MT._row_index], bool)
+                    if isinstance(self.MT.data[datarn][self.MT._row_index], bool)
                     else False
                 )
             else:
@@ -2476,8 +2485,7 @@ class RowIndex(tk.Canvas):
                 if iid not in self.tree_open_ids:
                     return False
             return True
-        else:
-            return all(iid in self.tree_open_ids for iid in self.get_iid_ancestors(iid))
+        return all(map(self.tree_open_ids.__contains__, self.get_iid_ancestors(iid)))
 
     def get_iid_ancestors(self, iid: str) -> Generator[str]:
         if self.tree[iid].parent:
