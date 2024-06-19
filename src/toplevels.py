@@ -1213,8 +1213,8 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.notebook.bind("<<NotebookTabChanged>>", self.notebook_tab_click)
 
         self.frframe = Frame(self.f2, theme=theme)
-        self.frframe.grid_columnconfigure(1, weight=1)
-        self.frframe.grid(row=0, column=0, columnspan=2, sticky="nswe")
+        # self.frframe.grid_columnconfigure(1, weight=1)
+        self.frframe.grid(row=0, column=1, pady=(10, 0), sticky="nswe")
 
         self.find_label = Label(self.frframe, text="Find", font=EF, theme=theme, anchor="w")
         self.find_label.grid(row=0, column=0, sticky="nswe", pady=(0, 14), padx=(20, 10))
@@ -1351,7 +1351,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
         self.result = False
         self.find_display.place_cursor()
-        center(self, 570, self.window_height(), move_left=True)
+        center(self, 500, self.window_height(), move_left=True)
         self.deiconify()
         self.starting_up = False
 
@@ -1361,7 +1361,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
     def notebook_tab_click(self, event=None):
         if not self.starting_up:
             if self.notebook.index(self.notebook.select()) != 1:
-                self.geometry(f"570x{self.window_height()}")
+                self.geometry(f"500x{self.window_height()}")
             else:
                 self.geometry(f"720x{self.window_height()}")
                 self.sheetdisplay.MT.focus_set()
