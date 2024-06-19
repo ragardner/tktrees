@@ -1179,7 +1179,7 @@ class Compare_Report_Popup(tk.Toplevel):
 
 
 class Find_And_Replace_Popup(tk.Toplevel):
-    def __init__(self, C, sheet_selection, theme="dark", within=False, pars=False):
+    def __init__(self, C, theme="dark", within=False, pars=False):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.withdraw()
         self.resizable(False, False)

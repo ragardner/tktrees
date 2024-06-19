@@ -7620,24 +7620,18 @@ class Tree_Editor(tk.Frame):
     def find_and_replace(self, event=None, within=False):
         if self.find_popup is not None:
             self.destroy_find_popup()
-        sel = self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)
+        if self.sheet_has_focus:
+            widget = self.sheet
+        else:
+            widget = self.tree
         pars = (
             any(
                 self.headers[c].type_ in ("ID", "Parent")
-                for c in self.sheet.get_selected_columns(get_cells_as_columns=True)
+                for c in widget.get_selected_columns(get_cells_as_columns=True)
             )
-            or self.sheet.get_selected_rows()
+            or widget.get_selected_rows()
         )
-        if sel:
-            self.find_popup = Find_And_Replace_Popup(
-                self,
-                self.sheet.MT.data[sel[0]][self.ic],
-                theme=self.C.theme,
-                within=within,
-                pars=pars,
-            )
-        else:
-            self.find_popup = Find_And_Replace_Popup(self, None, theme=self.C.theme, within=within, pars=pars)
+        self.find_popup = Find_And_Replace_Popup(self, theme=self.C.theme, within=within, pars=pars)
 
     def enable_copy_paste(self):
         self.tree_rc_menu_single_row_paste.entryconfig(
