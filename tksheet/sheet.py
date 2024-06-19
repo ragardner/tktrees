@@ -339,11 +339,9 @@ class Sheet(tk.Frame):
             row_index_align=(
                 convert_align(row_index_align) if row_index_align is not None else convert_align(index_align)
             ),
-            default_row_index=default_row_index,
         )
         self.CH = ColumnHeaders(
             parent=self,
-            default_header=default_header,
             header_align=convert_align(header_align),
         )
         self.MT = MainTable(
@@ -4297,10 +4295,6 @@ class Sheet(tk.Frame):
             )
         if "default_row_height" in kwargs:
             self.default_row_height(kwargs["default_row_height"])
-        if "default_header" in kwargs:
-            self.CH.default_header = kwargs["default_header"].lower()
-        if "default_row_index" in kwargs:
-            self.RI.default_index = kwargs["default_row_index"].lower()
         if "max_column_width" in kwargs:
             self.MT.max_column_width = float(kwargs["max_column_width"])
         if "max_row_height" in kwargs:

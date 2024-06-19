@@ -140,7 +140,6 @@ class RowIndex(tk.Canvas):
         self.hidd_boxes = set()
 
         self.align = kwargs["row_index_align"]
-        self.default_index = kwargs["default_row_index"].lower()
 
         self.tree_reset()
         self.basic_bindings()
@@ -1200,11 +1199,11 @@ class RowIndex(tk.Canvas):
 
     def auto_set_index_width(self, end_row: int, only_rows: list) -> bool:
         if not isinstance(self.MT._row_index, int) and not self.MT._row_index:
-            if self.default_index == "letters":
+            if self.PAR.ops.default_row_index == "letters":
                 new_w = self.MT.get_txt_w(f"{num2alpha(end_row)}") + 20
-            elif self.default_index == "numbers":
+            elif self.PAR.ops.default_row_index == "numbers":
                 new_w = self.MT.get_txt_w(f"{end_row}") + 20
-            elif self.default_index == "both":
+            elif self.PAR.ops.default_row_index == "both":
                 new_w = self.MT.get_txt_w(f"{end_row + 1} {num2alpha(end_row)}") + 20
         elif self.PAR.ops.auto_resize_row_index is True:
             new_w = self.get_index_text_width(only_rows=only_rows)
@@ -2388,7 +2387,7 @@ class RowIndex(tk.Canvas):
         except Exception:
             value = ""
         if not value and self.PAR.ops.show_default_index_for_empty:
-            value = get_n2a(datarn, self.default_index)
+            value = get_n2a(datarn, self.PAR.ops.default_row_index)
         return value
 
     def get_value_for_empty_cell(self, datarn: int, r_ops: bool = True) -> object:

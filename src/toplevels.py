@@ -4898,6 +4898,73 @@ class License_Popup(tk.Toplevel):
 
     def disagree(self, event=None):
         self.destroy()
+        
+        
+class Settings_Popup(tk.Toplevel):
+    def __init__(self, C, theme="dark"):
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
+        self.C = new_toplevel_chores(self, C, f"{app_title} - Settings")
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        
+        self.general = Frame(self, theme=theme)
+        self.general.grid(row=0, column=1, sticky="nswe")
+        
+        
+        self.xlsx = Frame(self, theme=theme)
+        self.xlsx.grid(row=0, column=1, sticky="nswe")
+        self.json = Frame(self, theme=theme)
+        self.json.grid(row=0, column=1, sticky="nswe")
+        self.appearance = Frame(self, theme=theme)
+        self.appearance.grid(row=0, column=1, sticky="nswe")
+        
+        self.page_chooser_frame = Frame(self, theme=theme)
+        self.page_chooser_frame.grid(row=0, column=0, padx=20, pady=10, sticky="nswe")
+        
+        self.general_button = Button(
+            self.page_chooser_frame,
+            text="General",
+            style="EF.Std.TButton",
+            command=self.goto_general,
+        )
+        self.general_button.pack(side="top", pady=10, fill="x")
+        
+        self.xlsx_button = Button(
+            self.page_chooser_frame,
+            text="General",
+            style="EF.Std.TButton",
+            command=self.goto_xlsx,
+        )
+        self.xlsx_button.pack(side="top", pady=10, fill="x")
+        
+        self.json_button = Button(
+            self.page_chooser_frame,
+            text="General",
+            style="EF.Std.TButton",
+            command=self.goto_json,
+        )
+        self.json_button.pack(side="top", pady=10, fill="x")
+        
+        self.appearance_button = Button(
+            self.page_chooser_frame,
+            text="Appearance",
+            style="EF.Std.TButton",
+            command=self.goto_appearance,
+        )
+        self.appearance_button.pack(side="top", pady=10, fill="x")
+        
+    def goto_general(self):
+        self.tkraise(self.general)
+        
+    def goto_xlsx(self):
+        self.tkraise(self.xlsx)
+        
+    def goto_json(self):
+        self.tkraise(self.json)
+        
+    def goto_appearance(self):
+        self.tkraise(self.appearance)
+        
 
 
 class Help_Popup(tk.Toplevel):
