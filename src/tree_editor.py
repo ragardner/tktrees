@@ -7624,13 +7624,11 @@ class Tree_Editor(tk.Frame):
             widget = self.sheet
         else:
             widget = self.tree
-        pars = (
-            any(
-                self.headers[c].type_ in ("ID", "Parent")
-                for c in widget.get_selected_columns(get_cells_as_columns=True)
-            )
-            or widget.get_selected_rows()
+        pars = any(
+            self.headers[c].type_ in ("ID", "Parent") for c in widget.get_selected_columns(get_cells_as_columns=True)
         )
+        if not pars:
+            pars = any(box.type_ == "rows" for box in widget.boxes)
         self.find_popup = Find_And_Replace_Popup(self, theme=self.C.theme, within=within, pars=pars)
 
     def enable_copy_paste(self):
