@@ -879,15 +879,15 @@ class Auto_Add_Condition_Num_Frame(tk.Frame):
         self.asc_desc_dropdown.grid(row=2, column=1, sticky="nswe", padx=(20, 0))
         self.button_frame = Frame(self, theme=theme)
         self.button_frame.grid(row=3, column=0, columnspan=4, sticky="nswe")
-        self.button_frame.grid_columnconfigure(0, weight=1, uniform="x")
-        self.button_frame.grid_columnconfigure(1, weight=1, uniform="x")
-        self.button_frame.grid_rowconfigure(0, weight=1)
         self.confirm_button = Button(
-            self.button_frame, text="Save conditions", style="EF.Std.TButton", command=self.confirm
+            self.button_frame,
+            text="Create conditions",
+            style="EF.Std.TButton",
+            command=self.confirm,
         )
-        self.confirm_button.grid(row=0, column=0, sticky="nswe", padx=(20, 10), pady=(20, 20))
+        self.confirm_button.pack(side="right", padx=20, pady=(20, 20))
         self.cancel_button = Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel)
-        self.cancel_button.grid(row=0, column=1, sticky="nswe", padx=(10, 20), pady=(20, 20))
+        self.cancel_button.pack(side="right", padx=20, pady=(20, 20))
         self.result = False
         self.min_val = ""
         self.max_val = ""
@@ -957,15 +957,15 @@ class Auto_Add_Condition_Date_Frame(tk.Frame):
         self.asc_desc_dropdown.grid(row=2, column=1, sticky="nswe", padx=(20, 0))
         self.button_frame = Frame(self, theme=theme)
         self.button_frame.grid(row=3, column=0, columnspan=4, sticky="nswe")
-        self.button_frame.grid_columnconfigure(0, weight=1, uniform="x")
-        self.button_frame.grid_columnconfigure(1, weight=1, uniform="x")
-        self.button_frame.grid_rowconfigure(0, weight=1)
         self.confirm_button = Button(
-            self.button_frame, text="Save conditions", style="EF.Std.TButton", command=self.confirm
+            self.button_frame,
+            text="Create conditions",
+            style="EF.Std.TButton",
+            command=self.confirm,
         )
-        self.confirm_button.grid(row=0, column=0, sticky="nswe", padx=(20, 10), pady=(20, 20))
+        self.confirm_button.pack(side="right", padx=20, pady=(20, 20))
         self.cancel_button = Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel)
-        self.cancel_button.grid(row=0, column=1, sticky="nswe", padx=(10, 20), pady=(20, 20))
+        self.cancel_button.pack(side="right", padx=20, pady=(20, 20))
         self.result = False
         self.min_val = ""
         self.max_val = ""
@@ -2319,7 +2319,7 @@ class Label(tk.Label):
     def change_text(self, text):
         self.config(text=text)
         self.update_idletasks()
-        
+
     def change_theme(self, theme):
         self.config(background=themes[theme].top_left_bg, foreground=themes[theme].table_fg)
 

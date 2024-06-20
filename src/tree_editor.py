@@ -1928,13 +1928,13 @@ class Tree_Editor(tk.Frame):
 
     def tree_sheet_edit_cell(self, event=None):
         if not event or event.value is None:
-            return False
+            return None
         if event.sheetname == "tree":
             y1, x1 = self.rns[self.tree.rowitem(event.row)], event.column
         elif event.sheetname == "sheet":
             y1, x1 = event.loc
         if (newtext := event.value) == self.sheet.data[y1][x1]:
-            return False
+            return None
         ID = self.sheet.data[y1][self.ic]
         ik = ID.lower()
         successful = False
@@ -1949,7 +1949,7 @@ class Tree_Editor(tk.Frame):
                 newtext = re.sub(r"[\n\t\s]*", "", newtext)
             success = self.change_ID_name(id_, newtext)
             if not success:
-                return False
+                return None
             self.changelog_append(
                 "Rename ID",
                 id_,
@@ -2017,7 +2017,7 @@ class Tree_Editor(tk.Frame):
                     theme=self.C.theme,
                 )
                 if not confirm.boolean:
-                    return False
+                    return None
             self.changelog_append(
                 "Edit cell",
                 f"ID: {ID} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
@@ -2036,7 +2036,7 @@ class Tree_Editor(tk.Frame):
                     f"Entered text invalid for column type - {self.why_isnt_detail_valid(x1, newtext)}   ",
                     theme=self.C.theme,
                 )
-                return False
+                return None
             if self.headers[x1].type_ == "Date Detail":
                 newtext = self.convert_date(newtext, self.DATE_FORM)
                 if "/" in newtext or "-" in newtext:
@@ -2055,10 +2055,10 @@ class Tree_Editor(tk.Frame):
                                     pass
                             if not date_corrected:
                                 Error(self, "Date invalid   ", theme=self.C.theme)
-                                return False
+                                return None
                         else:
                             Error(self, "Date invalid   ", theme=self.C.theme)
-                            return False
+                            return None
             self.changelog_append(
                 "Edit cell",
                 f"ID: {ID} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
