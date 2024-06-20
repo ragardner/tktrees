@@ -1821,13 +1821,14 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_choice_dropdown.unbind("<<ComboboxSelected>>")
 
     def toggle_sort_all_nodes(self, enabled, snapshot=True):
-        self.auto_sort_nodes_bool = enabled
-        if self.auto_sort_nodes_bool:
+        if enabled:
             if snapshot:
                 self.snapshot_auto_sort_nodes()
+            self.auto_sort_nodes_bool = enabled
             self.sort_all_children()
             self.redo_tree_display()
         else:
+            self.auto_sort_nodes_bool = enabled
             self.remake_topnodes_order()
 
     def sort_all_children(self):
@@ -6206,8 +6207,8 @@ class Tree_Editor(tk.Frame):
         )
         self.tv_label_col = new_vs["required_data"]["pickled"]["tv_label_col"]
         self.row_len = new_vs["required_data"]["pickled"]["row_len"]
-        self.mirror_var = new_vs["required_data"]["not_pickled"]["mirror_bool"]
-        self.auto_sort_nodes_bool = new_vs["required_data"]["not_pickled"]["auto_sort_nodes_bool"]
+        self.mirror_var = new_vs["required_data"]["pickled"]["mirror_bool"]
+        self.auto_sort_nodes_bool = new_vs["required_data"]["pickled"]["auto_sort_nodes_bool"]
         self.topnodes_order = new_vs["required_data"]["pickled"]["topnodes_order"]
         self.saved_info = new_vs["required_data"]["pickled"]["saved_info"]
         self.tagged_ids = new_vs["required_data"]["pickled"]["tagged_ids"]
@@ -6519,6 +6520,8 @@ class Tree_Editor(tk.Frame):
                     "pc": self.pc,
                     "hiers": self.hiers,
                     "row_len": self.row_len,
+                    "auto_sort_nodes_bool": self.auto_sort_nodes_bool,
+                    "mirror_bool": self.mirror_var,
                 }
             ),
             "not_pickled": self.get_unpickleable_required_snapshot_data(),
@@ -6527,8 +6530,6 @@ class Tree_Editor(tk.Frame):
     def get_unpickleable_required_snapshot_data(self):
         return {
             "nodes": json.dumps(self.jsonify_nodes()),
-            "auto_sort_nodes_bool": bool(self.auto_sort_nodes_bool),
-            "mirror_bool": bool(self.mirror_var),
             "focus": self.tree.has_focus(),
             "sheet_selections": self.get_sheet_sel(),
         }
