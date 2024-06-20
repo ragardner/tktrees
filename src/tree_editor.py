@@ -1439,7 +1439,7 @@ class Tree_Editor(tk.Frame):
                 column_widths=map(int, program_data.column_widths),
             )
             self.saved_info = DotDict({int(k): v for k, v in program_data.saved_info.items()})
-            for h, dct in self.saved_info.items():
+            for dct in self.saved_info.values():
                 dct["theights"] = {k: self.tree.valid_row_height(int(v)) for k, v in dct["theights"].items()}
                 dct["twidths"] = {k: int(v) for k, v in dct["twidths"].items()}
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
@@ -6522,7 +6522,7 @@ class Tree_Editor(tk.Frame):
     def sheet_set_heights_widths_from_undo(self, new_vs):
         self.sheet.row_index(newindex=self.ic)
         self.sheet.set_column_widths(new_vs["sheet_col_positions"], canvas_positions=True)
-        self.sheet.set_row_heights(new_vs["sheet_row_positions"], canvas_positions=True)
+        self.sheet.set_safe_row_heights(new_vs["sheet_row_positions"])
 
     def ctrl_z(self, event=None):
         if self.vs:
@@ -6557,7 +6557,7 @@ class Tree_Editor(tk.Frame):
             selected=self.tree.selected,
             twidths={self.headers[i].name: width for i, width in enumerate(self.tree.get_column_widths())},
             theights={
-                self.tree.rowitem(i, data_index=False): height for i, height in enumerate(self.tree.get_row_heights())
+                self.tree.rowitem(i, data_index=False): height for i, height in enumerate(self.tree.get_safe_row_heights())
             },
         )
         return self.saved_info
@@ -6568,7 +6568,7 @@ class Tree_Editor(tk.Frame):
                 {
                     "saved_info": self.save_info_get_saved_info(),
                     "sheet_col_positions": self.sheet.get_column_widths(canvas_positions=True),
-                    "sheet_row_positions": self.sheet.get_row_heights(canvas_positions=True),
+                    "sheet_row_positions": self.sheet.get_safe_row_heights(),
                     "topnodes_order": self.topnodes_order,
                     "tv_label_col": self.tv_label_col,
                     "tagged_ids": self.tagged_ids,
@@ -10033,7 +10033,7 @@ class Tree_Editor(tk.Frame):
                 ncols=self.row_len,
             ).dehighlight_all()
         if self.saved_info[self.pc].theights:
-            self.tree.set_row_heights(self.tree_gen_heights_from_saved())
+            self.tree.set_safe_row_heights(self.tree_gen_heights_from_saved())
         else:
             self.tree.set_row_heights()
         if selections:
@@ -11697,7 +11697,7 @@ class Tree_Editor(tk.Frame):
         ]
         d["nodes"] = self.jsonify_nodes()
         d["changelog"] = self.changelog
-        d["row_heights"] = self.sheet.get_row_heights()
+        d["row_heights"] = self.sheet.get_safe_row_heights()
         d["column_widths"] = self.sheet.get_column_widths()
         d["sheet_cell_alignments"] = self.sheet.get_cell_alignments()
         d["sheet_column_alignments"] = self.sheet.get_column_alignments()

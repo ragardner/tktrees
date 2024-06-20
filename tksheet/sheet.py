@@ -3459,6 +3459,17 @@ class Sheet(tk.Frame):
             return self.MT.row_positions
         return self.MT.get_row_heights()
 
+    def get_safe_row_heights(self) -> list[int]:
+        default_h = self.MT.get_default_row_height()
+        return [0 if e == default_h else e for e in self.MT.gen_row_heights()]
+
+    def set_safe_row_heights(self, heights: list[int]) -> Sheet:
+        default_h = self.MT.get_default_row_height()
+        self.MT.row_positions = list(
+            accumulate(chain([0], (self.valid_row_height(e) if e else default_h for e in heights)))
+        )
+        return self
+
     def get_row_text_height(
         self,
         row: int,
