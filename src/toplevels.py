@@ -4914,7 +4914,7 @@ class Settings_Popup(tk.Toplevel):
             compound="right",
         )
         self.xlsx_flattened_button.pack(side="top", anchor="nw", fill="x", pady=10)
-        
+
         self.flattened_divider = Frame(self.xlsx)
         self.flattened_divider.config(bg=themes[theme].table_fg, height=4)
         self.flattened_divider.pack(side="top", anchor="nw", fill="x", pady=(20, 0))
@@ -5008,6 +5008,45 @@ class Settings_Popup(tk.Toplevel):
 
         self.json_format_dropdown.bind("<<ComboboxSelected>>", self.set_json_format)
         self.json_format_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.date_format = Frame(self, theme=theme)
+        self.date_format.grid(row=0, column=1, pady=20, padx=20, sticky="nswe")
+
+        self.date_format_header = Label(self.date_format, text="Date Format", font=TF, theme=theme, anchor="nw")
+        self.date_format_header.pack(side="top", anchor="nw", fill="x", pady=(0, 20))
+
+        self.date_format_label = Label(self.date_format, text="Date Format: ", font=EF, theme=theme, anchor="nw")
+        self.date_format_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.date_format_dropdown = Ez_Dropdown(self.date_format, font=EF)
+        self.date_format_dropdown["values"] = [
+            "DD/MM/YYYY",
+            "DD-MM-YYYY",
+            "MM/DD/YYYY",
+            "MM-DD-YYYY",
+            "YYYY/MM/DD",
+            "YYYY-MM-DD",
+        ]
+        if self.C.DATE_FORM == "%d/%m/%Y":
+            self.date_format_dropdown.set_my_value("DD/MM/YYYY")
+        
+        elif self.C.DATE_FORM == "%d-%m-%Y":
+            self.date_format_dropdown.set_my_value("DD-MM-YYYY")
+
+        elif self.C.DATE_FORM == "%m/%d/%Y":
+            self.date_format_dropdown.set_my_value("MM/DD/YYYY")
+            
+        elif self.C.DATE_FORM == "%m-%d-%Y":
+            self.date_format_dropdown.set_my_value("MM-DD-YYYY")
+            
+        elif self.C.DATE_FORM == "%Y/%m/%d":
+            self.date_format_dropdown.set_my_value("YYYY/MM/DD")
+
+        elif self.C.DATE_FORM == "%Y-%m-%d":
+            self.date_format_dropdown.set_my_value("YYYY-MM-DD")
+
+        self.date_format_dropdown.bind("<<ComboboxSelected>>", self.set_date_format)
+        self.date_format_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
 
         self.appearance = Frame(self, theme=theme)
         self.appearance.grid(row=0, column=1, pady=20, padx=20, sticky="nswe")
@@ -5150,6 +5189,14 @@ class Settings_Popup(tk.Toplevel):
         )
         self.json_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
 
+        self.date_format_button = Button(
+            self.page_chooser_frame,
+            text="Date Format",
+            style="EF.Std.TButton",
+            command=self.goto_date_format,
+        )
+        self.date_format_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
+
         self.appearance_button = Button(
             self.page_chooser_frame,
             text="Appearance",
@@ -5160,7 +5207,7 @@ class Settings_Popup(tk.Toplevel):
 
         self.general.tkraise()
         self.bind("<Escape>", self.cancel)
-        center(self, 650, 650)
+        center(self, 520, 650)
         self.deiconify()
         self.wait_window()
 
@@ -5251,6 +5298,9 @@ class Settings_Popup(tk.Toplevel):
         self.table_alignment_label.change_theme(theme)
         self.index_alignment_label.change_theme(theme)
         self.header_alignment_label.change_theme(theme)
+        self.date_format.config(bg=themes[theme].top_left_bg)
+        self.date_format_header.change_theme(theme)
+        self.date_format_label.change_theme(theme)
         self.C.change_theme(theme)
 
     def set_table_alignment(self, event=None):
@@ -5271,6 +5321,21 @@ class Settings_Popup(tk.Toplevel):
         self.C.sheet.header_align(align, redraw=False)
         self.C.redraw_sheets()
 
+    def set_date_format(self, event=None):
+        fmt = self.date_format_dropdown.get_my_value()
+        if fmt == "DD/MM/YYYY":
+            self.C.change_date_format("%d/%m/%Y")
+        elif fmt == "DD-MM-YYYY":
+            self.C.change_date_format("%d-%m-%Y")
+        elif fmt == "MM/DD/YYYY":
+            self.C.change_date_format("%m/%d/%Y")
+        elif fmt == "MM-DD-YYYY":
+            self.C.change_date_format("%m-%d-%Y")
+        elif fmt == "YYYY/MM/DD":
+            self.C.change_date_format("%Y/%m/%d")
+        elif fmt == "YYYY-MM-DD":
+            self.C.change_date_format("%Y-%m-%d")
+
     def goto_general(self):
         self.general.tkraise()
 
@@ -5279,6 +5344,9 @@ class Settings_Popup(tk.Toplevel):
 
     def goto_json(self):
         self.json.tkraise()
+
+    def goto_date_format(self):
+        self.date_format.tkraise()
 
     def goto_appearance(self):
         self.appearance.tkraise()

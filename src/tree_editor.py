@@ -192,6 +192,8 @@ class Tree_Editor(tk.Frame):
         self.dark_theme_bool = True if self.C.theme == "dark" else False
         self.light_green_theme_bool = True if self.C.theme == "light_green" else False
         self.light_blue_theme_bool = True if self.C.theme == "light_blue" else False
+        self.auto_sort_nodes_bool = True
+        self.tv_lvls_bool = False
 
         if override_locale is not None:
             self.user_locale = f"{override_locale}"
@@ -301,74 +303,6 @@ class Tree_Editor(tk.Frame):
             command=self.clear_tagged_ids,
             **menu_kwargs,
         )
-
-        self.auto_sort_nodes_bool = True
-
-        self.tv_lvls_bool = tk.BooleanVar()
-        self.tv_lvls_bool.set(False)
-        # self.format_menu.add_checkbutton(
-        #     label="Show treeview levels",
-        #     variable=self.tv_lvls_bool,
-        #     command=self.show_tv_lvls,
-        #     **menu_kwargs,
-        # )
-        # self.date_format_menu = tk.Menu(self.format_menu, tearoff=0, **menu_kwargs)
-        # self.format_menu.add_separator()
-        # self.format_menu.add_cascade(
-        #     label="Date format",
-        #     menu=self.date_format_menu,
-        #     **menu_kwargs,
-        # )
-
-        self.Y_M_D_bool = tk.BooleanVar()
-        self.Y_M_D_bool.set(False)
-        self.D_M_Y_bool = tk.BooleanVar()
-        self.D_M_Y_bool.set(False)
-        self.M_D_Y_bool = tk.BooleanVar()
-        self.M_D_Y_bool.set(False)
-
-        self.date_hyphen_separator_bool = tk.BooleanVar()
-        self.date_hyphen_separator_bool.set(False)
-        self.date_slash_separator_bool = tk.BooleanVar()
-        self.date_slash_separator_bool.set(False)
-
-        if self.DATE_FORM in ("%d/%m/%Y", "%d-%m-%Y"):
-            self.D_M_Y_bool.set(True)
-        elif self.DATE_FORM in ("%Y/%m/%d", "%Y-%m-%d"):
-            self.Y_M_D_bool.set(True)
-        elif self.DATE_FORM in ("%m/%d/%Y", "%m-%d-%Y"):
-            self.M_D_Y_bool.set(True)
-        if "/" in self.DATE_FORM:
-            self.date_slash_separator_bool.set(True)
-        elif "-" in self.DATE_FORM:
-            self.date_hyphen_separator_bool.set(True)
-
-        # self.date_format_menu.add_checkbutton(
-        #     label="DD/MM/YYYY, DD-MM-YYYY",
-        #     variable=self.D_M_Y_bool,
-        #     command=self.change_date_format_D_M_Y,
-        # )
-        # self.date_format_menu.add_checkbutton(
-        #     label="MM/DD/YYYY, MM-DD-YYYY",
-        #     variable=self.M_D_Y_bool,
-        #     command=self.change_date_format_M_D_Y,
-        # )
-        # self.date_format_menu.add_checkbutton(
-        #     label="YYYY/MM/DD, YYYY-MM-DD",
-        #     variable=self.Y_M_D_bool,
-        #     command=self.change_date_format_Y_M_D,
-        # )
-        # self.date_format_menu.add_separator()
-        # self.date_format_menu.add_checkbutton(
-        #     label="Date hyphen separator -",
-        #     variable=self.date_hyphen_separator_bool,
-        #     command=self.change_date_format_hyphen,
-        # )
-        # self.date_format_menu.add_checkbutton(
-        #     label="Date forward slash separator /",
-        #     variable=self.date_slash_separator_bool,
-        #     command=self.change_date_format_slash,
-        # )
 
         # view menu
         self.view_menu = tk.Menu(self.C.menubar, tearoff=0, **menu_kwargs)
@@ -1422,7 +1356,7 @@ class Tree_Editor(tk.Frame):
             ]
             self.row_len = len(self.headers)
             self.changelog = program_data.changelog
-            self.tv_lvls_bool.set(program_data.show_tv_lvls)
+            self.tv_lvls_bool = bool(program_data.show_tv_lvls)
             self.sheet.align(program_data.sheet_table_align, redraw=False)
             self.sheet.row_index_align(program_data.sheet_index_align, redraw=False)
             self.sheet.header_align(program_data.sheet_header_align, redraw=False)
@@ -1459,6 +1393,8 @@ class Tree_Editor(tk.Frame):
             self.allow_spaces_columns_var = bool(program_data.allow_spaces_columns)
             self.set_headers()
             self.tag_ids(selection=set(program_data.tagged_ids), toggle=False, do_tree=False)
+            if "date_format" in program_data:
+                self.DATE_FORM = program_data.date_format
         else:
             self.set_headers()
             self.tagged_ids = set()
@@ -9890,77 +9826,7 @@ class Tree_Editor(tk.Frame):
         else:
             self.DATE_FORM = new_format
 
-    def change_date_format_D_M_Y(self, event=None):
-        if not (self.D_M_Y_bool.get() or self.M_D_Y_bool.get() or self.Y_M_D_bool.get()):
-            self.D_M_Y_bool.set(True)
-            return
-        if self.M_D_Y_bool.get():
-            self.M_D_Y_bool.set(False)
-        elif self.Y_M_D_bool.get():
-            self.Y_M_D_bool.set(False)
-        if self.date_hyphen_separator_bool.get():
-            new_form = "%d-%m-%Y"
-        elif self.date_slash_separator_bool.get():
-            new_form = "%d/%m/%Y"
-        self.apply_date_format_change(new_form)
-        self.DATE_FORM = new_form
-
-    def change_date_format_M_D_Y(self, event=None):
-        if not (self.D_M_Y_bool.get() or self.M_D_Y_bool.get() or self.Y_M_D_bool.get()):
-            self.M_D_Y_bool.set(True)
-            return
-        if self.D_M_Y_bool.get():
-            self.D_M_Y_bool.set(False)
-        elif self.Y_M_D_bool.get():
-            self.Y_M_D_bool.set(False)
-        if self.date_hyphen_separator_bool.get():
-            new_form = "%m-%d-%Y"
-        elif self.date_slash_separator_bool.get():
-            new_form = "%m/%d/%Y"
-        self.apply_date_format_change(new_form)
-        self.DATE_FORM = new_form
-
-    def change_date_format_Y_M_D(self, event=None):
-        if not (self.D_M_Y_bool.get() or self.M_D_Y_bool.get() or self.Y_M_D_bool.get()):
-            self.Y_M_D_bool.set(True)
-            return
-        if self.M_D_Y_bool.get():
-            self.M_D_Y_bool.set(False)
-        elif self.D_M_Y_bool.get():
-            self.D_M_Y_bool.set(False)
-        if self.date_hyphen_separator_bool.get():
-            new_form = "%Y-%m-%d"
-        elif self.date_slash_separator_bool.get():
-            new_form = "%Y/%m/%d"
-        self.apply_date_format_change(new_form)
-        self.DATE_FORM = new_form
-
-    def change_date_format_slash(self, event=None):
-        if not (self.date_hyphen_separator_bool.get() or self.date_slash_separator_bool.get()):
-            self.date_slash_separator_bool.set(True)
-        if self.date_hyphen_separator_bool.get():
-            self.date_hyphen_separator_bool.set(False)
-        if self.D_M_Y_bool.get():
-            new_form = "%d/%m/%Y"
-        elif self.M_D_Y_bool.get():
-            new_form = "%m/%d/%Y"
-        elif self.Y_M_D_bool.get():
-            new_form = "%Y/%m/%d"
-        if new_form != self.DATE_FORM:
-            self.apply_date_format_change(new_form)
-            self.DATE_FORM = new_form
-
-    def change_date_format_hyphen(self, event=None):
-        if not (self.date_hyphen_separator_bool.get() or self.date_slash_separator_bool.get()):
-            self.date_hyphen_separator_bool.set(True)
-        if self.date_slash_separator_bool.get():
-            self.date_slash_separator_bool.set(False)
-        if self.D_M_Y_bool.get():
-            new_form = "%d-%m-%Y"
-        elif self.M_D_Y_bool.get():
-            new_form = "%m-%d-%Y"
-        elif self.Y_M_D_bool.get():
-            new_form = "%Y-%m-%d"
+    def change_date_format(self, new_form):
         if new_form != self.DATE_FORM:
             self.apply_date_format_change(new_form)
             self.DATE_FORM = new_form
@@ -11716,9 +11582,10 @@ class Tree_Editor(tk.Frame):
         d["tagged_ids"] = list(self.tagged_ids)
         d["auto_sort_nodes_bool"] = self.auto_sort_nodes_bool
         d["sheetname"] = sheetname
-        d["show_tv_lvls"] = self.tv_lvls_bool.get()
+        d["show_tv_lvls"] = self.tv_lvls_bool
         d["allow_spaces_ids"] = self.allow_spaces_ids_var
         d["allow_spaces_columns"] = self.allow_spaces_columns_var
+        d["date_format"] = self.DATE_FORM
         return d
 
     def jsonify_nodes(self):
