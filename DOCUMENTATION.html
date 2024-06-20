@@ -6,18 +6,18 @@
 </ul>
 <p>Tk-Trees is licensed under GPL-3.0 and is the copyright of R. A. Gardner.
 github.com/ragardner
-<a href="mailto:&#x67;&#x69;&#x74;&#104;&#x75;&#98;&#x40;&#x72;&#x61;&#103;&#97;&#114;&#100;&#110;&#x65;&#x72;&#x2e;&#115;&#x69;&#x6d;&#112;&#x6c;&#x65;&#x6c;&#x6f;&#103;&#105;&#x6e;&#x2e;&#x63;&#x6f;&#109;">&#x67;&#x69;&#x74;&#104;&#x75;&#98;&#x40;&#x72;&#x61;&#103;&#97;&#114;&#100;&#110;&#x65;&#x72;&#x2e;&#115;&#x69;&#x6d;&#112;&#x6c;&#x65;&#x6c;&#x6f;&#103;&#105;&#x6e;&#x2e;&#x63;&#x6f;&#109;</a></p>
+<a href="mailto:&#103;&#105;&#116;&#x68;&#x75;&#98;&#x40;&#x72;&#x61;&#x67;&#x61;&#114;&#100;&#110;&#101;&#x72;&#x2e;&#x73;&#105;&#x6d;&#112;&#108;&#101;&#108;&#111;&#103;&#x69;&#110;&#x2e;&#x63;&#111;&#x6d;">&#103;&#105;&#116;&#x68;&#x75;&#98;&#x40;&#x72;&#x61;&#x67;&#x61;&#114;&#100;&#110;&#101;&#x72;&#x2e;&#x73;&#105;&#x6d;&#112;&#108;&#101;&#108;&#111;&#103;&#x69;&#110;&#x2e;&#x63;&#111;&#x6d;</a></p>
 <h2 id="program-basics">PROGRAM BASICS</h2>
-<p>If using the program for the first time you can go to the &quot;File&quot; menu or right click in the left or right panel to get started.</p>
+<p>If using the program for the first time you can go to the &quot;File&quot; menu or right click in the in the empty space to get started.</p>
 <p>This program is for management of hierarchy based master data which is stored in table format. Supported file formats are:</p>
 <ul>
 <li>.xlsx, .xls, .xlsm</li>
 <li>.json Javascript object notation where the full table is under the key &#39;records&#39;</li>
 <li>.csv/.tsv (comma or tab delimited)</li>
 </ul>
-<p>Any sheets opened with tk-trees must contain a single header row at the top of the sheet.</p>
+<p>Any sheets opened with tk-trees should contain a single header row at the top of the sheet.</p>
 <p>Additional settings and data such as the changelog, formatting and column types can be saved with the formats .xlsx and .json.</p>
-<p>Any changes made when using this program will not be saved unless you choose to do so. This can be done by going to the main menubar and choosing a save option under the &#39;File&#39; menu while in the Treeview.</p>
+<p>Any changes made when using this program will not be saved unless you choose to do so. This can be done by going to the menu bar and choosing a save option under the &#39;File&#39; menu while in the Treeview.</p>
 <p>Sheets must have an ID column and atleast one parent column, it does not matter in which order. e.g.</p>
 <pre><code>ID     Parent    Detail
 ID1    Par1      Detail 1
@@ -27,14 +27,16 @@ ID2    Par2      Detail 2
 <p>Sheets can have an unlimited number of parent columns (hierarchies) and an unlimited number of detail columns.</p>
 <p>The columns can be in any order and multiple columns of the same type can be separated by other types of columns.</p>
 <p>If the headers are not unique they will be renamed with a duplicate number. Any missing headers will have names created for them. Header names are not case sensitive.</p>
-<p>There is no limit to the number of characters allowed for headers, details or ID names. To allow spaces in ID/Header names go to Options on the main menubar while in the Treeview. Details are exempt from this rule.</p>
+<p>There is no limit to the number of characters allowed for headers, details or ID names. To allow spaces in ID/Header names go to File -&gt; Settings on the main menubar while in the Treeview. Details are exempt from this rule.</p>
 <p>Any mistakes in the sheet such as infinite loops of children, IDs appearing in a parent column but not in the ID column and duplications will be corrected upon creating the tree.</p>
 <p>The corrections will not be made to the original sheet unless you choose to save the sheet. Such corrections will appear as warnings when you first view the treeview window.</p>
 <p>To display the actual sheet go to View -&gt; Layout.</p>
 <p>If an ID has no parents or children in any hierarchy it will be placed in the first hierarchy (in order of the columns). The same will happen if you Undo a change made to anything but details.</p>
 <h2 id="helpful-tips-and-tutorials">HELPFUL TIPS AND TUTORIALS</h2>
 <h4 id="moving-ids-between-hierarchies">Moving IDs between hierarchies</h4>
-<p>To move an ID to another hierarchy or add an ID to another hierarchy you can right click on the ID in the treeview panel and go to Cut or Copy and then either Cut ID or Copy ID. Then using the dropdown box at the top of the treeview panel, labeled &quot;Hierarchy&quot; select the hierarchy you would like to move / add the ID to. Then go to the position or ID where you would like to place the Cut / Copied ID and right click and select a paste option.</p>
+<p>To move an ID to another hierarchy or add an ID to another hierarchy you can right click on the ID in the treeview panel and go to Cut or Copy and then either Cut ID or Copy ID. </p>
+<p>Then using the dropdown box labeled &quot;Hierarchy&quot; at the top of the treeview panel select the hierarchy you would like to move / add the ID to. </p>
+<p>Go to the position or ID where you would like to place the Cut / Copied ID and right click and select a paste option.</p>
 <p>To move multiple IDs in one go you can use Shift + Left Click or Ctrl + Left Click to select multiple IDs then use Ctrl + X (Cut) or Ctrl + C (Copy) or Right Click on one of the selected IDs.</p>
 <h4 id="moving-ids-by-drag-and-drop">Moving IDs by drag and drop</h4>
 <p>You can move IDs that are at the same level as one another around in a specific hierarchy by selecting them and left clicking and holding the mouse button down while moving the mouse to drag IDs from their existing locations to a new location, release the mouse button to drop them.</p>
@@ -56,7 +58,7 @@ ID2    Par2      Detail 2
 <h4 id="date-column-conditional-formatting">Date column conditional formatting</h4>
 <p>When entering conditional formatting in Date Detail columns, use forward slash dates e.g. DD/MM/YYYY. This is because hyphens will be interpreted as subtractions. If you want to enter a specific date, for current date use the letters: cd</p>
 <h4 id="changing-the-order-of-ids-in-the-treeview">Changing the order of IDs in the treeview</h4>
-<p>To disable automatic ordering of IDs in the treeview go to the Format menu and select Auto-sort treeview IDs so that it&#39;s unchecked. You can then select a row in the treeview and hold down the right mouse button and drag and drop the ID to it&#39;s desired position. To move an ID between parents see the above section on &quot;Moving IDs by drag and drop&quot;.</p>
+<p>To disable automatic ordering of IDs in the treeview go to File -&gt; Settings and select Auto-sort treeview IDs. You can re-order children by selecting a single row in the tree and dragging with the right mouse button or multiple IDs using the left mouse button. To move an ID between parents see the above section on &quot;Moving IDs by drag and drop&quot;.</p>
 <h2 id="managing-columns">MANAGING COLUMNS</h2>
 <p>Right clicking on columns in the header will show a popup menu with a few column specific options.</p>
 <h4 id="column-types">Column types:</h4>
@@ -104,12 +106,18 @@ e.g. == 100</p>
 <li>New: Create a new sheet.</li>
 <li>Open: Open a file.</li>
 <li>Compare sheets: This option takes you to a tree comparison window. For more information find the help section &quot;Tree Compare&quot;.</li>
-<li>Save: Options are Save (Ctrl + S), Save as, Save as with username-date- time (saves with the users login name, current date and time added to end of the filename) and Save new version (adds one to any detected file of the same name found in the chosen folder).</li>
+<li>Save: Options are Save (Ctrl + S), Save as, and Save new version (adds one to any detected file of the same name found in the chosen folder).</li>
+<li>Settings: Opens a settings panel.</li>
 <li>Quit: Quits the program.</li>
 </ul>
 <h4 id="edit-menu">Edit Menu</h4>
 <ul>
-<li>Undo (Ctrl + Z): there are a maximum of 75 undos. Although the changelog can be saved with any filetype other than .csv the changes cannot be undone across saves.</li>
+<li>Undo (Ctrl + Z). Note that although the changelog can be saved with program data the changes cannot be undone across saves.</li>
+<li>Sort sheet gives you two options for sorting the sheet:<ul>
+<li>Sort by tree: This button sorts the sheet in the order that the IDs occur in the tree.</li>
+<li>Sort by column: Using this button and the two drop-down boxes to its right you can sort the sheet using a basic natrual sorting order, numbers taking priority.</li>
+</ul>
+</li>
 <li>Copy to clipboard copies the underlying sheet to your computers clipboard to be pasted as a string, Copy as json will use the json format you have selected under the Options menu.</li>
 <li>Tag/Untag IDs tags the selected IDs, tagged IDs will be displayed in a dropdown box at the top of the window so you can find them later.</li>
 <li>Find, replace (Ctrl + F / Ctrl + H). This window also allows a large scale find and replace using a 2 column table, column 1 is the values to find and column 2 the corresponding values to replace them with.</li>
@@ -119,16 +127,6 @@ e.g. == 100</p>
 <li>Clear all tagged IDs clears all tagged IDs and the associated drop-down boxes. This is not an Undo-able action.</li>
 </ul>
 <p>Please note that when you undo a change not related to details such as copying or deleting an ID any IDs without parents and children in any hierarchy will be placed into the FIRST hierarchy.</p>
-<h4 id="format-menu">Format Menu</h4>
-<ul>
-<li>Sort sheet gives you two options for sorting the sheet:<ul>
-<li>Sort by tree: This button sorts the sheet in the order that the IDs occur in the tree.</li>
-<li>Sort by column: Using this button and the two drop-down boxes to its right you can sort the sheet using a basic natrual sorting order, numbers taking priority.</li>
-</ul>
-</li>
-<li>Autosort treeview IDs re-sorts the order of all treeview IDs and children, this is on by default but if you disable it the order of IDs will not longer be automatically alphanumerically maintained. You can manually set your own treeview IDs order by uncheck-ing this option and then pressing right click and holding over the desired ID and then dragging it to the desired location.</li>
-<li>Date format switches the date format for the program, it will try to change formats for conditional formatting and details for all date columns.</li>
-</ul>
 <h4 id="view-menu">View Menu</h4>
 <ul>
 <li>View changelog shows an enumerated view of all changes made to the sheet, it is bound to Ctrl + L.</li>
@@ -190,17 +188,6 @@ e.g. == 100</p>
 <li>Export changes gives a view of the changelog and allows saving/exporting of changes.</li>
 <li>Export flattened sheet allows you to add all IDs flattened levels for any hierarchies to a sheet and then gives options for saving as .xlsx or .csv or copying to clipboard.</li>
 </ul>
-<h4 id="options-menu">Options Menu</h4>
-<ul>
-<li>Auto-resize row indexes allows width adjustment of the row indexes in the treeview and sheet.</li>
-<li>Auto-select sheet ID toggles auto selecting of a row in the sheet when you select it in the treeview.</li>
-<li>Allow spaces in ID names allows spaces in ID names, disabling this will not remove existing spaces from ID names. This option is saved on a per file basis with the program data.</li>
-<li>Allow spaces in column names allows spaces in column names, disabling this will not remove existing spaces from column names. This option is saved on a per file basis with the program data.</li>
-<li>XLSX save options gives options for what data is saved within .xlsx files.</li>
-<li>JSON output format gives four choices for the format of ALL json output, saving and copying to clipboard. They are explained in more detail under the JSON Help section.</li>
-<li>Set all sheet alignments sets the global cell text alignment for columns in both the treeview and sheet. These global alignments are overridden when setting specific alignments by using the right click popup menu.</li>
-<li>Theme allows you to change the general colours of the app.</li>
-</ul>
 <h2 id="tree-buttons">TREE BUTTONS</h2>
 <p>In the tree panel:</p>
 <p>Find: Clicking the find button will attempt to find either an ID or detail (depending on which you has selected in the drop-down box on the right of &quot;Find&quot;) with letters, numbers etc. you have typed into the entry box on the right of the drop-down box. The drop-down box below the Find button will display any results found within the CURRENTLY viewed hierarchy. </p>
@@ -231,13 +218,13 @@ e.g. == 100</p>
 <p>The default save format is .xlsx.</p>
 <p>When saving .xlsx files you can also save program data to keep your changelog, row heights, column widths, formatting, validation, treeview ID order and more.</p>
 <p>When loading a file saved with program data the sheet and changelog in the program data, not the visible sheet, will take precedent. This means any edits in the viewable sheet will not be loaded.</p>
-<p>To disable saving with program data go to Options -&gt; XLSX save options -&gt; Save xlsx with program data.</p>
+<p>To disable saving with program data go to File -&gt; Settings -&gt; xlsx save options -&gt; Save with app data.</p>
 <p>If choosing to save program data any sheet named &quot;program_data&quot; will be overwritten when saving a workbook.</p>
 <p>You can also save a viewable changelog sheet. Sheets with &quot;Changelog&quot; in their name will be overwritten when this option is chosen.</p>
 <p>When saving .xlsx files you can also save the flattened format of the currently viewed hierarchy any sheets with &quot;flattened&quot; in their name will be overwritten. If viewing all hierarchies when saving then the first hierarchy will be saved.</p>
 <p>When comparing or merging if the workbook contains program data then it will take precedent, else a sheet will need to be selected to load data.</p>
 <h2 id="json-files">JSON FILES</h2>
-<p>There are four loadable json formats, with each one the entire sheet is kept under the key &quot;records&quot;. However the program will also look for the keys: sheet, data and table. The first format, also the first option under &quot;Options -&gt; JSON output format&quot; is displayed as an example below:</p>
+<p>There are four loadable json formats, with each one the entire sheet is kept under the key &quot;records&quot;. However the program will also look for the keys: sheet, data and table. The first format, also the first option under &quot;File -&gt; Settings -&gt; json save options -&gt; json format&quot; is displayed as an example below:</p>
 <p>A dictionary of key (column header) and value (list of column cells)</p>
 <pre><code>{&quot;records&quot;:
     {
@@ -391,7 +378,7 @@ typical so only use it if you really need to.</p>
 </tr>
 <tr>
 <td>-r</td>
-<td>Reverse order (top-base)</td>
+<td>Reverse order (base-top)</td>
 <td>flatten</td>
 </tr>
 <tr>
