@@ -89,14 +89,14 @@ class AppGUI(tk.Tk):
         style = ttk.Style()
         style.configure("TNotebook.Tab", font=("Calibri", std_font_size, "bold"))
         style.configure("Std.TButton", font=BF, borderwidth=0)
-        style.configure("EF.Std.TButton", font=EF)
-        style.configure("EFW.Std.TButton", font=EF, anchor="w")
-        style.configure("TF.Std.TButton", font=TF)
-        style.configure("STSF.Std.TButton", font=STSF)
-        style.configure("EFB.Std.TButton", font=EFB)
-        style.configure("ERR_ASK_FNT.Std.TButton", font=ERR_ASK_FNT)
-        style.configure("x_button.Std.TButton", font=EF, anchor="e")
-        style.configure("wx_button.Std.TButton", font=EF, anchor="w")
+        style.configure("EF.Std.TButton", font=EF, borderwidth=0)
+        style.configure("EFW.Std.TButton", font=EF, anchor="w", borderwidth=0)
+        style.configure("TF.Std.TButton", font=TF, borderwidth=0)
+        style.configure("STSF.Std.TButton", font=STSF, borderwidth=0)
+        style.configure("EFB.Std.TButton", font=EFB, borderwidth=0)
+        style.configure("ERR_ASK_FNT.Std.TButton", font=ERR_ASK_FNT, borderwidth=0)
+        style.configure("x_button.Std.TButton", font=EF, anchor="e", borderwidth=0)
+        style.configure("wx_button.Std.TButton", font=EF, anchor="w", borderwidth=0)
         self.style = style
 
         self.menubar = tk.Menu(self, **menu_kwargs)
@@ -115,6 +115,8 @@ class AppGUI(tk.Tk):
         self.file.add_command(label="Save new version", state="disabled", **menu_kwargs)
         self.file.add_separator()
         self.file.add_command(label="Save as", **menu_kwargs)
+        self.file.add_separator()
+        self.file.add_command(label="Settings", state="disabled", **menu_kwargs)
         self.file.add_separator()
         self.file.add_command(label="Quit", command=self.USER_HAS_CLOSED_WINDOW, **menu_kwargs)
 
@@ -282,9 +284,9 @@ To get started once you have closed this popup, either:
     def default_configsettings(self, event=None):
         self.configsettings = {
             "Save xlsx with program data": True,
-            "Save xlsx with viewable changelog": True,
-            "Save xlsx with flattened sheet": True,
-            "Save xlsx with treeview": True,
+            "Save xlsx with viewable changelog": False,
+            "Save xlsx with flattened sheet": False,
+            "Save xlsx with treeview": False,
             "Flatten include detail columns": True,
             "Flatten justify left": True,
             "Flatten reverse order": False,
@@ -315,16 +317,16 @@ To get started once you have closed this popup, either:
 
     def get_configsettings(self):
         self.configsettings = {
-            "Save xlsx with program data": self.frames["tree_edit"].save_xlsx_with_program_data.get(),
-            "Save xlsx with viewable changelog": self.frames["tree_edit"].save_xlsx_with_changelog.get(),
-            "Save xlsx with flattened sheet": self.frames["tree_edit"].save_xlsx_with_flattened.get(),
-            "Save xlsx with treeview": self.frames["tree_edit"].save_xlsx_with_treeview.get(),
-            "Flatten include detail columns": self.frames["tree_edit"].xlsx_flattened_detail_columns.get(),
-            "Flatten justify left": self.frames["tree_edit"].xlsx_flattened_justify.get(),
-            "Flatten reverse order": self.frames["tree_edit"].xlsx_flattened_reverse_order.get(),
-            "Flatten add index": self.frames["tree_edit"].xlsx_flattened_add_index.get(),
+            "Save xlsx with program data": self.frames["tree_edit"].save_xlsx_with_program_data,
+            "Save xlsx with viewable changelog": self.frames["tree_edit"].save_xlsx_with_changelog,
+            "Save xlsx with flattened sheet": self.frames["tree_edit"].save_xlsx_with_flattened,
+            "Save xlsx with treeview": self.frames["tree_edit"].save_xlsx_with_treeview,
+            "Flatten include detail columns": self.frames["tree_edit"].xlsx_flattened_detail_columns,
+            "Flatten justify left": self.frames["tree_edit"].xlsx_flattened_justify,
+            "Flatten reverse order": self.frames["tree_edit"].xlsx_flattened_reverse_order,
+            "Flatten add index": self.frames["tree_edit"].xlsx_flattened_add_index,
             "Json output format": self.get_json_output_format(),
-            "Save json with program data": self.frames["tree_edit"].save_with_program_data.get(),
+            "Save json with program data": self.frames["tree_edit"].save_json_with_program_data,
             "First GUI start": self.configsettings["First GUI start"],
             "PC user": f"{USER_NAME}",
             "Theme": f"{self.theme}",
@@ -342,10 +344,10 @@ To get started once you have closed this popup, either:
     def get_json_output_format(self):
         for i, x in enumerate(
             (
-                self.frames["tree_edit"].json_format_one.get(),
-                self.frames["tree_edit"].json_format_two.get(),
-                self.frames["tree_edit"].json_format_three.get(),
-                self.frames["tree_edit"].json_format_four.get(),
+                self.frames["tree_edit"].json_format_one,
+                self.frames["tree_edit"].json_format_two,
+                self.frames["tree_edit"].json_format_three,
+                self.frames["tree_edit"].json_format_four,
             ),
             1,
         ):
@@ -355,39 +357,37 @@ To get started once you have closed this popup, either:
 
     def set_json_output_format(self):
         if self.configsettings["Json output format"] == 1:
-            self.frames["tree_edit"].json_format_one.set(True)
-            self.frames["tree_edit"].json_format_two.set(False)
-            self.frames["tree_edit"].json_format_three.set(False)
-            self.frames["tree_edit"].json_format_four.set(False)
+            self.frames["tree_edit"].json_format_one = True
+            self.frames["tree_edit"].json_format_two = False
+            self.frames["tree_edit"].json_format_three = False
+            self.frames["tree_edit"].json_format_four = False
         elif self.configsettings["Json output format"] == 2:
-            self.frames["tree_edit"].json_format_one.set(False)
-            self.frames["tree_edit"].json_format_two.set(True)
-            self.frames["tree_edit"].json_format_three.set(False)
-            self.frames["tree_edit"].json_format_four.set(False)
+            self.frames["tree_edit"].json_format_one = False
+            self.frames["tree_edit"].json_format_two = True
+            self.frames["tree_edit"].json_format_three = False
+            self.frames["tree_edit"].json_format_four = False
         elif self.configsettings["Json output format"] == 3:
-            self.frames["tree_edit"].json_format_one.set(False)
-            self.frames["tree_edit"].json_format_two.set(False)
-            self.frames["tree_edit"].json_format_three.set(True)
-            self.frames["tree_edit"].json_format_four.set(False)
+            self.frames["tree_edit"].json_format_one = False
+            self.frames["tree_edit"].json_format_two = False
+            self.frames["tree_edit"].json_format_three = True
+            self.frames["tree_edit"].json_format_four = False
         elif self.configsettings["Json output format"] == 4:
-            self.frames["tree_edit"].json_format_one.set(False)
-            self.frames["tree_edit"].json_format_two.set(False)
-            self.frames["tree_edit"].json_format_three.set(False)
-            self.frames["tree_edit"].json_format_four.set(True)
+            self.frames["tree_edit"].json_format_one = False
+            self.frames["tree_edit"].json_format_two = False
+            self.frames["tree_edit"].json_format_three = False
+            self.frames["tree_edit"].json_format_four = True
 
     def set_settings(self, d: None | dict = None):
         if isinstance(d, dict):
             self.configsettings = d
-        self.frames["tree_edit"].save_xlsx_with_program_data.set(self.configsettings["Save xlsx with program data"])
-        self.frames["tree_edit"].save_xlsx_with_changelog.set(self.configsettings["Save xlsx with viewable changelog"])
-        self.frames["tree_edit"].save_xlsx_with_flattened.set(self.configsettings["Save xlsx with flattened sheet"])
-        self.frames["tree_edit"].save_xlsx_with_treeview.set(self.configsettings["Save xlsx with treeview"])
-        self.frames["tree_edit"].xlsx_flattened_detail_columns.set(
-            self.configsettings["Flatten include detail columns"]
-        )
-        self.frames["tree_edit"].xlsx_flattened_justify.set(self.configsettings["Flatten justify left"])
-        self.frames["tree_edit"].xlsx_flattened_reverse_order.set(self.configsettings["Flatten reverse order"])
-        self.frames["tree_edit"].xlsx_flattened_add_index.set(self.configsettings["Flatten add index"])
+        self.frames["tree_edit"].save_xlsx_with_program_data = self.configsettings["Save xlsx with program data"]
+        self.frames["tree_edit"].save_xlsx_with_changelog = self.configsettings["Save xlsx with viewable changelog"]
+        self.frames["tree_edit"].save_xlsx_with_flattened = self.configsettings["Save xlsx with flattened sheet"]
+        self.frames["tree_edit"].save_xlsx_with_treeview = self.configsettings["Save xlsx with treeview"]
+        self.frames["tree_edit"].xlsx_flattened_detail_columns = self.configsettings["Flatten include detail columns"]
+        self.frames["tree_edit"].xlsx_flattened_justify = self.configsettings["Flatten justify left"]
+        self.frames["tree_edit"].xlsx_flattened_reverse_order = self.configsettings["Flatten reverse order"]
+        self.frames["tree_edit"].xlsx_flattened_add_index = self.configsettings["Flatten add index"]
         self.set_json_output_format()
         self.theme = self.configsettings["Theme"]
         self.frames["tree_edit"].set_display_option(self.configsettings["Editor display option"])
@@ -412,7 +412,7 @@ To get started once you have closed this popup, either:
                 self.menubar.entryconfig("Working...")
             except Exception:
                 self.menubar.add_checkbutton(label="Working...", **menu_kwargs)
-            for x in ("File", "Edit", "Format", "View", "Import", "Export", "Options", "Help"):
+            for x in ("File", "Edit", "View", "Import", "Export", "Help"):
                 try:
                     self.menubar.delete(x)
                 except Exception:
@@ -442,12 +442,6 @@ To get started once you have closed this popup, either:
                         label="Edit", menu=self.frames["tree_edit"].edit_menu, state="normal", **menu_kwargs
                     )
                 try:
-                    self.menubar.entryconfig("Format", state="normal")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Format", menu=self.frames["tree_edit"].format_menu, state="normal", **menu_kwargs
-                    )
-                try:
                     self.menubar.entryconfig("View", state="normal")
                 except Exception:
                     self.menubar.add_cascade(
@@ -464,12 +458,6 @@ To get started once you have closed this popup, either:
                 except Exception:
                     self.menubar.add_cascade(
                         label="Export", menu=self.frames["tree_edit"].export_menu, state="normal", **menu_kwargs
-                    )
-                try:
-                    self.menubar.entryconfig("Options", state="normal")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Options", menu=self.frames["tree_edit"].options_menu, state="normal", **menu_kwargs
                     )
                 try:
                     self.menubar.entryconfig("Help", state="normal")
@@ -489,12 +477,6 @@ To get started once you have closed this popup, either:
                         label="Edit", menu=self.frames["tree_edit"].edit_menu, state="disabled", **menu_kwargs
                     )
                 try:
-                    self.menubar.entryconfig("Format", state="disabled")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Format", menu=self.frames["tree_edit"].format_menu, state="disabled", **menu_kwargs
-                    )
-                try:
                     self.menubar.entryconfig("View", state="disabled")
                 except Exception:
                     self.menubar.add_cascade(
@@ -511,12 +493,6 @@ To get started once you have closed this popup, either:
                 except Exception:
                     self.menubar.add_cascade(
                         label="Export", menu=self.frames["tree_edit"].export_menu, state="disabled", **menu_kwargs
-                    )
-                try:
-                    self.menubar.entryconfig("Options", state="disabled")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Options", menu=self.frames["tree_edit"].options_menu, state="disabled", **menu_kwargs
                     )
                 try:
                     self.menubar.entryconfig("Help", state="normal")

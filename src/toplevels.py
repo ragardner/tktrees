@@ -15,6 +15,7 @@ from tkinter import filedialog, ttk
 from openpyxl import Workbook, load_workbook
 from tksheet import (
     Sheet,
+    convert_align,
     move_elements_by_mapping,
 )
 
@@ -26,10 +27,12 @@ from .constants import (
     EF,
     EFB,
     ERR_ASK_FNT,
+    TF,
     USER_NAME,
     app_title,
     changelog_header,
     ctrl_button,
+    lge_font,
     lge_font_size,
     menu_kwargs,
     rc_button,
@@ -124,7 +127,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             text="Include detail columns  ",
             style="x_button.Std.TButton",
             compound="right",
-            checked=self.C.xlsx_flattened_detail_columns.get(),
+            checked=self.C.xlsx_flattened_detail_columns,
         )
         self.include_details_button.grid(row=1, column=0, sticky="new", pady=(10, 5), padx=10)
 
@@ -133,7 +136,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             text="Justify left  ",
             style="x_button.Std.TButton",
             compound="right",
-            checked=self.C.xlsx_flattened_justify.get(),
+            checked=self.C.xlsx_flattened_justify,
         )
         self.justify_left_button.grid(row=3, column=0, sticky="new", pady=5, padx=10)
 
@@ -142,7 +145,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             text="Reverse Order  ",
             style="x_button.Std.TButton",
             compound="right",
-            checked=self.C.xlsx_flattened_reverse_order.get(),
+            checked=self.C.xlsx_flattened_reverse_order,
         )
         self.order_button.grid(row=4, column=0, sticky="new", pady=5, padx=10)
 
@@ -151,7 +154,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             text="Add index column  ",
             style="x_button.Std.TButton",
             compound="right",
-            checked=self.C.xlsx_flattened_add_index.get(),
+            checked=self.C.xlsx_flattened_add_index,
         )
         self.add_index_button.grid(row=5, column=0, sticky="new", pady=(10, 5), padx=10)
 
@@ -1695,7 +1698,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         self.start_work("Replacing...")
 
-        allow_spaces = self.C.allow_spaces_ids_var.get()
+        allow_spaces = self.C.allow_spaces_ids_var
         if allow_spaces:
             id_par_newtext = newtext
         else:
@@ -1882,7 +1885,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         newtext2 = ""
         if event == "mapping":
             failed_name_changes = set()
-        allow_spaces = self.C.allow_spaces_ids_var.get()
+        allow_spaces = self.C.allow_spaces_ids_var
         sheet_data = self.C.sheet.MT.data
 
         for r, c in self.get_cells(where=where, widget=widget):
@@ -4022,7 +4025,7 @@ class Add_Top_Id_Popup(tk.Toplevel):
         self.wait_window()
 
     def confirm(self, event=None):
-        if self.C.allow_spaces_ids_var.get():
+        if self.C.allow_spaces_ids_var:
             self.result = self.id_name_display.get_my_value()
             if self.C.tv_label_col != self.C.ic:
                 self.id_label = self.id_tv_display.get_my_value()
@@ -4103,7 +4106,7 @@ class Add_Child_Or_Sibling_Id_Popup(tk.Toplevel):
         self.wait_window()
 
     def confirm(self, event=None):
-        if self.C.allow_spaces_ids_var.get():
+        if self.C.allow_spaces_ids_var:
             self.result = self.id_name_display.get_my_value()
             if self.C.tv_label_col != self.C.ic:
                 self.id_label = self.id_tv_display.get_my_value()
@@ -4226,7 +4229,7 @@ class Rename_Column_Popup(tk.Toplevel):
         self.wait_window()
 
     def confirm(self, event=None):
-        if self.C.allow_spaces_columns_var.get():
+        if self.C.allow_spaces_columns_var:
             self.result = self.new_name_display.get_my_value()
         else:
             self.result = "".join(self.new_name_display.get_my_value().strip().split())
@@ -4267,7 +4270,7 @@ class Add_Hierarchy_Column_Popup(tk.Toplevel):
         self.wait_window()
 
     def confirm(self, event=None):
-        if self.C.allow_spaces_columns_var.get():
+        if self.C.allow_spaces_columns_var:
             self.hier_name_display.get_my_value()
         else:
             self.result = "".join(self.hier_name_display.get_my_value().strip().split())
@@ -4314,7 +4317,7 @@ class Add_Detail_Column_Popup(tk.Toplevel):
         self.wait_window()
 
     def confirm(self, event=None):
-        if self.C.allow_spaces_columns_var.get():
+        if self.C.allow_spaces_columns_var:
             self.result = self.detail_name_display.get_my_value()
         else:
             self.result = "".join(self.detail_name_display.get_my_value().strip().split())
@@ -4358,7 +4361,7 @@ class Rename_Id_Popup(tk.Toplevel):
         self.wait_window()
 
     def confirm(self, event=None):
-        if self.C.allow_spaces_ids_var.get():
+        if self.C.allow_spaces_ids_var:
             self.result = self.new_name_display.get_my_value()
         else:
             self.result = "".join(self.new_name_display.get_my_value().strip().split())
@@ -4503,104 +4506,6 @@ class Treeview_Id_Finder(tk.Toplevel):
     def confirm(self, event=None):
         self.selected = self.dd_1.displayed.get()
         self.GO = True
-        self.destroy()
-
-    def cancel(self, event=None):
-        self.destroy()
-
-
-class Sheet_Settings_Chooser(tk.Toplevel):
-    def __init__(self, C, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Sheet settings")
-        self.changed = False
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
-        self.settings_frame = Frame(self, theme=theme)
-        self.settings_frame.grid(row=0, column=0, sticky="nswe", columnspan=2, padx=20, pady=(20, 5))
-
-        self.dd_2_label = Label(self.settings_frame, "Main table align: ", BF, theme=theme)
-        self.dd_2_label.grid(row=0, column=0, sticky="nswe")
-        self.dd_2 = Ez_Dropdown(self.settings_frame, EF)
-        self.dd_2["values"] = ("Left", "Center", "Right")
-        x = self.C.tree.table_align()
-        if x == "w":
-            self.dd_2.set_my_value("Left")
-        elif x == "center":
-            self.dd_2.set_my_value("Center")
-        elif x == "e":
-            self.dd_2.set_my_value("Right")
-        self.dd_2.grid(row=0, column=1, sticky="nswe")
-
-        self.dd_3_label = Label(self.settings_frame, "Row index align: ", BF, theme=theme)
-        self.dd_3_label.grid(row=1, column=0, sticky="nswe")
-        self.dd_3 = Ez_Dropdown(self.settings_frame, EF)
-        self.dd_3["values"] = ("Left", "Center", "Right")
-        x = self.C.tree.row_index_align()
-        if x == "w":
-            self.dd_3.set_my_value("Left")
-        elif x == "center":
-            self.dd_3.set_my_value("Center")
-        elif x == "e":
-            self.dd_3.set_my_value("Right")
-        self.dd_3.grid(row=1, column=1, sticky="nswe")
-
-        self.dd_4_label = Label(self.settings_frame, "Headers align: ", BF, theme=theme)
-        self.dd_4_label.grid(row=2, column=0, sticky="nswe")
-        self.dd_4 = Ez_Dropdown(self.settings_frame, EF)
-        self.dd_4["values"] = ("Left", "Center", "Right")
-        x = self.C.tree.header_align()
-        if x == "w":
-            self.dd_4.set_my_value("Left")
-        elif x == "center":
-            self.dd_4.set_my_value("Center")
-        elif x == "e":
-            self.dd_4.set_my_value("Right")
-        self.dd_4.grid(row=2, column=1, sticky="nswe")
-
-        self.confirm_button = Button(self, text="Confirm", style="EF.Std.TButton", command=self.confirm)
-        self.confirm_button.grid(row=1, column=0, sticky="nswe", padx=20, pady=(15, 20))
-        self.cancel_button = Button(self, text="Cancel", style="EF.Std.TButton", command=self.cancel)
-        self.cancel_button.grid(row=1, column=1, sticky="nswe", padx=20, pady=(15, 20))
-        self.bind("<Escape>", self.cancel)
-        center(self, 500, 165)
-        self.deiconify()
-        self.wait_window()
-
-    def confirm(self, event=None):
-        self.C.sheet.align_cells("all", redraw=False)
-        self.C.sheet.align_rows("all", redraw=False)
-        self.C.sheet.align_columns("all", redraw=False)
-        x = self.dd_2.displayed.get()
-        if x == "Left":
-            align = "w"
-        elif x == "Center":
-            align = "center"
-        elif x == "Right":
-            align = "e"
-        self.C.tree.table_align(align, redraw=False)
-        self.C.sheet.table_align(align, redraw=False)
-
-        x = self.dd_3.displayed.get()
-        if x == "Left":
-            align = "w"
-        elif x == "Center":
-            align = "center"
-        elif x == "Right":
-            align = "e"
-        self.C.sheet.row_index_align(align, redraw=False)
-
-        x = self.dd_4.displayed.get()
-        if x == "Left":
-            align = "w"
-        elif x == "Center":
-            align = "center"
-        elif x == "Right":
-            align = "e"
-        self.C.tree.header_align(align, redraw=False)
-        self.C.sheet.header_align(align, redraw=False)
-        self.changed = True
-        self.C.redraw_sheets()
         self.destroy()
 
     def cancel(self, event=None):
@@ -4898,73 +4803,486 @@ class License_Popup(tk.Toplevel):
 
     def disagree(self, event=None):
         self.destroy()
-        
-        
+
+
 class Settings_Popup(tk.Toplevel):
     def __init__(self, C, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Settings")
         self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
-        
+
         self.general = Frame(self, theme=theme)
-        self.general.grid(row=0, column=1, sticky="nswe")
-        
-        
+        self.general.grid(row=0, column=1, pady=20, padx=20, sticky="nswe")
+
+        self.general_header = Label(self.general, text="General Settings", font=TF, theme=theme, anchor="nw")
+        self.general_header.pack(side="top", anchor="nw", fill="x", pady=(0, 20))
+
+        self.auto_resize_indexes_button = X_Checkbutton(
+            self.general,
+            text="Auto-resize row indexes ",
+            style="x_button.Std.TButton",
+            command=self.toggle_auto_resize_indexes,
+            checked=self.C.auto_resize_indexes,
+            compound="right",
+        )
+        self.auto_resize_indexes_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.auto_select_id_button = X_Checkbutton(
+            self.general,
+            text="Auto-select sheet ID ",
+            style="x_button.Std.TButton",
+            command=self.toggle_auto_select,
+            checked=self.C.mirror_var,
+            compound="right",
+        )
+        self.auto_select_id_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.allow_spaces_ids_button = X_Checkbutton(
+            self.general,
+            text="Allow spaces in ID names ",
+            style="x_button.Std.TButton",
+            command=self.toggle_allow_spaces_ids,
+            checked=self.C.allow_spaces_ids_var,
+            compound="right",
+        )
+        self.allow_spaces_ids_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.allow_spaces_columns_button = X_Checkbutton(
+            self.general,
+            text="Allow spaces in column names ",
+            style="x_button.Std.TButton",
+            command=self.toggle_allow_spaces_columns,
+            checked=self.C.allow_spaces_columns_var,
+            compound="right",
+        )
+        self.allow_spaces_columns_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.auto_sort_tree_button = X_Checkbutton(
+            self.general,
+            text="Auto-sort tree IDs ",
+            style="x_button.Std.TButton",
+            command=self.toggle_auto_sort_tree_button,
+            checked=self.C.auto_sort_nodes_bool,
+            compound="right",
+        )
+        self.auto_sort_tree_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
         self.xlsx = Frame(self, theme=theme)
-        self.xlsx.grid(row=0, column=1, sticky="nswe")
+        self.xlsx.grid(row=0, column=1, pady=20, padx=20, sticky="nswe")
+
+        self.xlsx_header = Label(self.xlsx, text="xlsx Save Settings", font=TF, theme=theme, anchor="nw")
+        self.xlsx_header.pack(side="top", anchor="nw", fill="x", pady=(0, 20))
+
+        self.xlsx_app_data_button = X_Checkbutton(
+            self.xlsx,
+            text="Save with app data ",
+            style="x_button.Std.TButton",
+            command=self.toggle_xlsx_app_data,
+            checked=self.C.save_xlsx_with_program_data,
+            compound="right",
+        )
+        self.xlsx_app_data_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.xlsx_changelog_button = X_Checkbutton(
+            self.xlsx,
+            text="Save with changelog ",
+            style="x_button.Std.TButton",
+            command=self.toggle_xlsx_changelog,
+            checked=self.C.save_xlsx_with_changelog,
+            compound="right",
+        )
+        self.xlsx_changelog_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.xlsx_treeview_button = X_Checkbutton(
+            self.xlsx,
+            text="Save with tree ",
+            style="x_button.Std.TButton",
+            command=self.toggle_xlsx_treeview,
+            checked=self.C.save_xlsx_with_treeview,
+            compound="right",
+        )
+        self.xlsx_treeview_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.xlsx_flattened_button = X_Checkbutton(
+            self.xlsx,
+            text="Save with flattened sheet ",
+            style="x_button.Std.TButton",
+            command=self.toggle_xlsx_flattened,
+            checked=self.C.save_xlsx_with_flattened,
+            compound="right",
+        )
+        self.xlsx_flattened_button.pack(side="top", anchor="nw", fill="x", pady=10)
+        
+        self.flattened_divider = Frame(self.xlsx)
+        self.flattened_divider.config(bg=themes[theme].table_fg, height=4)
+        self.flattened_divider.pack(side="top", anchor="nw", fill="x", pady=(20, 0))
+
+        self.flattened_header = Label(
+            self.xlsx,
+            text="xlsx Flatten Settings",
+            font=TF,
+            theme=theme,
+            anchor="nw",
+        )
+        self.flattened_header.pack(side="top", anchor="nw", fill="x", pady=20)
+
+        self.xlsx_flattened_details_button = X_Checkbutton(
+            self.xlsx,
+            text="Include detail columns ",
+            style="x_button.Std.TButton",
+            command=self.toggle_xlsx_flattened_details,
+            checked=self.C.xlsx_flattened_detail_columns,
+            compound="right",
+        )
+        self.xlsx_flattened_details_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.xlsx_flattened_justify_button = X_Checkbutton(
+            self.xlsx,
+            text="Justify cells left ",
+            style="x_button.Std.TButton",
+            command=self.toggle_xlsx_flattened_justify,
+            checked=self.C.xlsx_flattened_justify,
+            compound="right",
+        )
+        self.xlsx_flattened_justify_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.xlsx_flattened_reverse_button = X_Checkbutton(
+            self.xlsx,
+            text="Reverse order ",
+            style="x_button.Std.TButton",
+            command=self.toggle_xlsx_flattened_reverse,
+            checked=self.C.xlsx_flattened_reverse_order,
+            compound="right",
+        )
+        self.xlsx_flattened_reverse_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.xlsx_flattened_index_button = X_Checkbutton(
+            self.xlsx,
+            text="Add index column ",
+            style="x_button.Std.TButton",
+            command=self.toggle_xlsx_flattened_index,
+            checked=self.C.xlsx_flattened_add_index,
+            compound="right",
+        )
+        self.xlsx_flattened_index_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
         self.json = Frame(self, theme=theme)
-        self.json.grid(row=0, column=1, sticky="nswe")
+        self.json.grid(row=0, column=1, pady=20, padx=20, sticky="nswe")
+
+        self.json_header = Label(self.json, text="json Save Settings", font=TF, theme=theme, anchor="nw")
+        self.json_header.pack(side="top", anchor="nw", fill="x", pady=(0, 20))
+
+        self.json_app_data_button = X_Checkbutton(
+            self.json,
+            text="Save with app data ",
+            style="x_button.Std.TButton",
+            command=self.toggle_json_app_data,
+            checked=self.C.save_json_with_program_data,
+            compound="right",
+        )
+        self.json_app_data_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.json_format_label = Label(self.json, text="json Format: ", font=EF, theme=theme, anchor="nw")
+        self.json_format_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.json_format_dropdown = Ez_Dropdown(self.json, font=EF)
+        self.json_format_dropdown["values"] = [
+            """1) {"Header": [Column], ...}""",
+            """2) [{"Header": value,..}, ...]""",
+            """3) [["Header", "Header"], ["id1", "par1"]]""",
+            """4) 'tab delimited csv'""",
+        ]
+        if self.C.json_format_one:
+            self.json_format_dropdown.set_my_value("""1) {"Header": [Column], ...}""")
+
+        elif self.C.json_format_two:
+            self.json_format_dropdown.set_my_value("""2) [{"Header": value,..}, ...]""")
+
+        elif self.C.json_format_three:
+            self.json_format_dropdown.set_my_value("""3) [["Header", "Header"], ["id1", "par1"]]""")
+
+        elif self.C.json_format_four:
+            self.json_format_dropdown.set_my_value("""4) 'tab delimited csv'""")
+
+        self.json_format_dropdown.bind("<<ComboboxSelected>>", self.set_json_format)
+        self.json_format_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
+
         self.appearance = Frame(self, theme=theme)
-        self.appearance.grid(row=0, column=1, sticky="nswe")
-        
+        self.appearance.grid(row=0, column=1, pady=20, padx=20, sticky="nswe")
+
+        self.appearance_header = Label(
+            self.appearance,
+            text="Appearance Settings",
+            font=TF,
+            theme=theme,
+            anchor="nw",
+        )
+        self.appearance_header.pack(side="top", anchor="nw", fill="x", pady=(0, 20))
+
+        self.theme_label = Label(self.appearance, text="Theme:", font=EF, theme=theme, anchor="nw")
+        self.theme_label.pack(side="top", anchor="nw", fill="x")
+
+        self.theme_dropdown = Ez_Dropdown(self.appearance, font=EF)
+        self.theme_dropdown["values"] = [
+            "Light Green",
+            "Light Blue",
+            "Dark",
+            "Dark Blue",
+            "Black",
+        ]
+        if self.C.light_green_theme_bool:
+            self.theme_dropdown.set_my_value("Light Green")
+
+        elif self.C.light_blue_theme_bool:
+            self.theme_dropdown.set_my_value("Light Blue")
+
+        elif self.C.dark_theme_bool:
+            self.theme_dropdown.set_my_value("Dark")
+
+        elif self.C.dark_blue_theme_bool:
+            self.theme_dropdown.set_my_value("Dark Blue")
+
+        elif self.C.black_theme_bool:
+            self.theme_dropdown.set_my_value("Black")
+
+        self.theme_dropdown.bind("<<ComboboxSelected>>", self.set_theme)
+        self.theme_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
+
+        self.alignments_label = Label(
+            self.appearance,
+            text="Cell alignments",
+            font=lge_font,
+            theme=theme,
+            anchor="nw",
+        )
+        self.alignments_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.table_alignment_label = Label(
+            self.appearance,
+            text="Main table default cell alignment:",
+            font=EF,
+            theme=theme,
+            anchor="nw",
+        )
+        self.table_alignment_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.table_alignment_dropdown = Ez_Dropdown(self.appearance, font=EF)
+        self.table_alignment_dropdown.bind("<<ComboboxSelected>>", self.set_table_alignment)
+        self.table_alignment_dropdown["values"] = ("Left", "Center", "Right")
+        x = self.C.tree.table_align()
+        if x == "w":
+            self.table_alignment_dropdown.set_my_value("Left")
+        elif x == "center":
+            self.table_alignment_dropdown.set_my_value("Center")
+        elif x == "e":
+            self.table_alignment_dropdown.set_my_value("Right")
+        self.table_alignment_dropdown.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.index_alignment_label = Label(
+            self.appearance,
+            "Row index align:",
+            font=BF,
+            anchor="nw",
+            theme=theme,
+        )
+        self.index_alignment_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.index_alignment_dropdown = Ez_Dropdown(self.appearance, font=EF)
+        self.index_alignment_dropdown.bind("<<ComboboxSelected>>", self.set_index_alignment)
+        self.index_alignment_dropdown["values"] = ("Left", "Center", "Right")
+        x = self.C.sheet.row_index_align()
+        if x == "w":
+            self.index_alignment_dropdown.set_my_value("Left")
+        elif x == "center":
+            self.index_alignment_dropdown.set_my_value("Center")
+        elif x == "e":
+            self.index_alignment_dropdown.set_my_value("Right")
+        self.index_alignment_dropdown.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.header_alignment_label = Label(
+            self.appearance,
+            "Headers align:",
+            font=BF,
+            anchor="nw",
+            theme=theme,
+        )
+        self.header_alignment_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.header_alignment_dropdown = Ez_Dropdown(self.appearance, font=EF)
+        self.header_alignment_dropdown.bind("<<ComboboxSelected>>", self.set_header_alignment)
+        self.header_alignment_dropdown["values"] = ("Left", "Center", "Right")
+        x = self.C.tree.header_align()
+        if x == "w":
+            self.header_alignment_dropdown.set_my_value("Left")
+        elif x == "center":
+            self.header_alignment_dropdown.set_my_value("Center")
+        elif x == "e":
+            self.header_alignment_dropdown.set_my_value("Right")
+        self.header_alignment_dropdown.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
         self.page_chooser_frame = Frame(self, theme=theme)
-        self.page_chooser_frame.grid(row=0, column=0, padx=20, pady=10, sticky="nswe")
-        
+        self.page_chooser_frame.config(bg=themes[theme].table_bg)
+        self.page_chooser_frame.grid(row=0, column=0, sticky="nswe")
+
         self.general_button = Button(
             self.page_chooser_frame,
             text="General",
             style="EF.Std.TButton",
             command=self.goto_general,
         )
-        self.general_button.pack(side="top", pady=10, fill="x")
-        
+        self.general_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
+
         self.xlsx_button = Button(
             self.page_chooser_frame,
-            text="General",
+            text="xlsx Save Options",
             style="EF.Std.TButton",
             command=self.goto_xlsx,
         )
-        self.xlsx_button.pack(side="top", pady=10, fill="x")
-        
+        self.xlsx_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
+
         self.json_button = Button(
             self.page_chooser_frame,
-            text="General",
+            text="json Save Options",
             style="EF.Std.TButton",
             command=self.goto_json,
         )
-        self.json_button.pack(side="top", pady=10, fill="x")
-        
+        self.json_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
+
         self.appearance_button = Button(
             self.page_chooser_frame,
             text="Appearance",
             style="EF.Std.TButton",
             command=self.goto_appearance,
         )
-        self.appearance_button.pack(side="top", pady=10, fill="x")
-        
+        self.appearance_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
+
+        self.general.tkraise()
+        self.bind("<Escape>", self.cancel)
+        center(self, 650, 650)
+        self.deiconify()
+        self.wait_window()
+
+    def toggle_auto_resize_indexes(self):
+        self.C.toggle_auto_resize_index(self.auto_resize_indexes_button.get_checked())
+
+    def toggle_auto_select(self):
+        self.C.toggle_mirror(self.auto_select_id_button.get_checked())
+
+    def toggle_allow_spaces_ids(self):
+        self.C.allow_spaces_ids_var = self.allow_spaces_ids_button.get_checked()
+
+    def toggle_allow_spaces_columns(self):
+        self.C.allow_spaces_columns_var = self.allow_spaces_columns_button.get_checked()
+
+    def toggle_auto_sort_tree_button(self):
+        self.C.toggle_sort_all_nodes(self.auto_sort_tree_button.get_checked())
+
+    def toggle_xlsx_app_data(self):
+        self.C.save_xlsx_with_program_data = self.xlsx_app_data_button.get_checked()
+        self.C.C.save_cfg()
+
+    def toggle_xlsx_changelog(self):
+        self.C.save_xlsx_with_changelog = self.xlsx_changelog_button.get_checked()
+        self.C.C.save_cfg()
+
+    def toggle_xlsx_treeview(self):
+        self.C.save_xlsx_with_treeview = self.xlsx_treeview_button.get_checked()
+        self.C.C.save_cfg()
+
+    def toggle_xlsx_flattened(self):
+        self.C.save_xlsx_with_flattened = self.xlsx_flattened_button.get_checked()
+        self.C.C.save_cfg()
+
+    def toggle_xlsx_flattened_details(self):
+        self.C.xlsx_flattened_detail_columns = self.xlsx_flattened_details_button.get_checked()
+        self.C.C.save_cfg()
+
+    def toggle_xlsx_flattened_justify(self):
+        self.C.xlsx_flattened_justify = self.xlsx_flattened_justify_button.get_checked()
+        self.C.C.save_cfg()
+
+    def toggle_xlsx_flattened_reverse(self):
+        self.C.xlsx_flattened_reverse_order = self.xlsx_flattened_reverse_button.get_checked()
+        self.C.C.save_cfg()
+
+    def toggle_xlsx_flattened_index(self):
+        self.C.xlsx_flattened_add_index = self.xlsx_flattened_index_button.get_checked()
+        self.C.C.save_cfg()
+
+    def toggle_json_app_data(self):
+        self.C.save_json_with_program_data = self.json_app_data_button.get_checked()
+        self.C.C.save_cfg()
+
+    def set_json_format(self, event=None):
+        fmt = self.json_format_dropdown.get_my_value()
+        if fmt.startswith("1"):
+            self.C.change_json_format_one()
+
+        elif fmt.startswith("2"):
+            self.C.change_json_format_two()
+
+        elif fmt.startswith("3"):
+            self.C.change_json_format_three()
+
+        elif fmt.startswith("4"):
+            self.C.change_json_format_four()
+
+        self.C.C.save_cfg()
+
+    def set_theme(self, event=None):
+        theme = self.theme_dropdown.get_my_value().lower().replace(" ", "_")
+        self.page_chooser_frame.config(bg=themes[theme].table_bg)
+        self.config(bg=themes[theme].top_left_bg)
+        self.general.config(bg=themes[theme].top_left_bg)
+        self.xlsx.config(bg=themes[theme].top_left_bg)
+        self.json.config(bg=themes[theme].top_left_bg)
+        self.appearance.config(bg=themes[theme].top_left_bg)
+        self.general_header.change_theme(theme)
+        self.xlsx_header.change_theme(theme)
+        self.json_header.change_theme(theme)
+        self.appearance_header.change_theme(theme)
+        self.json_format_label.change_theme(theme)
+        self.theme_label.change_theme(theme)
+        self.flattened_header.change_theme(theme)
+        self.flattened_divider.config(bg=themes[theme].table_fg)
+        self.alignments_label.change_theme(theme)
+        self.table_alignment_label.change_theme(theme)
+        self.index_alignment_label.change_theme(theme)
+        self.header_alignment_label.change_theme(theme)
+        self.C.change_theme(theme)
+
+    def set_table_alignment(self, event=None):
+        align = convert_align(self.table_alignment_dropdown.get_my_value())
+        self.C.tree.table_align(align, redraw=False)
+        self.C.sheet.table_align(align, redraw=False)
+        self.C.redraw_sheets()
+
+    def set_index_alignment(self, event=None):
+        align = convert_align(self.index_alignment_dropdown.get_my_value())
+        # self.C.tree.index_align(align, redraw=False)
+        self.C.sheet.index_align(align, redraw=False)
+        self.C.redraw_sheets()
+
+    def set_header_alignment(self, event=None):
+        align = convert_align(self.header_alignment_dropdown.get_my_value())
+        self.C.tree.header_align(align, redraw=False)
+        self.C.sheet.header_align(align, redraw=False)
+        self.C.redraw_sheets()
+
     def goto_general(self):
-        self.tkraise(self.general)
-        
+        self.general.tkraise()
+
     def goto_xlsx(self):
-        self.tkraise(self.xlsx)
-        
+        self.xlsx.tkraise()
+
     def goto_json(self):
-        self.tkraise(self.json)
-        
+        self.json.tkraise()
+
     def goto_appearance(self):
-        self.tkraise(self.appearance)
-        
+        self.appearance.tkraise()
+
+    def cancel(self, event=None):
+        self.destroy()
 
 
 class Help_Popup(tk.Toplevel):

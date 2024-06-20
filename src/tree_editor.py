@@ -116,7 +116,7 @@ from .toplevels import (
     Save_New_Version_Error_Popup,
     Save_New_Version_Postsave_Popup,
     Save_New_Version_Presave_Popup,
-    Sheet_Settings_Chooser,
+    Settings_Popup,
     Sort_Sheet_Popup,
     Text_Popup,
     Treeview_Id_Finder,
@@ -170,6 +170,29 @@ class Tree_Editor(tk.Frame):
         self.date_split_regex = "|".join(map(re.escape, ("/", "-")))
         self.find_popup = None
 
+        self.auto_resize_indexes = True
+        self.mirror_var = False
+        self.allow_spaces_ids_var = False
+        self.allow_spaces_columns_var = False
+        self.save_xlsx_with_program_data = bool(save_xlsx_and_json_with_program_data)
+        self.save_json_with_program_data = bool(save_xlsx_and_json_with_program_data)
+        self.save_xlsx_with_changelog = False
+        self.save_xlsx_with_treeview = False
+        self.save_xlsx_with_flattened = False
+        self.xlsx_flattened_detail_columns = True
+        self.xlsx_flattened_justify = True
+        self.xlsx_flattened_reverse_order = False
+        self.xlsx_flattened_add_index = False
+        self.json_format_one = True
+        self.json_format_two = False
+        self.json_format_three = False
+        self.json_format_four = False
+        self.black_theme_bool = True if self.C.theme == "black" else False
+        self.dark_blue_theme_bool = True if self.C.theme == "dark_blue" else False
+        self.dark_theme_bool = True if self.C.theme == "dark" else False
+        self.light_green_theme_bool = True if self.C.theme == "light_green" else False
+        self.light_blue_theme_bool = True if self.C.theme == "light_blue" else False
+
         if override_locale is not None:
             self.user_locale = f"{override_locale}"
         else:
@@ -199,6 +222,7 @@ class Tree_Editor(tk.Frame):
             command=self.save_as,
         )
         self.C.file.entryconfig("Save new version", command=self.save_new_vrsn)
+        self.C.file.entryconfig("Settings", command=self.settings)
 
         self.edit_menu = tk.Menu(self.C.menubar, tearoff=0, **menu_kwargs)
         self.C.menubar.add_cascade(
@@ -229,6 +253,11 @@ class Tree_Editor(tk.Frame):
         self.copy_clipboard_menu.add_command(
             label="Copy sheet to clipboard as json",
             command=self.clipboard_sheet_json,
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Sort sheet",
+            command=self.sort_sheet_choice,
             **menu_kwargs,
         )
         self.edit_menu.add_cascade(
@@ -273,28 +302,8 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
 
-        # format menu
-        self.format_menu = tk.Menu(self.C.menubar, tearoff=0, **menu_kwargs)
-        self.C.menubar.add_cascade(
-            label="Format",
-            menu=self.format_menu,
-            state="disabled",
-            **menu_kwargs,
-        )
-        self.format_menu.add_command(
-            label="Sort sheet",
-            command=self.sort_sheet_choice,
-            **menu_kwargs,
-        )
-        self.format_menu.add_separator()
-        self.auto_sort_nodes_bool = tk.BooleanVar()
-        self.auto_sort_nodes_bool.set(True)
-        self.format_menu.add_checkbutton(
-            label="Auto-sort treeview IDs",
-            variable=self.auto_sort_nodes_bool,
-            command=self.toggle_sort_all_nodes,
-            **menu_kwargs,
-        )
+        self.auto_sort_nodes_bool = True
+
         self.tv_lvls_bool = tk.BooleanVar()
         self.tv_lvls_bool.set(False)
         # self.format_menu.add_checkbutton(
@@ -303,13 +312,13 @@ class Tree_Editor(tk.Frame):
         #     command=self.show_tv_lvls,
         #     **menu_kwargs,
         # )
-        self.date_format_menu = tk.Menu(self.format_menu, tearoff=0, **menu_kwargs)
-        self.format_menu.add_separator()
-        self.format_menu.add_cascade(
-            label="Date format",
-            menu=self.date_format_menu,
-            **menu_kwargs,
-        )
+        # self.date_format_menu = tk.Menu(self.format_menu, tearoff=0, **menu_kwargs)
+        # self.format_menu.add_separator()
+        # self.format_menu.add_cascade(
+        #     label="Date format",
+        #     menu=self.date_format_menu,
+        #     **menu_kwargs,
+        # )
 
         self.Y_M_D_bool = tk.BooleanVar()
         self.Y_M_D_bool.set(False)
@@ -334,32 +343,32 @@ class Tree_Editor(tk.Frame):
         elif "-" in self.DATE_FORM:
             self.date_hyphen_separator_bool.set(True)
 
-        self.date_format_menu.add_checkbutton(
-            label="DD/MM/YYYY, DD-MM-YYYY",
-            variable=self.D_M_Y_bool,
-            command=self.change_date_format_D_M_Y,
-        )
-        self.date_format_menu.add_checkbutton(
-            label="MM/DD/YYYY, MM-DD-YYYY",
-            variable=self.M_D_Y_bool,
-            command=self.change_date_format_M_D_Y,
-        )
-        self.date_format_menu.add_checkbutton(
-            label="YYYY/MM/DD, YYYY-MM-DD",
-            variable=self.Y_M_D_bool,
-            command=self.change_date_format_Y_M_D,
-        )
-        self.date_format_menu.add_separator()
-        self.date_format_menu.add_checkbutton(
-            label="Date hyphen separator -",
-            variable=self.date_hyphen_separator_bool,
-            command=self.change_date_format_hyphen,
-        )
-        self.date_format_menu.add_checkbutton(
-            label="Date forward slash separator /",
-            variable=self.date_slash_separator_bool,
-            command=self.change_date_format_slash,
-        )
+        # self.date_format_menu.add_checkbutton(
+        #     label="DD/MM/YYYY, DD-MM-YYYY",
+        #     variable=self.D_M_Y_bool,
+        #     command=self.change_date_format_D_M_Y,
+        # )
+        # self.date_format_menu.add_checkbutton(
+        #     label="MM/DD/YYYY, MM-DD-YYYY",
+        #     variable=self.M_D_Y_bool,
+        #     command=self.change_date_format_M_D_Y,
+        # )
+        # self.date_format_menu.add_checkbutton(
+        #     label="YYYY/MM/DD, YYYY-MM-DD",
+        #     variable=self.Y_M_D_bool,
+        #     command=self.change_date_format_Y_M_D,
+        # )
+        # self.date_format_menu.add_separator()
+        # self.date_format_menu.add_checkbutton(
+        #     label="Date hyphen separator -",
+        #     variable=self.date_hyphen_separator_bool,
+        #     command=self.change_date_format_hyphen,
+        # )
+        # self.date_format_menu.add_checkbutton(
+        #     label="Date forward slash separator /",
+        #     variable=self.date_slash_separator_bool,
+        #     command=self.change_date_format_slash,
+        # )
 
         # view menu
         self.view_menu = tk.Menu(self.C.menubar, tearoff=0, **menu_kwargs)
@@ -523,242 +532,6 @@ class Tree_Editor(tk.Frame):
             command=self.export_flattened,
             **menu_kwargs,
         )
-
-        # options menu
-        self.options_menu = tk.Menu(self.C.menubar, tearoff=0, **menu_kwargs)
-        self.C.menubar.add_cascade(
-            label="Options",
-            menu=self.options_menu,
-            state="disabled",
-            **menu_kwargs,
-        )
-        self.auto_resize_indexes = tk.BooleanVar()
-        self.auto_resize_indexes.set(True)
-        self.options_menu.add_checkbutton(
-            label="Auto-resize row indexes",
-            variable=self.auto_resize_indexes,
-            command=self.toggle_auto_resize_index,
-            **menu_kwargs,
-        )
-        self.mirror_var = tk.BooleanVar()
-        self.mirror_var.set(False)
-        self.options_menu.add_checkbutton(
-            label="Auto-select sheet ID",
-            variable=self.mirror_var,
-            command=self.toggle_mirror,
-            **menu_kwargs,
-        )
-        self.options_menu.add_separator()
-        self.allow_spaces_ids_var = tk.BooleanVar()
-        self.allow_spaces_ids_var.set(False)
-        self.options_menu.add_checkbutton(
-            label="Allow spaces in ID names",
-            variable=self.allow_spaces_ids_var,
-            **menu_kwargs,
-        )
-        self.allow_spaces_columns_var = tk.BooleanVar()
-        self.allow_spaces_columns_var.set(False)
-        self.options_menu.add_checkbutton(
-            label="Allow spaces in column names",
-            variable=self.allow_spaces_columns_var,
-            **menu_kwargs,
-        )
-        self.options_menu.add_separator()
-        self.xlsx_save_options_menu = tk.Menu(self.options_menu, tearoff=0, **menu_kwargs)
-        self.save_xlsx_with_program_data = tk.BooleanVar()
-        self.save_xlsx_with_program_data.set(True)
-        self.xlsx_save_options_menu.add_checkbutton(
-            label="Save xlsx with program data",
-            variable=self.save_xlsx_with_program_data,
-            state="normal",
-            command=self.C.save_cfg,
-            **menu_kwargs,
-        )
-        self.save_xlsx_with_changelog = tk.BooleanVar()
-        self.save_xlsx_with_changelog.set(True)
-        self.xlsx_save_options_menu.add_checkbutton(
-            label="Save xlsx with viewable changelog",
-            variable=self.save_xlsx_with_changelog,
-            state="normal",
-            command=self.C.save_cfg,
-            **menu_kwargs,
-        )
-        self.save_xlsx_with_treeview = tk.BooleanVar()
-        self.save_xlsx_with_treeview.set(True)
-        self.xlsx_save_options_menu.add_checkbutton(
-            label="Save xlsx with treeview",
-            variable=self.save_xlsx_with_treeview,
-            state="normal",
-            command=self.C.save_cfg,
-            **menu_kwargs,
-        )
-        self.save_xlsx_with_flattened = tk.BooleanVar()
-        self.save_xlsx_with_flattened.set(True)
-        self.xlsx_save_options_menu.add_checkbutton(
-            label="Save xlsx with flattened sheet",
-            variable=self.save_xlsx_with_flattened,
-            state="normal",
-            command=self.C.save_cfg,
-            **menu_kwargs,
-        )
-        self.xlsx_flattened_menu = tk.Menu(self.xlsx_save_options_menu, tearoff=0, **menu_kwargs)
-        self.xlsx_save_options_menu.add_cascade(
-            label="Flattened sheet xlsx options",
-            menu=self.xlsx_flattened_menu,
-            state="normal",
-            command=self.C.save_cfg,
-            **menu_kwargs,
-        )
-        # self.xlsx_flattened_all_hiers = tk.BooleanVar()
-        # self.xlsx_flattened_all_hiers.set(False)
-        # self.xlsx_flattened_menu.add_checkbutton(label="All hierarchies, separate sheets",
-        # variable=self.xlsx_flattened_all_hiers,
-        # state="normal",**menu_kwargs)
-        self.xlsx_flattened_detail_columns = tk.BooleanVar()
-        self.xlsx_flattened_detail_columns.set(True)
-        self.xlsx_flattened_menu.add_checkbutton(
-            label="Include detail columns",
-            variable=self.xlsx_flattened_detail_columns,
-            state="normal",
-            command=self.C.save_cfg,
-            **menu_kwargs,
-        )
-        self.xlsx_flattened_justify = tk.BooleanVar()
-        self.xlsx_flattened_justify.set(True)
-        self.xlsx_flattened_menu.add_checkbutton(
-            label="Justify left",
-            variable=self.xlsx_flattened_justify,
-            state="normal",
-            command=self.C.save_cfg,
-            **menu_kwargs,
-        )
-        self.xlsx_flattened_reverse_order = tk.BooleanVar()
-        self.xlsx_flattened_reverse_order.set(False)
-        self.xlsx_flattened_menu.add_checkbutton(
-            label="Reverse order",
-            variable=self.xlsx_flattened_reverse_order,
-            state="normal",
-            command=self.C.save_cfg,
-            **menu_kwargs,
-        )
-        self.xlsx_flattened_add_index = tk.BooleanVar()
-        self.xlsx_flattened_add_index.set(False)
-        self.xlsx_flattened_menu.add_checkbutton(
-            label="Add index",
-            variable=self.xlsx_flattened_add_index,
-            state="normal",
-            command=self.C.save_cfg,
-            **menu_kwargs,
-        )
-        self.options_menu.add_cascade(
-            label="XLSX save options",
-            menu=self.xlsx_save_options_menu,
-            state="normal",
-            **menu_kwargs,
-        )
-        self.json_menu = tk.Menu(self.options_menu, tearoff=0, **menu_kwargs)
-        self.json_format_one = tk.BooleanVar()
-        self.json_format_one.set(True)
-        self.json_menu.add_checkbutton(
-            label=""" 1) {"Header": [Column], "Header": [Column]}""",
-            variable=self.json_format_one,
-            command=self.change_json_format_one,
-            state="normal",
-            **menu_kwargs,
-        )
-        self.json_format_two = tk.BooleanVar()
-        self.json_format_two.set(False)
-        self.json_menu.add_checkbutton(
-            label=""" 2) [{"Header": value,..}, {"Header": val..}]""",
-            variable=self.json_format_two,
-            command=self.change_json_format_two,
-            state="normal",
-            **menu_kwargs,
-        )
-        self.json_format_three = tk.BooleanVar()
-        self.json_format_three.set(False)
-        self.json_menu.add_checkbutton(
-            label=""" 3) [["Header", "Header"], ["id1", "par1"]]""",
-            variable=self.json_format_three,
-            command=self.change_json_format_three,
-            state="normal",
-            **menu_kwargs,
-        )
-        self.json_format_four = tk.BooleanVar()
-        self.json_format_four.set(False)
-        self.json_menu.add_checkbutton(
-            label=""" 4) : 'tab delimited csv stored as string'""",
-            variable=self.json_format_four,
-            command=self.change_json_format_four,
-            state="normal",
-            **menu_kwargs,
-        )
-        self.options_menu.add_cascade(
-            label="JSON output format",
-            menu=self.json_menu,
-            state="normal",
-            **menu_kwargs,
-        )
-        self.save_with_program_data = tk.BooleanVar()
-        self.save_with_program_data.set(save_xlsx_and_json_with_program_data)
-        self.json_menu.add_separator()
-        self.json_menu.add_checkbutton(
-            label="Save json with program data",
-            variable=self.save_with_program_data,
-            state=user_option_save_with_program_data,
-            **menu_kwargs,
-        )
-        self.options_menu.add_separator()
-        self.options_menu.add_command(
-            label="Set all sheet alignments",
-            command=self.change_sheet_settings,
-            **menu_kwargs,
-        )
-
-        # theme menu
-        self.black_theme_bool = tk.BooleanVar()
-        self.black_theme_bool.set(True if self.C.theme == "black" else False)
-        self.dark_blue_theme_bool = tk.BooleanVar()
-        self.dark_blue_theme_bool.set(True if self.C.theme == "dark_blue" else False)
-        self.dark_theme_bool = tk.BooleanVar()
-        self.dark_theme_bool.set(True if self.C.theme == "dark" else False)
-        self.light_green_theme_bool = tk.BooleanVar()
-        self.light_green_theme_bool.set(True if self.C.theme == "light_green" else False)
-        self.light_blue_theme_bool = tk.BooleanVar()
-        self.light_blue_theme_bool.set(True if self.C.theme == "light_blue" else False)
-        self.theme_menu = tk.Menu(self.C.menubar, tearoff=0, **menu_kwargs)
-
-        self.theme_menu.add_checkbutton(
-            label="Light Blue",
-            variable=self.light_blue_theme_bool,
-            command=lambda: self.change_theme("light_blue"),
-            **menu_kwargs,
-        )
-        self.theme_menu.add_checkbutton(
-            label="Light Green",
-            variable=self.light_green_theme_bool,
-            command=lambda: self.change_theme("light_green"),
-            **menu_kwargs,
-        )
-        self.theme_menu.add_checkbutton(
-            label="Dark",
-            variable=self.dark_theme_bool,
-            command=lambda: self.change_theme("dark"),
-            **menu_kwargs,
-        )
-        self.theme_menu.add_checkbutton(
-            label="Dark Blue",
-            variable=self.dark_blue_theme_bool,
-            command=lambda: self.change_theme("dark_blue"),
-            **menu_kwargs,
-        )
-        self.theme_menu.add_checkbutton(
-            label="Black",
-            variable=self.black_theme_bool,
-            command=lambda: self.change_theme("black"),
-            **menu_kwargs,
-        )
-        self.options_menu.add_cascade(label="Theme", menu=self.theme_menu, state="normal", **menu_kwargs)
 
         # help menu
         self.help_menu = tk.Menu(self.C.menubar, tearoff=0, **menu_kwargs)
@@ -1657,7 +1430,7 @@ class Tree_Editor(tk.Frame):
             self.tree.header_align(program_data.tree_header_align, redraw=False)
             self.nodes = self.nodes_json_x_dict(program_data.nodes, hiers=self.hiers)
             self.topnodes_order = {int(h): v for h, v in program_data.topnodes_order.items()}
-            self.auto_sort_nodes_bool.set(bool(program_data.auto_sort_nodes_bool))
+            self.auto_sort_nodes_bool = bool(program_data.auto_sort_nodes_bool)
             self.tv_label_col = int(program_data.tv_label_col)
             self.sheet.set_row_heights(
                 row_heights=map(self.sheet.valid_row_height, map(int, program_data.row_heights)),
@@ -1682,8 +1455,8 @@ class Tree_Editor(tk.Frame):
                 self.tree.align_columns(int(c), align=align, redraw=False)
             for r, align in program_data.tree_row_alignments.items():
                 self.tree.align_rows(int(r), align=align, redraw=False)
-            self.allow_spaces_ids_var.set(bool(program_data.allow_spaces_ids))
-            self.allow_spaces_columns_var.set(bool(program_data.allow_spaces_columns))
+            self.allow_spaces_ids_var = bool(program_data.allow_spaces_ids)
+            self.allow_spaces_columns_var = bool(program_data.allow_spaces_columns)
             self.set_headers()
             self.tag_ids(selection=set(program_data.tagged_ids), toggle=False, do_tree=False)
         else:
@@ -1737,16 +1510,20 @@ class Tree_Editor(tk.Frame):
             self.sheet.set_xview(0.0).set_yview(0.0)
             self.tree.set_xview(0.0).set_yview(0.0)
         self.C.show_frame("tree_edit", start=False, msg=self.get_tree_editor_status_bar_text())
+        self.C.file.entryconfig("Settings", state="normal")
         self.WINDOW_DIMENSIONS_CHANGED()
         self.focus_tree()
 
+    def settings(self):
+        Settings_Popup(self, theme=self.C.theme)
+
     def change_theme(self, theme="light_green", write=True):
         self.C.theme = theme
-        self.dark_blue_theme_bool.set(True if self.C.theme == "dark_blue" else False)
-        self.black_theme_bool.set(True if self.C.theme == "black" else False)
-        self.dark_theme_bool.set(True if self.C.theme == "dark" else False)
-        self.light_green_theme_bool.set(True if self.C.theme == "light_green" else False)
-        self.light_blue_theme_bool.set(True if self.C.theme == "light_blue" else False)
+        self.dark_blue_theme_bool = True if self.C.theme == "dark_blue" else False
+        self.black_theme_bool = True if self.C.theme == "black" else False
+        self.dark_theme_bool = True if self.C.theme == "dark" else False
+        self.light_green_theme_bool = True if self.C.theme == "light_green" else False
+        self.light_blue_theme_bool = True if self.C.theme == "light_blue" else False
         self.config(bg=themes[theme].top_left_bg)
         self.C.config(bg=themes[theme].top_left_bg)
         self.main_canvas.config(bg=themes[theme].top_left_bg)
@@ -1877,7 +1654,7 @@ class Tree_Editor(tk.Frame):
         self.sheet.reset_all_options()
         self.headers = []
         self.set_headers()
-        self.auto_sort_nodes_bool.set(True)
+        self.auto_sort_nodes_bool = True
         self.topnodes_order = {}
         self.nodes = {}
         self.rns = {}
@@ -1899,51 +1676,31 @@ class Tree_Editor(tk.Frame):
     def show_tv_lvls(self, event=None): ...
 
     def change_json_format_one(self):
-        if not self.json_format_one.get():
-            self.json_format_one.set(True)
-            return
-        if self.json_format_two.get():
-            self.json_format_two.set(False)
-        if self.json_format_three.get():
-            self.json_format_three.set(False)
-        if self.json_format_four.get():
-            self.json_format_four.set(False)
+        self.json_format_one = True
+        self.json_format_two = False
+        self.json_format_three = False
+        self.json_format_four = False
         self.C.save_cfg()
 
     def change_json_format_two(self):
-        if not self.json_format_two.get():
-            self.json_format_two.set(True)
-            return
-        if self.json_format_one.get():
-            self.json_format_one.set(False)
-        if self.json_format_three.get():
-            self.json_format_three.set(False)
-        if self.json_format_four.get():
-            self.json_format_four.set(False)
+        self.json_format_two = True
+        self.json_format_one = False
+        self.json_format_three = False
+        self.json_format_four = False
         self.C.save_cfg()
 
     def change_json_format_three(self):
-        if not self.json_format_three.get():
-            self.json_format_three.set(True)
-            return
-        if self.json_format_one.get():
-            self.json_format_one.set(False)
-        if self.json_format_two.get():
-            self.json_format_two.set(False)
-        if self.json_format_four.get():
-            self.json_format_four.set(False)
+        self.json_format_three = True
+        self.json_format_one = False
+        self.json_format_two = False
+        self.json_format_four = False
         self.C.save_cfg()
 
     def change_json_format_four(self):
-        if not self.json_format_four.get():
-            self.json_format_four.set(True)
-            return
-        if self.json_format_one.get():
-            self.json_format_one.set(False)
-        if self.json_format_two.get():
-            self.json_format_two.set(False)
-        if self.json_format_three.get():
-            self.json_format_three.set(False)
+        self.json_format_four = True
+        self.json_format_one = False
+        self.json_format_two = False
+        self.json_format_three = False
         self.C.save_cfg()
 
     def bind_or_unbind_save(self, save_menu_state: Literal["normal", "save as", "disabled"] | None = None):
@@ -1956,6 +1713,7 @@ class Tree_Editor(tk.Frame):
         self.C.file.entryconfig("Save", state="disabled")
         self.C.file.entryconfig("Save as", state="disabled")
         self.C.file.entryconfig("Save new version", state="disabled")
+        self.C.file.entryconfig("Settings", state="disabled")
         if self.C.save_menu_state == "normal":
             self.C.file.entryconfig("Save", state="normal")
             self.C.file.entryconfig("Save as", state="normal")
@@ -1964,12 +1722,14 @@ class Tree_Editor(tk.Frame):
             self.C.bind_class("all", f"<{ctrl_button}-S>", self.save_)
             self.C.bind_class("all", f"<{ctrl_button}-Shift-s>", self.save_as)
             self.C.bind_class("all", f"<{ctrl_button}-Shift-S>", self.save_as)
+            self.C.file.entryconfig("Settings", state="normal")
         elif self.C.save_menu_state == "save as":
             self.C.file.entryconfig("Save as", state="normal")
             self.C.bind_class("all", f"<{ctrl_button}-s>", self.save_as)
             self.C.bind_class("all", f"<{ctrl_button}-S>", self.save_as)
             self.C.bind_class("all", f"<{ctrl_button}-Shift-s>", self.save_as)
             self.C.bind_class("all", f"<{ctrl_button}-Shift-S>", self.save_as)
+            self.C.file.entryconfig("Settings", state="normal")
 
     def enable_widgets(self, widgets=True, menubar=True):
         self.C.menubar_state("normal")
@@ -2124,9 +1884,9 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_dropdown.unbind("<<ComboboxSelected>>")
         self.sheet_search_choice_dropdown.unbind("<<ComboboxSelected>>")
 
-    def toggle_sort_all_nodes(self, event=None, snapshot=True):
-        x = self.auto_sort_nodes_bool.get()
-        if x:
+    def toggle_sort_all_nodes(self, enabled, snapshot=True):
+        self.auto_sort_nodes_bool = enabled
+        if self.auto_sort_nodes_bool:
             if snapshot:
                 self.snapshot_auto_sort_nodes()
             self.sort_all_children()
@@ -2249,7 +2009,7 @@ class Tree_Editor(tk.Frame):
                 tree_sel = self.tree.selection()[0]
             else:
                 tree_sel = False
-            if not self.allow_spaces_ids_var.get():
+            if not self.allow_spaces_ids_var:
                 newtext = re.sub(r"[\n\t\s]*", "", newtext)
             success = self.change_ID_name(id_, newtext)
             if not success:
@@ -2286,7 +2046,7 @@ class Tree_Editor(tk.Frame):
         elif self.headers[x1].type_ == "Parent":
             self.snapshot_paste_id()
             oldparent = f"{self.sheet.data[y1][x1]}"
-            if not self.allow_spaces_ids_var.get():
+            if not self.allow_spaces_ids_var:
                 newtext = re.sub(r"[\n\t\s]*", "", newtext)
             if self.cut_paste_edit_cell(self.sheet.data[y1][self.ic], oldparent, x1, newtext):
                 successful = True
@@ -2313,7 +2073,7 @@ class Tree_Editor(tk.Frame):
             "Numerical Detail",
             "Date Detail",
         ):
-            if not self.auto_sort_nodes_bool.get():
+            if not self.auto_sort_nodes_bool:
                 self.update()
                 confirm = Ask_Confirm(
                     self,
@@ -2485,7 +2245,7 @@ class Tree_Editor(tk.Frame):
                 pk = self.nodes[ik].ps[self.pc]
                 if pk:
                     pk = pk.k
-                if not self.auto_sort_nodes_bool.get():
+                if not self.auto_sort_nodes_bool:
                     for h, p in self.nodes[ik].ps.items():
                         if p == "":
                             self.topnodes_order[h].remove(ik)
@@ -2508,7 +2268,7 @@ class Tree_Editor(tk.Frame):
                         self.sheet.MT.data[rn][k] = ""
                 del self.nodes[ik]
                 self.vs[-1]["rows"].append(Del_stre(1, row, self.sheet.MT.data[row]))
-                if self.auto_sort_nodes_bool.get() and pk and self.nodes[pk].ps[self.pc]:
+                if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
                     self.nodes[pk].ps[self.pc].cn[self.pc] = self.sort_node_cn(
                         self.nodes[pk].ps[self.pc].cn[self.pc], self.pc
                     )
@@ -2578,7 +2338,7 @@ class Tree_Editor(tk.Frame):
                     self.set_undo_label()
             cells_changed = 0
             need_rebuild, need_rebuild_ID = self.get_need_rebuild(rows_and_cols=rows_and_cols)
-            if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool.get():
+            if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool:
                 confirm = Ask_Confirm(
                     self,
                     "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
@@ -2652,7 +2412,7 @@ class Tree_Editor(tk.Frame):
             self.sheet.deselect("all", redraw=False)
         self.nodes = {}
         self.clear_copied_details()
-        self.auto_sort_nodes_bool.set(True)
+        self.auto_sort_nodes_bool = True
         self.sheet.MT.data, self.nodes = TreeBuilder().build(
             input_sheet=self.sheet.MT.data,
             output_sheet=self.new_sheet,
@@ -2661,7 +2421,7 @@ class Tree_Editor(tk.Frame):
             hiers=self.hiers,
             nodes=self.nodes,
             add_warnings=False,
-            strip=not self.allow_spaces_ids_var.get(),
+            strip=not self.allow_spaces_ids_var,
         )
         self.save_info_get_saved_info()
         self.new_sheet = []
@@ -2786,7 +2546,7 @@ class Tree_Editor(tk.Frame):
                 return
         cells_changed = 0
         need_rebuild, need_rebuild_ID = self.get_need_rebuild(rows_and_cols=rows_and_cols)
-        if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool.get():
+        if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool:
             confirm = Ask_Confirm(
                 self,
                 "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
@@ -2995,7 +2755,7 @@ class Tree_Editor(tk.Frame):
                 self.vs.pop()
                 self.vp -= 1
                 self.set_undo_label()
-                if self.headers[x1].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool.get():
+                if self.headers[x1].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool:
                     confirm = Ask_Confirm(
                         self,
                         "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
@@ -3022,7 +2782,7 @@ class Tree_Editor(tk.Frame):
                 need_rebuild_ID = True
             if self.headers[c].type_ == "Parent":
                 need_rebuild = True
-        if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool.get():
+        if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool:
             confirm = Ask_Confirm(
                 self,
                 "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
@@ -3166,7 +2926,7 @@ class Tree_Editor(tk.Frame):
                 self.vs.pop()
                 self.vp -= 1
                 self.set_undo_label()
-                if self.headers[x1].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool.get():
+                if self.headers[x1].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool:
                     confirm = Ask_Confirm(
                         self,
                         "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
@@ -3193,7 +2953,7 @@ class Tree_Editor(tk.Frame):
                 need_rebuild_ID = True
             if self.headers[c].type_ == "Parent":
                 need_rebuild = True
-        if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool.get():
+        if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool:
             confirm = Ask_Confirm(
                 self,
                 "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
@@ -3683,7 +3443,7 @@ class Tree_Editor(tk.Frame):
         if len(headers) < row_len:
             headers += list(repeat("", row_len - len(headers)))
         tally_of_headers = defaultdict(lambda: -1)
-        allow_whitespace = self.allow_spaces_columns_var.get()
+        allow_whitespace = self.allow_spaces_columns_var
         for coln in range(len(headers)):
             cell = headers[coln]
             if not cell:
@@ -3730,7 +3490,7 @@ class Tree_Editor(tk.Frame):
                 self.selected_PAR = ""
             else:
                 self.selected_PAR = self.nodes[pariid].name
-            if self.mirror_var.get() and not self.mirror_sels_disabler:
+            if self.mirror_var and not self.mirror_sels_disabler:
                 self.go_to_row()
             self.mirror_sels_disabler = False
         else:
@@ -3856,7 +3616,7 @@ class Tree_Editor(tk.Frame):
             self.tree.deselect()
 
     def tree_rc_motion(self, event):
-        if self.auto_sort_nodes_bool.get() or self.drag_iid is None:
+        if self.auto_sort_nodes_bool or self.drag_iid is None:
             return
         iid = self.tree.rowitem(self.tree.identify_row(event, allow_end=False))
         if not iid or iid == self.last_rced:
@@ -3906,7 +3666,7 @@ class Tree_Editor(tk.Frame):
     def tree_rc_release(self, event):
         if self.drag_iid is not None:
             self.drag_end_index = self.tree.index(self.drag_iid)
-        if self.auto_sort_nodes_bool.get() or self.drag_iid is None or self.drag_end_index == self.drag_start_index:
+        if self.auto_sort_nodes_bool or self.drag_iid is None or self.drag_end_index == self.drag_start_index:
             row = self.tree.identify_row(event, allow_end=False)
             col = self.tree.identify_column(event, allow_end=False)
             self.tree_sheet_rc_menu_option_enabler_disabler(col)
@@ -3921,7 +3681,7 @@ class Tree_Editor(tk.Frame):
                 else:
                     self.tree_rc_menu_empty.tk_popup(event.x_root, event.y_root)
             elif region == "index":
-                if self.auto_sort_nodes_bool.get():
+                if self.auto_sort_nodes_bool:
                     try:
                         self.tree_rc_menu_single_row.delete("Sort children")
                     except Exception:
@@ -4093,13 +3853,13 @@ class Tree_Editor(tk.Frame):
         else:
             self.nodes[ik].ps[self.pc] = self.nodes[pk]
             self.nodes[pk].cn[self.pc].append(self.nodes[ik])
-            if self.auto_sort_nodes_bool.get():
+            if self.auto_sort_nodes_bool:
                 self.nodes[pk].cn[self.pc] = self.sort_node_cn(self.nodes[pk].cn[self.pc], self.pc)
                 if self.nodes[pk].ps[self.pc]:
                     self.nodes[pk].ps[self.pc].cn[self.pc] = self.sort_node_cn(
                         self.nodes[pk].ps[self.pc].cn[self.pc], self.pc
                     )
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             if parent == "":
                 self.topnodes_order[self.pc].append(ik)
         if insert_row is not None and snapshot:
@@ -4136,7 +3896,7 @@ class Tree_Editor(tk.Frame):
             self.vs[-1]["ikrow"] = (ik_rn, ik, self.nodes[ik].name, new_name)
         self.nodes[ik].name = new_name
         self.nodes[ik].k = nnk
-        if self.auto_sort_nodes_bool.get():
+        if self.auto_sort_nodes_bool:
             for h, p in self.nodes[ik].ps.items():
                 if p:
                     self.nodes[ik].ps[h].cn[h] = self.sort_node_cn(self.nodes[ik].ps[h].cn[h], h)
@@ -4194,7 +3954,7 @@ class Tree_Editor(tk.Frame):
                 if errors:
                     Error(self, f"ID: {ID} already has this parent   ", theme=self.C.theme)
                 return False
-        auto_sort_quick = self.auto_sort_nodes_bool.get()
+        auto_sort_quick = self.auto_sort_nodes_bool
         for child in self.nodes[ik].cn[hier]:
             child.ps[hier] = parent_of_ik
             crow = self.rns[child.k]
@@ -4335,7 +4095,7 @@ class Tree_Editor(tk.Frame):
         else:
             self.nodes[ik].ps[self.pc] = self.nodes[npk]
             self.nodes[npk].cn[self.pc].append(self.nodes[ik])
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             if pk == "":
                 try_remove(self.topnodes_order[hier], ik)
             if npk == "":
@@ -4385,7 +4145,7 @@ class Tree_Editor(tk.Frame):
                 self.sheet.MT.data[crow][self.pc] = f"{self.sheet.MT.data[crow][hier]}"
                 self.sheet.MT.data[crow][hier] = ""
                 self.cut_paste_all_recur(child, hier, snapshot)
-        if self.auto_sort_nodes_bool.get():
+        if self.auto_sort_nodes_bool:
             if sort_later:
                 if npk and not self.sort_later_dct["filled"]:
                     self.sort_later_dct["new_parent"] = (npk, self.pc)
@@ -4457,7 +4217,7 @@ class Tree_Editor(tk.Frame):
         else:
             self.nodes[ik].ps[self.pc] = self.nodes[npk]
             self.nodes[npk].cn[self.pc].append(self.nodes[ik])
-            if self.auto_sort_nodes_bool.get():
+            if self.auto_sort_nodes_bool:
                 if sort_later and not self.sort_later_dct["filled"]:
                     self.sort_later_dct["new_parent"] = (self.nodes[npk].k, self.pc)
                     if self.nodes[npk].ps[self.pc]:
@@ -4471,7 +4231,7 @@ class Tree_Editor(tk.Frame):
                         self.nodes[npk].ps[self.pc].cn[self.pc] = self.sort_node_cn(
                             self.nodes[npk].ps[self.pc].cn[self.pc], self.pc
                         )
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             if npk == "":
                 self.topnodes_order[self.pc].append(ik)
         rn = self.rns[ik]
@@ -4524,7 +4284,7 @@ class Tree_Editor(tk.Frame):
         else:
             self.nodes[ik].ps[self.pc] = self.nodes[npk]
             self.nodes[npk].cn[self.pc].append(self.nodes[ik])
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             if npk == "":
                 self.topnodes_order[self.pc].append(ik)
         rn = self.rns[ik]
@@ -4566,7 +4326,7 @@ class Tree_Editor(tk.Frame):
             child.cn[self.pc] = child.cn[hier][:]
             self.sheet.MT.data[crow][self.pc] = f"{self.sheet.MT.data[crow][hier]}"
             self.copy_paste_all_recur(child, hier, snapshot)
-        if npk and self.auto_sort_nodes_bool.get():
+        if npk and self.auto_sort_nodes_bool:
             if sort_later and not self.sort_later_dct["filled"]:
                 self.sort_later_dct["new_parent"] = (self.nodes[npk].k, self.pc)
                 if self.nodes[npk].ps[self.pc]:
@@ -4655,7 +4415,7 @@ class Tree_Editor(tk.Frame):
         for child in tuple(self.nodes[pk].cn[hier]):
             child_key = child.k
             if child_key not in already_in:
-                if not self.auto_sort_nodes_bool.get() and npk == "":
+                if not self.auto_sort_nodes_bool and npk == "":
                     self.topnodes_order[self.pc].append(child_key)
                 crow = self.rns[child_key]
                 if snapshot:
@@ -4685,7 +4445,7 @@ class Tree_Editor(tk.Frame):
                 self.nodes[pk].cn[hier].remove(child)
                 if hier != self.pc:
                     self.cut_paste_children_recur(child, hier, snapshot, already_in)
-            if self.auto_sort_nodes_bool.get():
+            if self.auto_sort_nodes_bool:
                 if self.nodes[pk].ps[hier]:
                     self.nodes[pk].ps[hier].cn[hier] = self.sort_node_cn(self.nodes[pk].ps[hier].cn[hier], hier)
                 if npk:
@@ -4753,11 +4513,11 @@ class Tree_Editor(tk.Frame):
         else:
             self.nodes[ik].ps[hier] = self.nodes[npk]
             self.nodes[npk].cn[hier].append(self.nodes[ik])
-            if self.auto_sort_nodes_bool.get():
+            if self.auto_sort_nodes_bool:
                 self.nodes[npk].cn[hier] = self.sort_node_cn(self.nodes[npk].cn[hier], hier)
                 if self.nodes[npk].ps[hier]:
                     self.nodes[npk].ps[hier].cn[hier] = self.sort_node_cn(self.nodes[npk].ps[hier].cn[hier], hier)
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             if pk == "":
                 try_remove(self.topnodes_order[hier], ik)
             if npk == "":
@@ -4785,7 +4545,7 @@ class Tree_Editor(tk.Frame):
         pk = parent.lower()
         if pk:
             self.nodes[pk].cn[self.pc].remove(self.nodes[ik])
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             if pk == "":
                 self.topnodes_order[self.pc].remove(ik)
                 for child in self.nodes[ik].cn[self.pc]:
@@ -4843,7 +4603,7 @@ class Tree_Editor(tk.Frame):
             self.nodes[ik].cn[self.pc] = []
             self.nodes[ik].ps[self.pc] = None
             self.sheet.MT.data[rn][self.pc] = ""
-        if self.auto_sort_nodes_bool.get():
+        if self.auto_sort_nodes_bool:
             if pk:
                 if self.nodes[pk].ps[self.pc]:
                     self.nodes[pk].ps[self.pc].cn[self.pc] = self.sort_node_cn(
@@ -4858,7 +4618,7 @@ class Tree_Editor(tk.Frame):
         pk = parent.lower()
         if pk:
             self.nodes[pk].cn[self.pc].remove(self.nodes[ik])
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             if pk == "":
                 self.topnodes_order[self.pc].remove(ik)
             for child in self.nodes[ik].cn[self.pc]:
@@ -4894,7 +4654,7 @@ class Tree_Editor(tk.Frame):
             self.nodes[ik].cn[self.pc] = []
             self.nodes[ik].ps[self.pc] = None
             self.sheet.MT.data[rn][self.pc] = ""
-        if self.auto_sort_nodes_bool.get():
+        if self.auto_sort_nodes_bool:
             if pk:
                 if self.nodes[pk].ps[self.pc]:
                     self.nodes[pk].ps[self.pc].cn[self.pc] = self.sort_node_cn(
@@ -4910,7 +4670,7 @@ class Tree_Editor(tk.Frame):
         self.untag_id(ik)
         if pk:
             pk = pk.k
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             for h, p in self.nodes[ik].ps.items():
                 if p == "":
                     self.topnodes_order[h].remove(ik)
@@ -4937,7 +4697,7 @@ class Tree_Editor(tk.Frame):
             self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
         del self.nodes[ik]
         self.sheet.delete_row(rn, redraw=False)
-        if self.auto_sort_nodes_bool.get():
+        if self.auto_sort_nodes_bool:
             if pk:
                 if self.nodes[pk].ps[self.pc]:
                     self.nodes[pk].ps[self.pc].cn[self.pc] = self.sort_node_cn(
@@ -4950,7 +4710,7 @@ class Tree_Editor(tk.Frame):
         self.untag_id(ik)
         if pk:
             pk = pk.k
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             for h, p in self.nodes[ik].ps.items():
                 if p == "":
                     self.topnodes_order[h].remove(ik)
@@ -5018,7 +4778,7 @@ class Tree_Editor(tk.Frame):
             self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
         del self.nodes[ik]
         self.sheet.delete_row(rn, redraw=False)
-        if self.auto_sort_nodes_bool.get():
+        if self.auto_sort_nodes_bool:
             if pk:
                 if self.nodes[pk].ps[self.pc]:
                     self.nodes[pk].ps[self.pc].cn[self.pc] = self.sort_node_cn(
@@ -5082,13 +4842,13 @@ class Tree_Editor(tk.Frame):
             self.sheet.MT.data[rn][self.pc] = ""
         self.sheet.del_rows(to_del)
         self.levels = defaultdict(list)
-        if self.auto_sort_nodes_bool.get():
+        if self.auto_sort_nodes_bool:
             if pk:
                 if self.nodes[pk].ps[self.pc]:
                     self.nodes[pk].ps[self.pc].cn[self.pc] = self.sort_node_cn(
                         self.nodes[pk].ps[self.pc].cn[self.pc], self.pc
                     )
-        elif not self.auto_sort_nodes_bool.get():
+        elif not self.auto_sort_nodes_bool:
             if pk == "":
                 try_remove(self.topnodes_order[self.pc], ik)
         if snapshot:
@@ -5116,7 +4876,7 @@ class Tree_Editor(tk.Frame):
             qvsapp(Del_stre(1, rn, self.sheet.MT.data[rn]))
         to_del.append(rn)
         self.untag_id(ik)
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             for h, p in self.nodes[ik].ps.items():
                 if p == "":
                     self.topnodes_order[h].remove(ik)
@@ -5131,7 +4891,7 @@ class Tree_Editor(tk.Frame):
         self.sheet.del_rows(to_del, redraw=False)
         self.levels = defaultdict(list)
         try:
-            if self.auto_sort_nodes_bool.get():
+            if self.auto_sort_nodes_bool:
                 if pk:
                     if self.nodes[pk].ps[self.pc]:
                         self.nodes[pk].ps[self.pc].cn[self.pc] = self.sort_node_cn(
@@ -5178,7 +4938,7 @@ class Tree_Editor(tk.Frame):
         first_hier = self.hiers[0]
         quick_hiers = self.hiers[1:]
         lh = len(self.hiers)
-        if startup and self.auto_sort_nodes_bool.get():
+        if startup and self.auto_sort_nodes_bool:
             for n in self.nodes.values():
                 if all(p is None for p in n.ps.values()):
                     n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
@@ -5198,7 +4958,7 @@ class Tree_Editor(tk.Frame):
                     for h in quick_hiers:
                         n.ps[h] = None
 
-        elif not startup and self.auto_sort_nodes_bool.get():
+        elif not startup and self.auto_sort_nodes_bool:
             to_insert = []
             for n in self.nodes.values():
                 if all(p is None for p in n.ps.values()):
@@ -5220,7 +4980,7 @@ class Tree_Editor(tk.Frame):
             if to_insert:
                 self.sheet.insert_rows(rows=to_insert)
 
-        elif not startup and not self.auto_sort_nodes_bool.get():
+        elif not startup and not self.auto_sort_nodes_bool:
             st_check_topnodes_order = {k: set(v) for k, v in self.topnodes_order.items()}
             to_insert = []
             for n in self.nodes.values():
@@ -5252,7 +5012,7 @@ class Tree_Editor(tk.Frame):
         quick_hiers = self.hiers[1:]
         lh = len(self.hiers)
         to_insert = []
-        if self.auto_sort_nodes_bool.get():
+        if self.auto_sort_nodes_bool:
             for n in self.nodes.values():
                 if all(p is None for p in n.ps.values()):
                     n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
@@ -5304,7 +5064,7 @@ class Tree_Editor(tk.Frame):
                 n.ps[first_hier] = ""
                 for h in quick_hiers:
                     n.ps[h] = None
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             current_nodes = {n: None for n in self.topnodes_order[self.hiers[0]]}
             wc = []
             woc = []
@@ -5336,7 +5096,7 @@ class Tree_Editor(tk.Frame):
 
     def topnodes(self):
         pc = self.pc
-        if self.auto_sort_nodes_bool.get():
+        if self.auto_sort_nodes_bool:
             wc = []
             woc = []
             for n in self.nodes.values():
@@ -6275,7 +6035,7 @@ class Tree_Editor(tk.Frame):
             node.ps[col] = None
             node.cn[col] = []
         self.saved_info[col] = new_info_storage()
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             self.topnodes_order[col] = []
         if snapshot:
             self.changelog_append(
@@ -6381,7 +6141,7 @@ class Tree_Editor(tk.Frame):
                     del node.ps[col]
                     del node.cn[col]
                 del self.saved_info[col]
-                if not self.auto_sort_nodes_bool.get():
+                if not self.auto_sort_nodes_bool:
                     del self.topnodes_order[col]
             self.associate()
         self.row_len -= len(cols)
@@ -6428,11 +6188,8 @@ class Tree_Editor(tk.Frame):
     def cut_cols(self, cols):
         self.cut_columns = cols
 
-    def change_sheet_settings(self, event=None):
-        Sheet_Settings_Chooser(self, theme=self.C.theme)
-
     def adjust_hiers_del_cols(self, cols):
-        auto_sort_nodes_bool = self.auto_sort_nodes_bool.get()
+        auto_sort_nodes_bool = self.auto_sort_nodes_bool
         self.hiers = [k if not (num := bisect_left(cols, k)) else k - num for k in self.hiers]
         for node in self.nodes.values():
             node.ps = {k if not (num := bisect_left(cols, k)) else k - num: v for k, v in node.ps.items()}
@@ -6444,7 +6201,7 @@ class Tree_Editor(tk.Frame):
             }
 
     def adjust_hiers_add_cols(self, cols):
-        auto_sort_nodes_bool = self.auto_sort_nodes_bool.get()
+        auto_sort_nodes_bool = self.auto_sort_nodes_bool
         self.hiers = [k if not (num := bisect_right(cols, k)) else k + num for k in self.hiers]
         for node in self.nodes.values():
             node.ps = {k if not (num := bisect_right(cols, k)) else k + num: v for k, v in node.ps.items()}
@@ -6507,14 +6264,16 @@ class Tree_Editor(tk.Frame):
         self.ic = new_vs["required_data"]["pickled"]["ic"]
         self.pc = new_vs["required_data"]["pickled"]["pc"]
         self.hiers = new_vs["required_data"]["pickled"]["hiers"]
-        self.nodes = new_vs["required_data"]["pickled"]["nodes"]
+        self.nodes = self.nodes_json_x_dict(
+            json.loads(new_vs["required_data"]["not_pickled"]["nodes"]),
+            hiers=self.hiers,
+        )
         self.tv_label_col = new_vs["required_data"]["pickled"]["tv_label_col"]
         self.row_len = new_vs["required_data"]["pickled"]["row_len"]
-        self.mirror_var.set(new_vs["required_data"]["not_pickled"]["mirror_bool"])
-        self.auto_sort_nodes_bool.set(new_vs["required_data"]["not_pickled"]["auto_sort_nodes_bool"])
+        self.mirror_var = new_vs["required_data"]["not_pickled"]["mirror_bool"]
+        self.auto_sort_nodes_bool = new_vs["required_data"]["not_pickled"]["auto_sort_nodes_bool"]
         self.topnodes_order = new_vs["required_data"]["pickled"]["topnodes_order"]
         self.saved_info = new_vs["required_data"]["pickled"]["saved_info"]
-        self.toggle_mirror(select_row=False)
         self.tagged_ids = new_vs["required_data"]["pickled"]["tagged_ids"]
         self.sheet.align_cells(
             cells=new_vs["required_data"]["pickled"]["sheet_cell_alignments"],
@@ -6810,7 +6569,6 @@ class Tree_Editor(tk.Frame):
                     "saved_info": self.save_info_get_saved_info(),
                     "sheet_col_positions": self.sheet.get_column_widths(canvas_positions=True),
                     "sheet_row_positions": self.sheet.get_row_heights(canvas_positions=True),
-                    "nodes": self.nodes,
                     "topnodes_order": self.topnodes_order,
                     "tv_label_col": self.tv_label_col,
                     "tagged_ids": self.tagged_ids,
@@ -6832,8 +6590,9 @@ class Tree_Editor(tk.Frame):
 
     def get_unpickleable_required_snapshot_data(self):
         return {
-            "auto_sort_nodes_bool": True if self.auto_sort_nodes_bool.get() else False,
-            "mirror_bool": True if self.mirror_var.get() else False,
+            "nodes": json.dumps(self.jsonify_nodes()),
+            "auto_sort_nodes_bool": bool(self.auto_sort_nodes_bool),
+            "mirror_bool": bool(self.mirror_var),
             "focus": self.tree.has_focus(),
             "sheet_selections": self.get_sheet_sel(),
         }
@@ -7078,11 +6837,11 @@ class Tree_Editor(tk.Frame):
             else:
                 self.selected_PAR = new_parent
             successful = [dct["id"] for dct in self.paste_cut_sibling_all(redo_tree=False)]
-        if successful and (not self.auto_sort_nodes_bool.get() or index_only):
+        if successful and (not self.auto_sort_nodes_bool or index_only):
             index_only += successful
         if index_only:
-            if self.auto_sort_nodes_bool.get():
-                self.auto_sort_nodes_bool.set(False)
+            if self.auto_sort_nodes_bool:
+                self.auto_sort_nodes_bool = False
                 self.remake_topnodes_order()
             self.redo_tree_display(selections=False)
             move_to_index = self.tree.index(move_to_iid)
@@ -7173,7 +6932,7 @@ class Tree_Editor(tk.Frame):
             node.cn = {full_new_idxs[k]: v for k, v in node.cn.items()}
             node.ps = {full_new_idxs[k]: v for k, v in node.ps.items()}
         self.saved_info = {full_new_idxs[k]: v for k, v in self.saved_info.items()}
-        if not self.auto_sort_nodes_bool.get():
+        if not self.auto_sort_nodes_bool:
             self.topnodes_order = {full_new_idxs[k]: v for k, v in self.topnodes_order.items()}
         self.clear_copied_details()
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
@@ -8777,7 +8536,7 @@ class Tree_Editor(tk.Frame):
             pk = par.lower()
             if pk:
                 self.nodes[pk].cn[self.pc].remove(self.nodes[iid])
-            if not self.auto_sort_nodes_bool.get():
+            if not self.auto_sort_nodes_bool:
                 if pk == "":
                     self.topnodes_order[self.pc].remove(iid)
                     for child in self.nodes[iid].cn[self.pc]:
@@ -8831,7 +8590,7 @@ class Tree_Editor(tk.Frame):
                 self.nodes[iid].cn[self.pc] = []
                 self.nodes[iid].ps[self.pc] = None
                 self.sheet.MT.data[rn][self.pc] = ""
-            if self.auto_sort_nodes_bool.get():
+            if self.auto_sort_nodes_bool:
                 if pk:
                     if self.nodes[pk].ps[self.pc]:
                         self.nodes[pk].ps[self.pc].cn[self.pc] = self.sort_node_cn(
@@ -9100,7 +8859,7 @@ class Tree_Editor(tk.Frame):
                 "Numerical Detail",
                 "Date Detail",
             ):
-                if self.headers[col].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool.get():
+                if self.headers[col].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool:
                     confirm = Ask_Confirm(
                         self,
                         "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
@@ -9426,7 +9185,7 @@ class Tree_Editor(tk.Frame):
                 "Numerical Detail",
                 "Date Detail",
             ):
-                if self.headers[self.treecolsel].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool.get():
+                if self.headers[self.treecolsel].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool:
                     confirm = Ask_Confirm(
                         self,
                         "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
@@ -9815,18 +9574,14 @@ class Tree_Editor(tk.Frame):
         self.tree.set_all_cell_sizes_to_text()
         self.sheet.set_all_cell_sizes_to_text()
 
-    def toggle_auto_resize_index(self, event=None):
-        x = True if self.auto_resize_indexes.get() else False
-        self.tree.set_options(auto_resize_row_index=x)
-        self.sheet.set_options(auto_resize_row_index=x)
+    def toggle_auto_resize_index(self, enabled):
+        self.tree.set_options(auto_resize_row_index=enabled)
+        self.sheet.set_options(auto_resize_row_index=enabled)
 
-    def toggle_mirror(self, event=None, select_row=True):
-        if event:
-            self.mirror_var.set(not self.mirror_var.get())
-        if select_row:
-            if self.mirror_var.get():
-                if self.tree.selection():
-                    self.go_to_row()
+    def toggle_mirror(self, enabled, select_row=True):
+        self.mirror_var = enabled
+        if select_row and self.mirror_var and self.tree.selection():
+            self.go_to_row()
 
     def focus_tree(self):
         self.sheet.focus_set()
@@ -10394,7 +10149,7 @@ class Tree_Editor(tk.Frame):
         self.cut_children_dct = {}
         self.sheet.set_xview(0.0)
         self.sheet.set_yview(0.0)
-        self.auto_sort_nodes_bool.set(True)
+        self.auto_sort_nodes_bool = True
         self.sheet.MT.data, self.nodes, self.warnings = TreeBuilder().build(
             input_sheet=self.sheet.MT.data,
             output_sheet=self.new_sheet,
@@ -10404,7 +10159,7 @@ class Tree_Editor(tk.Frame):
             nodes={},
             warnings=self.warnings,
             add_warnings=True,
-            strip=not self.allow_spaces_ids_var.get(),
+            strip=not self.allow_spaces_ids_var,
         )
         self.new_sheet = []
         self.fix_associate_sort(startup=True)
@@ -10558,7 +10313,7 @@ class Tree_Editor(tk.Frame):
                             self.sheet.MT.data[self.rns[cik]][col] = change[5]
                             if oldv != newv and type_ == "ID" or type_ == "Parent":
                                 self.nodes = {}
-                                self.auto_sort_nodes_bool.set(True)
+                                self.auto_sort_nodes_bool = True
                                 self.sheet.MT.data, self.nodes = TreeBuilder().build(
                                     self.sheet.MT.data,
                                     self.new_sheet,
@@ -10567,7 +10322,7 @@ class Tree_Editor(tk.Frame):
                                     self.hiers,
                                     self.nodes,
                                     add_warnings=False,
-                                    strip=not self.allow_spaces_ids_var.get(),
+                                    strip=not self.allow_spaces_ids_var,
                                 )
                                 self.new_sheet = []
                                 self.fix_associate_sort_edit_cells()
@@ -11853,7 +11608,7 @@ class Tree_Editor(tk.Frame):
                 self.new_sheet = []
                 self.nodes = {}
                 self.clear_copied_details()
-                self.auto_sort_nodes_bool.set(True)
+                self.auto_sort_nodes_bool = True
                 self.sheet.MT.data, self.nodes, self.warnings = TreeBuilder().build(
                     self.sheet.MT.data,
                     self.new_sheet,
@@ -11863,7 +11618,7 @@ class Tree_Editor(tk.Frame):
                     self.nodes,
                     warnings=self.warnings,
                     add_warnings=True,
-                    strip=not self.allow_spaces_ids_var.get(),
+                    strip=not self.allow_spaces_ids_var,
                 )
                 self.new_sheet = []
                 self.fix_associate_sort(startup=False)
@@ -11900,11 +11655,11 @@ class Tree_Editor(tk.Frame):
         self.new_sheet = []
 
     def which_json(self) -> int:
-        if self.json_format_one.get():
+        if self.json_format_one:
             return 1
-        elif self.json_format_two.get():
+        elif self.json_format_two:
             return 2
-        elif self.json_format_three.get():
+        elif self.json_format_three:
             return 3
         elif self.json_format_four.get():
             return 4
@@ -11918,7 +11673,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             d = {}
-        if self.save_with_program_data.get():
+        if self.save_with_program_data:
             d["version"] = software_version_number
             if not program_data:
                 d["changelog"] = self.changelog
@@ -11959,35 +11714,35 @@ class Tree_Editor(tk.Frame):
         d["tv_label_col"] = self.tv_label_col
         d["topnodes_order"] = self.topnodes_order
         d["tagged_ids"] = list(self.tagged_ids)
-        d["auto_sort_nodes_bool"] = self.auto_sort_nodes_bool.get()
+        d["auto_sort_nodes_bool"] = self.auto_sort_nodes_bool
         d["sheetname"] = sheetname
         d["show_tv_lvls"] = self.tv_lvls_bool.get()
-        d["allow_spaces_ids"] = self.allow_spaces_ids_var.get()
-        d["allow_spaces_columns"] = self.allow_spaces_columns_var.get()
+        d["allow_spaces_ids"] = self.allow_spaces_ids_var
+        d["allow_spaces_columns"] = self.allow_spaces_columns_var
         return d
 
     def jsonify_nodes(self):
         return {
-            node.k: {
-                "name": node.name,
-                "cn": {h: [c.k for c in cnl] for h, cnl in node.cn.items()},
-                "ps": {h: p.k if p else p for h, p in node.ps.items()},
+            n.name: {
+                "cn": {h: [c.k for c in cnl] for h, cnl in n.cn.items()},
+                "ps": {h: p.k if p else p for h, p in n.ps.items()},
             }
-            for node in self.nodes.values()
+            for n in self.nodes.values()
         }
 
     def nodes_json_x_dict(self, njson, hiers):
         nodes = {
-            nodek: Node(
-                name=nodedict["name"],
-                k=nodek,
+            name.lower(): Node(
+                name=name,
+                k=name.lower(),
                 hrs=hiers,
             )
-            for nodek, nodedict in njson.items()
+            for name in njson
         }
-        for nodek, nodedict in njson.items():
-            nodes[nodek].ps = {int(h): nodes[pk] if pk else pk for h, pk in nodedict["ps"].items()}
-            nodes[nodek].cn = {int(h): [nodes[ck] for ck in cnl] for h, cnl in nodedict["cn"].items()}
+        for name, nodedict in njson.items():
+            ik = name.lower()
+            nodes[ik].ps = {int(h): nodes[pk] if pk else pk for h, pk in nodedict["ps"].items()}
+            nodes[ik].cn = {int(h): [nodes[ck] for ck in cnl] for h, cnl in nodedict["cn"].items()}
         return nodes
 
     def xlsx_chunker(self, seq):
@@ -12037,10 +11792,10 @@ class Tree_Editor(tk.Frame):
             ic=int(self.ic),
             pc=int(self.pc),
             hiers=list(self.hiers),
-            detail_columns=self.xlsx_flattened_detail_columns.get(),
-            justify_left=self.xlsx_flattened_justify.get(),
-            reverse=self.xlsx_flattened_reverse_order.get(),
-            add_index=self.xlsx_flattened_add_index.get(),
+            detail_columns=self.xlsx_flattened_detail_columns,
+            justify_left=self.xlsx_flattened_justify,
+            reverse=self.xlsx_flattened_reverse_order,
+            add_index=self.xlsx_flattened_add_index,
         ):
             ws.append(r)
         self.new_sheet = []
@@ -12085,7 +11840,7 @@ class Tree_Editor(tk.Frame):
                 self.write_treeview_to_workbook_recur(ws, c, level + 1)
 
     def write_additional_sheets_to_workbook(self, new_sheet_name=None):
-        if self.save_xlsx_with_flattened.get():
+        if self.save_xlsx_with_flattened:
             self.C.status_bar.change_text("Saving flattened sheet...")
             self.write_flattened_to_workbook(
                 self.C.wb,
@@ -12095,7 +11850,7 @@ class Tree_Editor(tk.Frame):
                 ),
             )
             self.C.update()
-        if self.save_xlsx_with_changelog.get():
+        if self.save_xlsx_with_changelog:
             self.C.status_bar.change_text("Saving changelog...")
             self.write_changelog_to_workbook(
                 self.C.wb,
@@ -12105,7 +11860,7 @@ class Tree_Editor(tk.Frame):
                 ),
             )
             self.C.update()
-        if self.save_xlsx_with_treeview.get():
+        if self.save_xlsx_with_treeview:
             self.C.status_bar.change_text("Saving treeview...")
             self.write_treeview_to_workbook(
                 self.C.wb,
@@ -12115,7 +11870,7 @@ class Tree_Editor(tk.Frame):
                 ),
             )
             self.C.update()
-        if self.save_xlsx_with_program_data.get():
+        if self.save_xlsx_with_program_data:
             self.C.status_bar.change_text("Saving program data...")
             self.write_program_data_to_workbook(
                 self.C.wb,

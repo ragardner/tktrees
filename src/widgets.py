@@ -228,7 +228,7 @@ class Column_Selection(tk.Frame):
             hiers=self.C.frames.tree_edit.hiers,
             nodes=self.C.frames.tree_edit.nodes,
             warnings=self.C.frames.tree_edit.warnings,
-            strip=not self.C.frames.tree_edit.allow_spaces_ids_var.get(),
+            strip=not self.C.frames.tree_edit.allow_spaces_ids_var,
         )
         self.C.frames.tree_edit.populate()
         self.C.frames.tree_edit.show_warnings(str(self.C.open_dict["filepath"]), str(self.C.open_dict["sheet"]))
@@ -2319,6 +2319,9 @@ class Label(tk.Label):
     def change_text(self, text):
         self.config(text=text)
         self.update_idletasks()
+        
+    def change_theme(self, theme):
+        self.config(background=themes[theme].top_left_bg, foreground=themes[theme].table_fg)
 
 
 class Display_Label(tk.Label):
