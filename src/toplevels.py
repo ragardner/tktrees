@@ -4869,6 +4869,31 @@ class Settings_Popup(tk.Toplevel):
         )
         self.auto_sort_tree_button.pack(side="top", anchor="nw", fill="x", pady=10)
 
+        self.layout_label = Label(self.general, text="Layout: ", font=EF, theme=theme, anchor="nw")
+        self.layout_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.layout_dropdown = Ez_Dropdown(self.general, font=EF)
+        self.layout_dropdown["values"] = [
+            "Display Only Tree",
+            "Display Only Sheet",
+            "50/50 Tree/Sheet",
+            "Adjustable Tree/Sheet",
+        ]
+        if self.C.full_left_bool.get():
+            self.layout_dropdown.set_my_value("Display Only Tree")
+
+        elif self.C.full_right_bool.get():
+            self.layout_dropdown.set_my_value("Display Only Sheet")
+
+        elif self.C._50_50_bool.get():
+            self.layout_dropdown.set_my_value("50/50 Tree/Sheet")
+
+        elif self.C.adjustable_bool.get():
+            self.layout_dropdown.set_my_value("Adjustable Tree/Sheet")
+
+        self.layout_dropdown.bind("<<ComboboxSelected>>", self.set_layout)
+        self.layout_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
+
         self.xlsx = Frame(self, theme=theme)
         self.xlsx.grid(row=0, column=1, pady=20, padx=20, sticky="nswe")
 
@@ -5015,7 +5040,7 @@ class Settings_Popup(tk.Toplevel):
         self.date_format_header = Label(self.date_format, text="Date Format", font=TF, theme=theme, anchor="nw")
         self.date_format_header.pack(side="top", anchor="nw", fill="x", pady=(0, 20))
 
-        self.date_format_label = Label(self.date_format, text="Date Format: ", font=EF, theme=theme, anchor="nw")
+        self.date_format_label = Label(self.date_format, text="Date Format (per file): ", font=EF, theme=theme, anchor="nw")
         self.date_format_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
 
         self.date_format_dropdown = Ez_Dropdown(self.date_format, font=EF)
@@ -5029,16 +5054,16 @@ class Settings_Popup(tk.Toplevel):
         ]
         if self.C.DATE_FORM == "%d/%m/%Y":
             self.date_format_dropdown.set_my_value("DD/MM/YYYY")
-        
+
         elif self.C.DATE_FORM == "%d-%m-%Y":
             self.date_format_dropdown.set_my_value("DD-MM-YYYY")
 
         elif self.C.DATE_FORM == "%m/%d/%Y":
             self.date_format_dropdown.set_my_value("MM/DD/YYYY")
-            
+
         elif self.C.DATE_FORM == "%m-%d-%Y":
             self.date_format_dropdown.set_my_value("MM-DD-YYYY")
-            
+
         elif self.C.DATE_FORM == "%Y/%m/%d":
             self.date_format_dropdown.set_my_value("YYYY/MM/DD")
 
@@ -5226,6 +5251,17 @@ class Settings_Popup(tk.Toplevel):
     def toggle_auto_sort_tree_button(self):
         self.C.toggle_sort_all_nodes(self.auto_sort_tree_button.get_checked())
 
+    def set_layout(self, event=None):
+        layout = self.layout_dropdown.get_my_value()
+        if "Only Tree" in layout:
+            self.C.set_display_option("left")
+        elif "Only Sheet" in layout:
+            self.C.set_display_option("right")
+        elif "50" in layout:
+            self.C.set_display_option("50/50")
+        elif "Adjustable" in layout:
+            self.C.set_display_option("adjustable")
+
     def toggle_xlsx_app_data(self):
         self.C.save_xlsx_with_program_data = self.xlsx_app_data_button.get_checked()
         self.C.C.save_cfg()
@@ -5301,6 +5337,7 @@ class Settings_Popup(tk.Toplevel):
         self.date_format.config(bg=themes[theme].top_left_bg)
         self.date_format_header.change_theme(theme)
         self.date_format_label.change_theme(theme)
+        self.layout_label.change_theme(theme)
         self.C.change_theme(theme)
 
     def set_table_alignment(self, event=None):
