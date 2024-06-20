@@ -11527,7 +11527,7 @@ class Tree_Editor(tk.Frame):
             return 2
         elif self.json_format_three:
             return 3
-        elif self.json_format_four.get():
+        elif self.json_format_four:
             return 4
 
     def get_save_json(self, program_data=False):
