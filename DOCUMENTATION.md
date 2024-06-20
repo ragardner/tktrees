@@ -40,7 +40,7 @@ The columns can be in any order and multiple columns of the same type can be sep
 
 If the headers are not unique they will be renamed with a duplicate number. Any missing headers will have names created for them. Header names are not case sensitive.
 
-There is no limit to the number of characters allowed for headers, details or ID names. To allow spaces in ID/Header names go to Options on the main menubar while in the Treeview. Details are exempt from this rule.
+There is no limit to the number of characters allowed for headers, details or ID names. To allow spaces in ID/Header names go to File -> Settings on the main menubar while in the Treeview. Details are exempt from this rule.
 
 Any mistakes in the sheet such as infinite loops of children, IDs appearing in a parent column but not in the ID column and duplications will be corrected upon creating the tree.
 
@@ -54,7 +54,11 @@ If an ID has no parents or children in any hierarchy it will be placed in the fi
 
 #### Moving IDs between hierarchies
 
-To move an ID to another hierarchy or add an ID to another hierarchy you can right click on the ID in the treeview panel and go to Cut or Copy and then either Cut ID or Copy ID. Then using the dropdown box at the top of the treeview panel, labeled "Hierarchy" select the hierarchy you would like to move / add the ID to. Then go to the position or ID where you would like to place the Cut / Copied ID and right click and select a paste option.
+To move an ID to another hierarchy or add an ID to another hierarchy you can right click on the ID in the treeview panel and go to Cut or Copy and then either Cut ID or Copy ID. 
+
+Then using the dropdown box labeled "Hierarchy" at the top of the treeview panel select the hierarchy you would like to move / add the ID to. 
+
+Go to the position or ID where you would like to place the Cut / Copied ID and right click and select a paste option.
 
 To move multiple IDs in one go you can use Shift + Left Click or Ctrl + Left Click to select multiple IDs then use Ctrl + X (Cut) or Ctrl + C (Copy) or Right Click on one of the selected IDs.
 
@@ -98,7 +102,7 @@ When entering conditional formatting in Date Detail columns, use forward slash d
 
 #### Changing the order of IDs in the treeview
 
-To disable automatic ordering of IDs in the treeview go to the Format menu and select Auto-sort treeview IDs so that it's unchecked. You can then select a row in the treeview and hold down the right mouse button and drag and drop the ID to it's desired position. To move an ID between parents see the above section on "Moving IDs by drag and drop".
+To disable automatic ordering of IDs in the treeview go to File -> Settings and select Auto-sort treeview IDs. You can re-order children by selecting a single row in the tree and dragging with the right mouse button or multiple IDs using the left mouse button. To move an ID between parents see the above section on "Moving IDs by drag and drop".
 
 ## MANAGING COLUMNS
 
@@ -164,12 +168,16 @@ Conditions must have spaces in between statements.
 - New: Create a new sheet.
 - Open: Open a file.
 - Compare sheets: This option takes you to a tree comparison window. For more information find the help section "Tree Compare".
-- Save: Options are Save (Ctrl + S), Save as, Save as with username-date- time (saves with the users login name, current date and time added to end of the filename) and Save new version (adds one to any detected file of the same name found in the chosen folder).
+- Save: Options are Save (Ctrl + S), Save as, and Save new version (adds one to any detected file of the same name found in the chosen folder).
+- Settings: Opens a settings panel.
 - Quit: Quits the program.
 
 #### Edit Menu
 
 - Undo (Ctrl + Z). Note that although the changelog can be saved with program data the changes cannot be undone across saves.
+- Sort sheet gives you two options for sorting the sheet:
+    - Sort by tree: This button sorts the sheet in the order that the IDs occur in the tree.
+    - Sort by column: Using this button and the two drop-down boxes to its right you can sort the sheet using a basic natrual sorting order, numbers taking priority.
 - Copy to clipboard copies the underlying sheet to your computers clipboard to be pasted as a string, Copy as json will use the json format you have selected under the Options menu.
 - Tag/Untag IDs tags the selected IDs, tagged IDs will be displayed in a dropdown box at the top of the window so you can find them later.
 - Find, replace (Ctrl + F / Ctrl + H). This window also allows a large scale find and replace using a 2 column table, column 1 is the values to find and column 2 the corresponding values to replace them with.
@@ -179,14 +187,6 @@ Conditions must have spaces in between statements.
 - Clear all tagged IDs clears all tagged IDs and the associated drop-down boxes. This is not an Undo-able action.
 
 Please note that when you undo a change not related to details such as copying or deleting an ID any IDs without parents and children in any hierarchy will be placed into the FIRST hierarchy.
-
-#### Format Menu
-
-- Sort sheet gives you two options for sorting the sheet:
-    - Sort by tree: This button sorts the sheet in the order that the IDs occur in the tree.
-    - Sort by column: Using this button and the two drop-down boxes to its right you can sort the sheet using a basic natrual sorting order, numbers taking priority.
-- Autosort treeview IDs re-sorts the order of all treeview IDs and children, this is on by default but if you disable it the order of IDs will not longer be automatically alphanumerically maintained. You can manually set your own treeview IDs order by uncheck-ing this option and then pressing right click and holding over the desired ID and then dragging it to the desired location.
-- Date format switches the date format for the program, it will try to change formats for conditional formatting and details for all date columns.
 
 #### View Menu
 
@@ -251,17 +251,6 @@ You can also recycle the imported changes, importing them again into another fil
 - Export changes gives a view of the changelog and allows saving/exporting of changes.
 - Export flattened sheet allows you to add all IDs flattened levels for any hierarchies to a sheet and then gives options for saving as .xlsx or .csv or copying to clipboard.
 
-#### Options Menu
-
-- Auto-resize row indexes allows width adjustment of the row indexes in the treeview and sheet.
-- Auto-select sheet ID toggles auto selecting of a row in the sheet when you select it in the treeview.
-- Allow spaces in ID names allows spaces in ID names, disabling this will not remove existing spaces from ID names. This option is saved on a per file basis with the program data.
-- Allow spaces in column names allows spaces in column names, disabling this will not remove existing spaces from column names. This option is saved on a per file basis with the program data.
-- XLSX save options gives options for what data is saved within .xlsx files.
-- JSON output format gives four choices for the format of ALL json output, saving and copying to clipboard. They are explained in more detail under the JSON Help section.
-- Set all sheet alignments sets the global cell text alignment for columns in both the treeview and sheet. These global alignments are overridden when setting specific alignments by using the right click popup menu.
-- Theme allows you to change the general colours of the app.
-
 ## TREE BUTTONS
 
 In the tree panel:
@@ -322,7 +311,7 @@ When saving .xlsx files you can also save program data to keep your changelog, r
 
 When loading a file saved with program data the sheet and changelog in the program data, not the visible sheet, will take precedent. This means any edits in the viewable sheet will not be loaded.
 
-To disable saving with program data go to Options -> XLSX save options -> Save xlsx with program data.
+To disable saving with program data go to File -> Settings -> xlsx save options -> Save with app data.
 
 If choosing to save program data any sheet named "program_data" will be overwritten when saving a workbook.
 
@@ -334,7 +323,7 @@ When comparing or merging if the workbook contains program data then it will tak
 
 ## JSON FILES
 
-There are four loadable json formats, with each one the entire sheet is kept under the key "records". However the program will also look for the keys: sheet, data and table. The first format, also the first option under "Options -> JSON output format" is displayed as an example below:
+There are four loadable json formats, with each one the entire sheet is kept under the key "records". However the program will also look for the keys: sheet, data and table. The first format, also the first option under "File -> Settings -> json save options -> json format" is displayed as an example below:
 
 A dictionary of key (column header) and value (list of column cells)
 ```

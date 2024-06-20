@@ -5040,7 +5040,13 @@ class Settings_Popup(tk.Toplevel):
         self.date_format_header = Label(self.date_format, text="Date Format", font=TF, theme=theme, anchor="nw")
         self.date_format_header.pack(side="top", anchor="nw", fill="x", pady=(0, 20))
 
-        self.date_format_label = Label(self.date_format, text="Date Format (per file): ", font=EF, theme=theme, anchor="nw")
+        self.date_format_label = Label(
+            self.date_format,
+            text="Date Format (per file): ",
+            font=EF,
+            theme=theme,
+            anchor="nw",
+        )
         self.date_format_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
 
         self.date_format_dropdown = Ez_Dropdown(self.date_format, font=EF)
