@@ -1353,9 +1353,9 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.bind(f"<{ctrl_button}-z>", self.C.undo)
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
         self.result = False
-        self.find_display.place_cursor()
         center(self, 500, self.window_height(), move_left=True)
         self.deiconify()
+        self.find_display.place_cursor()
         self.starting_up = False
 
     def window_height(self) -> int:
@@ -3549,9 +3549,9 @@ class Ask_Confirm(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.boolean = False
-        self.action_display.place_cursor()
         center(self, 530, 168)
         self.deiconify()
+        self.action_display.place_cursor()
         self.wait_window()
 
     def confirm(self, event=None):
@@ -3589,9 +3589,9 @@ class Save_New_Version_Presave_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.file_loc_display.place_cursor()
         center(self, 550, 185)
         self.deiconify()
+        self.file_loc_display.place_cursor()
         self.wait_window()
 
     def choose_loc(self, event=None):
@@ -3628,9 +3628,9 @@ class Save_New_Version_Postsave_Popup(tk.Toplevel):
         self.bind("<Return>", self.cancel)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.file_name_display.place_cursor()
         center(self, 550, 210)
         self.deiconify()
+        self.file_name_display.place_cursor()
         self.wait_window()
 
     def cancel(self, event=None):
@@ -3777,7 +3777,6 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
             self.date_entry_widget.entry_1.bind("<Return>", self.confirm_normal)
             self.date_entry_widget.entry_2.bind("<Return>", self.confirm_normal)
             self.date_entry_widget.entry_3.bind("<Return>", self.confirm_normal)
-            self.date_entry_widget.place_cursor()
             width_ = 850
             height_ = 280
 
@@ -3795,6 +3794,8 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
         center(self, width_, height_)
         self.deiconify()
         self.bind("<Escape>", self.cancel)
+        if not validation_values:
+            self.date_entry_widget.place_cursor()
         self.wait_window()
 
     def confirm_normal(self, event=None):
@@ -3856,7 +3857,6 @@ class Edit_Detail_Numerical_Popup(tk.Toplevel):
             self.entry_widget.my_entry.bind("<Return>", self.confirm_normal)
             width_ = 600
             height_ = 240
-            self.entry_widget.place_cursor()
 
         self.confirm_button = Button(
             self.bf,
@@ -3872,6 +3872,8 @@ class Edit_Detail_Numerical_Popup(tk.Toplevel):
         center(self, width_, height_)
         self.deiconify()
         self.bind("<Escape>", self.cancel)
+        if not validation_values:
+            self.entry_widget.place_cursor()
         self.wait_window()
 
     def confirm_normal(self, event=None):
@@ -3923,7 +3925,6 @@ class Edit_Detail_Text_Popup(tk.Toplevel):
             self.grid_rowconfigure(3, weight=1)
             self.text_widget = Wrapped_Text_With_Find_And_Yscroll(self, current_detail, "normal", 15, theme=theme)
             self.text_widget.grid(row=3, column=0, sticky="nswe", columnspan=2)
-            self.text_widget.place_cursor()
             width_ = 800
             height_ = 595
             self.confirm_button = Button(self.bf, text="Save", style="EF.Std.TButton", command=self.confirm_normal)
@@ -3935,6 +3936,8 @@ class Edit_Detail_Text_Popup(tk.Toplevel):
         self.deiconify()
         self.grab_set()
         self.bind("<Escape>", self.cancel)
+        if not validation_values:
+            self.text_widget.place_cursor()
         self.wait_window()
 
     def confirm_normal(self, event=None):
@@ -3972,9 +3975,9 @@ class View_Column_Text_Popup(tk.Toplevel):
         self.cancel_button.grid(row=4, column=0, columnspan=2, sticky="nswe", padx=220, pady=(25, 20))
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.text_widget.place_cursor()
         center(self, 850, 545)
         self.deiconify()
+        self.text_widget.place_cursor()
         self.wait_window()
 
     def cancel(self, event=None):
@@ -4018,7 +4021,6 @@ class Add_Top_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.id_name_display.place_cursor()
         center(self, 600, 186 if self.C.tv_label_col == self.C.ic else 250)
         self.deiconify()
         self.id_name_display.place_cursor()
@@ -4221,11 +4223,11 @@ class Rename_Column_Popup(tk.Toplevel):
         self.cancel_button = Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel)
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=(10, 20), pady=(10, 20))
         self.result = False
-        self.new_name_display.place_cursor()
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         center(self, 600, 180)
         self.deiconify()
+        self.new_name_display.place_cursor()
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4262,11 +4264,11 @@ class Add_Hierarchy_Column_Popup(tk.Toplevel):
         self.cancel_button = Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel)
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=(10, 20), pady=(10, 20))
         self.result = False
-        self.hier_name_display.place_cursor()
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        center(self, 600, 185)
+        center(self, 600, 150)
         self.deiconify()
+        self.hier_name_display.place_cursor()
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4309,11 +4311,11 @@ class Add_Detail_Column_Popup(tk.Toplevel):
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=(10, 20), pady=(10, 20))
         self.result = False
         self.type_ = "Text Detail"
-        self.detail_name_display.place_cursor()
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        center(self, 600, 185)
+        center(self, 600, 155)
         self.deiconify()
+        self.detail_name_display.place_cursor()
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4355,9 +4357,9 @@ class Rename_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.new_name_display.place_cursor()
         center(self, 600, 185)
         self.deiconify()
+        self.new_name_display.place_cursor()
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4392,9 +4394,9 @@ class Enter_Sheet_Name_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.sheet_entry.place_cursor()
         center(self, 600, 137)
         self.deiconify()
+        self.sheet_entry.place_cursor()
         self.wait_window()
 
     def confirm(self, event=None):
