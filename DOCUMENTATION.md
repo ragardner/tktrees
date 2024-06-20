@@ -6,8 +6,8 @@ Tk-Trees is an app for management of hierarchy data in table format. It was writ
  - tkinter, tksheet, openpyxl
 
 Tk-Trees is licensed under GPL-3.0 and is the copyright of R. A. Gardner.
-github.com/ragardner
-github@ragardner.simplelogin.com
+- github.com/ragardner
+- github@ragardner.simplelogin.com
 
 ## PROGRAM BASICS
 
