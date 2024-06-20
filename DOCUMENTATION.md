@@ -293,7 +293,7 @@ Right clicking in a cell and selecting edit will pop up a larger window so the t
 
 Pasting a detail or details will work between both panels. You can drag and drop rows in the sheet panel to change their order.
 
-When using drag and drop you can use your mousewheel to scroll down, just move your mouse a bit after scrolling to cause the selection to move.
+When using drag and drop you can use your mousewheel to scroll down, move the mouse a little after scrolling to cause the selection to move.
 
 ## TREE COMPARE
 
