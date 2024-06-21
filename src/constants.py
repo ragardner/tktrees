@@ -53,7 +53,7 @@ rc_press = "<ButtonPress-2>" if USER_OS == "darwin" else "<ButtonPress-3>"
 rc_motion = "<B2-Motion>" if USER_OS == "darwin" else "<B3-Motion>"
 rc_release = "<ButtonRelease-2>" if USER_OS == "darwin" else "<ButtonRelease-3>"
 ctrl_button = "Command" if USER_OS == "darwin" else "Control"
-from_clipboard_delimiters = "".join(["\t", ",", "|"])
+from_clipboard_delimiters = "\t,|"
 
 software_version_number = "1.0"
 software_version_full = "Version: " + software_version_number

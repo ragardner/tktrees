@@ -479,20 +479,7 @@ class Changelog_Popup(tk.Toplevel):
             outline_thickness=0,
             auto_resize_row_index=True,
         )
-        self.sheetdisplay.enable_bindings(
-            "single",
-            "copy",
-            "right_click_popup_menu",
-            "drag_select",
-            "select_all",
-            "row_width_resize",
-            "column_width_resize",
-            "double_click_column_resize",
-            "row_height_resize",
-            "double_click_row_resize",
-            "row_select",
-            "arrowkeys",
-        )
+        self.enable_bindings()
         self.red_bg = "#db7463"
         self.green_bg = "#40bd59"
         self.red_fg = "black"
@@ -559,8 +546,8 @@ class Changelog_Popup(tk.Toplevel):
     def stop_work(self, msg=""):
         self.status_bar.change_text(self.total_changes + msg)
         self.enable_widgets()
-
-    def enable_widgets(self):
+        
+    def enable_bindings(self):
         self.sheetdisplay.enable_bindings(
             "single",
             "copy",
@@ -573,8 +560,12 @@ class Changelog_Popup(tk.Toplevel):
             "row_height_resize",
             "double_click_row_resize",
             "row_select",
+            "column_select",
             "arrowkeys",
         )
+
+    def enable_widgets(self):
+        self.enable_bindings()
         self.find_window.bind("<Return>", self.find)
         self.find_reset_button.config(state="normal")
         self.find_up_button.config(state="normal")
