@@ -1240,7 +1240,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         self.where = X_Checkbutton(
             self.frframe,
-            text="  Only within selected cells",
+            text="  Find in Selection",
             style="wx_button.Std.TButton",
             checked=bool(within),
             compound="left",
@@ -1248,7 +1248,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.where.grid(row=4, column=1, padx=(30, 20), pady=5, sticky="we")
 
         self.match_button = X_Checkbutton(
-            self.frframe, text="  Exact match", style="wx_button.Std.TButton", compound="left"
+            self.frframe, text="  Exact Match", style="wx_button.Std.TButton", compound="left"
         )
         self.match_button.grid(row=5, column=1, padx=(30, 20), pady=(5, 30), sticky="we")
 
@@ -1321,7 +1321,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         self.where2 = X_Checkbutton(
             self.options_frame,
-            text="  Only within selected cells",
+            text="  Find in Selection",
             style="wx_button.Std.TButton",
             checked=bool(within),
             compound="left",
@@ -1563,6 +1563,9 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.select_sheet_button.config(state="disabled")
 
     def sheet_see_and_set(self, row, column, just_see: bool = False):
+        """
+        Uses data indexes
+        """
         self.C.sheet.see(
             row=row,
             column=column,
@@ -1579,6 +1582,9 @@ class Find_And_Replace_Popup(tk.Toplevel):
         return row, column
 
     def tree_see_and_set(self, row, column, just_see=False):
+        """
+        Uses data indexes
+        """
         self.C.tree.scroll_to_item(self.C.tree.rowitem(row, data_index=True))
         self.C.tree.see(
             row=None,
@@ -1692,8 +1698,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         if found_coords:
             self.sheet_see_and_set(*found_coords)
-        else:
-            self.sheet_see_and_set(rst, cst, just_see=True)
+
         if set_status_bar:
             if found_coords:
                 self.status_bar.change_text(
@@ -1738,6 +1743,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
                     break
         else:
             rst, cst, _ = self.get_start_coords(self.C.tree, plus_one=True)
+            rst = datarn(rst)
             for r, c in self.gen_all_cells(start_row=rst, start_col=cst, widget=self.C.tree):
                 cell = data[r][c]
                 if (
@@ -1752,8 +1758,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         if found_coords:
             self.tree_see_and_set(*found_coords)
-        else:
-            self.tree_see_and_set(datarn(rst), cst, just_see=True)
+
         if set_status_bar:
             if found_coords:
                 self.status_bar.change_text(
@@ -1949,6 +1954,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
                 iterable = chain(islice(sels, curridx, None), islice(sels, 0, curridx))
             else:
                 rst, cst, _ = self.get_start_coords(self.C.tree, plus_one=True)
+                rst = datarn(rst)
                 iterable = self.gen_all_cells(start_row=rst, start_col=cst, widget=self.C.tree)
 
             for r, c in iterable:
