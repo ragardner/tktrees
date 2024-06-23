@@ -1500,6 +1500,8 @@ class Sheet(tk.Frame):
         if displayed_rows:
             self.MT.displayed_rows = []
             self.MT.all_rows_displayed = True
+        if selections:
+            self.MT.deselect(redraw=False)
         if row_heights:
             self.MT.saved_row_heights = {}
             self.MT.set_row_positions([])
@@ -1512,8 +1514,6 @@ class Sheet(tk.Frame):
             self.MT.reset_tags()
         if undo_stack:
             self.reset_undos()
-        if selections:
-            self.MT.deselect(redraw=False)
         if sheet_options:
             self.ops = new_sheet_options()
             self.change_theme(redraw=False)
@@ -3832,7 +3832,13 @@ class Sheet(tk.Frame):
         return c if self.MT.all_columns_displayed else self.MT.displayed_columns[c]
 
     data_c = displayed_column_to_data
+    datacn = displayed_column_to_data
     dcol = displayed_column_to_data
+
+    def data_column_to_displayed(self, c: int) -> int:
+        return self.MT.dispcn(c)
+
+    dispcn = data_column_to_displayed
 
     def display_columns(
         self,
@@ -3960,7 +3966,13 @@ class Sheet(tk.Frame):
         return r if self.MT.all_rows_displayed else self.MT.displayed_rows[r]
 
     data_r = displayed_row_to_data
+    datarn = displayed_row_to_data
     drow = displayed_row_to_data
+
+    def data_row_to_displayed(self, r: int) -> int:
+        return self.MT.disprn(r)
+
+    disprn = data_row_to_displayed
 
     def display_rows(
         self,
