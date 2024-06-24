@@ -5912,12 +5912,7 @@ class Tree_Editor(tk.Frame):
         if increment_unsaved:
             self.increment_unsaved()
         self.sheet_changes += 1
-        if self.DATE_FORM in ("%d/%m/%Y", "%d-%m-%Y"):
-            return f'{datetime.datetime.today().strftime("%A %d %B %Y %H:%M:%S")}'
-        elif self.DATE_FORM in ("%Y/%m/%d", "%Y-%m-%d"):
-            return f'{datetime.datetime.today().strftime("%A %Y %B %d %H:%M:%S")}'
-        elif self.DATE_FORM in ("%m/%d/%Y", "%m-%d-%Y"):
-            return f'{datetime.datetime.today().strftime("%A %B %d %Y %H:%M:%S")}'
+        return f'{datetime.datetime.today().strftime("%Y/%m/%d")}'
 
     def rc_rename_col(self, event=None):
         if (col := self.rc_selected_col(allow_hiers=True)) is None:
@@ -11679,7 +11674,7 @@ class Tree_Editor(tk.Frame):
         ws = wb.create_sheet(title=new_title1)
         cell = WriteOnlyCell(
             ws,
-            value=f"Date constructed: {datetime.datetime.today().strftime('%A %d %B %Y %H:%M:%S')}",
+            value=f"Date constructed: {datetime.datetime.today().strftime('%Y/%m/%d')}",
         )
         cell.fill = green_add_fill
         ws.append([cell])
