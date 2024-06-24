@@ -44,7 +44,6 @@ from .classes import (
 from .constants import (
     BF,
     EF,
-    USER_NAME,
     align_c_icon,
     align_e_icon,
     align_w_icon,
@@ -1356,6 +1355,8 @@ class Tree_Editor(tk.Frame):
             ]
             self.row_len = len(self.headers)
             self.changelog = program_data.changelog
+            if self.changelog and len(self.changelog[0]) > 5:
+                self.changelog = []
             self.tv_lvls_bool = bool(program_data.show_tv_lvls)
             self.sheet.align(program_data.sheet_table_align, redraw=False)
             self.sheet.row_index_align(program_data.sheet_index_align, redraw=False)
@@ -1903,11 +1904,14 @@ class Tree_Editor(tk.Frame):
             ),
         )
 
+    def changelog_singular(self, text):
+        self.changelog[-1] = self.changelog[-1][:1] + (text,) + self.changelog[-1][2:]
+        self.increment_unsaved()
+
     def changelog_append(self, change, id_, old, new):
         self.changelog.append(
             (
                 self.get_datetime_changelog(increment_unsaved=True),
-                USER_NAME,
                 change,
                 id_,
                 old,
@@ -1919,7 +1923,6 @@ class Tree_Editor(tk.Frame):
         self.changelog.append(
             (
                 self.get_datetime_changelog(increment_unsaved=False),
-                USER_NAME,
                 change,
                 id_,
                 old,
@@ -2372,10 +2375,6 @@ class Tree_Editor(tk.Frame):
             self.redraw_sheets()
         self.redo_tree_display()
         return
-
-    def changelog_singular(self, text, increment_unsaved=True):
-        self.changelog[-1] = self.changelog[-1][:2] + (text,) + self.changelog[-1][3:]
-        self.increment_unsaved()
 
     def cut_key(self, event: object = None) -> None:
         if self.tree.has_focus():
@@ -3516,7 +3515,7 @@ class Tree_Editor(tk.Frame):
         else:
             cc_add = ""
         if self.changelog:
-            end = f"|   Last Edit: {self.changelog[-1][2]}   {cc_add}"
+            end = f"|   Last Edit: {self.changelog[-1][1]}   {cc_add}"
         else:
             end = f"|   No Changes Made   {cc_add}"
         return f"{len(self.sheet.MT.data)} IDs   {tree_addition}{sheet_addition}{end}"
@@ -6252,7 +6251,7 @@ class Tree_Editor(tk.Frame):
             for i, row in enumerate(reversed(self.changelog)):
                 if not i:
                     continue
-                if not row[2].startswith(
+                if not row[1].startswith(
                     (
                         "Merge | ",
                         "Imported change |",
@@ -6494,7 +6493,8 @@ class Tree_Editor(tk.Frame):
             selected=self.tree.selected,
             twidths={self.headers[i].name: width for i, width in enumerate(self.tree.get_column_widths())},
             theights={
-                self.tree.rowitem(i, data_index=False): height for i, height in enumerate(self.tree.get_safe_row_heights())
+                self.tree.rowitem(i, data_index=False): height
+                for i, height in enumerate(self.tree.get_safe_row_heights())
             },
         )
         return self.saved_info
@@ -10127,7 +10127,7 @@ class Tree_Editor(tk.Frame):
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
         row_len = max(map(len, changes), default=0)
-        if row_len != 6:
+        if row_len != 5:
             Error(self, "Invalid changelog format   ", theme=self.C.theme)
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
@@ -10140,7 +10140,7 @@ class Tree_Editor(tk.Frame):
             if not changenum % 10:
                 self.C.update()
                 self.C.status_bar.change_text(f"Imported {changenum} / {changes_len} changes")
-            ctyp = change[2]
+            ctyp = change[1]
             if ctyp.startswith("Imported change |"):
                 ctyp = ctyp.split("Imported change | ")[1]
             elif ctyp.startswith("Merge |"):
@@ -10148,7 +10148,7 @@ class Tree_Editor(tk.Frame):
             try:
                 #  "Edit cell"
                 if ctyp == "Edit cell |" or ctyp == "Edit cell":
-                    c3s = change[3].split(" ")
+                    c3s = change[2].split(" ")
                     cik = c3s[1].lower()
                     name = c3s[5]  # col name in change
                     col = next(i for i, h in enumerate(self.headers) if h.name.lower() == name.lower())
@@ -10156,7 +10156,7 @@ class Tree_Editor(tk.Frame):
                     if type_ == "Detail":
                         type_ = f"{c3s[-2]} {type_}"
                     if self.headers[col].validation:
-                        if self.is_in_validation(self.headers[col].validation, change[5]):
+                        if self.is_in_validation(self.headers[col].validation, change[4]):
                             validation_check = True
                         else:
                             validation_check = False
@@ -10165,19 +10165,19 @@ class Tree_Editor(tk.Frame):
                     if (
                         self.headers[col].type_ == type_
                         and cik in self.rns
-                        and self.sheet.MT.data[self.rns[cik]][col] == change[4]
+                        and self.sheet.MT.data[self.rns[cik]][col] == change[3]
                         and validation_check
                     ):
                         oldv = f"{self.sheet.MT.data[self.rns[cik]][col]}"
-                        newv = f"{change[5]}"
-                        if self.sheet.MT.data[self.rns[cik]][col] != change[5]:
+                        newv = f"{change[4]}"
+                        if self.sheet.MT.data[self.rns[cik]][col] != change[4]:
                             self.changelog_append_no_unsaved(
                                 "Imported change | Edit cell",
+                                change[2],
                                 change[3],
                                 change[4],
-                                change[5],
                             )
-                            self.sheet.MT.data[self.rns[cik]][col] = change[5]
+                            self.sheet.MT.data[self.rns[cik]][col] = change[4]
                             if oldv != newv and type_ == "ID" or type_ == "Parent":
                                 self.nodes = {}
                                 self.auto_sort_nodes_bool = True
@@ -10203,8 +10203,8 @@ class Tree_Editor(tk.Frame):
                 #  "Move rows"
 
                 elif ctyp == "Move rows":
-                    old_locs = change[4].split(",")
-                    new_locs = change[5].split(",")
+                    old_locs = change[3].split(",")
+                    new_locs = change[4].split(",")
                     if len(old_locs) != len(new_locs):
                         successful.append(False)
                         continue
@@ -10223,9 +10223,9 @@ class Tree_Editor(tk.Frame):
                         )
                         self.changelog_append_no_unsaved(
                             "Imported change | Move rows",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         successful.append(True)
@@ -10235,8 +10235,8 @@ class Tree_Editor(tk.Frame):
                 #  "Move columns"
 
                 elif ctyp == "Move columns":
-                    old_locs = change[4].split(",")
-                    new_locs = change[5].split(",")
+                    old_locs = change[3].split(",")
+                    new_locs = change[4].split(",")
                     if len(old_locs) != len(new_locs):
                         successful.append(False)
                         continue
@@ -10256,9 +10256,9 @@ class Tree_Editor(tk.Frame):
                         self.snapshot_drag_cols(event_data=event_data)
                         self.changelog_append_no_unsaved(
                             "Imported change | Move columns",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10267,7 +10267,7 @@ class Tree_Editor(tk.Frame):
                 #  "Add new hierarchy column"
 
                 elif ctyp == "Add new hierarchy column":
-                    c3s = change[3].split(" ")
+                    c3s = change[2].split(" ")
                     colname = "".join(c3s[-1].split(" ")).strip()
                     colnum = int(c3s[1][1:]) - 1
                     if (
@@ -10278,9 +10278,9 @@ class Tree_Editor(tk.Frame):
                         self.add_hier_col(colnum, colname, snapshot=False)
                         self.changelog_append_no_unsaved(
                             "Imported change | Add new hierarchy column",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10289,7 +10289,7 @@ class Tree_Editor(tk.Frame):
                 #  "Add new detail column"
 
                 elif ctyp == "Add new detail column":
-                    c3s = change[3].split(" ")
+                    c3s = change[2].split(" ")
                     colname = "".join(c3s[4].split(" ")).strip()
                     colnum = int(c3s[1][1:]) - 1
                     coltype = f"{c3s[-2]} {c3s[-1]}"
@@ -10301,9 +10301,9 @@ class Tree_Editor(tk.Frame):
                         self.add_col(colnum, colname, coltype, snapshot=False)
                         self.changelog_append_no_unsaved(
                             "Imported change | Add new detail column",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10312,7 +10312,7 @@ class Tree_Editor(tk.Frame):
                 #  "Delete hierarchy column"
 
                 elif ctyp == "Delete hierarchy column":
-                    c3s = change[3].split(" ")
+                    c3s = change[2].split(" ")
                     colname = c3s[-1]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     if self.headers[colnum].type_ == "Parent" and len(self.hiers) > 1:
@@ -10321,7 +10321,7 @@ class Tree_Editor(tk.Frame):
                         self.del_cols(cols=[colnum], snapshot=False)
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete hierarchy column",
-                            change[3],
+                            change[2],
                             "",
                             "",
                         )
@@ -10332,7 +10332,7 @@ class Tree_Editor(tk.Frame):
                 #  "Delete detail column"
 
                 elif ctyp == "Delete detail column":
-                    c3s = change[3].split(" ")
+                    c3s = change[2].split(" ")
                     colname = c3s[4]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     coltype = f"{c3s[-2]} {c3s[-1]}"
@@ -10344,7 +10344,7 @@ class Tree_Editor(tk.Frame):
                         self.del_cols(cols=[colnum], snapshot=False)
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete detail column",
-                            change[3],
+                            change[2],
                             "",
                             "",
                         )
@@ -10355,21 +10355,21 @@ class Tree_Editor(tk.Frame):
                 #  "Column rename"
 
                 elif ctyp == "Column rename":
-                    c3s = change[3].split(" ")
+                    c3s = change[2].split(" ")
                     coltype = f"{c3s[-2]} {c3s[-1]}"
-                    colname = "".join(change[5].split(" ")).strip()
+                    colname = "".join(change[4].split(" ")).strip()
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     if (
-                        self.headers[colnum].name.lower() == change[4].lower()
+                        self.headers[colnum].name.lower() == change[3].lower()
                         and self.headers[colnum].type_ == coltype
                         and colname.lower() not in (h.name.lower() for h in self.headers)
                     ):
                         self.rename_col(colnum, colname, snapshot=False)
                         self.changelog_append_no_unsaved(
                             "Imported change | Column rename",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10378,15 +10378,15 @@ class Tree_Editor(tk.Frame):
                 #  "Edit validation"
 
                 elif ctyp == "Edit validation":
-                    c3s = change[3].split(" ")
+                    c3s = change[2].split(" ")
                     colname = c3s[3]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     coltype = f"{c3s[-2]} {c3s[-1]}"
-                    validation = change[5]
+                    validation = change[4]
                     if (
                         self.headers[colnum].type_ == coltype
                         and coltype in ("Text Detail", "Numerical Detail", "Date Detail")
-                        and change[4] == ",".join(self.headers[colnum].validation)
+                        and change[3] == ",".join(self.headers[colnum].validation)
                     ):
                         if validation:
                             validation = self.check_validation_validity(colnum, f"{validation}")
@@ -10400,9 +10400,9 @@ class Tree_Editor(tk.Frame):
                             self.apply_validation_to_col(colnum)
                         self.changelog_append_no_unsaved(
                             "Imported change | Edit validation",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10411,11 +10411,11 @@ class Tree_Editor(tk.Frame):
                 #  "Change detail column type"
 
                 elif ctyp == "Change detail column type":
-                    c3s = change[3].split(" ")
+                    c3s = change[2].split(" ")
                     colname = c3s[-1]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
-                    oldtype = change[4]
-                    newtype = change[5]
+                    oldtype = change[3]
+                    newtype = change[4]
                     if self.headers[colnum].type_ == oldtype and newtype in (
                         "Text Detail",
                         "Numerical Detail",
@@ -10456,9 +10456,9 @@ class Tree_Editor(tk.Frame):
                             ]
                         self.changelog_append_no_unsaved(
                             "Imported change | Change detail column type",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10467,8 +10467,8 @@ class Tree_Editor(tk.Frame):
                 #  "Date format change"
 
                 elif ctyp == "Date format change":
-                    old_form = "%" + change[4][:2] + "%" + change[4][2:4] + "%" + change[4][4:]
-                    new_form = "%" + change[5][:2] + "%" + change[5][2:4] + "%" + change[5][4:]
+                    old_form = "%" + change[3][:2] + "%" + change[3][2:4] + "%" + change[3][4:]
+                    new_form = "%" + change[4][:2] + "%" + change[4][2:4] + "%" + change[4][4:]
                     if old_form in (
                         "%Y/%m/%d",
                         "%m/%d/%Y",
@@ -10487,9 +10487,9 @@ class Tree_Editor(tk.Frame):
                         self.apply_date_format_change(new_form, snapshot=False)
                         self.changelog_append_no_unsaved(
                             "Imported change | Date format change",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10498,11 +10498,11 @@ class Tree_Editor(tk.Frame):
                 #  "Cut and paste ID"
 
                 elif ctyp == "Cut and paste ID" or ctyp == "Cut and paste ID |":
-                    cik = change[3].lower()
-                    old = change[4].split(" ")
+                    cik = change[2].lower()
+                    old = change[3].split(" ")
                     oldcolname = old[-1]
                     oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
-                    if "n/a - Top ID" in change[4]:
+                    if "n/a - Top ID" in change[3]:
                         oldpar = ""
                         oldpar_check = True
                     else:
@@ -10512,10 +10512,10 @@ class Tree_Editor(tk.Frame):
                         else:
                             oldpar_check = True
 
-                    new = change[5].split(" ")
+                    new = change[4].split(" ")
                     newcolname = new[-1]
                     newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    if "n/a - Top ID" in change[5]:
+                    if "n/a - Top ID" in change[4]:
                         newpar = ""
                         newpar_check = True
                     else:
@@ -10535,7 +10535,7 @@ class Tree_Editor(tk.Frame):
                         oldpc = int(self.pc)
                         self.pc = newcol
                         if self.cut_paste(
-                            f"{change[3]}",
+                            f"{change[2]}",
                             oldpar,
                             oldcol,
                             newpar,
@@ -10544,9 +10544,9 @@ class Tree_Editor(tk.Frame):
                         ):
                             self.changelog_append_no_unsaved(
                                 "Imported change | Cut and paste ID",
+                                change[2],
                                 change[3],
                                 change[4],
-                                change[5],
                             )
                             successful.append(True)
                         else:
@@ -10558,11 +10558,11 @@ class Tree_Editor(tk.Frame):
                 #  "Cut and paste ID + children |"
 
                 elif ctyp == "Cut and paste ID + children" or ctyp == "Cut and paste ID + children |":
-                    cik = change[3].lower()
-                    old = change[4].split(" ")
+                    cik = change[2].lower()
+                    old = change[3].split(" ")
                     oldcolname = old[-1]
                     oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
-                    if "n/a - Top ID" in change[4]:
+                    if "n/a - Top ID" in change[3]:
                         oldpar = ""
                         oldpar_check = True
                     else:
@@ -10572,10 +10572,10 @@ class Tree_Editor(tk.Frame):
                         else:
                             oldpar_check = True
 
-                    new = change[5].split(" ")
+                    new = change[4].split(" ")
                     newcolname = new[-1]
                     newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    if "n/a - Top ID" in change[5]:
+                    if "n/a - Top ID" in change[4]:
                         newpar = ""
                         newpar_check = True
                     else:
@@ -10595,7 +10595,7 @@ class Tree_Editor(tk.Frame):
                         oldpc = int(self.pc)
                         self.pc = newcol
                         if self.cut_paste_all(
-                            f"{change[3]}",
+                            f"{change[2]}",
                             oldpar,
                             oldcol,
                             newpar,
@@ -10604,9 +10604,9 @@ class Tree_Editor(tk.Frame):
                         ):
                             self.changelog_append_no_unsaved(
                                 "Imported change | Cut and paste ID + children",
+                                change[2],
                                 change[3],
                                 change[4],
-                                change[5],
                             )
                             successful.append(True)
                         else:
@@ -10618,10 +10618,10 @@ class Tree_Editor(tk.Frame):
                 #  "Cut and paste children"
 
                 elif ctyp == "Cut and paste children":
-                    old = change[4].split(" ")
+                    old = change[3].split(" ")
                     oldcolname = old[-1]
                     oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
-                    if "n/a - Top ID" in change[4]:
+                    if "n/a - Top ID" in change[3]:
                         oldpar = ""
                         oldpar_check = True
                     else:
@@ -10631,10 +10631,10 @@ class Tree_Editor(tk.Frame):
                         else:
                             oldpar_check = True
 
-                    new = change[5].split(" ")
+                    new = change[4].split(" ")
                     newcolname = new[-1]
                     newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    if "n/a - Top ID" in change[5]:
+                    if "n/a - Top ID" in change[4]:
                         newpar = ""
                         newpar_check = True
                     else:
@@ -10655,9 +10655,9 @@ class Tree_Editor(tk.Frame):
                         if self.cut_paste_children(oldpar, newpar, oldcol, snapshot=False, errors=False):
                             self.changelog_append_no_unsaved(
                                 "Imported change | Cut and paste children",
+                                change[2],
                                 change[3],
                                 change[4],
-                                change[5],
                             )
                             successful.append(True)
                         else:
@@ -10669,14 +10669,14 @@ class Tree_Editor(tk.Frame):
                 #  "Copy and paste ID |"
 
                 elif ctyp == "Copy and paste ID |" or ctyp == "Copy and paste ID":
-                    cik = change[3].lower()
-                    old = change[4].split(" ")
+                    cik = change[2].lower()
+                    old = change[3].split(" ")
                     oldcolname = old[-1]
                     oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
-                    new = change[5].split(" ")
+                    new = change[4].split(" ")
                     newcolname = new[-1]
                     newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    if "n/a - Top ID" in change[5]:
+                    if "n/a - Top ID" in change[4]:
                         newpar = ""
                         newpar_check = True
                     else:
@@ -10694,12 +10694,12 @@ class Tree_Editor(tk.Frame):
                     ):
                         oldpc = int(self.pc)
                         self.pc = newcol
-                        if self.copy_paste(change[3], oldcol, newpar, snapshot=False, errors=False):
+                        if self.copy_paste(change[2], oldcol, newpar, snapshot=False, errors=False):
                             self.changelog_append_no_unsaved(
                                 "Imported change | Copy and paste ID",
+                                change[2],
                                 change[3],
                                 change[4],
-                                change[5],
                             )
                             successful.append(True)
                         else:
@@ -10711,14 +10711,14 @@ class Tree_Editor(tk.Frame):
                 #  "Copy and paste ID + children |"
 
                 elif ctyp == "Copy and paste ID + children |" or ctyp == "Copy and paste ID + children":
-                    cik = change[3].lower()
-                    old = change[4].split(" ")
+                    cik = change[2].lower()
+                    old = change[3].split(" ")
                     oldcolname = old[-1]
                     oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
-                    new = change[5].split(" ")
+                    new = change[4].split(" ")
                     newcolname = new[-1]
                     newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    if "n/a - Top ID" in change[5]:
+                    if "n/a - Top ID" in change[4]:
                         newpar = ""
                         newpar_check = True
                     else:
@@ -10736,12 +10736,12 @@ class Tree_Editor(tk.Frame):
                     ):
                         oldpc = int(self.pc)
                         self.pc = newcol
-                        if self.copy_paste_all(change[3], oldcol, newpar, snapshot=False, errors=False):
+                        if self.copy_paste_all(change[2], oldcol, newpar, snapshot=False, errors=False):
                             self.changelog_append_no_unsaved(
                                 "Imported change | Copy and paste ID + children",
+                                change[2],
                                 change[3],
                                 change[4],
-                                change[5],
                             )
                             successful.append(True)
                         else:
@@ -10753,12 +10753,12 @@ class Tree_Editor(tk.Frame):
                 #  "Add ID"
 
                 elif ctyp == "Add ID":
-                    new = change[3].split(" ")
+                    new = change[2].split(" ")
                     newcolname = new[-1]
                     newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
                     cid = new[1]
                     cik = cid.lower()
-                    if "n/a - Top ID" in change[3]:
+                    if "n/a - Top ID" in change[2]:
                         newpar = ""
                         newpk = ""
                     else:
@@ -10779,9 +10779,9 @@ class Tree_Editor(tk.Frame):
                             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                             self.changelog_append_no_unsaved(
                                 "Imported change | Add ID",
+                                change[2],
                                 change[3],
                                 change[4],
-                                change[5],
                             )
                             successful.append(True)
                         else:
@@ -10793,15 +10793,15 @@ class Tree_Editor(tk.Frame):
                 #  "Rename ID"
 
                 elif ctyp == "Rename ID":
-                    oldname = change[4]
-                    newname = change[5]
+                    oldname = change[3]
+                    newname = change[4]
                     if oldname.lower() in self.rns and newname.lower() not in self.rns:
                         if self.change_ID_name(oldname, newname, snapshot=False, errors=False):
                             self.changelog_append_no_unsaved(
                                 "Imported change | Rename ID",
+                                change[2],
                                 change[3],
                                 change[4],
-                                change[5],
                             )
                             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                             if oldname.lower() in self.tagged_ids:
@@ -10816,11 +10816,11 @@ class Tree_Editor(tk.Frame):
                 #  "Delete ID |"
 
                 elif ctyp == "Delete ID |" or ctyp == "Delete ID":
-                    info = change[3].split(" ")
+                    info = change[2].split(" ")
                     colname = info[-1]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     cid = info[1]
-                    if "n/a - Top ID" in change[3]:
+                    if "n/a - Top ID" in change[2]:
                         cpar = ""
                     else:
                         cpar = info[3]
@@ -10839,9 +10839,9 @@ class Tree_Editor(tk.Frame):
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10850,11 +10850,11 @@ class Tree_Editor(tk.Frame):
                 #  "Delete ID, orphan children"
 
                 elif ctyp == "Delete ID, orphan children":
-                    info = change[3].split(" ")
+                    info = change[2].split(" ")
                     colname = info[-1]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     cid = info[1]
-                    if "n/a - Top ID" in change[3]:
+                    if "n/a - Top ID" in change[2]:
                         cpar = ""
                     else:
                         cpar = info[3]
@@ -10873,9 +10873,9 @@ class Tree_Editor(tk.Frame):
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10884,11 +10884,11 @@ class Tree_Editor(tk.Frame):
                 #  "Delete ID + all children"
 
                 elif ctyp == "Delete ID + all children":
-                    info = change[3].split(" ")
+                    info = change[2].split(" ")
                     colname = info[-1]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     cid = info[1]
-                    if "n/a - Top ID" in change[3]:
+                    if "n/a - Top ID" in change[2]:
                         cpar = ""
                     else:
                         cpar = info[3]
@@ -10907,9 +10907,9 @@ class Tree_Editor(tk.Frame):
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID + all children",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10918,11 +10918,11 @@ class Tree_Editor(tk.Frame):
                 #  "Delete ID + all children from all hierarchies"
 
                 elif ctyp == "Delete ID + all children from all hierarchies":
-                    info = change[3].split(" ")
+                    info = change[2].split(" ")
                     colname = info[-1]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     cid = info[1]
-                    if "n/a - Top ID" in change[3]:
+                    if "n/a - Top ID" in change[2]:
                         cpar = ""
                     else:
                         cpar = info[3]
@@ -10941,9 +10941,9 @@ class Tree_Editor(tk.Frame):
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID + all children from all hierarchies",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10952,15 +10952,15 @@ class Tree_Editor(tk.Frame):
                 #  "Delete ID from all hierarchies |"
 
                 elif ctyp == "Delete ID from all hierarchies |" or ctyp == "Delete ID from all hierarchies":
-                    cid = change[3]
+                    cid = change[2]
                     if cid.lower() in self.rns:
                         self.del_id_all_hiers(cid.lower(), snapshot=False)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID from all hierarchies",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10969,15 +10969,15 @@ class Tree_Editor(tk.Frame):
                 #  "Delete ID from all hierarchies, orphan children"
 
                 elif ctyp == "Delete ID from all hierarchies, orphan children":
-                    cid = change[3]
+                    cid = change[2]
                     if cid.lower() in self.rns:
                         self.del_id_all_hiers_orphan(cid.lower(), snapshot=False)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID from all hierarchies, orphan children",
+                            change[2],
                             change[3],
                             change[4],
-                            change[5],
                         )
                         successful.append(True)
                     else:
@@ -10986,20 +10986,20 @@ class Tree_Editor(tk.Frame):
                 #  "Sort sheet"
 
                 elif ctyp == "Sort sheet":
-                    if change[3] == "Sorted sheet in tree walk order":
+                    if change[2] == "Sorted sheet in tree walk order":
                         if self.sheet.MT.data:
                             self.sort_sheet_walk(snapshot=False)
                             self.changelog_append_no_unsaved(
-                                f"Imported change | {change[2]}",
+                                f"Imported change | {change[1]}",
+                                change[2],
                                 change[3],
                                 change[4],
-                                change[5],
                             )
                             successful.append(True)
                         else:
                             successful.append(False)
                     else:
-                        c3s = change[3].split(" ")
+                        c3s = change[2].split(" ")
                         colname = info[6]
                         colnum = next(
                             i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower()
@@ -11008,10 +11008,10 @@ class Tree_Editor(tk.Frame):
                         if order in ("ASCENDING", "DESCENDING"):
                             self.sort_sheet(colname, order, snapshot=False)
                             self.changelog_append_no_unsaved(
-                                f"Imported change | {change[2]}",
+                                f"Imported change | {change[1]}",
+                                change[2],
                                 change[3],
                                 change[4],
-                                change[5],
                             )
                             successful.append(True)
                         else:
@@ -11080,7 +11080,7 @@ class Tree_Editor(tk.Frame):
         applicable_changes = applicable_changes | {f"Imported change | {change}" for change in applicable_changes}
         Post_Import_Changes_Popup(
             self,
-            [change for change in changes if change[2] in applicable_changes or change[2].startswith("Merge | ")],
+            [change for change in changes if change[1] in applicable_changes or change[1].startswith("Merge | ")],
             successful,
             theme=self.C.theme,
         )

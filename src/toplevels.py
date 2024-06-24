@@ -28,7 +28,6 @@ from .constants import (
     EFB,
     ERR_ASK_FNT,
     TF,
-    USER_NAME,
     app_title,
     changelog_header,
     ctrl_button,
@@ -88,12 +87,12 @@ from .widgets import (
 )
 
 
-def new_toplevel_chores(toplevel, parent, title, grab=True):
+def new_toplevel_chores(toplevel, parent, title, grab=True, resizable=False):
     toplevel.update()
     if grab:
         toplevel.grab_set()
     toplevel.withdraw()
-    toplevel.resizable(False, False)
+    toplevel.resizable(resizable, resizable)
     toplevel.tk.call("wm", "iconphoto", toplevel._w, tk.PhotoImage(format="gif", data=top_left_icon))
     toplevel.title(title)
     if grab:
@@ -105,7 +104,7 @@ def new_toplevel_chores(toplevel, parent, title, grab=True):
 class Export_Flattened_Popup(tk.Toplevel):
     def __init__(self, C, width=1280, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Flatten sheet")
+        self.C = new_toplevel_chores(toplevel=self, parent=C, title=f"{app_title} - Flatten sheet", resizable=True)
 
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.USER_HAS_QUIT = False
@@ -385,7 +384,7 @@ class Export_Flattened_Popup(tk.Toplevel):
 class Post_Import_Changes_Popup(tk.Toplevel):
     def __init__(self, C, changes, successful, width=1000, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Successful changes")
+        self.C = new_toplevel_chores(self, C, f"{app_title} - Successful changes", resizable=True)
         self.total_changes = f"Total changes: {len(changes)}"
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -412,7 +411,7 @@ class Post_Import_Changes_Popup(tk.Toplevel):
             "arrowkeys",
             "ctrl_select",
         )
-        self.sheetdisplay.headers(newheaders=["Date", "User", "Type", "ID/Name/Number", "Old Value", "New Value"])
+        self.sheetdisplay.headers(newheaders=changelog_header)
         self.sheetdisplay.row_index(0)
         self.sheetdisplay.data_reference(newdataref=self.changes, reset_col_positions=True, reset_row_positions=True)
         for i, b in enumerate(self.successful):
@@ -439,7 +438,7 @@ class Post_Import_Changes_Popup(tk.Toplevel):
 class Changelog_Popup(tk.Toplevel):
     def __init__(self, C, width=999, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Changelog")
+        self.C = new_toplevel_chores(self, C, f"{app_title} - Changelog", resizable=True)
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
 
@@ -470,7 +469,7 @@ class Changelog_Popup(tk.Toplevel):
         self.sheetdisplay = Sheet(
             self,
             theme=theme,
-            headers=["Date", "User", "Type", "ID/Name/Number", "Old Value", "New Value"],
+            headers=changelog_header,
             row_index=0,
             startup_select=(len(self.C.changelog) - 1, len(self.C.changelog), "rows"),
             data=self.C.changelog,
@@ -478,14 +477,16 @@ class Changelog_Popup(tk.Toplevel):
             header_font=sheet_header_font,
             outline_thickness=0,
             auto_resize_row_index=True,
+            default_column_width=200,
         )
+        self.sheetdisplay.column_width(0, width=1)
         self.enable_bindings()
         self.red_bg = "#db7463"
         self.green_bg = "#40bd59"
         self.red_fg = "black"
         self.green_fg = "black"
-        self.sheetdisplay.highlight_columns(columns=4, bg=self.red_bg, fg=self.red_fg)
-        self.sheetdisplay.highlight_columns(columns=5, bg=self.green_bg, fg=self.green_fg)
+        self.sheetdisplay.highlight_columns(columns=3, bg=self.red_bg, fg=self.red_fg)
+        self.sheetdisplay.highlight_columns(columns=4, bg=self.green_bg, fg=self.green_fg)
         self.sheetdisplay.grid(row=1, column=0, sticky="nswe")
         self.status_bar = Status_Bar(self, text=self.total_changes, theme=theme)
         self.status_bar.grid(row=2, column=0, sticky="nswe")
@@ -521,14 +522,14 @@ class Changelog_Popup(tk.Toplevel):
         num = len(selectedrows)
         self.start_work(f"Pruning {num} changes...")
         up_to = min(selectedrows)
-        if self.C.changelog[up_to][2].endswith(("|", "| ")):
+        if self.C.changelog[up_to][1].endswith(("|", "| ")):
             for i, entry in enumerate(islice(self.C.changelog, up_to, None), up_to):
-                if not entry[2].endswith(("|", "| ")):
+                if not entry[1].endswith(("|", "| ")):
                     up_to = i
                     break
         self.C.snapshot_prune_changelog(up_to)
         self.C.changelog[: up_to + 1] = []
-        self.sheetdisplay.headers(newheaders=["Date", "User", "Type", "ID/Name/Number", "Old Value", "New Value"])
+        self.sheetdisplay.headers(newheaders=changelog_header)
         self.sheetdisplay.row_index(newindex=0)
         self.sheetdisplay.data_reference(
             newdataref=self.C.changelog, reset_col_positions=False, reset_row_positions=True, redraw=False
@@ -830,8 +831,8 @@ class Changelog_Popup(tk.Toplevel):
         if not newfind:
             self.find_window.delete(0, "end")
         self.find_results_label.config(text="0/0")
-        self.sheetdisplay.highlight_columns(columns=4, bg=self.red_bg, fg=self.red_fg)
-        self.sheetdisplay.highlight_columns(columns=5, bg=self.green_bg, fg=self.green_fg)
+        self.sheetdisplay.highlight_columns(columns=3, bg=self.red_bg, fg=self.red_fg)
+        self.sheetdisplay.highlight_columns(columns=4, bg=self.green_bg, fg=self.green_fg)
         self.sheetdisplay.refresh()
 
     def cancel(self, event=None):
@@ -841,7 +842,7 @@ class Changelog_Popup(tk.Toplevel):
 class Compare_Report_Popup(tk.Toplevel):
     def __init__(self, C, width=1000, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Comparison Report")
+        self.C = new_toplevel_chores(self, C, f"{app_title} - Comparison Report", resizable=True)
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
 
@@ -1344,7 +1345,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.bind(f"<{ctrl_button}-z>", self.C.undo)
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
         self.result = False
-        center(self, 500, self.window_height(), move_left=True)
+        center(self, 480, self.window_height(), move_left=True)
         self.deiconify()
         self.find_display.place_cursor()
         self.starting_up = False
@@ -1355,7 +1356,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
     def notebook_tab_click(self, event=None):
         if not self.starting_up:
             if self.notebook.index(self.notebook.select()) != 1:
-                self.geometry(f"500x{self.window_height()}")
+                self.geometry(f"480x{self.window_height()}")
             else:
                 self.geometry(f"720x{self.window_height()}")
                 self.sheetdisplay.MT.focus_set()
@@ -2246,9 +2247,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
             self.C.redraw_sheets()
 
         if total_changed > 1:
-            self.C.changelog.append(
-                (self.C.get_datetime_changelog(), USER_NAME, f"Edit {total_changed} cells", "", "", "")
-            )
+            self.C.changelog_append((f"Edit {total_changed} cells", "", "", ""))
         else:
             self.C.changelog_singular("Edit cell")
 
@@ -2767,7 +2766,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
 class View_Id_Popup(tk.Toplevel):
     def __init__(self, C, ids_row, width=800, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - {C.sheet.MT.data[ids_row['rn']][C.ic]}")
+        self.C = new_toplevel_chores(self, C, f"{app_title} - {C.sheet.MT.data[ids_row['rn']][C.ic]}", resizable=True)
 
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
@@ -3032,7 +3031,7 @@ class View_Id_Popup(tk.Toplevel):
 class Merge_Sheets_Popup(tk.Toplevel):
     def __init__(self, C, theme="dark", add_rows=False):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Merge sheets")
+        self.C = new_toplevel_chores(self, C, f"{app_title} - Merge sheets", resizable=True)
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.USER_HAS_QUIT = False
         self.grid_columnconfigure(0, weight=1, uniform="x")
@@ -3539,7 +3538,10 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
     def __init__(self, C, cols, row_len, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(
-            self, C, f"{app_title} - Overwrite the current sheet using data from the clipboard"
+            self,
+            C,
+            f"{app_title} - Overwrite the current sheet using data from the clipboard",
+            resizable=True,
         )
         # self.grid_columnconfigure(0,weight=1)
         self.grid_columnconfigure(1, weight=1)

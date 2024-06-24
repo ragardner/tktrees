@@ -99,11 +99,10 @@ def case_insensitive_replace(find_, repl, text):
 
 def xlsx_changelog_header(ws):
     ws.column_dimensions["A"].width = 37
-    ws.column_dimensions["B"].width = 20
-    ws.column_dimensions["C"].width = 37
-    ws.column_dimensions["D"].width = 52
+    ws.column_dimensions["B"].width = 37
+    ws.column_dimensions["C"].width = 52
     ws.column_dimensions["E"].width = 60
-    ws.column_dimensions["F"].width = 60
+    ws.column_dimensions["D"].width = 60
     ws.freeze_panes = "A2"
     old_val_cell = WriteOnlyCell(ws, value="Old Value")
     old_val_cell.fill = red_remove_fill
@@ -111,7 +110,6 @@ def xlsx_changelog_header(ws):
     new_val_cell.fill = green_add_fill
     return [
         WriteOnlyCell(ws, value="Date"),
-        WriteOnlyCell(ws, value="User"),
         WriteOnlyCell(ws, value="Type"),
         WriteOnlyCell(ws, value="ID/Name/Number"),
         old_val_cell,

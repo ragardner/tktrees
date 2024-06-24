@@ -36,17 +36,6 @@ USER_OS_VERSION = f"{get_os_version()}"
 USER_PYTHON_VERSION = f"{get_python_version}"
 USER_TK_VERSION = f"{tk.TkVersion}"
 USER_TCL_VERSION = f"{tk.TclVersion}"
-USER_NAME = "Failed to get username"
-if USER_OS == "darwin":
-    USER_NAME = os.path.expanduser("~").split("/")[-1]
-else:
-    try:
-        USER_NAME = os.getlogin()
-    except Exception:
-        try:
-            USER_NAME = os.getenv("username")
-        except Exception:
-            pass
 
 rc_button = "<2>" if USER_OS == "darwin" else "<3>"
 rc_press = "<ButtonPress-2>" if USER_OS == "darwin" else "<ButtonPress-3>"
@@ -220,7 +209,6 @@ openpyxl_center_align = Alignment(horizontal="center")
 
 changelog_header = [
     "Date",
-    "User",
     "Type",
     "ID/Name/Number",
     "Old Value",
