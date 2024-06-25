@@ -13,7 +13,7 @@ import zlib
 from bisect import bisect_left, bisect_right
 from collections import defaultdict, deque
 from collections.abc import Generator, Iterator, Sequence
-from itertools import islice, repeat, filterfalse
+from itertools import cycle, filterfalse, islice, repeat
 from locale import getdefaultlocale
 from math import floor
 from operator import itemgetter
@@ -26,11 +26,11 @@ from tksheet import (
     Highlight,
     Sheet,
     get_data_from_clipboard,
+    is_contiguous,
     move_elements_by_mapping,
     num2alpha,
 )
 from tksheet import (
-    is_contiguous,
     num2alpha as _n2a,
 )
 
@@ -55,10 +55,10 @@ from .constants import (
     rc_release,
     sheet_bindings,
     sheet_header_font,
-    slate_fill,
     software_version_number,
     themes,
     tree_bindings,
+    tv_lvls_colors,
     validation_allowed_date_chars,
     validation_allowed_num_chars,
     warnings_header,
@@ -79,6 +79,7 @@ from .functions import (
     isintlike,
     isreal,
     json_to_sheet,
+    level_to_color,
     new_info_storage,
     new_saved_info,
     path_numbers,
@@ -11679,10 +11680,14 @@ class Tree_Editor(tk.Frame):
                 if node.ps[h] and not node.cn[h]:
                     self.get_par_lvls(h, node)
         maxlvls = max(self.levels, default=0) + 1
+        # self.xl_tv_using_grouping = maxlvls < 9
         self.xl_tv_details_start_col = maxlvls + 1
         self.xl_tv_detail_cols = tuple(i for i, h in enumerate(self.headers) if h.type_ not in ("ID", "Parent"))
+        self.level_colors = tuple(tv_lvls_colors[level_to_color(i)] for i in range(maxlvls + 1))
+        cycle_colors = cycle(tv_lvls_colors)
         for lvl in range(1, maxlvls + 1):
             ws.cell(row=1, column=lvl, value=lvl)
+            ws.cell(row=1, column=lvl).fill = next(cycle_colors)
         for col, hdr in enumerate((h for h in self.headers if h.type_ not in ("ID", "Parent")), start=maxlvls + 1):
             ws.cell(row=1, column=col, value=hdr.name)
         for h in self.hiers:
@@ -11694,7 +11699,7 @@ class Tree_Editor(tk.Frame):
                     column=1,
                     value=f"{self.hier_disp}{self.sheet.MT.data[self.rns[node.k]][self.tv_label_col]}",
                 )
-                ws.cell(row=self.xl_tv_row_ctr, column=1).fill = slate_fill
+                ws.cell(row=self.xl_tv_row_ctr, column=1).fill = tv_lvls_colors[0]
                 for i, col in enumerate(self.xl_tv_detail_cols):
                     ws.cell(
                         row=self.xl_tv_row_ctr,
@@ -11708,13 +11713,14 @@ class Tree_Editor(tk.Frame):
         self.levels = defaultdict(list)
 
     def write_treeview_to_workbook_recur(self, ws, n, level=2):
+        
         for c in n.cn[self.pc]:
             ws.cell(
                 row=self.xl_tv_row_ctr,
                 column=level,
                 value=f"{self.hier_disp}{self.sheet.MT.data[self.rns[c.k]][self.tv_label_col]}",
             )
-            ws.cell(row=self.xl_tv_row_ctr, column=level).fill = slate_fill
+            ws.cell(row=self.xl_tv_row_ctr, column=level).fill = self.level_colors[level - 1]
             for i, col in enumerate(self.xl_tv_detail_cols):
                 ws.cell(
                     row=self.xl_tv_row_ctr,

@@ -5,25 +5,26 @@ import os
 import re
 import tkinter as tk
 from platform import (
-    system as get_os,
     release as get_os_version,
+)
+from platform import (
+    system as get_os,
 )
 from sys import (
     version as get_python_version,
 )
 
+from openpyxl.styles import Alignment, PatternFill
+from openpyxl.styles.borders import Border, Side
+from openpyxl.styles.colors import Color
 from tksheet import (
     DotDict,
     theme_black,
     theme_dark,
+    theme_dark_blue,
     theme_light_blue,
     theme_light_green,
-    theme_dark_blue,
 )
-
-from openpyxl.styles import Alignment, PatternFill
-from openpyxl.styles.borders import Border, Side
-from openpyxl.styles.colors import Color
 
 _ts_path = os.path.realpath(__file__)
 current_dir = os.path.join(os.path.normpath(os.path.dirname(_ts_path)), "")
@@ -206,6 +207,13 @@ green_add_fill = PatternFill(start_color=Color("E6FFED"), end_color=Color("E6FFE
 red_remove_fill = PatternFill(start_color=Color("FFEEF0"), end_color=Color("FFEEF0"), fill_type="solid")
 openpyxl_left_align = Alignment(horizontal="left")
 openpyxl_center_align = Alignment(horizontal="center")
+tv_lvls_colors = [
+    PatternFill(start_color=Color("d2abff"), end_color=Color("d2abff"), fill_type="solid"),
+    PatternFill(start_color=Color("88d2fc"), end_color=Color("88d2fc"), fill_type="solid"),
+    PatternFill(start_color=Color("A0C36C"), end_color=Color("A0C36C"), fill_type="solid"),
+    PatternFill(start_color=Color("FFEC87"), end_color=Color("FFEC87"), fill_type="solid"),
+    PatternFill(start_color=Color("fea05f"), end_color=Color("fea05f"), fill_type="solid"),
+]
 
 changelog_header = [
     "Date",

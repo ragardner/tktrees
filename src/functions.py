@@ -31,6 +31,7 @@ from .constants import (
     isintre,
     isrealre,
     red_remove_fill,
+    tv_lvls_colors,
     upone_dir,
 )
 
@@ -123,6 +124,20 @@ def xl_column_string(n):
         n, remainder = divmod(n - 1, 26)
         s = chr(65 + remainder) + s
     return s
+
+
+def level_to_color(level):
+    x = f"{float(level / len(tv_lvls_colors))}"
+    if x.endswith("0"):
+        return 0
+    elif x.endswith("2"):
+        return 1
+    elif x.endswith("4"):
+        return 2
+    elif x.endswith("6"):
+        return 3
+    elif x.endswith("8"):
+        return 4
 
 
 def center(
