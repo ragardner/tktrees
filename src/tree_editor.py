@@ -21,7 +21,6 @@ from tkinter import filedialog, ttk
 from typing import Literal
 
 from openpyxl import Workbook, load_workbook
-from openpyxl.cell import WriteOnlyCell
 from tksheet import (
     DotDict,
     Highlight,
@@ -49,7 +48,6 @@ from .constants import (
     align_w_icon,
     changelog_header,
     ctrl_button,
-    green_add_fill,
     menu_kwargs,
     rc_button,
     rc_motion,
@@ -11672,33 +11670,58 @@ class Tree_Editor(tk.Frame):
             except Exception:
                 continue
         ws = wb.create_sheet(title=new_title1)
-        cell = WriteOnlyCell(
-            ws,
-            value=f"Date constructed: {datetime.datetime.today().strftime('%Y/%m/%d')}",
-        )
-        cell.fill = green_add_fill
-        ws.append([cell])
-        ws.freeze_panes = "B2"
-        ws.column_dimensions.group("A", hidden=False)
+        ws.freeze_panes = "A2"
         oldpc = int(self.pc)
+        self.xl_tv_row_ctr = 2
+        self.levels = defaultdict(list)
+        for h in self.hiers:
+            for node in self.nodes.values():
+                if node.ps[h] and not node.cn[h]:
+                    self.get_par_lvls(h, node)
+        maxlvls = max(self.levels, default=0) + 1
+        self.xl_tv_details_start_col = maxlvls + 1
+        self.xl_tv_detail_cols = tuple(i for i, h in enumerate(self.headers) if h.type_ not in ("ID", "Parent"))
+        for lvl in range(1, maxlvls + 1):
+            ws.cell(row=1, column=lvl, value=lvl)
+        for col, hdr in enumerate((h for h in self.headers if h.type_ not in ("ID", "Parent")), start=maxlvls + 1):
+            ws.cell(row=1, column=col, value=hdr.name)
         for h in self.hiers:
             self.pc = h
             self.hier_disp = f"{self.headers[self.pc].name} - "
             for node in self.topnodes():
-                v = f"{self.hier_disp}{self.sheet.MT.data[self.rns[node.k]][self.tv_label_col]}"
-                cell = WriteOnlyCell(ws, value=v)
-                cell.fill = slate_fill
-                ws.append([cell])
+                ws.cell(
+                    row=self.xl_tv_row_ctr,
+                    column=1,
+                    value=f"{self.hier_disp}{self.sheet.MT.data[self.rns[node.k]][self.tv_label_col]}",
+                )
+                ws.cell(row=self.xl_tv_row_ctr, column=1).fill = slate_fill
+                for i, col in enumerate(self.xl_tv_detail_cols):
+                    ws.cell(
+                        row=self.xl_tv_row_ctr,
+                        column=i + self.xl_tv_details_start_col,
+                        value=self.sheet.MT.data[self.rns[node.k]][col],
+                    )
+                self.xl_tv_row_ctr += 1
                 if node.cn[self.pc]:
                     self.write_treeview_to_workbook_recur(ws, node)
         self.pc = int(oldpc)
+        self.levels = defaultdict(list)
 
     def write_treeview_to_workbook_recur(self, ws, n, level=2):
         for c in n.cn[self.pc]:
-            v = f"{self.hier_disp}{self.sheet.MT.data[self.rns[c.k]][self.tv_label_col]}"
-            cell = WriteOnlyCell(ws, value=v)
-            cell.fill = slate_fill
-            ws.append(list(repeat("", level - 1)) + [cell])
+            ws.cell(
+                row=self.xl_tv_row_ctr,
+                column=level,
+                value=f"{self.hier_disp}{self.sheet.MT.data[self.rns[c.k]][self.tv_label_col]}",
+            )
+            ws.cell(row=self.xl_tv_row_ctr, column=level).fill = slate_fill
+            for i, col in enumerate(self.xl_tv_detail_cols):
+                ws.cell(
+                    row=self.xl_tv_row_ctr,
+                    column=i + self.xl_tv_details_start_col,
+                    value=self.sheet.MT.data[self.rns[c.k]][col],
+                )
+            self.xl_tv_row_ctr += 1
             if c.cn[self.pc]:
                 self.write_treeview_to_workbook_recur(ws, c, level + 1)
 
@@ -11746,7 +11769,7 @@ class Tree_Editor(tk.Frame):
         self.C.update()
 
     def save_workbook(self, filepath, sheetname):
-        self.C.wb = Workbook(write_only=True)
+        self.C.wb = Workbook()
         ws = self.C.wb.create_sheet(title=sheetname)
         if not self.ic:
             ws.freeze_panes = "B2"
