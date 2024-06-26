@@ -11661,6 +11661,15 @@ class Tree_Editor(tk.Frame):
         ):
             ws.append(r)
         self.new_sheet = []
+        
+    def get_node_descendants(self, node: Node) -> Generator[Node]:
+        for cnode in node.cn[self.pc]:
+            yield cnode
+            if cnode.cn[self.pc]:
+                yield from self.get_node_descendants(cnode)
+        
+    def num_descendants(self, node: Node) -> int:
+        return sum(1 for _ in self.get_node_descendants(node))
 
     def write_treeview_to_workbook(self, wb, sheetnames_):
         sheetname = sheetnames_[1]
@@ -11680,7 +11689,6 @@ class Tree_Editor(tk.Frame):
                 if node.ps[h] and not node.cn[h]:
                     self.get_par_lvls(h, node)
         maxlvls = max(self.levels, default=0) + 1
-        # self.xl_tv_using_grouping = maxlvls < 9
         self.xl_tv_details_start_col = maxlvls + 1
         self.xl_tv_detail_cols = tuple(i for i, h in enumerate(self.headers) if h.type_ not in ("ID", "Parent"))
         self.level_colors = tuple(tv_lvls_colors[level_to_color(i)] for i in range(maxlvls + 1))
@@ -11708,12 +11716,17 @@ class Tree_Editor(tk.Frame):
                     )
                 self.xl_tv_row_ctr += 1
                 if node.cn[self.pc]:
+                    # ws.row_dimensions.group(
+                    #     self.xl_tv_row_ctr, 
+                    #     self.xl_tv_row_ctr + self.num_descendants(node) - 1,
+                    #     outline_level=1,
+                    #     hidden=True,
+                    # )
                     self.write_treeview_to_workbook_recur(ws, node)
         self.pc = int(oldpc)
         self.levels = defaultdict(list)
 
     def write_treeview_to_workbook_recur(self, ws, n, level=2):
-        
         for c in n.cn[self.pc]:
             ws.cell(
                 row=self.xl_tv_row_ctr,
@@ -11729,6 +11742,13 @@ class Tree_Editor(tk.Frame):
                 )
             self.xl_tv_row_ctr += 1
             if c.cn[self.pc]:
+                # if level < 9:
+                #     ws.row_dimensions.group(
+                #         self.xl_tv_row_ctr, 
+                #         self.xl_tv_row_ctr + self.num_descendants(c) - 1,
+                #         outline_level=level,
+                #         hidden=True,
+                #     )
                 self.write_treeview_to_workbook_recur(ws, c, level + 1)
 
     def write_additional_sheets_to_workbook(self, new_sheet_name=None):
@@ -11776,7 +11796,8 @@ class Tree_Editor(tk.Frame):
 
     def save_workbook(self, filepath, sheetname):
         self.C.wb = Workbook()
-        ws = self.C.wb.create_sheet(title=sheetname)
+        ws = self.C.wb.active
+        ws.title = sheetname
         if not self.ic:
             ws.freeze_panes = "B2"
         else:
