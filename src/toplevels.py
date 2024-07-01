@@ -4693,7 +4693,7 @@ class Treeview_Id_Finder(tk.Toplevel):
     def __init__(self, C, hiers, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(
-            self, C, f"{app_title} - ID is in multiple hierarchies, select a hierarchy to go to"
+            self, C, f"{app_title} - ID is in multiple hierarchies"
         )
         self.GO = False
         self.selected = 0
@@ -4707,7 +4707,7 @@ class Treeview_Id_Finder(tk.Toplevel):
         self.bf = Frame(self, theme=theme)
         self.bf.grid(row=1, column=1, sticky="e")
 
-        self.confirm_button = Button(self.bf, text="Go", style="EF.Std.TButton", command=self.confirm)
+        self.confirm_button = Button(self.bf, text="Go to hierarchy", style="EF.Std.TButton", command=self.confirm)
         self.confirm_button.grid(row=0, column=0, sticky="e", padx=20, pady=(20, 20))
         self.cancel_button = Button(self.bf, text="Cancel", style="EF.Std.TButton", command=self.cancel)
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=(20, 20))
