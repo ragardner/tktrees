@@ -1335,33 +1335,44 @@ class RowIndex(tk.Canvas):
         fill: str,
         tag: str | tuple[str],
         indent: float,
+        has_children: bool = False,
         open_: bool = False,
     ) -> None:
         mod = (self.MT.index_txt_height - 1) if self.MT.index_txt_height % 2 else self.MT.index_txt_height
         small_mod = int(mod / 5)
         mid_y = floor(self.MT.min_row_height / 2)
-        # up arrow
-        if open_:
-            points = (
-                # the left hand downward point
-                x1 + 5 + indent,
-                y1 + mid_y + small_mod,
-                # the middle upward point
-                x1 + 5 + indent + small_mod + small_mod,
-                y1 + mid_y - small_mod,
-                # the right hand downward point
-                x1 + 5 + indent + small_mod + small_mod + small_mod + small_mod,
-                y1 + mid_y + small_mod,
-            )
-        # right pointing arrow
+        if has_children:
+            # up arrow
+            if open_:
+                points = (
+                    # the left hand downward point
+                    x1 + 5 + indent,
+                    y1 + mid_y + small_mod,
+                    # the middle upward point
+                    x1 + 5 + indent + small_mod + small_mod,
+                    y1 + mid_y - small_mod,
+                    # the right hand downward point
+                    x1 + 5 + indent + small_mod + small_mod + small_mod + small_mod,
+                    y1 + mid_y + small_mod,
+                )
+            # right pointing arrow
+            else:
+                points = (
+                    # the upper point
+                    x1 + 5 + indent + small_mod + small_mod,
+                    y1 + mid_y - small_mod - small_mod,
+                    # the middle point
+                    x1 + 5 + indent + small_mod + small_mod + small_mod + small_mod,
+                    y1 + mid_y,
+                    # the bottom point
+                    x1 + 5 + indent + small_mod + small_mod,
+                    y1 + mid_y + small_mod + small_mod,
+                )
         else:
             points = (
                 # the upper point
                 x1 + 5 + indent + small_mod + small_mod,
                 y1 + mid_y - small_mod - small_mod,
-                # the middle point
-                x1 + 5 + indent + small_mod + small_mod + small_mod + small_mod,
-                y1 + mid_y,
                 # the bottom point
                 x1 + 5 + indent + small_mod + small_mod,
                 y1 + mid_y + small_mod + small_mod,
@@ -1370,14 +1381,14 @@ class RowIndex(tk.Canvas):
             t, sh = self.hidd_tree_arrow.popitem()
             self.coords(t, points)
             if sh:
-                self.itemconfig(t, fill=fill)
+                self.itemconfig(t, fill=fill if has_children else self.PAR.ops.index_grid_fg)
             else:
-                self.itemconfig(t, fill=fill, tag=tag, state="normal")
+                self.itemconfig(t, fill=fill if has_children else self.PAR.ops.index_grid_fg, tag=tag, state="normal")
             self.lift(t)
         else:
             t = self.create_line(
                 points,
-                fill=fill,
+                fill=fill if has_children else self.PAR.ops.index_grid_fg,
                 tag=tag,
                 width=2,
                 capstyle=tk.ROUND,
@@ -1688,16 +1699,16 @@ class RowIndex(tk.Canvas):
                     draw_x += self.MT.index_txt_height + 3
                 indent = self.get_treeview_indent(iid)
                 draw_x += indent + 5
-                if self.tree[iid].children:
-                    self.redraw_tree_arrow(
-                        2,
-                        rtopgridln,
-                        r=r,
-                        fill=tree_arrow_fg,
-                        tag="ta",
-                        indent=indent,
-                        open_=self.MT._row_index[datarn].iid in self.tree_open_ids,
-                    )
+                self.redraw_tree_arrow(
+                    2,
+                    rtopgridln,
+                    r=r,
+                    fill=tree_arrow_fg,
+                    tag="ta",
+                    indent=indent,
+                    has_children=bool(self.tree[iid].children),
+                    open_=self.MT._row_index[datarn].iid in self.tree_open_ids,
+                )
             lns = self.get_valid_cell_data_as_str(datarn, fix=False)
             if not lns:
                 continue
