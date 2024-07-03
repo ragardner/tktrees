@@ -405,15 +405,8 @@ To get started once you have closed this popup, either:
 
     def menubar_state(self, state="normal", start=False):
         if state == "disabled":
-            try:
-                self.menubar.entryconfig("Working...")
-            except Exception:
-                self.menubar.add_checkbutton(label="Working...", **menu_kwargs)
-            for x in ("File", "Edit", "View", "Import", "Export", "Help"):
-                try:
-                    self.menubar.delete(x)
-                except Exception:
-                    pass
+            for label in ("File", "Edit", "View", "Import", "Export", "Help"):
+                self.menubar.entryconfig(label, state="disabled")
             self.unbind(f"<{ctrl_button}-O>")
             self.unbind(f"<{ctrl_button}-o>")
             self.unbind(f"<{ctrl_button}-N>")
@@ -423,80 +416,13 @@ To get started once you have closed this popup, either:
             self.bind(f"<{ctrl_button}-o>", self.open_file_at_start)
             self.bind(f"<{ctrl_button}-N>", self.create_new_at_start)
             self.bind(f"<{ctrl_button}-n>", self.create_new_at_start)
-            try:
-                self.menubar.delete("Working...")
-            except Exception:
-                pass
-            if not start:
-                try:
-                    self.menubar.entryconfig("File", state="normal")
-                except Exception:
-                    self.menubar.add_cascade(label="File", menu=self.file, state="normal", **menu_kwargs)
-                try:
-                    self.menubar.entryconfig("Edit", state="normal")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Edit", menu=self.frames["tree_edit"].edit_menu, state="normal", **menu_kwargs
-                    )
-                try:
-                    self.menubar.entryconfig("View", state="normal")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="View", menu=self.frames["tree_edit"].view_menu, state="normal", **menu_kwargs
-                    )
-                try:
-                    self.menubar.entryconfig("Import", state="normal")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Import", menu=self.frames["tree_edit"].import_menu, state="normal", **menu_kwargs
-                    )
-                try:
-                    self.menubar.entryconfig("Export", state="normal")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Export", menu=self.frames["tree_edit"].export_menu, state="normal", **menu_kwargs
-                    )
-                try:
-                    self.menubar.entryconfig("Help", state="normal")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Help", menu=self.frames["tree_edit"].help_menu, state="normal", **menu_kwargs
-                    )
+            self.menubar.entryconfig("File", state="normal")
+            if start:
+                x = "disabled"
             else:
-                try:
-                    self.menubar.entryconfig("File", state="normal")
-                except Exception:
-                    self.menubar.add_cascade(label="File", menu=self.file, state="normal", **menu_kwargs)
-                try:
-                    self.menubar.entryconfig("Edit", state="disabled")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Edit", menu=self.frames["tree_edit"].edit_menu, state="disabled", **menu_kwargs
-                    )
-                try:
-                    self.menubar.entryconfig("View", state="disabled")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="View", menu=self.frames["tree_edit"].view_menu, state="disabled", **menu_kwargs
-                    )
-                try:
-                    self.menubar.entryconfig("Import", state="disabled")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Import", menu=self.frames["tree_edit"].import_menu, state="disabled", **menu_kwargs
-                    )
-                try:
-                    self.menubar.entryconfig("Export", state="disabled")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Export", menu=self.frames["tree_edit"].export_menu, state="disabled", **menu_kwargs
-                    )
-                try:
-                    self.menubar.entryconfig("Help", state="normal")
-                except Exception:
-                    self.menubar.add_cascade(
-                        label="Help", menu=self.frames["tree_edit"].help_menu, state="normal", **menu_kwargs
-                    )
+                x = "normal"
+            for label in ("Edit", "View", "Import", "Export", "Help"):
+                self.menubar.entryconfig(label, state=x)
 
     def change_app_title(self, title=None, star=None):
         if title:
