@@ -421,8 +421,9 @@ To get started once you have closed this popup, either:
                 x = "disabled"
             else:
                 x = "normal"
-            for label in ("Edit", "View", "Import", "Export", "Help"):
+            for label in ("Edit", "View", "Import", "Export"):
                 self.menubar.entryconfig(label, state=x)
+            self.menubar.entryconfig("Help", state="normal")
 
     def change_app_title(self, title=None, star=None):
         if title:
