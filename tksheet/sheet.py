@@ -2922,7 +2922,7 @@ class Sheet(tk.Frame):
 
     def table_align(
         self,
-        align: str = None,
+        align: str | None = None,
         redraw: bool = True,
     ) -> str | Sheet:
         if align is None:
@@ -2935,7 +2935,7 @@ class Sheet(tk.Frame):
 
     def header_align(
         self,
-        align: str = None,
+        align: str | None = None,
         redraw: bool = True,
     ) -> str | Sheet:
         if align is None:
@@ -2948,7 +2948,7 @@ class Sheet(tk.Frame):
 
     def row_index_align(
         self,
-        align: str = None,
+        align: str | None = None,
         redraw: bool = True,
     ) -> str | Sheet:
         if align is None:
@@ -6691,9 +6691,6 @@ class Sheet(tk.Frame):
     def get_index_dropdown_value(self, r: int = 0) -> object:
         if self.RI.get_cell_kwargs(r, key="dropdown"):
             return self.MT._row_index[r]
-
-    def delete_all_formatting(self, clear_values: bool = False) -> None:
-        self.MT.delete_all_formatting(clear_values=clear_values)
 
     def format_cell(
         self,
