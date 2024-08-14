@@ -604,7 +604,7 @@ class Flattened_Column_Selector(tk.Frame):
         self.headers = headers
         self.par_cols = set()
         self.par_col_display = Readonly_Entry_With_Scrollbar(self, font=EFB, theme=theme)
-        self.par_col_display.set_my_value("   Hierarchy columns:   ")
+        self.par_col_display.set_my_value("Hierarchy columns: ")
         self.par_col_display.grid(row=0, column=0, sticky="nswe")
         self.par_col_selection = Sheet(
             self,
@@ -669,19 +669,19 @@ class Flattened_Column_Selector(tk.Frame):
     def par_col_selection_B1(self, event=None):
         if event:
             self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
-            self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
+            self.par_col_display.set_my_value(f"Hierarchy columns: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def par_col_deselection_B1(self, event=None):
         if event:
             self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
-            self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
+            self.par_col_display.set_my_value(f"Hierarchy columns: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def clear_displays(self):
         self.headers = [[]]
         self.par_col_selection.data_reference(newdataref=[[]], redraw=True)
         self.par_cols = set()
         self.par_col_selection.deselect("all")
-        self.par_col_display.set_my_value("   Hierarchy columns:   ")
+        self.par_col_display.set_my_value("Hierarchy columns: ")
 
     def set_par_cols(self, cols):
         self.par_col_selection.deselect("all")
@@ -691,9 +691,7 @@ class Flattened_Column_Selector(tk.Frame):
             for r in cols:
                 self.par_col_selection.toggle_select_cell(r, 0, redraw=False)
             self.par_col_selection.see(row=cols[0], column=0)
-            self.par_col_display.set_my_value(
-                "   Hierarchy columns:   " + ",".join([str(n) for n in sorted(p + 1 for p in self.par_cols)])
-            )
+            self.par_col_display.set_my_value(f"Hierarchy columns: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
         self.par_col_selection.refresh()
 
     def get_par_cols(self):
@@ -731,7 +729,7 @@ class Single_Column_Selector(tk.Frame):
         self.headers = headers
         self.col = None
         self.col_display = Readonly_Entry_With_Scrollbar(self, font=EFB, theme=theme)
-        self.col_display.set_my_value("  Column:   ")
+        self.col_display.set_my_value("Column: ")
         self.col_display.grid(row=0, column=0, sticky="nswe")
         self.col_selection = Sheet(
             self,
@@ -772,17 +770,17 @@ class Single_Column_Selector(tk.Frame):
     def col_selection_B1(self, event=None):
         if event:
             self.col = event.selected.row
-            self.col_display.set_my_value(f"   Column:   {self.col + 1}")
+            self.col_display.set_my_value(f"Column: {self.col + 1}")
 
     def col_deselect(self, event=None):
         if event:
             self.col = None
-            self.col_display.set_my_value("  Column:   ")
+            self.col_display.set_my_value("Column: ")
 
     def par_col_deselection_B1(self, event=None):
         if event:
             self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
-            self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
+            self.par_col_display.set_my_value(f"Column: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def clear_displays(self):
         self.headers = [[]]

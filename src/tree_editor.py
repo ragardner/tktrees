@@ -9623,7 +9623,7 @@ class Tree_Editor(tk.Frame):
             if self.warnings:
                 Text_Popup(
                     self,
-                    "".join((top, warnings_header, "\n".join(self.warnings))),
+                    "".join((top, warnings_header, "\n", "\n".join(self.warnings))),
                     theme=self.C.theme,
                 )
             else:
@@ -9636,7 +9636,7 @@ class Tree_Editor(tk.Frame):
             if self.warnings:
                 Text_Popup(
                     self,
-                    "".join((top, warnings_header, "\n".join(self.warnings))),
+                    "".join((top, warnings_header, "\n", "\n".join(self.warnings))),
                     theme=self.C.theme,
                 )
 

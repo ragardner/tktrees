@@ -4731,7 +4731,7 @@ class Text_Popup(tk.Toplevel):
         self,
         C,
         text,
-        width_=700,
+        width_=800,
         height_=650,
         theme="dark",
         use_entry_bg=False,
