@@ -191,7 +191,7 @@ class Sheet(tk.Frame):
         edit_cell_tab: Literal["right", "down", ""] = "right",
         edit_cell_return: Literal["right", "down", ""] = "down",
         treeview: bool = False,
-        treeview_indent: str | int = "6",
+        treeview_indent: str | int = "5",
         rounded_boxes: bool = True,
         alternate_color: str = "",
         # colors
