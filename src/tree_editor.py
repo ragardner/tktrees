@@ -9508,6 +9508,7 @@ class Tree_Editor(tk.Frame):
     def toggle_auto_resize_index(self, enabled):
         self.tree.set_options(auto_resize_row_index=enabled)
         self.sheet.set_options(auto_resize_row_index=enabled)
+        self.auto_resize_indexes = enabled
 
     def toggle_mirror(self, enabled, select_row=True):
         self.mirror_var = enabled
