@@ -440,7 +440,7 @@ class TreeBuilder:
                         par = r[pcol]
                         pk = par.lower()
                         if ik:
-                            if not (par := r[pcol]):
+                            if not par:
                                 try:
                                     par = next(r[i] for i in islice(reversed(hier_cols), idx + 1, None) if r[i])
                                     pk = par.lower()
@@ -545,7 +545,7 @@ class TreeBuilder:
                         par = r[pcol]
                         pk = par.lower()
                         if ik:
-                            if not (par := r[pcol]):
+                            if not par:
                                 try:
                                     par = next(r[i] for i in islice(reversed(hier_cols), idx + 1, None) if r[i])
                                     pk = par.lower()
