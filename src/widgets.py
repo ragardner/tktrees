@@ -192,6 +192,7 @@ class Column_Selection(tk.Frame):
         self.C.status_bar.change_text("Loading...   ")
         self.C.disable_at_start()
         self.C.frames.tree_edit.sheet.MT.data = self.sheetdisplay.get_sheet_data()
+        self.rowlen = max(map(len, self.C.frames.tree_edit.sheet.MT.data), default=0)
         equalize_sublist_lens(self.C.frames.tree_edit.sheet.MT.data, self.rowlen)
         if flattened:
             (
@@ -729,7 +730,7 @@ class Single_Column_Selector(tk.Frame):
         self.headers = headers
         self.col = None
         self.col_display = Readonly_Entry_With_Scrollbar(self, font=EFB, theme=theme)
-        self.col_display.set_my_value("Column: ")
+        self.col_display.set_my_value("")
         self.col_display.grid(row=0, column=0, sticky="nswe")
         self.col_selection = Sheet(
             self,
@@ -770,33 +771,28 @@ class Single_Column_Selector(tk.Frame):
     def col_selection_B1(self, event=None):
         if event:
             self.col = event.selected.row
-            self.col_display.set_my_value(f"Column: {self.col + 1}")
+            self.col_display.set_my_value(f"{self.headers[self.col][0]}")
 
     def col_deselect(self, event=None):
         if event:
             self.col = None
-            self.col_display.set_my_value("Column: ")
-
-    def par_col_deselection_B1(self, event=None):
-        if event:
-            self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
-            self.par_col_display.set_my_value(f"Column: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
+            self.col_display.set_my_value("")
 
     def clear_displays(self):
         self.headers = [[]]
         self.col_selection.data_reference(newdataref=[[]], redraw=True)
         self.col = 0
         self.col_selection.deselect("all")
-        self.col_display.set_my_value("Column:")
+        self.col_display.set_my_value("")
 
     def set_col(self, col=None):
-        if col is not None:
+        if isinstance(col, int):
             self.col = int(col)
             self.col_selection.deselect("all")
-            self.col_selection.select_cell(col, 0, redraw=False)
-            self.col_selection.see(row=col, column=0)
+            self.col_selection.select_cell(self.col, 0, redraw=False)
+            self.col_selection.see(row=self.col, column=0)
             self.col_selection.refresh()
-            self.col_display.set_my_value(f"Column: {col + 1}")
+            self.col_display.set_my_value(f"{self.headers[self.col][0]}")
 
     def get_col(self):
         return int(self.col)

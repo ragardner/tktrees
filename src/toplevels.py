@@ -4692,9 +4692,7 @@ class Error_Sheet(tk.Toplevel):
 class Treeview_Id_Finder(tk.Toplevel):
     def __init__(self, C, hiers, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(
-            self, C, f"{app_title} - ID is in multiple hierarchies"
-        )
+        self.C = new_toplevel_chores(self, C, f"{app_title} - ID is in multiple hierarchies")
         self.GO = False
         self.selected = 0
         self.grid_columnconfigure(0, weight=1)

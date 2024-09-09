@@ -11662,13 +11662,13 @@ class Tree_Editor(tk.Frame):
         ):
             ws.append(r)
         self.new_sheet = []
-        
+
     def get_node_descendants(self, node: Node) -> Generator[Node]:
         for cnode in node.cn[self.pc]:
             yield cnode
             if cnode.cn[self.pc]:
                 yield from self.get_node_descendants(cnode)
-        
+
     def num_descendants(self, node: Node) -> int:
         return sum(1 for _ in self.get_node_descendants(node))
 
@@ -11718,7 +11718,7 @@ class Tree_Editor(tk.Frame):
                 self.xl_tv_row_ctr += 1
                 if node.cn[self.pc]:
                     # ws.row_dimensions.group(
-                    #     self.xl_tv_row_ctr, 
+                    #     self.xl_tv_row_ctr,
                     #     self.xl_tv_row_ctr + self.num_descendants(node) - 1,
                     #     outline_level=1,
                     #     hidden=True,
@@ -11745,7 +11745,7 @@ class Tree_Editor(tk.Frame):
             if c.cn[self.pc]:
                 # if level < 9:
                 #     ws.row_dimensions.group(
-                #         self.xl_tv_row_ctr, 
+                #         self.xl_tv_row_ctr,
                 #         self.xl_tv_row_ctr + self.num_descendants(c) - 1,
                 #         outline_level=level,
                 #         hidden=True,

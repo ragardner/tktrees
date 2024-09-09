@@ -382,6 +382,7 @@ class TreeBuilder:
                 - (set(idx for detail_cols in hier_cols_detail_cols.values() for idx in detail_cols) | set(hier_cols))
             )
             ids_details_tally = {}
+
             if order == "Flattened - Left → Right is Base → Top":
                 for rn, r in enumerate(islice(data, 1, None), 1):
                     for idx in hier_cols:
@@ -395,12 +396,20 @@ class TreeBuilder:
                                 ids_details_tally[ik][det_col_enum][r[det_col]] += 1
                             if ik not in rns:
                                 rns[ik] = rn
-                    for idcol, pcol in zip(hier_cols, islice(hier_cols, 1, None)):
+
+                    for idx, (idcol, pcol) in enumerate(zip(hier_cols, islice(hier_cols, 1, None))):
                         ID = r[idcol]
                         ik = ID.lower()
                         par = r[pcol]
                         pk = par.lower()
                         if ik:
+                            if not par:
+                                try:
+                                    par = next(r[i] for i in islice(hier_cols, idx + 1, None) if r[i])
+                                    pk = par.lower()
+                                    warnings.append(f" - Missing ID in hierarchy column {data[0][pcol]} row #{rn + 1}")
+                                except Exception:
+                                    pass
                             if ik not in ids_parents_tally:
                                 ids_parents_tally[ik] = defaultdict(int)
                             ids_parents_tally[ik][pk] += 1
@@ -410,7 +419,8 @@ class TreeBuilder:
                         if pcol == hier_cols[-1] and pk not in added_ids and par:
                             added_ids.add(pk)
                             to_add[pk] = (par, "")
-            else:
+
+            elif order == "Flattened - Left → Right is Top → Base":
                 for rn, r in enumerate(islice(data, 1, None), 1):
                     for idx in reversed(hier_cols):
                         if r[idx]:
@@ -423,12 +433,20 @@ class TreeBuilder:
                                 ids_details_tally[ik][det_col_enum][r[det_col]] += 1
                             if ik not in rns:
                                 rns[ik] = rn
-                    for idcol, pcol in zip(reversed(hier_cols), islice(reversed(hier_cols), 1, None)):
+
+                    for idx, (idcol, pcol) in enumerate(zip(reversed(hier_cols), islice(reversed(hier_cols), 1, None))):
                         ID = r[idcol]
                         ik = ID.lower()
                         par = r[pcol]
                         pk = par.lower()
                         if ik:
+                            if not (par := r[pcol]):
+                                try:
+                                    par = next(r[i] for i in islice(reversed(hier_cols), idx + 1, None) if r[i])
+                                    pk = par.lower()
+                                    warnings.append(f" - Missing ID in hierarchy column {data[0][pcol]} row #{rn + 1}")
+                                except Exception:
+                                    pass
                             if ik not in ids_parents_tally:
                                 ids_parents_tally[ik] = defaultdict(int)
                             ids_parents_tally[ik][pk] += 1
@@ -438,6 +456,7 @@ class TreeBuilder:
                         if pcol == hier_cols[0] and par.lower() not in added_ids and par:
                             added_ids.add(par.lower())
                             to_add[pk] = (par, "")
+
             for ik, dct in ids_details_tally.items():
                 for det_col_enum, detail_dct in dct.items():
                     if len(detail_dct) > 1:
@@ -492,12 +511,19 @@ class TreeBuilder:
                     for idx in hier_cols:
                         if r[idx] and r[idx].lower() not in rns:
                             rns[r[idx].lower()] = rn
-                    for idcol, pcol in zip(hier_cols, islice(hier_cols, 1, None)):
+                    for idx, (idcol, pcol) in enumerate(zip(hier_cols, islice(hier_cols, 1, None))):
                         ID = r[idcol]
                         ik = ID.lower()
                         par = r[pcol]
                         pk = par.lower()
                         if ik:
+                            if not par:
+                                try:
+                                    par = next(r[i] for i in islice(hier_cols, idx + 1, None) if r[i])
+                                    pk = par.lower()
+                                    warnings.append(f" - Missing ID in hierarchy column {data[0][pcol]} row #{rn + 1}")
+                                except Exception:
+                                    pass
                             if ik not in ids_parents_tally:
                                 ids_parents_tally[ik] = defaultdict(int)
                             ids_parents_tally[ik][pk] += 1
@@ -507,17 +533,25 @@ class TreeBuilder:
                         if pcol == hier_cols[-1] and par.lower() not in added_ids and par:
                             added_ids.add(par.lower())
                             to_add[pk] = (par, "")
-            else:
+
+            elif order == "Flattened - Left → Right is Top → Base":
                 for rn, r in enumerate(islice(data, 1, None), 1):
                     for idx in reversed(hier_cols):
                         if r[idx] and r[idx].lower() not in rns:
                             rns[r[idx].lower()] = rn
-                    for idcol, pcol in zip(reversed(hier_cols), islice(reversed(hier_cols), 1, None)):
+                    for idx, (idcol, pcol) in enumerate(zip(reversed(hier_cols), islice(reversed(hier_cols), 1, None))):
                         ID = r[idcol]
                         ik = ID.lower()
                         par = r[pcol]
                         pk = par.lower()
                         if ik:
+                            if not (par := r[pcol]):
+                                try:
+                                    par = next(r[i] for i in islice(reversed(hier_cols), idx + 1, None) if r[i])
+                                    pk = par.lower()
+                                    warnings.append(f" - Missing ID in hierarchy column {data[0][pcol]} row #{rn + 1}")
+                                except Exception:
+                                    pass
                             if ik not in ids_parents_tally:
                                 ids_parents_tally[ik] = defaultdict(int)
                             ids_parents_tally[ik][pk] += 1
@@ -527,6 +561,7 @@ class TreeBuilder:
                         if pcol == hier_cols[0] and par.lower() not in added_ids and par:
                             added_ids.add(par.lower())
                             to_add[pk] = (par, "")
+
             for ik, dct in ids_parents_tally.items():
                 if len(dct) > 1:
                     lp = "\n\t".join(f"{to_add[pk][0]}: {num}" for pk, num in dct.items() if pk)
