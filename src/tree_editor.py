@@ -1402,9 +1402,9 @@ class Tree_Editor(tk.Frame):
             self.tv_label_col = int(self.ic)
             self.saved_info = new_saved_info(self.hiers)
             self.topnodes_order = {}
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             if not self.C.created_new:
                 self.fix_associate_sort()
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.remake_topnodes_order()
             self.tree.set_column_widths()
             self.sheet.set_row_heights().set_column_widths()
