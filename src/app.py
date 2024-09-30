@@ -216,7 +216,7 @@ Welcome to Tk-Trees!
 
 This program is for management of tree/hierarchy data which is in table format.
 
-It is licensed under GPL-3.0.
+It is licensed under GPL-3.0. Copyright R. A. Gardner
 
 To get started once you have closed this popup, either:
 - Right click in the empty space in the table.
