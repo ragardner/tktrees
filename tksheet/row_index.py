@@ -1332,7 +1332,7 @@ class RowIndex(tk.Canvas):
         self,
         x1: float,
         y1: float,
-        r: int,
+        y2: float,
         fill: str,
         tag: str | tuple[str],
         indent: float,
@@ -1370,13 +1370,21 @@ class RowIndex(tk.Canvas):
                     y1 + mid_y + small_mod + small_mod,
                 )
         else:
+            # points = (
+            #     # the upper point
+            #     x1 + 5 + indent + small_mod + small_mod,
+            #     y1 + mid_y - small_mod - small_mod,
+            #     # the bottom point
+            #     x1 + 5 + indent + small_mod + small_mod,
+            #     y1 + mid_y + small_mod + small_mod,
+            # )
             points = (
                 # the upper point
                 x1 + 5 + indent + small_mod + small_mod,
                 y1 + mid_y - small_mod - small_mod,
                 # the bottom point
                 x1 + 5 + indent + small_mod + small_mod,
-                y1 + mid_y + small_mod + small_mod,
+                y2 - mid_y + small_mod + small_mod,
             )
         if self.hidd_tree_arrow:
             t, sh = self.hidd_tree_arrow.popitem()
@@ -1702,7 +1710,7 @@ class RowIndex(tk.Canvas):
                 self.redraw_tree_arrow(
                     2,
                     rtopgridln,
-                    r=r,
+                    rbotgridln - 1,
                     fill=tree_arrow_fg,
                     tag="ta",
                     indent=indent,

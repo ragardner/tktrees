@@ -4735,6 +4735,7 @@ class Text_Popup(tk.Toplevel):
         use_entry_bg=False,
         wrap="none",
         show_finder=True,
+        heading="",
     ):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title}")
@@ -4744,7 +4745,7 @@ class Text_Popup(tk.Toplevel):
         self.results_number = 0
         self.addon = ""
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         if show_finder:
             self.find_frame = Frame(self, theme=theme)
             self.find_frame.grid(row=0, column=0, columnspan=2, sticky="nswe")
@@ -4761,6 +4762,9 @@ class Text_Popup(tk.Toplevel):
             self.find_up_button.pack(side="left", fill="x")
             self.find_down_button = Button(self.find_frame, text="▼", command=self.find_down)
             self.find_down_button.pack(side="left", fill="x")
+        if heading:
+            self.heading_label = Label(self, text=f"{heading}", font=EF, theme=theme)
+            self.heading_label.grid(row=1, column=0, columnspan=2, sticky="we")
         self.textbox = Working_Text(
             self,
             wrap=wrap,
@@ -4773,12 +4777,12 @@ class Text_Popup(tk.Toplevel):
         self.textbox.delete(1.0, "end")
         self.textbox.insert(1.0, text)
         self.textbox.config(state="disabled")
-        self.textbox.grid(row=1, column=0, padx=(5, 0), sticky="nswe")
-        self.yscrollb.grid(row=1, column=1, sticky="nswe")
+        self.textbox.grid(row=2, column=0, padx=(5, 0), sticky="nswe")
+        self.yscrollb.grid(row=2, column=1, sticky="nswe")
         if wrap == "none":
-            self.xscrollb.grid(row=2, column=0, columnspan=2, sticky="nswe")
+            self.xscrollb.grid(row=3, column=0, columnspan=2, sticky="nswe")
         self.buttonframe = Frame(self, theme=theme)
-        self.buttonframe.grid(row=3, column=0, columnspan=2, sticky="nswe")
+        self.buttonframe.grid(row=4, column=0, columnspan=2, sticky="nswe")
         self.copy_text_button = Button(
             self.buttonframe,
             text="Copy",
@@ -4918,7 +4922,7 @@ class First_Start_Popup(tk.Toplevel):
         C,
         text,
         width_=720,
-        height_=450,
+        height_=570,
         theme="dark",
         use_entry_bg=False,
         wrap="word",

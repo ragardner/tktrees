@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright © R. A. Gardner
+
 from __future__ import annotations
 
 import csv

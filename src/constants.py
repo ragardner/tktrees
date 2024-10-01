@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright © R. A. Gardner
 
+import datetime
 import os
 import re
 import tkinter as tk
@@ -50,7 +51,9 @@ software_version_full = "Version: " + software_version_number
 app_title = "tk-trees"
 contact_email = "github@ragardner.simplelogin.com"
 website1 = "github.com/ragardner"
-contact_info = f" {software_version_full}\n Copyright © 2019 R. A. Gardner.\n {contact_email}\n {website1}"
+current_year = f"{datetime.datetime.now().year}"
+app_copyright = f"Copyright © 2019-{current_year} R. A. Gardner."
+contact_info = f" {software_version_full}\n {app_copyright}\n {contact_email}\n {website1}"
 about_system = "\n".join(
     (
         f"Tk-Trees: {software_version_number}",

@@ -193,7 +193,7 @@ class Sheet(tk.Frame):
         edit_cell_return: Literal["right", "down", ""] = "down",
         editor_del_key: Literal["forward", "backward", ""] = "forward",
         treeview: bool = False,
-        treeview_indent: str | int = "6",
+        treeview_indent: str | int = "5",
         rounded_boxes: bool = True,
         alternate_color: str = "",
         # colors

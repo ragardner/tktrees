@@ -26,12 +26,15 @@ from .constants import (
     TF,
     USER_OS,
     about_system,
+    app_copyright,
     app_title,
+    contact_email,
     ctrl_button,
     menu_kwargs,
     std_font_size,
     top_left_icon,
     upone_dir,
+    website1,
 )
 from .functions import (
     b32_x_dict,
@@ -211,16 +214,19 @@ class AppGUI(tk.Tk):
         if self.configsettings["First GUI start"]:
             First_Start_Popup(
                 self,
-                text="""
+                text=f"""
 Welcome to Tk-Trees!
 
 This program is for management of tree/hierarchy data which is in table format.
 
-It is licensed under GPL-3.0. Copyright R. A. Gardner
+It is licensed under GPL-3.0.
+{app_copyright}
+Contact: {contact_email}
+Visit: {website1}
 
 To get started once you have closed this popup, either:
 - Right click in the empty space in the table.
-- Go to the File menu and select a desired option.
+- Or go to the File menu and select a desired option.
 - Or go to the Help menu for documentation.
                 """,
                 theme=self.theme,
@@ -574,7 +580,7 @@ To get started once you have closed this popup, either:
         Help_Popup(self, self.DOCUMENTATION, theme=self.theme)
 
     def license_func(self):
-        License_Popup(self, "\n" + self.LICENSE, show_buttons=False, theme=self.theme)
+        License_Popup(self, f"Tk-Trees {app_copyright}\n\n" + self.LICENSE, show_buttons=False, theme=self.theme)
 
     def about_func(self):
         Text_Popup(
@@ -586,6 +592,7 @@ To get started once you have closed this popup, either:
             use_entry_bg=False,
             wrap="word",
             show_finder=False,
+            heading=app_copyright,
         )
 
     def reset_data_change_app_title(self):
