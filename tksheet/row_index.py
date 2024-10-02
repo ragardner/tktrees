@@ -925,7 +925,7 @@ class RowIndex(tk.Canvas):
             and isinstance(self.MT._row_index, list)
             and (datarn := self.MT.datarn(r)) < len(self.MT._row_index)
             and eventx
-            < (indent := self.get_treeview_indent((iid := self.MT._row_index[datarn].iid))) + self.MT.index_txt_height + 4
+            < (indent := self.get_iid_indent((iid := self.MT._row_index[datarn].iid))) + self.MT.index_txt_height + 4
             and eventx >= indent + 1
         ):
             return iid
@@ -1057,7 +1057,7 @@ class RowIndex(tk.Canvas):
                 align = self.align
             if align == "w":
                 w += self.MT.index_txt_height
-            w += self.get_treeview_indent(self.MT._row_index[datarn].iid) + 10
+            w += self.get_iid_indent(self.MT._row_index[datarn].iid) + 10
         return w, h
 
     def get_row_text_height(
@@ -1338,6 +1338,7 @@ class RowIndex(tk.Canvas):
         indent: float,
         has_children: bool = False,
         open_: bool = False,
+        level: int = 1,
     ) -> None:
         mod = (self.MT.index_txt_height - 1) if self.MT.index_txt_height % 2 else self.MT.index_txt_height
         small_mod = int(mod / 5)
@@ -1705,7 +1706,7 @@ class RowIndex(tk.Canvas):
                 mw -= self.MT.index_txt_height
                 if align == "w":
                     draw_x += self.MT.index_txt_height + 3
-                indent = self.get_treeview_indent(iid)
+                level, indent = self.get_iid_level_indent(iid)
                 draw_x += indent + 5
                 self.redraw_tree_arrow(
                     2,
@@ -1716,6 +1717,7 @@ class RowIndex(tk.Canvas):
                     indent=indent,
                     has_children=bool(self.tree[iid].children),
                     open_=self.MT._row_index[datarn].iid in self.tree_open_ids,
+                    level=level,
                 )
             lns = self.get_valid_cell_data_as_str(datarn, fix=False)
             if not lns:
@@ -2526,12 +2528,20 @@ class RowIndex(tk.Canvas):
     def gen_top_nodes(self) -> Generator[Node]:
         yield from (node for node in self.MT._row_index if node.parent == "")
 
-    def get_treeview_indent(self, iid: str) -> int:
+    def get_iid_indent(self, iid: str) -> int:
         if isinstance(self.PAR.ops.treeview_indent, str):
             indent = self.MT.index_txt_width * int(self.PAR.ops.treeview_indent)
         else:
             indent = self.PAR.ops.treeview_indent
         return indent * max(self.get_node_level(self.tree[iid]))
+
+    def get_iid_level_indent(self, iid: str) -> tuple[int, int]:
+        if isinstance(self.PAR.ops.treeview_indent, str):
+            indent = self.MT.index_txt_width * int(self.PAR.ops.treeview_indent)
+        else:
+            indent = self.PAR.ops.treeview_indent
+        level = max(self.get_node_level(self.tree[iid]))
+        return level, indent * level
 
     def remove_node_from_parents_children(self, node: Node) -> None:
         if node.parent:

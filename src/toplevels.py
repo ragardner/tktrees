@@ -5108,6 +5108,16 @@ class Settings_Popup(tk.Toplevel):
         self.layout_dropdown.bind("<<ComboboxSelected>>", self.set_layout)
         self.layout_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
 
+        self.indent_label = Label(self.general, text="Treeview Level Indent: ", font=EF, theme=theme, anchor="nw")
+        self.indent_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.indent_dropdown = Ez_Dropdown(self.general, font=EF)
+        self.indent_dropdown["values"] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+        self.indent_dropdown.set_my_value(self.C.tree.ops.treeview_indent)
+
+        self.indent_dropdown.bind("<<ComboboxSelected>>", self.set_treeview_indent)
+        self.indent_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
+
         self.xlsx = Frame(self, theme=theme)
         self.xlsx.grid(row=0, column=1, pady=20, padx=20, sticky="nswe")
 
@@ -5481,6 +5491,10 @@ class Settings_Popup(tk.Toplevel):
             self.C.set_display_option("50/50")
         elif "Adjustable" in layout:
             self.C.set_display_option("adjustable")
+            
+    def set_treeview_indent(self, event=None):
+        indent = self.indent_dropdown.get_my_value()
+        self.C.tree.set_options(treeview_indent=indent)
 
     def toggle_xlsx_app_data(self):
         self.C.save_xlsx_with_program_data = self.xlsx_app_data_button.get_checked()
@@ -5558,6 +5572,7 @@ class Settings_Popup(tk.Toplevel):
         self.date_format_header.change_theme(theme)
         self.date_format_label.change_theme(theme)
         self.layout_label.change_theme(theme)
+        self.indent_label.change_theme(theme)
         self.C.change_theme(theme)
 
     def set_table_alignment(self, event=None):
