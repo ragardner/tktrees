@@ -1371,6 +1371,7 @@ class RowIndex(tk.Canvas):
                     y1 + mid_y + small_mod + small_mod,
                 )
         else:
+            # POINTS FOR A LINE THAT STOPS BELOW FIRST LINE OF TEXT
             # points = (
             #     # the upper point
             #     x1 + 5 + indent + small_mod + small_mod,
@@ -1379,14 +1380,27 @@ class RowIndex(tk.Canvas):
             #     x1 + 5 + indent + small_mod + small_mod,
             #     y1 + mid_y + small_mod + small_mod,
             # )
+            
+            # POINTS FOR A LINE THAT STOPS AT ROW LINE
+            # points = (
+            #     # the upper point
+            #     x1 + 5 + indent + small_mod + small_mod,
+            #     y1 + mid_y - small_mod - small_mod,
+            #     # the bottom point
+            #     x1 + 5 + indent + small_mod + small_mod,
+            #     y2 - mid_y + small_mod + small_mod,
+            # )
+            
+            # POINTS FOR A HORIZONTAL LINE
             points = (
-                # the upper point
-                x1 + 5 + indent + small_mod + small_mod,
-                y1 + mid_y - small_mod - small_mod,
-                # the bottom point
-                x1 + 5 + indent + small_mod + small_mod,
-                y2 - mid_y + small_mod + small_mod,
+                # the left point
+                x1 + 5 + indent,
+                y1 + mid_y,
+                # the right point
+                x1 + 5 + indent + small_mod + small_mod + small_mod + small_mod,
+                y1 + mid_y,
             )
+            
         if self.hidd_tree_arrow:
             t, sh = self.hidd_tree_arrow.popitem()
             self.coords(t, points)

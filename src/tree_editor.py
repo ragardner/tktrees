@@ -1357,7 +1357,6 @@ class Tree_Editor(tk.Frame):
             self.changelog = program_data.changelog
             if self.changelog and len(self.changelog[0]) > 5:
                 self.changelog = []
-            self.tv_lvls_bool = bool(program_data.show_tv_lvls)
             self.sheet.align(program_data.sheet_table_align, redraw=False)
             self.sheet.row_index_align(program_data.sheet_index_align, redraw=False)
             self.sheet.header_align(program_data.sheet_header_align, redraw=False)
@@ -9850,11 +9849,18 @@ class Tree_Editor(tk.Frame):
                 for cell, highlight in highlights.items():
                     self.tree.highlight_cells(tree_row, cell[1], bg=highlight.bg, fg="black")
             r = self.sheet.MT.data[rn]
-            self.tree.item(
-                ik,
-                text=f"{r[self.tv_label_col]}",
-                values=r,
-            )
+            if self.tv_lvls_bool:
+                self.tree.item(
+                    ik,
+                    text=f"{max(self.get_node_level(self.nodes[ik]))}. {r[self.tv_label_col]}",
+                    values=r,
+                )
+            else:
+                self.tree.item(
+                    ik,
+                    text=f"{r[self.tv_label_col]}",
+                    values=r,
+                )
 
     def redraw_sheets(self):
         self.sheet.set_refresh_timer()
@@ -9869,6 +9875,11 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_dropdown["values"] = []
         self.sheet_search_displayed.set("")
         self.sheet_search_results = []
+        
+    def get_node_level(self, node, level=1):
+        yield level
+        if node.ps[self.pc]:
+            yield from self.get_node_level(node.ps[self.pc], level + 1)
 
     def redo_tree_display(self, selections=True):
         if self.saved_info[self.pc].twidths:
@@ -9885,16 +9896,33 @@ class Tree_Editor(tk.Frame):
                 open_ids = self.saved_info[self.pc].opens
             else:
                 open_ids = None
-            self.tree.tree_build(
-                data=[self.sheet.data[self.rns[node.k]] for node in self.pc_nodes()],
-                iid_column=self.ic,
-                parent_column=self.pc,
-                text_column=self.tv_label_col,
-                row_heights=False,
-                open_ids=open_ids,
-                safety=False,
-                ncols=self.row_len,
-            ).dehighlight_all()
+            if self.tv_lvls_bool:
+                data = []
+                labels = []
+                for node in self.pc_nodes():
+                    data.append(self.sheet.data[self.rns[node.k]])
+                    labels.append(f"{max(self.get_node_level(node))}. {self.sheet.data[self.rns[node.k]][self.tv_label_col]}")
+                self.tree.tree_build(
+                    data=data,
+                    iid_column=self.ic,
+                    parent_column=self.pc,
+                    text_column=labels,
+                    row_heights=False,
+                    open_ids=open_ids,
+                    safety=False,
+                    ncols=self.row_len,
+                ).dehighlight_all()
+            else:
+                self.tree.tree_build(
+                    data=[self.sheet.data[self.rns[node.k]] for node in self.pc_nodes()],
+                    iid_column=self.ic,
+                    parent_column=self.pc,
+                    text_column=self.tv_label_col,
+                    row_heights=False,
+                    open_ids=open_ids,
+                    safety=False,
+                    ncols=self.row_len,
+                ).dehighlight_all()
         if self.saved_info[self.pc].theights:
             self.tree.set_safe_row_heights(self.tree_gen_heights_from_saved())
         else:
@@ -11579,7 +11607,6 @@ class Tree_Editor(tk.Frame):
         d["tagged_ids"] = list(self.tagged_ids)
         d["auto_sort_nodes_bool"] = self.auto_sort_nodes_bool
         d["sheetname"] = sheetname
-        d["show_tv_lvls"] = self.tv_lvls_bool
         d["allow_spaces_ids"] = self.allow_spaces_ids_var
         d["allow_spaces_columns"] = self.allow_spaces_columns_var
         d["date_format"] = self.DATE_FORM

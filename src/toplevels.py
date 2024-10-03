@@ -5082,6 +5082,16 @@ class Settings_Popup(tk.Toplevel):
             compound="right",
         )
         self.auto_sort_tree_button.pack(side="top", anchor="nw", fill="x", pady=10)
+        
+        self.show_tv_lvls_button = X_Checkbutton(
+            self.general,
+            text="Show ID level numbering ",
+            style="x_button.Std.TButton",
+            command=self.toggle_show_tv_lvls,
+            checked=self.C.tv_lvls_bool,
+            compound="right",
+        )
+        self.show_tv_lvls_button.pack(side="top", anchor="nw", fill="x", pady=10)
 
         self.layout_label = Label(self.general, text="Layout: ", font=EF, theme=theme, anchor="nw")
         self.layout_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
@@ -5480,6 +5490,10 @@ class Settings_Popup(tk.Toplevel):
 
     def toggle_auto_sort_tree_button(self):
         self.C.toggle_sort_all_nodes(self.auto_sort_tree_button.get_checked())
+        
+    def toggle_show_tv_lvls(self):
+        self.C.tv_lvls_bool = self.show_tv_lvls_button.get_checked()
+        self.C.redo_tree_display()
 
     def set_layout(self, event=None):
         layout = self.layout_dropdown.get_my_value()

@@ -306,6 +306,7 @@ To get started once you have closed this popup, either:
             # left, 50/50, adjustable, right
             "Editor display option": "left",
             "Treeview indent": self.frames["tree_edit"].tree.ops.treeview_indent,
+            "Treeview levels": self.frames["tree_edit"].tv_lvls_bool,
         }
         self.check_window_size_settings()
 
@@ -339,6 +340,7 @@ To get started once you have closed this popup, either:
             "Window coords": self.configsettings["Window coords"],
             "Editor display option": self.frames["tree_edit"].get_display_option(),
             "Treeview indent": self.frames["tree_edit"].tree.ops.treeview_indent,
+            "Treeview levels": self.frames["tree_edit"].tv_lvls_bool,
         }
 
     def save_cfg(self, event=None, get_settings=True):
@@ -395,6 +397,8 @@ To get started once you have closed this popup, either:
         self.frames["tree_edit"].xlsx_flattened_add_index = self.configsettings["Flatten add index"]
         if "Treeview indent" in self.configsettings:
             self.frames["tree_edit"].tree.ops.treeview_indent = self.configsettings["Treeview indent"]
+        if "Treeview levels" in self.configsettings:
+            self.frames["tree_edit"].tv_lvls_bool = self.configsettings["Treeview levels"]
         self.set_json_output_format()
         self.theme = self.configsettings["Theme"]
         self.frames["tree_edit"].set_display_option(self.configsettings["Editor display option"])
