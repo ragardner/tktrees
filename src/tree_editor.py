@@ -356,17 +356,6 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.view_menu.add_separator()
-        self.view_menu.add_command(
-            label="Save position",
-            command=self.save_scroll,
-            **menu_kwargs,
-        )
-        self.view_menu.add_command(
-            label="Go to saved",
-            command=self.go_to_saved,
-            **menu_kwargs,
-        )
-        self.view_menu.add_separator()
         self.adjustable_bool = tk.BooleanVar()
         self.adjustable_bool.set(False)
         self._50_50_bool = tk.BooleanVar()
@@ -1427,8 +1416,6 @@ class Tree_Editor(tk.Frame):
         self.sheet.unbind("<Z>")
         self.copied_details = {"copied": [], "id": ""}
         self.copied_detail = {"copied": "", "id": ""}
-        self.savedyscroll = 0
-        self.savedxscroll = 0
         self.vs = deque(maxlen=30)
         self.vp = 0
         self.cut = []
@@ -9599,7 +9586,7 @@ class Tree_Editor(tk.Frame):
             ik = self.sheet.MT.data[sel[0]][self.ic].lower()
             Text_Popup(self, self.details(ik), theme=self.C.theme)
         else:
-            Error(self, "Select an ID in the sheet", theme=self.C.theme)
+            Error(self, "Select an ID in the sheet\nTo display the sheet go to View > Layout", theme=self.C.theme)
 
     def show_ids_full_info_tree(self, event=None):
         if self.selected_ID:
@@ -9761,15 +9748,6 @@ class Tree_Editor(tk.Frame):
     def zoom_out(self, event=None):
         self.tree.zoom_out()
         self.sheet.zoom_out()
-
-    def save_scroll(self, event=None):
-        self.savedyscroll = self.tree.yview()
-        self.savedxscroll = self.tree.xview()
-
-    def go_to_saved(self, event=None):
-        if self.savedyscroll:
-            self.tree.yview("moveto", float(self.savedyscroll[0]))
-            self.tree.xview("moveto", float(self.savedxscroll[0]))
 
     def expand_all(self, event=None):
         self.tree.tree_open()
@@ -10033,8 +10011,6 @@ class Tree_Editor(tk.Frame):
         self.new_sheet = []
         self.saved_info = new_saved_info(self.hiers)
         self.clear_copied_details()
-        self.savedyscroll = 0
-        self.savedxscroll = 0
         self.cut = []
         self.copied = []
         self.cut_children_dct = {}

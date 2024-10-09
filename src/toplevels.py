@@ -5472,7 +5472,7 @@ class Settings_Popup(tk.Toplevel):
 
         self.general.tkraise()
         self.bind("<Escape>", self.cancel)
-        center(self, 520, 650)
+        center(self, 540, 650)
         self.deiconify()
         self.wait_window()
 

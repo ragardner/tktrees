@@ -46,7 +46,7 @@ rc_release = "<ButtonRelease-2>" if USER_OS == "darwin" else "<ButtonRelease-3>"
 ctrl_button = "Command" if USER_OS == "darwin" else "Control"
 from_clipboard_delimiters = "\t,|"
 
-software_version_number = "1.04"
+software_version_number = "1.05"
 software_version_full = "Version: " + software_version_number
 app_title = "tk-trees"
 contact_email = "github@ragardner.simplelogin.com"
