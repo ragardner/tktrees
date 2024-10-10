@@ -1974,13 +1974,7 @@ class Tree_Editor(tk.Frame):
             oldparent = f"{self.sheet.data[y1][x1]}"
             if not self.allow_spaces_ids_var:
                 newtext = re.sub(r"[\n\t\s]*", "", newtext)
-            if self.cut_paste_edit_cell(self.sheet.data[y1][self.ic], oldparent, x1, newtext):
-                successful = True
-            if not successful:
-                self.vs.pop()
-                self.vp -= 1
-                self.set_undo_label()
-            else:
+            if (successful := self.cut_paste_edit_cell(self.sheet.data[y1][self.ic], oldparent, x1, newtext)):
                 self.changelog_append(
                     "Cut and paste ID + children" if self.nodes[ik].cn[x1] else "Cut and paste ID",
                     self.sheet.data[y1][self.ic],
@@ -1994,6 +1988,10 @@ class Tree_Editor(tk.Frame):
                 self.disable_paste()
                 self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
                 return newtext
+            else:
+                self.vs.pop()
+                self.vp -= 1
+                self.set_undo_label()
         if not successful and self.headers[x1].type_ not in (
             "Text Detail",
             "Numerical Detail",
@@ -2017,8 +2015,13 @@ class Tree_Editor(tk.Frame):
             self.snapshot_ctrl_x_v_del_key_id_par()
             self.sheet.MT.data[y1][x1] = f"{newtext}"
             self.rebuild_tree(redraw=False)
+            self.refresh_all_formatting(rows=(y1,))
+            # self.tree.scroll_to_item(ik)
+            # self.tree.selection_set(ik)
+            # self.save_info_get_saved_info()
+            self.redo_tree_display()
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-            return newtext
+            return None
         else:
             if not self.detail_is_valid_for_col(x1, newtext):
                 Error(
