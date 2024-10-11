@@ -7166,7 +7166,7 @@ class Tree_Editor(tk.Frame):
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{self.headers[h].name}  {node.name}  {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
+                                    text=f"{self.headers[h].name}  {self.headers[i].name}  {node.name}  {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
                                     iid=iid,
                                     column=i,
                                     term=search,
