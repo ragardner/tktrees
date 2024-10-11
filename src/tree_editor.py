@@ -55,6 +55,7 @@ from .constants import (
     rc_motion,
     rc_press,
     rc_release,
+    remove_nrt,
     sheet_bindings,
     sheet_header_font,
     software_version_number,
@@ -1398,6 +1399,8 @@ class Tree_Editor(tk.Frame):
             self.remake_topnodes_order()
             self.tree.set_column_widths()
             self.sheet.set_row_heights().set_column_widths()
+        self.reset_tree_search_dropdown()
+        self.reset_sheet_search_dropdown()
         self.selected_ID = ""
         self.selected_PAR = ""
         self.new_sheet = []
@@ -7163,7 +7166,7 @@ class Tree_Editor(tk.Frame):
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{self.headers[h].name}  {node.name}  {e[:50] if len(e) > 50 else e}",
+                                    text=f"{self.headers[h].name}  {node.name}  {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
                                     iid=iid,
                                     column=i,
                                     term=search,
@@ -7183,37 +7186,24 @@ class Tree_Editor(tk.Frame):
             search = find
         if not search or all(c.isspace() for c in search):
             return
-        self.sheet_search_results = []
+        self.reset_sheet_search_dropdown()
         search = search.lower()
-        resnum = 1
-        if not exact:
-            for r in self.sheet.MT.data:
-                if search in r[self.ic].lower():
-                    self.sheet_search_results.append(
-                        (
-                            f"{resnum} ID: {r[self.ic]}",
-                            r[self.ic].lower(),
-                            self.headers[self.ic].name,
-                        )
+        for r in self.sheet.MT.data:
+            if (exact and search == r[self.ic].lower()) or (not exact and search in r[self.ic].lower()):
+                self.sheet_search_results.append(
+                    SearchResult(
+                        hierarchy=self.pc,
+                        text=f"{r[self.ic]}",
+                        iid=r[self.ic].lower(),
+                        column=self.ic,
+                        term=search,
+                        type_=0,
+                        exact=exact,
                     )
-                    resnum += 1
-        elif exact:
-            for r in self.sheet.MT.data:
-                if search == r[self.ic].lower():
-                    self.sheet_search_results.append(
-                        (
-                            f"{resnum} ID: {r[self.ic]}",
-                            r[self.ic].lower(),
-                            self.headers[self.ic].name,
-                        )
-                    )
-                    resnum += 1
+                )
         if self.sheet_search_results:
-            self.sheet_search_dropdown["values"] = tuple(tup[0] for tup in self.sheet_search_results)
-            self.sheet_search_displayed.set(self.sheet_search_results[0][0])
-            self.sheet_show_search_result(None)
-        else:
-            self.reset_sheet_search_dropdown()
+            self.sheet_search_dropdown["values"] = tuple(result.text for result in self.sheet_search_results)
+            self.sheet_search_displayed.set(self.sheet_search_results[0].text)
 
     def sheet_search_for_detail(self, find=None, exact=False):
         if find is None:
@@ -7225,57 +7215,23 @@ class Tree_Editor(tk.Frame):
         self.reset_sheet_search_dropdown()
         search = search.lower()
         idcol_hiers = set(self.hiers) | {self.ic}
-        resnum = 1
-        if not exact:
-            for r in self.sheet.MT.data:
-                for i, e in enumerate(r):
-                    if i not in idcol_hiers:
-                        if search in e.lower():
-                            if len(e) > 50:
-                                self.sheet_search_results.append(
-                                    (
-                                        f"{resnum} ID: {r[self.ic]}  |  {self.headers[i].name}: {e[:50]}",
-                                        r[self.ic].lower(),
-                                        self.headers[i].name,
-                                    )
-                                )
-                            else:
-                                self.sheet_search_results.append(
-                                    (
-                                        f"{resnum} ID: {r[self.ic]}  |  {self.headers[i].name}: {e}",
-                                        r[self.ic].lower(),
-                                        self.headers[i].name,
-                                    )
-                                )
-                            resnum += 1
-        elif exact:
-            for r in self.sheet.MT.data:
-                for i, e in enumerate(r):
-                    if i not in idcol_hiers:
-                        if search == e.lower():
-                            if len(e) > 50:
-                                self.sheet_search_results.append(
-                                    (
-                                        f"{resnum} ID: {r[self.ic]}  |  {self.headers[i].name}: {e[:50]}",
-                                        r[self.ic].lower(),
-                                        self.headers[i].name,
-                                    )
-                                )
-                            else:
-                                self.sheet_search_results.append(
-                                    (
-                                        f"{resnum} ID: {r[self.ic]}  |  {self.headers[i].name}: {e}",
-                                        r[self.ic].lower(),
-                                        self.headers[i].name,
-                                    )
-                                )
-                            resnum += 1
+        for r in self.sheet.MT.data:
+            for i, e in enumerate(r):
+                if i not in idcol_hiers and ((exact and search == e.lower()) or (not exact and search in e.lower())):
+                    self.sheet_search_results.append(
+                        SearchResult(
+                            hierarchy=self.pc,
+                            text=f"{self.headers[i].name}  {r[self.ic]}  {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
+                            iid=r[self.ic].lower(),
+                            column=i,
+                            term=search,
+                            type_=1,
+                            exact=exact,
+                        )
+                    )
         if self.sheet_search_results:
-            self.sheet_search_dropdown["values"] = tuple(tup[0] for tup in self.sheet_search_results)
-            self.sheet_search_displayed.set(self.sheet_search_results[0][0])
-            self.sheet_show_search_result(None)
-        else:
-            self.reset_sheet_search_dropdown()
+            self.sheet_search_dropdown["values"] = tuple(result.text for result in self.sheet_search_results)
+            self.sheet_search_displayed.set(self.sheet_search_results[0].text)
 
     def find_and_replace(self, event=None, within=False):
         if self.find_popup is not None:
@@ -9440,12 +9396,30 @@ class Tree_Editor(tk.Frame):
 
     def show_search_result(self, event=None):
         result = self.search_results[self.search_dropdown.current()]
-
-        if result.iid not in self.rns:
-            Error(self, "Search result not found, refresh the search", theme=self.C.theme)
+        if not self.check_search_result(result):
             return
-        sheet_rn = self.rns[result.iid]
+        if self.pc != result.hierarchy:
+            self.switch_hier(hier=result.hierarchy)
+        self.tree.scroll_to_item(result.iid, redraw=True)
+        self.tree.selection_set(result.iid)
+        self.tree.set_currently_selected(column=result.column, item=self.tree.selected.fill_iid)
+        self.tree.see(column=result.column, keep_yscroll=True)
+        self.focus_tree()
 
+    def sheet_show_search_result(self, event=None):
+        result = self.sheet_search_results[self.sheet_search_dropdown.current()]
+        if not self.check_search_result(result):
+            return
+        self.sheet.select_row(row=self.rns[result.iid])
+        self.sheet.see(row=self.rns[result.iid], column=result.column, redraw=True)
+        self.sheet.set_currently_selected(column=result.column, item=self.sheet.selected.fill_iid)
+        self.focus_sheet()
+
+    def check_search_result(self, result: SearchResult) -> bool:
+        result_ok = True
+        if result.iid not in self.rns:
+            result_ok = False
+        sheet_rn = self.rns[result.iid]
         try:
             sheet_cell = self.sheet.data[sheet_rn][result.column].lower()
             if (
@@ -9453,36 +9427,16 @@ class Tree_Editor(tk.Frame):
                 or (result.exact and sheet_cell != result.term)
                 or (not result.exact and result.term not in sheet_cell)
             ):
-                Error(self, "Search result not found, refresh the search", theme=self.C.theme)
-                return
-
+                result_ok = False
         except Exception:
-            pass
-
-        if self.pc != result.hierarchy:
-            self.switch_hier(hier=result.hierarchy)
-
-        self.tree.scroll_to_item(result.iid)
-        if result.type_:
-            self.tree.select_cell(
-                row=self.tree.itemrow(result.iid),
-                column=result.column,
+            result_ok = False
+        if not result_ok:
+            Error(
+                self,
+                "Search result not found, refresh the search.\nThis error usually occurs because data has been modified after searching.",
+                theme=self.C.theme,
             )
-        else:
-            self.tree.selection_set(result.iid)
-        self.tree.see(column=result.column, keep_yscroll=True)
-        self.focus_tree()
-
-    def sheet_show_search_result(self, event=None):
-        displayed, ik, col = self.sheet_search_results[self.sheet_search_dropdown.current()]
-        try:
-            coln = next(i for i, h in enumerate(self.headers) if h.name == col)
-            self.sheet.select_cell(row=self.rns[ik], column=coln)
-            self.sheet.see(row=self.rns[ik], column=coln)
-        except Exception:
-            self.sheet.select_row(row=self.rns[ik])
-            self.sheet.see(row=self.rns[ik], keep_xscroll=True)
-        self.focus_sheet()
+        return result_ok
 
     def sheet_rc_tv_label(self, event=None):
         if self.tree.has_focus() and self.tree.selected and self.tree.selected.type_ == "columns":
@@ -9879,7 +9833,6 @@ class Tree_Editor(tk.Frame):
         self.selected_ID = ""
         self.selected_PAR = ""
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-        self.reset_sheet_search_dropdown()
         if self.sheet.data:
             if self.saved_info[self.pc].opens:
                 open_ids = self.saved_info[self.pc].opens
@@ -10008,7 +9961,6 @@ class Tree_Editor(tk.Frame):
             self.hiers = popup.pcols
         self.selected_ID = ""
         self.selected_PAR = ""
-        self.reset_sheet_search_dropdown()
         self.tree.reset()
         self.sheet.deselect("all", redraw=False)
         self.sheet.dehighlight_cells(all_=True, redraw=False)
