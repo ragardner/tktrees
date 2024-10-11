@@ -5427,7 +5427,7 @@ class Settings_Popup(tk.Toplevel):
         self.header_alignment_dropdown.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
 
         self.page_chooser_frame = Frame(self, theme=theme)
-        self.page_chooser_frame.config(bg=themes[theme].table_bg)
+        self.page_chooser_frame.config(bg=themes[theme].top_left_fg)
         self.page_chooser_frame.grid(row=0, column=0, sticky="nswe")
 
         self.general_button = Button(
@@ -5564,7 +5564,7 @@ class Settings_Popup(tk.Toplevel):
 
     def set_theme(self, event=None):
         theme = self.theme_dropdown.get_my_value().lower().replace(" ", "_")
-        self.page_chooser_frame.config(bg=themes[theme].table_bg)
+        self.page_chooser_frame.config(bg=themes[theme].top_left_fg)
         self.config(bg=themes[theme].top_left_bg)
         self.general.config(bg=themes[theme].top_left_bg)
         self.xlsx.config(bg=themes[theme].top_left_bg)
