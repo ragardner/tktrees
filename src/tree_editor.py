@@ -17,7 +17,7 @@ from collections.abc import Generator, Iterator, Sequence
 from itertools import cycle, filterfalse, islice, repeat
 from locale import getdefaultlocale
 from math import floor
-from operator import itemgetter
+from operator import attrgetter, itemgetter
 from tkinter import filedialog, ttk
 from typing import Literal
 
@@ -39,6 +39,7 @@ from .classes import (
     Del_stre,
     Header,
     Node,
+    SearchResult,
     TreeBuilder,
 )
 from .constants import (
@@ -1974,7 +1975,7 @@ class Tree_Editor(tk.Frame):
             oldparent = f"{self.sheet.data[y1][x1]}"
             if not self.allow_spaces_ids_var:
                 newtext = re.sub(r"[\n\t\s]*", "", newtext)
-            if (successful := self.cut_paste_edit_cell(self.sheet.data[y1][self.ic], oldparent, x1, newtext)):
+            if successful := self.cut_paste_edit_cell(self.sheet.data[y1][self.ic], oldparent, x1, newtext):
                 self.changelog_append(
                     "Cut and paste ID + children" if self.nodes[ik].cn[x1] else "Cut and paste ID",
                     self.sheet.data[y1][self.ic],
@@ -3717,11 +3718,15 @@ class Tree_Editor(tk.Frame):
         ):
             self.treecolsel = column
 
-    def switch_hier(self, event=None):
-        index = self.switch.current()
-        if self.hiers[index] == self.pc:
-            self.focus_tree()
-            return
+    def switch_hier(self, event=None, hier: int | None = None):
+        if isinstance(hier, int):
+            self.switch_displayed.set(self.headers[hier].name)
+            index = self.hiers.index(hier)
+        else:
+            index = self.switch.current()
+            if self.hiers[index] == self.pc:
+                self.focus_tree()
+                return
         self.save_info_get_saved_info()
         self.pc = int(self.hiers[index])
         self.tree.close_dropdown()
@@ -7118,25 +7123,27 @@ class Tree_Editor(tk.Frame):
             search = find
         if not search or all(c.isspace() for c in search):
             return
-        self.search_results = []
+        self.reset_tree_search_dropdown()
         search = search.lower()
-        resnum = 1
-        if not exact:
-            for iid in self.tree.get_children():
-                if search in iid:
-                    self.search_results.append((f"{resnum} ID: {self.nodes[iid].name}", iid))
-                    resnum += 1
-        elif exact:
-            for iid in self.tree.get_children():
-                if search == iid:
-                    self.search_results.append((f"{resnum} ID: {self.nodes[iid].name}", iid))
-                    resnum += 1
+        for iid, node in self.nodes.items():
+            if (exact and search == iid) or (not exact and search in iid):
+                for h, par in node.ps.items():
+                    if par is not None:
+                        self.search_results.append(
+                            SearchResult(
+                                hierarchy=h,
+                                text=f"{self.headers[h].name}  {node.name}",
+                                iid=iid,
+                                column=self.ic,
+                                term=search,
+                                type_=0,
+                                exact=exact,
+                            )
+                        )
         if self.search_results:
-            self.search_dropdown["values"] = tuple(tup[0] for tup in self.search_results)
-            self.search_displayed.set(self.search_results[0][0])
-            self.show_search_result(None)
-        else:
-            self.reset_tree_search_dropdown()
+            self.search_results.sort(key=attrgetter("hierarchy"))
+            self.search_dropdown["values"] = tuple(result.text for result in self.search_results)
+            self.search_displayed.set(self.search_results[0].text)
 
     def search_for_detail(self, find=None, exact=False):
         if find is None:
@@ -7148,53 +7155,26 @@ class Tree_Editor(tk.Frame):
         self.reset_tree_search_dropdown()
         search = search.lower()
         idcol_hiers = set(self.hiers) | {self.ic}
-        resnum = 1
-        if not exact:
-            for iid in self.tree.get_children():
-                for i, e in enumerate(self.sheet.MT.data[self.rns[iid]]):
-                    if i not in idcol_hiers:
-                        if search in e.lower():
-                            if len(e) > 50:
-                                self.search_results.append(
-                                    (
-                                        f"{resnum} ID: {self.nodes[iid].name}  |  {self.headers[i].name}: {e[:50]}",
-                                        iid,
-                                    )
+        for iid, node in self.nodes.items():
+            for i, e in enumerate(self.sheet.MT.data[self.rns[iid]]):
+                if i not in idcol_hiers and ((exact and search == e.lower()) or (not exact and search in e.lower())):
+                    for h, par in node.ps.items():
+                        if par is not None:
+                            self.search_results.append(
+                                SearchResult(
+                                    hierarchy=h,
+                                    text=f"{self.headers[h].name}  {node.name}  {e[:50] if len(e) > 50 else e}",
+                                    iid=iid,
+                                    column=i,
+                                    term=search,
+                                    type_=1,
+                                    exact=exact,
                                 )
-                            else:
-                                self.search_results.append(
-                                    (
-                                        f"{resnum} ID: {self.nodes[iid].name}  |  {self.headers[i].name}: {e}",
-                                        iid,
-                                    )
-                                )
-                            resnum += 1
-        elif exact:
-            for iid in self.tree.get_children():
-                for i, e in enumerate(self.sheet.MT.data[self.rns[iid]]):
-                    if i not in idcol_hiers:
-                        if search == e.lower():
-                            if len(e) > 50:
-                                self.search_results.append(
-                                    (
-                                        f"{resnum} ID: {self.nodes[iid].name}  |  {self.headers[i].name}: {e[:50]}",
-                                        iid,
-                                    )
-                                )
-                            else:
-                                self.search_results.append(
-                                    (
-                                        f"{resnum} ID: {self.nodes[iid].name}  |  {self.headers[i].name}: {e}",
-                                        iid,
-                                    )
-                                )
-                            resnum += 1
+                            )
         if self.search_results:
-            self.search_dropdown["values"] = tuple(tup[0] for tup in self.search_results)
-            self.search_displayed.set(self.search_results[0][0])
-            self.show_search_result(None)
-        else:
-            self.reset_tree_search_dropdown()
+            self.search_results.sort(key=attrgetter("hierarchy"))
+            self.search_dropdown["values"] = tuple(result.text for result in self.search_results)
+            self.search_displayed.set(self.search_results[0].text)
 
     def sheet_search_for_ID(self, find=None, exact=False):
         if find is None:
@@ -9459,9 +9439,38 @@ class Tree_Editor(tk.Frame):
             self.sheet_show_search_result()
 
     def show_search_result(self, event=None):
-        item = self.search_results[self.search_dropdown.current()][1]
-        self.tree.selection_set(item.lower())
-        self.tree.scroll_to_item(item)
+        result = self.search_results[self.search_dropdown.current()]
+
+        if result.iid not in self.rns:
+            Error(self, "Search result not found, refresh the search", theme=self.C.theme)
+            return
+        sheet_rn = self.rns[result.iid]
+
+        try:
+            sheet_cell = self.sheet.data[sheet_rn][result.column].lower()
+            if (
+                (result.hierarchy not in self.hiers)
+                or (result.exact and sheet_cell != result.term)
+                or (not result.exact and result.term not in sheet_cell)
+            ):
+                Error(self, "Search result not found, refresh the search", theme=self.C.theme)
+                return
+
+        except Exception:
+            pass
+
+        if self.pc != result.hierarchy:
+            self.switch_hier(hier=result.hierarchy)
+
+        self.tree.scroll_to_item(result.iid)
+        if result.type_:
+            self.tree.select_cell(
+                row=self.tree.itemrow(result.iid),
+                column=result.column,
+            )
+        else:
+            self.tree.selection_set(result.iid)
+        self.tree.see(column=result.column, keep_yscroll=True)
         self.focus_tree()
 
     def sheet_show_search_result(self, event=None):
@@ -9856,7 +9865,7 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_dropdown["values"] = []
         self.sheet_search_displayed.set("")
         self.sheet_search_results = []
-        
+
     def get_node_level(self, node, level=1):
         yield level
         if node.ps[self.pc]:
@@ -9870,7 +9879,6 @@ class Tree_Editor(tk.Frame):
         self.selected_ID = ""
         self.selected_PAR = ""
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-        self.reset_tree_search_dropdown()
         self.reset_sheet_search_dropdown()
         if self.sheet.data:
             if self.saved_info[self.pc].opens:
@@ -9882,7 +9890,9 @@ class Tree_Editor(tk.Frame):
                 labels = []
                 for node in self.pc_nodes():
                     data.append(self.sheet.data[self.rns[node.k]])
-                    labels.append(f"{max(self.get_node_level(node))}. {self.sheet.data[self.rns[node.k]][self.tv_label_col]}")
+                    labels.append(
+                        f"{max(self.get_node_level(node))}. {self.sheet.data[self.rns[node.k]][self.tv_label_col]}"
+                    )
                 self.tree.tree_build(
                     data=data,
                     iid_column=self.ic,
@@ -9998,7 +10008,6 @@ class Tree_Editor(tk.Frame):
             self.hiers = popup.pcols
         self.selected_ID = ""
         self.selected_PAR = ""
-        self.reset_tree_search_dropdown()
         self.reset_sheet_search_dropdown()
         self.tree.reset()
         self.sheet.deselect("all", redraw=False)

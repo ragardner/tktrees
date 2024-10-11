@@ -586,6 +586,28 @@ class TreeBuilder:
             return output, max(map(len, output), default=0), 0, [1]
 
 
+class SearchResult:
+    __slots__ = ("hierarchy", "text", "iid", "column", "term", "type_", "exact")
+
+    def __init__(
+        self,
+        hierarchy: int,
+        text: str,
+        iid: str,
+        column: int,
+        term: str,
+        type_: int, # 0 for id, 1 for detail
+        exact: bool,
+    ):
+        self.hierarchy = hierarchy
+        self.text = text
+        self.iid = iid
+        self.column = column
+        self.term = term
+        self.type_ = type_
+        self.exact = exact
+
+
 class Node:
     __slots__ = ("name", "k", "cn", "ps")
 
