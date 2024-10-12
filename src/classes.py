@@ -259,6 +259,7 @@ class TreeBuilder:
         justify_left: bool,
         reverse: bool,
         add_index: bool,
+        empty_cells_to_none: bool = False,
     ) -> list[list[str]]:
         output_headers = []
         detail_columns = detail_columns and len(hiers) + 1 < len(headers)
@@ -330,6 +331,12 @@ class TreeBuilder:
                 if detail_columns:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
             output_headers = output_headers[::-1]
+            
+        if empty_cells_to_none:
+            for rn in range(len(output_sheet)):
+                for cn in range(len(output_sheet[rn])):
+                    if not output_sheet[rn][cn]:
+                        output_sheet[rn][cn] = None
 
         if add_index:
             return [["Index"] + output_headers] + [[f"{rn}"] + r for rn, r in enumerate(output_sheet)]

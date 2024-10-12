@@ -624,7 +624,7 @@ class Changelog_Popup(tk.Toplevel):
                 ws = self.wb_.create_sheet(title="Changelog")
                 ws.append(xlsx_changelog_header(ws))
                 for row in self.C.changelog:
-                    ws.append(row)
+                    ws.append([e if e else None for e in row])
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
             elif newfile.lower().endswith((".csv", ".tsv")):
@@ -685,7 +685,7 @@ class Changelog_Popup(tk.Toplevel):
                 ws = self.wb_.create_sheet(title="Changelog")
                 ws.append(xlsx_changelog_header(ws))
                 for row in islice(self.C.changelog, from_row, to_row):
-                    ws.append(row)
+                    ws.append([e if e else None for e in row])
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
             elif newfile.lower().endswith((".csv", ".tsv")):
@@ -1063,10 +1063,10 @@ class Compare_Report_Popup(tk.Toplevel):
                 ws.freeze_panes = "A2"
                 ws.append(["ID", "Difference", self.sheet1name, self.sheet2name])
                 for row in self.sheetdisplay1.get_sheet_data():
-                    ws.append(row)
+                    ws.append([e if e else None for e in row])
                 ws = self.wb_.create_sheet(title="Other Differences")
                 for row in self.sheetdisplay2.get_sheet_data():
-                    ws.append(row)
+                    ws.append([e if e else None for e in row])
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
         except Exception as error_msg:

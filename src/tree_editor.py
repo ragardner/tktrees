@@ -22,6 +22,7 @@ from tkinter import filedialog, ttk
 from typing import Literal
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.cell import WriteOnlyCell
 from tksheet import (
     DotDict,
     Highlight,
@@ -9626,7 +9627,7 @@ class Tree_Editor(tk.Frame):
                         ws = self.C.wb.create_sheet(title="Changelog")
                         ws.append(xlsx_changelog_header(ws))
                         for row in self.changelog:
-                            ws.append(row)
+                            ws.append([e if e else None for e in row])
                         self.C.wb.save(newfile)
                         self.C.try_to_close_workbook()
                     elif newfile.lower().endswith((".csv", ".tsv")):
@@ -9666,7 +9667,7 @@ class Tree_Editor(tk.Frame):
                         ws.append(xlsx_changelog_header(ws))
                         if self.sheet_changes:
                             for row in islice(self.changelog, from_row, to_row):
-                                ws.append(row)
+                                ws.append([e if e else None for e in row])
                         self.C.wb.save(newfile)
                         self.C.try_to_close_workbook()
                     elif newfile.lower().endswith((".csv", ".tsv")):
@@ -11601,8 +11602,8 @@ class Tree_Editor(tk.Frame):
                 continue
         ws = wb.create_sheet(title=new_title1)
         ws.append(xlsx_changelog_header(ws))
-        for row in reversed(self.changelog):
-            ws.append(row)
+        for r in reversed(self.changelog):
+            ws.append([e if e else None for e in r])
 
     def write_flattened_to_workbook(self, wb, sheetnames_):
         sheetname = sheetnames_[1]
@@ -11628,7 +11629,7 @@ class Tree_Editor(tk.Frame):
             reverse=self.xlsx_flattened_reverse_order,
             add_index=self.xlsx_flattened_add_index,
         ):
-            ws.append(r)
+            ws.append([e if e else None for e in r])
         self.new_sheet = []
 
     def get_node_descendants(self, node: Node) -> Generator[Node]:
@@ -11640,7 +11641,7 @@ class Tree_Editor(tk.Frame):
     def num_descendants(self, node: Node) -> int:
         return sum(1 for _ in self.get_node_descendants(node))
 
-    def write_treeview_to_workbook(self, wb, sheetnames_):
+    def write_treeview_to_workbook(self, wb: Workbook, sheetnames_):
         sheetname = sheetnames_[1]
         new_title1 = sheetname + " Treeview"
         for sname in (i for i in wb.sheetnames if "Treeview" in i):
@@ -11651,7 +11652,6 @@ class Tree_Editor(tk.Frame):
         ws = wb.create_sheet(title=new_title1)
         ws.freeze_panes = "A2"
         oldpc = int(self.pc)
-        self.xl_tv_row_ctr = 2
         self.levels = defaultdict(list)
         for h in self.hiers:
             for node in self.nodes.values():
@@ -11662,62 +11662,60 @@ class Tree_Editor(tk.Frame):
         self.xl_tv_detail_cols = tuple(i for i, h in enumerate(self.headers) if h.type_ not in ("ID", "Parent"))
         self.level_colors = tuple(tv_lvls_colors[level_to_color(i)] for i in range(maxlvls + 1))
         cycle_colors = cycle(tv_lvls_colors)
+
+        row = []
         for lvl in range(1, maxlvls + 1):
-            ws.cell(row=1, column=lvl, value=lvl)
-            ws.cell(row=1, column=lvl).fill = next(cycle_colors)
+            cell = WriteOnlyCell(ws, value=lvl)
+            cell.fill = next(cycle_colors)
+            row.append(cell)
+
         for col, hdr in enumerate((h for h in self.headers if h.type_ not in ("ID", "Parent")), start=maxlvls + 1):
-            ws.cell(row=1, column=col, value=hdr.name)
+            cell = WriteOnlyCell(ws, value=hdr.name)
+            row.append(cell)
+
+        ws.append(row)
+
         for h in self.hiers:
             self.pc = h
             self.hier_disp = f"{self.headers[self.pc].name} - "
+
             for node in self.topnodes():
-                ws.cell(
-                    row=self.xl_tv_row_ctr,
-                    column=1,
+                row = []
+                cell = WriteOnlyCell(
+                    ws,
                     value=f"{self.hier_disp}{self.sheet.MT.data[self.rns[node.k]][self.tv_label_col]}",
                 )
-                ws.cell(row=self.xl_tv_row_ctr, column=1).fill = tv_lvls_colors[0]
-                for i, col in enumerate(self.xl_tv_detail_cols):
-                    ws.cell(
-                        row=self.xl_tv_row_ctr,
-                        column=i + self.xl_tv_details_start_col,
-                        value=self.sheet.MT.data[self.rns[node.k]][col],
-                    )
-                self.xl_tv_row_ctr += 1
+                cell.fill = tv_lvls_colors[0]
+                row.append(cell)
+
+                row.extend(list(repeat(None, self.xl_tv_details_start_col - 2)))
+                for col in self.xl_tv_detail_cols:
+                    cell = WriteOnlyCell(ws, value=self.sheet.MT.data[self.rns[node.k]][col])
+                    row.append(cell)
+
+                ws.append(row)
                 if node.cn[self.pc]:
-                    # ws.row_dimensions.group(
-                    #     self.xl_tv_row_ctr,
-                    #     self.xl_tv_row_ctr + self.num_descendants(node) - 1,
-                    #     outline_level=1,
-                    #     hidden=True,
-                    # )
                     self.write_treeview_to_workbook_recur(ws, node)
         self.pc = int(oldpc)
         self.levels = defaultdict(list)
 
     def write_treeview_to_workbook_recur(self, ws, n, level=2):
         for c in n.cn[self.pc]:
-            ws.cell(
-                row=self.xl_tv_row_ctr,
-                column=level,
+            row = list(repeat(None, level - 1))
+            cell = WriteOnlyCell(
+                ws,
                 value=f"{self.hier_disp}{self.sheet.MT.data[self.rns[c.k]][self.tv_label_col]}",
             )
-            ws.cell(row=self.xl_tv_row_ctr, column=level).fill = self.level_colors[level - 1]
-            for i, col in enumerate(self.xl_tv_detail_cols):
-                ws.cell(
-                    row=self.xl_tv_row_ctr,
-                    column=i + self.xl_tv_details_start_col,
-                    value=self.sheet.MT.data[self.rns[c.k]][col],
-                )
-            self.xl_tv_row_ctr += 1
+            cell.fill = self.level_colors[level - 1]
+            row.append(cell)
+
+            row.extend(list(repeat(None, self.xl_tv_details_start_col - 1 - level)))
+            for col in self.xl_tv_detail_cols:
+                cell = WriteOnlyCell(ws, value=self.sheet.MT.data[self.rns[c.k]][col])
+                row.append(cell)
+
+            ws.append(row)
             if c.cn[self.pc]:
-                # if level < 9:
-                #     ws.row_dimensions.group(
-                #         self.xl_tv_row_ctr,
-                #         self.xl_tv_row_ctr + self.num_descendants(c) - 1,
-                #         outline_level=level,
-                #         hidden=True,
-                #     )
                 self.write_treeview_to_workbook_recur(ws, c, level + 1)
 
     def write_additional_sheets_to_workbook(self, new_sheet_name=None):
@@ -11764,9 +11762,8 @@ class Tree_Editor(tk.Frame):
         self.C.update()
 
     def save_workbook(self, filepath, sheetname):
-        self.C.wb = Workbook()
-        ws = self.C.wb.active
-        ws.title = sheetname
+        self.C.wb = Workbook(write_only=True)
+        ws = self.C.wb.create_sheet(title=sheetname)
         if not self.ic:
             ws.freeze_panes = "B2"
         else:
