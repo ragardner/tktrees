@@ -9434,7 +9434,7 @@ class Tree_Editor(tk.Frame):
         if not result_ok:
             Error(
                 self,
-                "Search result not found, refresh the search.\nThis error usually occurs because data has been modified after searching.",
+                "Search result not found, refresh the search. Data may have been modified after searching.",
                 theme=self.C.theme,
             )
         return result_ok
