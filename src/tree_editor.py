@@ -7125,8 +7125,7 @@ class Tree_Editor(tk.Frame):
             self.sheet_search_for_detail(None, True)
 
     def search_for_any(self, find=None):
-        search = self.search_entry.get() if find is None else find
-        if not search or all(c.isspace() for c in search):
+        if not (search := self.search_entry.get() if find is None else find):
             return
         self.reset_tree_search_dropdown()
         search = search.lower()
@@ -7149,8 +7148,7 @@ class Tree_Editor(tk.Frame):
         self.display_search_results()
 
     def search_for_ID(self, find=None, exact=False):
-        search = self.search_entry.get() if find is None else find
-        if not search or all(c.isspace() for c in search):
+        if not (search := self.search_entry.get() if find is None else find):
             return
         self.reset_tree_search_dropdown()
         search = search.lower()
@@ -7172,8 +7170,7 @@ class Tree_Editor(tk.Frame):
         self.display_search_results()
 
     def search_for_detail(self, find=None, exact=False):
-        search = self.search_entry.get() if find is None else find
-        if not search or all(c.isspace() for c in search):
+        if not (search := self.search_entry.get() if find is None else find):
             return
         self.reset_tree_search_dropdown()
         search = search.lower()
@@ -7204,8 +7201,7 @@ class Tree_Editor(tk.Frame):
             self.show_search_result()
 
     def sheet_search_for_any(self, find=None):
-        search = self.sheet_search_entry.get() if find is None else find
-        if not search or all(c.isspace() for c in search):
+        if not (search := self.sheet_search_entry.get() if find is None else find):
             return
         self.reset_sheet_search_dropdown()
         search = search.lower()
@@ -7226,8 +7222,7 @@ class Tree_Editor(tk.Frame):
         self.sheet_display_search_results()
 
     def sheet_search_for_ID(self, find=None, exact=False):
-        search = self.sheet_search_entry.get() if find is None else find
-        if not search or all(c.isspace() for c in search):
+        if not (search := self.sheet_search_entry.get() if find is None else find):
             return
         self.reset_sheet_search_dropdown()
         search = search.lower()
@@ -7247,8 +7242,7 @@ class Tree_Editor(tk.Frame):
         self.sheet_display_search_results()
 
     def sheet_search_for_detail(self, find=None, exact=False):
-        search = self.sheet_search_entry.get() if find is None else find
-        if not search or all(c.isspace() for c in search):
+        if not (search := self.sheet_search_entry.get() if find is None else find):
             return
         self.reset_sheet_search_dropdown()
         search = search.lower()
