@@ -515,7 +515,7 @@ class Tree_Editor(tk.Frame):
         self.search_button = Button(self.btns_tree, text=" Find:", command=self.search_choice)
         self.search_button.grid(row=0, column=0, sticky="nswe")
         self.search_choice_displayed = tk.StringVar(self.btns_tree)
-        self.search_choice_displayed.set("ID non-exact")
+        self.search_choice_displayed.set("Non-exact")
         self.search_choice_dropdown = ttk.Combobox(
             self.btns_tree,
             textvariable=self.search_choice_displayed,
@@ -524,6 +524,7 @@ class Tree_Editor(tk.Frame):
         )
         self.search_choice_dropdown.config(width=13)
         self.search_choice_dropdown["values"] = [
+            "Non-exact",
             "ID non-exact",
             "ID exact",
             "Detail non-exact",
@@ -614,7 +615,7 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_button = Button(self.btns_sheet, text=" Find:", command=self.sheet_search_choice)
         self.sheet_search_button.grid(row=0, column=2, sticky="nswe")
         self.sheet_search_choice_displayed = tk.StringVar(self.btns_sheet)
-        self.sheet_search_choice_displayed.set("ID non-exact")
+        self.sheet_search_choice_displayed.set("Non-exact")
         self.sheet_search_choice_dropdown = ttk.Combobox(
             self.btns_sheet,
             textvariable=self.sheet_search_choice_displayed,
@@ -623,6 +624,7 @@ class Tree_Editor(tk.Frame):
         )
         self.sheet_search_choice_dropdown.config(width=13)
         self.sheet_search_choice_dropdown["values"] = [
+            "Non-exact",
             "ID non-exact",
             "ID exact",
             "Detail non-exact",
@@ -1600,8 +1602,6 @@ class Tree_Editor(tk.Frame):
         self.tagged_ids = set()
         self.C.created_new = False
         self.C.change_app_title(title=None)
-
-    def show_tv_lvls(self, event=None): ...
 
     def change_json_format_one(self):
         self.json_format_one = True
@@ -7100,7 +7100,9 @@ class Tree_Editor(tk.Frame):
 
     def search_choice(self, event=None):
         choice = self.search_choice_displayed.get()
-        if choice == "ID non-exact":
+        if choice == "Non-exact":
+            self.search_for_any(None)
+        elif choice == "ID non-exact":
             self.search_for_ID(None, False)
         elif choice == "ID exact":
             self.search_for_ID(None, True)
@@ -7111,7 +7113,9 @@ class Tree_Editor(tk.Frame):
 
     def sheet_search_choice(self, event=None):
         choice = self.sheet_search_choice_displayed.get()
-        if choice == "ID non-exact":
+        if choice == "Non-exact":
+            self.sheet_search_for_any()
+        elif choice == "ID non-exact":
             self.sheet_search_for_ID(None, False)
         elif choice == "ID exact":
             self.sheet_search_for_ID(None, True)
@@ -7120,11 +7124,32 @@ class Tree_Editor(tk.Frame):
         elif choice == "Detail exact":
             self.sheet_search_for_detail(None, True)
 
+    def search_for_any(self, find=None):
+        search = self.search_entry.get() if find is None else find
+        if not search or all(c.isspace() for c in search):
+            return
+        self.reset_tree_search_dropdown()
+        search = search.lower()
+        for iid, node in self.nodes.items():
+            for i, e in enumerate(self.sheet.MT.data[self.rns[iid]]):
+                if search in e.lower():
+                    for h, par in node.ps.items():
+                        if par is not None:
+                            self.search_results.append(
+                                SearchResult(
+                                    hierarchy=h,
+                                    text=f"{self.headers[h].name}    {self.headers[i].name}    {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
+                                    iid=iid,
+                                    column=i,
+                                    term=search,
+                                    type_=2,
+                                    exact=False,
+                                )
+                            )
+        self.display_search_results()
+
     def search_for_ID(self, find=None, exact=False):
-        if find is None:
-            search = self.search_entry.get()
-        else:
-            search = find
+        search = self.search_entry.get() if find is None else find
         if not search or all(c.isspace() for c in search):
             return
         self.reset_tree_search_dropdown()
@@ -7136,7 +7161,7 @@ class Tree_Editor(tk.Frame):
                         self.search_results.append(
                             SearchResult(
                                 hierarchy=h,
-                                text=f"{self.headers[h].name}  {node.name}",
+                                text=f"{self.headers[h].name}    {self.headers[self.ic].name}    {node.name}",
                                 iid=iid,
                                 column=self.ic,
                                 term=search,
@@ -7144,16 +7169,10 @@ class Tree_Editor(tk.Frame):
                                 exact=exact,
                             )
                         )
-        if self.search_results:
-            self.search_results.sort(key=attrgetter("hierarchy"))
-            self.search_dropdown["values"] = tuple(result.text for result in self.search_results)
-            self.search_displayed.set(self.search_results[0].text)
+        self.display_search_results()
 
     def search_for_detail(self, find=None, exact=False):
-        if find is None:
-            search = self.search_entry.get()
-        else:
-            search = find
+        search = self.search_entry.get() if find is None else find
         if not search or all(c.isspace() for c in search):
             return
         self.reset_tree_search_dropdown()
@@ -7167,7 +7186,7 @@ class Tree_Editor(tk.Frame):
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{self.headers[h].name}  {self.headers[i].name}  {node.name}  {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
+                                    text=f"{self.headers[h].name}    {self.headers[i].name}    {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
                                     iid=iid,
                                     column=i,
                                     term=search,
@@ -7175,16 +7194,39 @@ class Tree_Editor(tk.Frame):
                                     exact=exact,
                                 )
                             )
+        self.display_search_results()
+
+    def display_search_results(self):
         if self.search_results:
             self.search_results.sort(key=attrgetter("hierarchy"))
             self.search_dropdown["values"] = tuple(result.text for result in self.search_results)
             self.search_displayed.set(self.search_results[0].text)
+            self.show_search_result()
+
+    def sheet_search_for_any(self, find=None):
+        search = self.sheet_search_entry.get() if find is None else find
+        if not search or all(c.isspace() for c in search):
+            return
+        self.reset_sheet_search_dropdown()
+        search = search.lower()
+        for r in self.sheet.MT.data:
+            for i, e in enumerate(r):
+                if search in e.lower():
+                    self.sheet_search_results.append(
+                        SearchResult(
+                            hierarchy=self.pc,
+                            text=f"{self.headers[i].name}      {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
+                            iid=r[self.ic].lower(),
+                            column=i,
+                            term=search,
+                            type_=2,
+                            exact=False,
+                        )
+                    )
+        self.sheet_display_search_results()
 
     def sheet_search_for_ID(self, find=None, exact=False):
-        if find is None:
-            search = self.sheet_search_entry.get()
-        else:
-            search = find
+        search = self.sheet_search_entry.get() if find is None else find
         if not search or all(c.isspace() for c in search):
             return
         self.reset_sheet_search_dropdown()
@@ -7194,7 +7236,7 @@ class Tree_Editor(tk.Frame):
                 self.sheet_search_results.append(
                     SearchResult(
                         hierarchy=self.pc,
-                        text=f"{r[self.ic]}",
+                        text=f"{self.headers[self.ic].name}      {r[self.ic]}",
                         iid=r[self.ic].lower(),
                         column=self.ic,
                         term=search,
@@ -7202,15 +7244,10 @@ class Tree_Editor(tk.Frame):
                         exact=exact,
                     )
                 )
-        if self.sheet_search_results:
-            self.sheet_search_dropdown["values"] = tuple(result.text for result in self.sheet_search_results)
-            self.sheet_search_displayed.set(self.sheet_search_results[0].text)
+        self.sheet_display_search_results()
 
     def sheet_search_for_detail(self, find=None, exact=False):
-        if find is None:
-            search = self.sheet_search_entry.get()
-        else:
-            search = find
+        search = self.sheet_search_entry.get() if find is None else find
         if not search or all(c.isspace() for c in search):
             return
         self.reset_sheet_search_dropdown()
@@ -7222,7 +7259,7 @@ class Tree_Editor(tk.Frame):
                     self.sheet_search_results.append(
                         SearchResult(
                             hierarchy=self.pc,
-                            text=f"{self.headers[i].name}  {r[self.ic]}  {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
+                            text=f"{self.headers[i].name}    {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
                             iid=r[self.ic].lower(),
                             column=i,
                             term=search,
@@ -7230,9 +7267,13 @@ class Tree_Editor(tk.Frame):
                             exact=exact,
                         )
                     )
+        self.sheet_display_search_results()
+
+    def sheet_display_search_results(self):
         if self.sheet_search_results:
             self.sheet_search_dropdown["values"] = tuple(result.text for result in self.sheet_search_results)
             self.sheet_search_displayed.set(self.sheet_search_results[0].text)
+            self.sheet_show_search_result()
 
     def find_and_replace(self, event=None, within=False):
         if self.find_popup is not None:

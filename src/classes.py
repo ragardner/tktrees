@@ -603,7 +603,7 @@ class SearchResult:
         iid: str,
         column: int,
         term: str,
-        type_: int, # 0 for id, 1 for detail
+        type_: int, # 0 for id, 1 for detail, 2 for either
         exact: bool,
     ):
         self.hierarchy = hierarchy
