@@ -48,7 +48,7 @@ The corrections will not be made to the original sheet unless you choose to save
 
 To display the actual sheet go to View -> Layout.
 
-If an ID has no parents or children in any hierarchy it will be placed in the first hierarchy (in order of the columns). The same will happen if you Undo a change made to anything but details.
+Upon opening a file if an ID has no parents or children in any hierarchy it will be placed in the first hierarchy (in order of the columns).
 
 ## HELPFUL TIPS AND TUTORIALS
 

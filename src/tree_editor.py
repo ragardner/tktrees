@@ -146,7 +146,7 @@ class Tree_Editor(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.C = C
         self.undo_unsaved_changes_passed_0 = False
-        self.l_frame_proportion = float(0.35)
+        self.l_frame_proportion = float(0.50)
         self.last_width = 0
         self.last_height = 0
         self.currently_adjusting_divider = False
@@ -586,7 +586,7 @@ class Tree_Editor(tk.Frame):
         self.btns_sheet.pack(side="top", fill="x")
         self.btns_sheet.grid_rowconfigure(0, weight=1)
         self.btns_sheet.grid_rowconfigure(1, weight=1)
-        self.btns_sheet.grid_columnconfigure(4, weight=1)
+        self.btns_sheet.grid_columnconfigure(2, weight=1)
 
         self.sheetframe = Frame(self.r_frame)
         self.sheetframe.pack(side="top", fill="both", expand=True)
@@ -602,18 +602,11 @@ class Tree_Editor(tk.Frame):
         self.sheet.pack(side="right", fill="both", expand=True)
 
         # buttons for top right frame
-        # tag ID
-        self.sheet_tagged_ids_dropdown = Ez_Dropdown(self.btns_sheet, EF)
-        self.sheet_tagged_ids_dropdown.grid(row=0, column=0, sticky="nswe")
-        self.sheet_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.sheet_go_to_tagged_id)
-        self.sheet_tag_id_button = Button(self.btns_sheet, text="Tagged IDs: ", underline=0, command=self.tag_ids)
-        self.sheet_tag_id_button.grid(row=1, column=0, ipady=1, sticky="nswe")
-
         # sheet search function
         self.sheet_search_displayed = tk.StringVar(self.btns_sheet)
         self.sheet_search_displayed.set("")
         self.sheet_search_button = Button(self.btns_sheet, text=" Find:", command=self.sheet_search_choice)
-        self.sheet_search_button.grid(row=0, column=2, sticky="nswe")
+        self.sheet_search_button.grid(row=0, column=0, sticky="nswe")
         self.sheet_search_choice_displayed = tk.StringVar(self.btns_sheet)
         self.sheet_search_choice_displayed.set("Non-exact")
         self.sheet_search_choice_dropdown = ttk.Combobox(
@@ -630,9 +623,9 @@ class Tree_Editor(tk.Frame):
             "Detail non-exact",
             "Detail exact",
         ]
-        self.sheet_search_choice_dropdown.grid(row=0, column=3, sticky="nswe")
+        self.sheet_search_choice_dropdown.grid(row=0, column=1, sticky="nswe")
         self.sheet_search_entry = Normal_Entry(self.btns_sheet, font=BF, theme="light_blue")
-        self.sheet_search_entry.grid(row=0, column=4, sticky="nswe")
+        self.sheet_search_entry.grid(row=0, column=2, sticky="nswe")
         self.sheet_search_entry.bind("<Return>", self.sheet_search_choice)
         self.sheet_search_dropdown = ttk.Combobox(
             self.btns_sheet,
@@ -645,7 +638,14 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_choice_dropdown.bind(
             "<<ComboboxSelected>>", lambda focus: self.sheet_search_entry.focus_set()
         )
-        self.sheet_search_dropdown.grid(row=1, column=2, columnspan=3, sticky="nswe")
+        self.sheet_search_dropdown.grid(row=1, column=0, columnspan=3, sticky="nswe")
+
+        # tag ID
+        self.sheet_tag_id_button = Button(self.btns_sheet, text="Tagged IDs: ", underline=0, command=self.tag_ids)
+        self.sheet_tag_id_button.grid(row=0, column=3, ipady=1, sticky="nswe")
+        self.sheet_tagged_ids_dropdown = Ez_Dropdown(self.btns_sheet, EF)
+        self.sheet_tagged_ids_dropdown.grid(row=1, column=3, sticky="nswe")
+        self.sheet_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.sheet_go_to_tagged_id)
 
         # RIGHT CLICK MENUS
 
