@@ -2963,18 +2963,7 @@ class Tree_Editor(tk.Frame):
         ik = self.sheet.MT.data[self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)[0]][
             self.ic
         ].lower()
-        hs = [self.headers[h].name for h, p in self.nodes[ik].ps.items() if p is not None]
-        if len(hs) > 1:
-            popup = Treeview_Id_Finder(self, hs, theme=self.C.theme)
-            if not popup.GO:
-                return
-            selected = popup.selected
-        else:
-            selected = hs[0]
-        self.switch_displayed.set(f"{selected}")
-        self.switch_hier()
-        self.tree.selection_set(self.nodes[ik].k)
-        self.tree.scroll_to_item(self.nodes[ik].name)
+        self.go_to_treeview_id_finder(ik)
 
     def start_work(self, msg="", outside_treeframe=False):
         self.C.working = True
@@ -9371,14 +9360,32 @@ class Tree_Editor(tk.Frame):
                 redraw=False,
             )
         return "break"
+    
+    def go_to_treeview_id_finder(self, ik: str):
+        hs = [self.headers[h].name for h, p in self.nodes[ik].ps.items() if p is not None]
+        if len(hs) > 1:
+            popup = Treeview_Id_Finder(self, hs, theme=self.C.theme)
+            if not popup.GO:
+                return
+            selected = popup.selected
+        else:
+            selected = hs[0]
+        self.switch_displayed.set(f"{selected}")
+        self.switch_hier()
+        self.tree.selection_set(self.nodes[ik].k)
+        self.tree.scroll_to_item(self.nodes[ik].name)
 
     def tree_go_to_tagged_id(self, event=None):
         if not (ik := self.tree_tagged_ids_dropdown.get_my_value().lower()):
             return
-        if ik in self.rns:
-            self.tree.scroll_to_item(ik)
-            self.tree.selection_set(ik)
+        if ik in self.nodes:
+            if self.tree.exists(ik):
+                self.tree.scroll_to_item(ik)
+                self.tree.selection_set(ik)
+            else:
+                self.go_to_treeview_id_finder(ik)
         else:
+            Error(self, f"{ik} no longer exists and has been removed from tagged ids.", theme=self.C.theme)
             self.discard_tagged_id(ik)
 
     def discard_tagged_id(self, ik):
