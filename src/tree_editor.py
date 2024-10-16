@@ -334,15 +334,15 @@ class Tree_Editor(tk.Frame):
         )
         self.view_menu.add_separator()
         self.view_menu.add_command(
-            label="Expand all",
+            label="Expand ID",
             accelerator="Ctrl+E",
-            command=self.expand_all,
+            command=self.expand_id,
             **menu_kwargs,
         )
         self.view_menu.add_command(
-            label="Collapse all",
+            label="Collapse ID",
             accelerator="Ctrl+R",
-            command=self.collapse_all,
+            command=self.collapse_id,
             **menu_kwargs,
         )
         self.view_menu.add_separator()
@@ -1662,10 +1662,10 @@ class Tree_Editor(tk.Frame):
     def enable_widgets(self, widgets=True, menubar=True):
         self.C.menubar_state("normal")
         for widget in (self.tree, self.sheet):
-            widget.bind(f"<{ctrl_button}-e>", self.expand_all)
-            widget.bind(f"<{ctrl_button}-E>", self.expand_all)
-            widget.bind(f"<{ctrl_button}-r>", self.collapse_all)
-            widget.bind(f"<{ctrl_button}-R>", self.collapse_all)
+            widget.bind(f"<{ctrl_button}-e>", self.expand_id)
+            widget.bind(f"<{ctrl_button}-E>", self.expand_id)
+            widget.bind(f"<{ctrl_button}-r>", self.collapse_id)
+            widget.bind(f"<{ctrl_button}-R>", self.collapse_id)
             widget.bind(f"<{ctrl_button}-z>", self.ctrl_z)
             widget.bind(f"<{ctrl_button}-Z>", self.ctrl_z)
             widget.bind(f"<{ctrl_button}-f>", self.find_and_replace)
@@ -9360,7 +9360,7 @@ class Tree_Editor(tk.Frame):
                 redraw=False,
             )
         return "break"
-    
+
     def go_to_treeview_id_finder(self, ik: str):
         hs = [self.headers[h].name for h, p in self.nodes[ik].ps.items() if p is not None]
         if len(hs) > 1:
@@ -9758,11 +9758,21 @@ class Tree_Editor(tk.Frame):
         self.tree.zoom_out()
         self.sheet.zoom_out()
 
-    def expand_all(self, event=None):
-        self.tree.tree_open()
+    def expand_id(self, event=None):
+        if current := self.tree.selected:
+            selections = self.tree.selection()
+            self.tree.tree_open({self.selected_ID} | set(self.tree.descendants(self.selected_ID)))
+            self.tree.selection_set(selections)
+            self.tree.selected = current
 
-    def collapse_all(self, event=None):
-        self.tree.tree_close()
+    def collapse_id(self, event=None):
+        if current := self.tree.selected:
+            selections = self.tree.selection()
+            current_iid = self.tree.tree_selected
+            self.tree.tree_close({self.selected_ID} | set(self.tree.descendants(self.selected_ID)))
+            self.tree.selection_set(set(filter(self.tree.item_displayed, selections)))
+            if self.tree.item_displayed(current_iid):
+                self.tree.selected = current
 
     def apply_date_format_change(self, new_format, snapshot=True):
         if snapshot:

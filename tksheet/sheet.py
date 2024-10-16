@@ -5288,15 +5288,26 @@ class Sheet(tk.Frame):
             self.MT._row_index[self.MT.displayed_rows[rn]].iid for rn in self.get_selected_rows(get_cells_as_rows=cells)
         ]
 
-    def selection_set(self, *items, redraw: bool = True) -> Sheet:
+    @property
+    def tree_selected(self) -> str | None:
+        """
+        Get the iid at the currently selected box
+        """
+        if selected := self.selected:
+            return self.rowitem(selected.row)
+        return None
+
+    def selection_set(self, *items, run_binding: bool = True, redraw: bool = True) -> Sheet:
         if any(item.lower() in self.RI.tree for item in unpack(items)):
             boxes_to_hide = tuple(self.MT.selection_boxes)
-            self.selection_add(*items, redraw=False)
+            self.selection_add(*items, run_binding=False, redraw=False)
             for iid in boxes_to_hide:
                 self.MT.hide_selection_box(iid)
+            if run_binding:
+                self.MT.run_selection_binding("rows")
         return self.set_refresh_timer(redraw)
 
-    def selection_add(self, *items, redraw: bool = True) -> Sheet:
+    def selection_add(self, *items, run_binding: bool = True, redraw: bool = True) -> Sheet:
         to_open = []
         quick_displayed_check = set(self.MT.displayed_rows)
         for item in unpack(items):
@@ -5326,7 +5337,8 @@ class Sheet(tk.Frame):
                 set_current=True,
                 ext=True,
             )
-        self.MT.run_selection_binding("rows")
+        if run_binding:
+            self.MT.run_selection_binding("rows")
         return self.set_refresh_timer(redraw)
 
     def selection_remove(self, *items, redraw: bool = True) -> Sheet:
@@ -5352,6 +5364,9 @@ class Sheet(tk.Frame):
         self.selection_remove(*remove, redraw=False)
         self.selection_add(*add, redraw=False)
         return self.set_refresh_timer(redraw)
+
+    def descendants(self, item: str, check_open: bool = False) -> set[str]:
+        return self.RI.get_iid_descendants(item.lower(), check_open=check_open)
 
     # Functions not in docs
 

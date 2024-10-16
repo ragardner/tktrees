@@ -5847,6 +5847,7 @@ class MainTable(tk.Canvas):
         c: int | None = None,
         item: int | None = None,
         box: tuple[int, int, int, int] | None = None,
+        run_binding: bool = True,
     ) -> None:
         if isinstance(item, int) and item in self.selection_boxes:
             selection_box = self.selection_boxes[item]
@@ -5862,6 +5863,8 @@ class MainTable(tk.Canvas):
                     selection_box.type_,
                     selection_box.fill_iid,
                 )
+                if run_binding:
+                    self.run_selection_binding(selection_box.type_)
                 return
         # currently selected is pointed at any selection box with "box" coordinates
         if isinstance(box, tuple):
@@ -5878,6 +5881,8 @@ class MainTable(tk.Canvas):
                         selection_box.type_,
                         selection_box.fill_iid,
                     )
+                    if run_binding:
+                        self.run_selection_binding(selection_box.type_)
                     return
         # currently selected is just pointed at a coordinate
         # find the top most box there, requires r and c
@@ -5891,6 +5896,8 @@ class MainTable(tk.Canvas):
                         selection_box.type_,
                         selection_box.fill_iid,
                     )
+                    if run_binding:
+                        self.run_selection_binding(selection_box.type_)
                     return
             # wasn't provided an item and couldn't find a box at coords so select cell
             if r < len(self.row_positions) - 1 and c < len(self.col_positions) - 1:
