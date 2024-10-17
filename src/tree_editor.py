@@ -9761,7 +9761,7 @@ class Tree_Editor(tk.Frame):
     def expand_id(self, event=None):
         if current := self.tree.selected:
             selections = self.tree.selection()
-            self.tree.tree_open({self.selected_ID} | set(self.tree.descendants(self.selected_ID)))
+            self.tree.tree_open({self.selected_ID.lower()} | set(self.tree.descendants(self.selected_ID)))
             self.tree.selection_set(selections)
             self.tree.selected = current
 
@@ -9769,7 +9769,7 @@ class Tree_Editor(tk.Frame):
         if current := self.tree.selected:
             selections = self.tree.selection()
             current_iid = self.tree.tree_selected
-            self.tree.tree_close({self.selected_ID} | set(self.tree.descendants(self.selected_ID)))
+            self.tree.tree_close({self.selected_ID.lower()} | set(self.tree.descendants(self.selected_ID)))
             self.tree.selection_set(set(filter(self.tree.item_displayed, selections)))
             if self.tree.item_displayed(current_iid):
                 self.tree.selected = current
