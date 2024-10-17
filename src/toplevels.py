@@ -1273,7 +1273,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.done_button.grid(row=0, column=3, sticky="nswe", padx=(5, 20), pady=(15, 10))
 
         self.status_bar = Readonly_Entry_With_Scrollbar(self, theme=theme, use_status_fg=True)
-        self.status_bar.change_text(text="Note: case is ignored in search results")
+        self.status_bar.change_text(text="Search in current hierarchy or sheet, case insenitive")
         self.status_bar.my_entry.config(relief="flat", font=("Calibri", std_font_size))
         self.status_bar.grid(row=1, column=0, columnspan=2, sticky="we")
 
