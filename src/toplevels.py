@@ -1669,7 +1669,10 @@ class Find_And_Replace_Popup(tk.Toplevel):
         found_coords = tuple()
         if where:
             sels = self.C.sheet.get_selected_cells(
-                get_rows=True, get_columns=True, sort_by_row=True, sort_by_column=True
+                get_rows=True,
+                get_columns=True,
+                sort_by_row=True,
+                sort_by_column=True,
             )
             rst, cst, curridx = self.get_start_coords(widget=self.C.sheet, plus_one=True, within=sels)
             for r, c in chain(islice(sels, curridx, None), islice(sels, 0, curridx)):
@@ -2247,7 +2250,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
             self.C.redraw_sheets()
 
         if total_changed > 1:
-            self.C.changelog_append((f"Edit {total_changed} cells", "", "", ""))
+            self.C.changelog_append(f"Edit {total_changed} cells", "", "", "")
         else:
             self.C.changelog_singular("Edit cell")
 
@@ -5082,7 +5085,7 @@ class Settings_Popup(tk.Toplevel):
             compound="right",
         )
         self.auto_sort_tree_button.pack(side="top", anchor="nw", fill="x", pady=10)
-        
+
         self.show_tv_lvls_button = X_Checkbutton(
             self.general,
             text="Show ID level numbering ",
@@ -5490,7 +5493,7 @@ class Settings_Popup(tk.Toplevel):
 
     def toggle_auto_sort_tree_button(self):
         self.C.toggle_sort_all_nodes(self.auto_sort_tree_button.get_checked())
-        
+
     def toggle_show_tv_lvls(self):
         self.C.tv_lvls_bool = self.show_tv_lvls_button.get_checked()
         self.C.redo_tree_display()
@@ -5505,7 +5508,7 @@ class Settings_Popup(tk.Toplevel):
             self.C.set_display_option("50/50")
         elif "Adjustable" in layout:
             self.C.set_display_option("adjustable")
-            
+
     def set_treeview_indent(self, event=None):
         indent = self.indent_dropdown.get_my_value()
         self.C.tree.set_options(treeview_indent=indent)
