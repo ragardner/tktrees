@@ -5298,13 +5298,12 @@ class Sheet(tk.Frame):
         return None
 
     def selection_set(self, *items, run_binding: bool = True, redraw: bool = True) -> Sheet:
-        if any(item.lower() in self.RI.tree for item in unpack(items)):
-            boxes_to_hide = tuple(self.MT.selection_boxes)
-            self.selection_add(*items, run_binding=False, redraw=False)
-            for iid in boxes_to_hide:
-                self.MT.hide_selection_box(iid)
-            if run_binding:
-                self.MT.run_selection_binding("rows")
+        boxes_to_hide = tuple(self.MT.selection_boxes)
+        self.selection_add(*items, run_binding=False, redraw=False)
+        for iid in boxes_to_hide:
+            self.MT.hide_selection_box(iid)
+        if run_binding:
+            self.MT.run_selection_binding("rows")
         return self.set_refresh_timer(redraw)
 
     def selection_add(self, *items, run_binding: bool = True, redraw: bool = True) -> Sheet:
