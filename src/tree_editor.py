@@ -6419,10 +6419,6 @@ class Tree_Editor(tk.Frame):
         self.refresh_dropdowns()
         self.move_sheet_pos()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-        if new_vs["required_data"]["not_pickled"]["focus"]:
-            self.focus_tree()
-        else:
-            self.focus_sheet()
 
     def tree_gen_heights_from_saved(self) -> Generator[int]:
         heights_dict = self.saved_info[self.pc].theights
