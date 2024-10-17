@@ -7,7 +7,7 @@ tk-Trees - Hierarchy Management Tool
 
 This program is for management of hierarchy data in table format
 
-Requires Python >= 3.8
+Requires Python >= 3.9
 """
 
 if __name__ == "__main__":

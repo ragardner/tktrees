@@ -10,6 +10,15 @@ class LxmlSyntaxError(Exception):
     pass
 
 
+class _Element(Element):
+    def __init__(self, tag, attrib):
+        self.tag = tag
+        self.attrib = attrib
+        self._children = []
+        self.text = ""
+        self.tail = ""
+
+
 class _FakeIncrementalFileWriter(object):
     """Replacement for _IncrementalFileWriter of lxml.
     Uses ElementTree to build xml in memory."""
@@ -29,13 +38,10 @@ class _FakeIncrementalFileWriter(object):
         """
         # __enter__ part
         self._have_root = True
-        self._top_element = Element(
+        self._top_element = _Element(
             tag,
-            attrib={} if attrib is None else attrib,
-            **_extra,
+            attrib=_extra if attrib is None else attrib | _extra,
         )
-        self._top_element.text = ""
-        self._top_element.tail = ""
         self._element_stack.append(self._top_element)
         yield None
 

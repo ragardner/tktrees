@@ -220,7 +220,7 @@ tv_lvls_colors = [
 ]
 
 changelog_header = [
-    "Date",
+    "Date YYYY/MM/DD",
     "Type",
     "ID/Name/Number",
     "Old Value",
