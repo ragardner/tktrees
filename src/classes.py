@@ -73,35 +73,20 @@ class TreeBuilder:
                     if strip:
                         if add_warnings:
                             if " " in e:
-                                if compare:
-                                    warnings.append((f" - Spaces in row #{rn} column #{c+1}",))
-                                else:
-                                    warnings.append(f" - Spaces in row #{rn} column #{c + 1}")
+                                warnings.append(f" - Spaces in row #{rn} column #{c + 1}")
                             if "\n" in e:
-                                if compare:
-                                    warnings.append((f" - Newlines in row #{rn} column #{c+1}",))
-                                else:
-                                    warnings.append(f" - Newlines in row #{rn} column #{c + 1}")
+                                warnings.append(f" - Newlines in row #{rn} column #{c + 1}")
                             if "\r" in e:
-                                if compare:
-                                    warnings.append((f" - Carriage returns in row #{rn} column #{c+1}",))
-                                else:
-                                    warnings.append(f" - Carriage returns in row #{rn} column #{c + 1}")
+                                warnings.append(f" - Carriage returns in row #{rn} column #{c + 1}")
                             if "\t" in e:
-                                if compare:
-                                    warnings.append((f" - Tabs in row #{rn} column #{c+1}",))
-                                else:
-                                    warnings.append(f" - Tabs returns in row #{rn} column #{c + 1}")
+                                warnings.append(f" - Tabs returns in row #{rn} column #{c + 1}")
                         r[c] = "".join(e.strip().split())
                 ID = r[ic]
                 ik = ID.lower()
                 tally_of_ids[ik] += 1
                 if tally_of_ids[ik] > 0:
                     if add_warnings:
-                        if compare:
-                            warnings.append((f" - ID ({ID}) renamed due to repeat occurrence at row #{rn}",))
-                        else:
-                            warnings.append(f" - ID ({ID}) renamed due to repeat occurrence at row #{rn}")
+                        warnings.append(f" - ID ({ID}) renamed due to repeat occurrence at row #{rn}")
                     orig = ID
                     x = 1
                     while ik in tally_of_ids:
@@ -117,14 +102,9 @@ class TreeBuilder:
                     pk = parent.lower()
                     if ik == pk:
                         if add_warnings:
-                            if compare:
-                                warnings.append(
-                                    (f" - ID ({ID}) same as parent ({parent}). Set {parent} to none at row #{rn}",)
-                                )
-                            else:
-                                warnings.append(
-                                    f" - ID ({ID}) same as parent ({parent}). Set parent ({parent}) to none at row #{rn}"
-                                )
+                            warnings.append(
+                                f" - ID ({ID}) same as parent ({parent}). Set parent ({parent}) to none at row #{rn}"
+                            )
                         r[h] = ""
                         parent = ""
                         pk = ""
@@ -132,16 +112,9 @@ class TreeBuilder:
                         for ck in chain(self.check_cn(nodes[ik], h), self.check_ps(nodes[ik], h)):
                             if pk == ck:
                                 if add_warnings:
-                                    if compare:
-                                        warnings.append(
-                                            (
-                                                f" - Infinite loop of children avoided by setting IDs ({ID}) parent ({parent}) to none at row #{rn}",
-                                            )
-                                        )
-                                    else:
-                                        warnings.append(
-                                            f" - Infinite loop of children avoided by setting IDs ({ID}) parent ({parent}) to none at row #{rn}"
-                                        )
+                                    warnings.append(
+                                        f" - Infinite loop of children avoided by setting IDs ({ID}) parent ({parent}) to none at row #{rn}"
+                                    )
                                 r[h] = ""
                                 parent = ""
                                 pk = ""
@@ -156,10 +129,7 @@ class TreeBuilder:
                 output_sheet.append(r)
             else:
                 if add_warnings:
-                    if compare:
-                        warnings.append((f" - Empty ID cell, row #{rn} excluded from comparison",))
-                    else:
-                        warnings.append(f" - Empty ID cell, row #{rn} excluded from sheet")
+                    warnings.append(f" - Empty ID cell, row #{rn} excluded from sheet")
                 continue
         if fix_associate:
             quick_hiers = hiers[1:]
@@ -173,7 +143,7 @@ class TreeBuilder:
                     output_sheet.append(newrow)
                     rns[n.k] = len(output_sheet) - 1
                     if compare:
-                        warnings.append((f" - ID ({n.name}) missing from ID column, new row added",))
+                        warnings.append(f" - ID ({n.name}) missing from ID column, new row added")
                 tlly = 0
                 for k, v in n.cn.items():
                     if not v and not n.ps[k]:
@@ -331,7 +301,7 @@ class TreeBuilder:
                 if detail_columns:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
             output_headers = output_headers[::-1]
-            
+
         if empty_cells_to_none:
             for rn in range(len(output_sheet)):
                 for cn in range(len(output_sheet[rn])):
@@ -603,7 +573,7 @@ class SearchResult:
         iid: str,
         column: int,
         term: str,
-        type_: int, # 0 for id, 1 for detail, 2 for either
+        type_: int,  # 0 for id, 1 for detail, 2 for either
         exact: bool,
     ):
         self.hierarchy = hierarchy
@@ -736,7 +706,6 @@ def tk_trees_api(
                 warnings=[],
                 add_warnings=True,
                 skip_1st=False,
-                compare=False,
                 fix_associate=True,
             )
             data = TreeBuilder().build_flattened(

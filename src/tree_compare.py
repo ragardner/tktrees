@@ -695,9 +695,9 @@ class Tree_Compare(tk.Frame):
         )
 
         if addition1:
-            self.report[f"WARNINGS - {sheetname_1} - "].extend(addition1)
+            self.report[f"WARNINGS - {sheetname_1} - "].extend([[warning] for warning in addition1])
         if addition2:
-            self.report[f"WARNINGS - {sheetname_2} - "].extend(addition2)
+            self.report[f"WARNINGS - {sheetname_2} - "].extend([[warning] for warning in addition2])
 
         qhst1 = set(self.parent_cols1)
         qhst2 = set(self.parent_cols2)
@@ -750,19 +750,25 @@ class Tree_Compare(tk.Frame):
                     self.report["COLUMNS"].append([f"       Column {sheetname_1}: {detcold[n][0]}"])
                     self.report["COLUMNS"].append([f"       Column {sheetname_2}: {detcold[n][1]}"])
             if any(h not in hdset2 for h in hdset1):
-                self.report["COLUMNS"].append([f" - {sheetname_1} has following detail columns that {sheetname_2} doesn't:"])
+                self.report["COLUMNS"].append(
+                    [f" - {sheetname_1} has following detail columns that {sheetname_2} doesn't:"]
+                )
                 for h in hdset1:
                     if h not in hdset2:
                         self.report["COLUMNS"].append([f"       {h}"])
             if any(h not in hdset1 for h in hdset2):
-                self.report["COLUMNS"].append([f" - {sheetname_2} has following detail columns that {sheetname_1} doesn't:"])
+                self.report["COLUMNS"].append(
+                    [f" - {sheetname_2} has following detail columns that {sheetname_1} doesn't:"]
+                )
                 for h in hdset2:
                     if h not in hdset1:
                         self.report["COLUMNS"].append([f"       {h}"])
         else:
             self.report["COLUMNS"].append([" - Sheets have no matching detail column names"])
 
-        shared_ids = any(node in self.nodes2 for node in self.nodes1) or any(node in self.nodes1 for node in self.nodes2)
+        shared_ids = any(node in self.nodes2 for node in self.nodes1) or any(
+            node in self.nodes1 for node in self.nodes2
+        )
         if not shared_ids:
             self.report["MATCHING IDS"].append(["- Sheets have no matching IDs"])
 
@@ -770,11 +776,19 @@ class Tree_Compare(tk.Frame):
             missids1 = any(ik not in self.nodes2 for ik in self.nodes1)
             missids2 = any(ik not in self.nodes1 for ik in self.nodes2)
             if missids1:
-                self.report["MISSING IDS"].append([f" - {sheetname_1} has the following IDs that {sheetname_2} doesn't:"])
-                self.report["MISSING IDS"].extend([[f"{self.nodes1[ik].name}"] for ik in self.nodes1 if ik not in self.nodes2])
+                self.report["MISSING IDS"].append(
+                    [f" - {sheetname_1} has the following IDs that {sheetname_2} doesn't:"]
+                )
+                self.report["MISSING IDS"].extend(
+                    [[f"{self.nodes1[ik].name}"] for ik in self.nodes1 if ik not in self.nodes2]
+                )
             if missids2:
-                self.report["MISSING IDS"].append([f" - {sheetname_2} has the following IDs that {sheetname_1} doesn't:"])
-                self.report["MISSING IDS"].extend([[f"{self.nodes2[ik].name}"] for ik in self.nodes2 if ik not in self.nodes1])
+                self.report["MISSING IDS"].append(
+                    [f" - {sheetname_2} has the following IDs that {sheetname_1} doesn't:"]
+                )
+                self.report["MISSING IDS"].extend(
+                    [[f"{self.nodes2[ik].name}"] for ik in self.nodes2 if ik not in self.nodes1]
+                )
 
             self.report["MATCHING IDS"].append(["ID", "DIFFERENCE", sheetname_1, sheetname_2])
             if matching_hrs_names:
@@ -862,7 +876,9 @@ class Tree_Compare(tk.Frame):
                                 c1 = self.sheet1[self.rns1[ik]][detcold[nx][0]]
                                 c2 = row[detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["MATCHING IDS"].append([f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"])
+                                    self.report["MATCHING IDS"].append(
+                                        [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
+                                    )
                 elif self.row_len1 < self.row_len2:
                     for row in self.sheet1:
                         ID = row[self.ic1]
@@ -947,7 +963,9 @@ class Tree_Compare(tk.Frame):
                                 c1 = row[detcold[nx][0]]
                                 c2 = self.sheet2[self.rns2[ik]][detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["MATCHING IDS"].append([f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"])
+                                    self.report["MATCHING IDS"].append(
+                                        [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
+                                    )
 
             elif not matching_hrs_names:
                 if self.row_len1 >= self.row_len2:
@@ -958,7 +976,9 @@ class Tree_Compare(tk.Frame):
                                 c1 = self.sheet1[self.rns1[ik]][detcold[nx][0]]
                                 c2 = row[detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["MATCHING IDS"].append([f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"])
+                                    self.report["MATCHING IDS"].append(
+                                        [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
+                                    )
                 elif self.row_len1 < self.row_len2:
                     for row in self.sheet1:
                         ID = row[self.ic1]
@@ -967,7 +987,9 @@ class Tree_Compare(tk.Frame):
                                 c1 = row[detcold[nx][0]]
                                 c2 = self.sheet2[self.rns2[ik]][detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["MATCHING IDS"].append([f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"])
+                                    self.report["MATCHING IDS"].append(
+                                        [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
+                                    )
         self.sheetname_1 = sheetname_1
         self.sheetname_2 = sheetname_2
 

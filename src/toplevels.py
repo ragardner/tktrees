@@ -1018,7 +1018,7 @@ class Compare_Report_Popup(tk.Toplevel):
             self.stop_work(f"Error saving file: {error_msg}")
             return
         self.stop_work("Success! Report saved")
-        
+
     def go_to_result(self, row: int) -> None:
         self.sheetdisplay1.scroll_to_item(self.sheetdisplay1.rowitem(row, data_index=True))
 
