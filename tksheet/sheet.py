@@ -4926,7 +4926,7 @@ class Sheet(tk.Frame):
     ) -> str:
         if iid is None:
             i = 0
-            while (iid := f"{num2alpha(i)}") in self.RI.tree:
+            while (iid := f"{num2alpha(i).lower()}") in self.RI.tree:
                 i += 1
         iid, pid = iid.lower(), parent.lower()
         if not iid:
@@ -4965,8 +4965,8 @@ class Sheet(tk.Frame):
         if values is None:
             values = []
         self.insert_rows(
-            idx=idx,
             rows=[[self.RI.tree[iid]] + values],
+            idx=idx,
             row_index=True,
             create_selections=create_selections,
             fill=False,
@@ -4974,6 +4974,68 @@ class Sheet(tk.Frame):
         self.RI.tree_rns[iid] = idx
         if pid and (pid not in self.RI.tree_open_ids or not self.item_displayed(pid)):
             self.hide_rows(idx, deselect_all=False, data_indexes=True)
+        return iid
+    
+    def bulk_insert(
+        self,
+        data: list[list[object]],
+        parent: str = "",
+        index: None | int | Literal["end"] = None,
+        iid_column: int | None = None,
+        create_selections: bool = False,
+        include_iid_column: bool = True,
+    ) -> str:
+        to_insert = []
+        pid = parent.lower()
+        if pid and pid not in self.RI.tree:
+            raise ValueError(f"parent '{parent}' does not exist.")
+        parent_node = self.RI.tree[pid] if parent else ""
+        if parent_node:
+            if isinstance(index, int):
+                idx = self.RI.tree_rns[pid] + index + 1
+                for count, cid in enumerate(self.get_children(pid)):
+                    if count >= index:
+                        break
+                    idx += sum(1 for _ in self.RI.get_iid_descendants(cid))
+            else:
+                idx = self.RI.tree_rns[pid] + sum(1 for _ in self.RI.get_iid_descendants(pid)) + 1
+        else:
+            if isinstance(index, int):
+                idx = index
+                if index:
+                    for count, cid in enumerate(self.get_children("")):
+                        if count >= index:
+                            break
+                        idx += sum(1 for _ in self.RI.get_iid_descendants(cid)) + 1
+            else:
+                idx = len(self.MT._row_index)
+        i = 0
+        rns_to_add = {}
+        for rn, r in enumerate(data, start=idx):
+            if iid_column is None:
+                while (iid := f"{num2alpha(i).lower()}") in self.RI.tree:
+                    i += 1
+            else:
+                iid = r[iid_column]
+            self.RI.tree[iid] = Node("", iid, parent_node)
+            if parent_node:
+                if isinstance(index, int):
+                    self.RI.tree[pid].children.insert(index, self.RI.tree[iid])
+                else:
+                    self.RI.tree[pid].children.append(self.RI.tree[iid])
+            to_insert.append([self.RI.tree[iid]] + r)
+            rns_to_add[iid] = rn
+        self.insert_rows(
+            rows=to_insert,
+            idx=idx,
+            row_index=True,
+            create_selections=create_selections,
+            fill=False,
+        )
+        for iid, rn in rns_to_add.items():
+            self.RI.tree_rns[iid] = rn
+        if pid and (pid not in self.RI.tree_open_ids or not self.item_displayed(pid)):
+            self.hide_rows(range(idx, idx + len(to_insert)), deselect_all=False, data_indexes=True)
         return iid
 
     def item(

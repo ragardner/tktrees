@@ -624,7 +624,7 @@ class Changelog_Popup(tk.Toplevel):
                 ws = self.wb_.create_sheet(title="Changelog")
                 ws.append(xlsx_changelog_header(ws))
                 for row in self.C.changelog:
-                    ws.append([e if e else None for e in row])
+                    ws.append((e if e else None for e in row))
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
             elif newfile.lower().endswith((".csv", ".tsv")):
@@ -685,7 +685,7 @@ class Changelog_Popup(tk.Toplevel):
                 ws = self.wb_.create_sheet(title="Changelog")
                 ws.append(xlsx_changelog_header(ws))
                 for row in islice(self.C.changelog, from_row, to_row):
-                    ws.append([e if e else None for e in row])
+                    ws.append((e if e else None for e in row))
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
             elif newfile.lower().endswith((".csv", ".tsv")):
@@ -849,30 +849,11 @@ class Compare_Report_Popup(tk.Toplevel):
         self.find_results = []
         self.results_number = 0
         self.wb_ = None
-        report = self.C.report
         self.sheet1name = self.C.sheetname_1
         self.sheet2name = self.C.sheetname_2
 
-        self.open_tab = 1
-
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
-
-        self.notebook = ttk.Notebook(self)
-        self.notebook.grid(row=1, column=0, sticky="nswe")
-
-        self.f1 = Frame(self, theme=theme)
-        self.f1.grid_columnconfigure(0, weight=1)
-        self.f1.grid_rowconfigure(1, weight=1)
-        self.notebook.add(self.f1, text="Matching IDs Differences")
-
-        self.f2 = Frame(self, theme=theme)
-        self.f2.grid_columnconfigure(0, weight=1)
-        self.f2.grid_rowconfigure(1, weight=1)
-        self.notebook.add(self.f2, text="Other Differences")
-        self.notebook.select(self.f1)
-        self.notebook.enable_traversal()
-        self.notebook.bind("<<NotebookTabChanged>>", self.tab_change)
 
         self.find_frame = Frame(self, theme=theme)
         self.find_frame.grid(row=0, column=0, columnspan=2, sticky="nswe")
@@ -891,10 +872,12 @@ class Compare_Report_Popup(tk.Toplevel):
         self.find_down_button.pack(side="left", fill="x")
 
         self.sheetdisplay1 = Sheet(
-            self.f1,
+            self,
             theme=theme,
             header_font=sheet_header_font,
             outline_thickness=1,
+            default_column_width=220,
+            treeview=True,
         )
         self.sheetdisplay1.enable_bindings(
             "single",
@@ -911,49 +894,22 @@ class Compare_Report_Popup(tk.Toplevel):
             "arrowkeys",
             "ctrl_select",
         )
-        self.sheetdisplay1.headers(newheaders=["ID", "Difference", self.sheet1name, self.sheet2name])
-        self.sheetdisplay1.data_reference(
-            newdataref=report["ids"], reset_col_positions=False, reset_row_positions=False, redraw=False
-        )
+        for header_row, rows in self.C.report.items():
+            self.sheetdisplay1.insert(iid=header_row, text="Expand for Results", values=[header_row])
+            self.sheetdisplay1.bulk_insert(data=rows, parent=header_row)
 
-        self.sheetdisplay1.set_all_cell_sizes_to_text()
+        # self.sheetdisplay1.set_all_cell_sizes_to_text()
         self.sheetdisplay1.grid(row=1, column=0, sticky="nswe")
-
-        self.sheetdisplay2 = Sheet(
-            self.f2,
-            theme=theme,
-            header_font=sheet_header_font,
-            header=0,
-            outline_thickness=1,
-        )
-        self.sheetdisplay2.enable_bindings(
-            "single",
-            "copy",
-            "rc_popup_menu",
-            "select_all",
-            "drag_select",
-            "column_width_resize",
-            "double_click_column_resize",
-            "row_height_resize",
-            "double_click_row_resize",
-            "row_select",
-            "column_select",
-            "arrowkeys",
-            "ctrl_select",
-        )
-        self.sheetdisplay2.data_reference(
-            newdataref=report["info"], reset_col_positions=False, reset_row_positions=False, redraw=False
-        )
-
-        self.sheetdisplay2.set_all_cell_sizes_to_text()
-        self.sheetdisplay2.grid(row=1, column=0, sticky="nswe")
 
         self.buttonframe = Frame(self, theme=theme)
         self.buttonframe.grid(row=3, column=0, sticky="nswe")
         self.cancel_button = Button(self.buttonframe, text="Done", style="EF.Std.TButton", command=self.cancel)
         self.cancel_button.pack(side="right", padx=(20, 100), pady=20)
         self.save_text_button = Button(
-            self.buttonframe, text="Save Report", style="EF.Std.TButton", command=self.save_report
+            self.buttonframe,
+            text="Save Report",
+            style="EF.Std.TButton",
+            command=self.save_report,
         )
         self.save_text_button.pack(side="right", padx=(50, 30), pady=20)
 
@@ -961,10 +917,6 @@ class Compare_Report_Popup(tk.Toplevel):
         center(self, width, height)
         self.deiconify()
         self.wait_window()
-
-    def tab_change(self, event=None):
-        self.find_reset(True)
-        self.open_tab = self.notebook.index(self.notebook.select()) + 1
 
     def start_work(self, msg=""):
         if msg:
@@ -991,20 +943,6 @@ class Compare_Report_Popup(tk.Toplevel):
             "arrowkeys",
             "ctrl_select",
         )
-        self.sheetdisplay2.enable_bindings(
-            "single",
-            "copy",
-            "rc_popup_menu",
-            "select_all",
-            "column_width_resize",
-            "double_click_column_resize",
-            "row_height_resize",
-            "double_click_row_resize",
-            "row_select",
-            "column_select",
-            "arrowkeys",
-            "ctrl_select",
-        )
         self.find_window.bind("<Return>", self.find)
         self.find_reset_button.config(state="normal")
         self.find_up_button.config(state="normal")
@@ -1013,7 +951,6 @@ class Compare_Report_Popup(tk.Toplevel):
 
     def disable_widgets(self):
         self.sheetdisplay1.disable_bindings()
-        self.sheetdisplay2.disable_bindings()
         self.find_window.unbind("<Return>")
         self.find_reset_button.config(state="disabled")
         self.find_up_button.config(state="disabled")
@@ -1059,14 +996,20 @@ class Compare_Report_Popup(tk.Toplevel):
         try:
             if newfile.lower().endswith(".xlsx"):
                 self.wb_ = Workbook(write_only=True)
-                ws = self.wb_.create_sheet(title="Matching IDs Differences")
-                ws.freeze_panes = "A2"
-                ws.append(["ID", "Difference", self.sheet1name, self.sheet2name])
-                for row in self.sheetdisplay1.get_sheet_data():
-                    ws.append([e if e else None for e in row])
-                ws = self.wb_.create_sheet(title="Other Differences")
-                for row in self.sheetdisplay2.get_sheet_data():
-                    ws.append([e if e else None for e in row])
+                ws = self.wb_.create_sheet(title="Report")
+                row_ctr = 2
+                for header_row, rows in self.C.report.items():
+                    ws.row_dimensions.group(
+                        row_ctr,
+                        row_ctr + len(rows) - 1,
+                        outline_level=1,
+                        hidden=True,
+                    )
+                    row_ctr += 1 + len(rows)
+                for header_row, rows in self.C.report.items():
+                    ws.append([header_row])
+                    for row in rows:
+                        ws.append((e if e else None for e in row))
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
         except Exception as error_msg:
@@ -1075,6 +1018,9 @@ class Compare_Report_Popup(tk.Toplevel):
             self.stop_work(f"Error saving file: {error_msg}")
             return
         self.stop_work("Success! Report saved")
+        
+    def go_to_result(self, row: int) -> None:
+        self.sheetdisplay1.scroll_to_item(self.sheetdisplay1.rowitem(row, data_index=True))
 
     def find(self, event=None):
         self.find_reset(True)
@@ -1082,35 +1028,28 @@ class Compare_Report_Popup(tk.Toplevel):
         if not self.word:
             return
         x = self.word.lower()
-        if self.open_tab == 1:
-            target_sheet = self.sheetdisplay1
-        else:
-            target_sheet = self.sheetdisplay2
-        for rn, row in enumerate(target_sheet.get_sheet_data()):
+
+        for rn, row in enumerate(self.sheetdisplay1.get_sheet_data()):
             for colno, cell in enumerate(row):
                 if x in cell.lower():
                     self.find_results.append((rn, colno))
         if self.find_results:
             for rn, colno in islice(self.find_results, 1, len(self.find_results)):
-                target_sheet.highlight_cells(row=rn, column=colno, bg="yellow", fg="black")
-            target_sheet.highlight_cells(
+                self.sheetdisplay1.highlight_cells(row=rn, column=colno, bg="yellow", fg="black")
+            self.sheetdisplay1.highlight_cells(
                 row=self.find_results[self.results_number][0],
                 column=self.find_results[self.results_number][1],
                 bg="orange",
                 fg="black",
             )
             self.find_results_label.config(text=f"1/{len(self.find_results)}")
-            target_sheet.see(row=self.find_results[0][0], column=0, keep_xscroll=True)
-        target_sheet.refresh()
+            self.go_to_result(self.find_results[0][0])
+        self.sheetdisplay1.refresh()
 
     def find_up(self, event=None):
-        if self.open_tab == 1:
-            target_sheet = self.sheetdisplay1
-        else:
-            target_sheet = self.sheetdisplay2
         if not self.find_results or len(self.find_results) == 1:
             return
-        target_sheet.highlight_cells(
+        self.sheetdisplay1.highlight_cells(
             row=self.find_results[self.results_number][0],
             column=self.find_results[self.results_number][1],
             bg="yellow",
@@ -1121,23 +1060,19 @@ class Compare_Report_Popup(tk.Toplevel):
         else:
             self.results_number -= 1
         self.find_results_label.config(text=f"{self.results_number + 1}/{len(self.find_results)}")
-        target_sheet.highlight_cells(
+        self.sheetdisplay1.highlight_cells(
             row=self.find_results[self.results_number][0],
             column=self.find_results[self.results_number][1],
             bg="orange",
             fg="black",
         )
-        target_sheet.see(row=self.find_results[self.results_number][0], column=0, keep_xscroll=True)
-        target_sheet.refresh()
+        self.go_to_result(self.find_results[self.results_number][0])
+        self.sheetdisplay1.refresh()
 
     def find_down(self, event=None):
-        if self.open_tab == 1:
-            target_sheet = self.sheetdisplay1
-        else:
-            target_sheet = self.sheetdisplay2
         if not self.find_results or len(self.find_results) == 1:
             return
-        target_sheet.highlight_cells(
+        self.sheetdisplay1.highlight_cells(
             row=self.find_results[self.results_number][0],
             column=self.find_results[self.results_number][1],
             bg="yellow",
@@ -1148,14 +1083,14 @@ class Compare_Report_Popup(tk.Toplevel):
         else:
             self.results_number += 1
         self.find_results_label.config(text=f"{self.results_number + 1}/{len(self.find_results)}")
-        target_sheet.highlight_cells(
+        self.sheetdisplay1.highlight_cells(
             row=self.find_results[self.results_number][0],
             column=self.find_results[self.results_number][1],
             bg="orange",
             fg="black",
         )
-        target_sheet.see(row=self.find_results[self.results_number][0], column=0, keep_xscroll=True)
-        target_sheet.refresh()
+        self.go_to_result(self.find_results[self.results_number][0])
+        self.sheetdisplay1.refresh()
 
     def find_reset(self, newfind=False):
         try:

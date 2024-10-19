@@ -299,7 +299,7 @@ When using drag and drop you can use your mousewheel to scroll down, move the mo
 
 Accessible from the "File" menu, this window allows comparison of trees and sheets. You can open files using the "Open file" button which will open a file dialog. Once open the file name or path will display next to this button and if the file is an excel file and was opened from the file dialog then you will have to select a sheet from the drop down box next to "Load sheet". 
 
-You can select your sheets ID column and parent column numbers and do the same with the 2nd panel on the right. After you are happy with your selections click the "Create Report" button to compare. A report will be generated and you have the option to save it as a .xlsx file which will have 2 sheets.
+You can select your sheets ID column and parent column numbers and do the same with the 2nd panel on the right. After you are happy with your selections click the "Create Report" button to compare. A report will be generated and you have the option to save it as an .xlsx file.
 
 You can mix different file types when comparing.
 

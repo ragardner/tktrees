@@ -9665,7 +9665,7 @@ class Tree_Editor(tk.Frame):
                         ws = self.C.wb.create_sheet(title="Changelog")
                         ws.append(xlsx_changelog_header(ws))
                         for row in self.changelog:
-                            ws.append([e if e else None for e in row])
+                            ws.append((e if e else None for e in row))
                         self.C.wb.save(newfile)
                         self.C.try_to_close_workbook()
                     elif newfile.lower().endswith((".csv", ".tsv")):
@@ -9705,7 +9705,7 @@ class Tree_Editor(tk.Frame):
                         ws.append(xlsx_changelog_header(ws))
                         if self.sheet_changes:
                             for row in islice(self.changelog, from_row, to_row):
-                                ws.append([e if e else None for e in row])
+                                ws.append((e if e else None for e in row))
                         self.C.wb.save(newfile)
                         self.C.try_to_close_workbook()
                     elif newfile.lower().endswith((".csv", ".tsv")):
@@ -11651,7 +11651,7 @@ class Tree_Editor(tk.Frame):
         ws = wb.create_sheet(title=new_title1)
         ws.append(xlsx_changelog_header(ws))
         for r in reversed(self.changelog):
-            ws.append([e if e else None for e in r])
+            ws.append((e if e else None for e in r))
 
     def write_flattened_to_workbook(self, wb, sheetnames_):
         sheetname = sheetnames_[1]
@@ -11677,7 +11677,7 @@ class Tree_Editor(tk.Frame):
             reverse=self.xlsx_flattened_reverse_order,
             add_index=self.xlsx_flattened_add_index,
         ):
-            ws.append([e if e else None for e in r])
+            ws.append((e if e else None for e in r))
         self.new_sheet = []
 
     def get_node_descendants(self, node: Node) -> Generator[Node]:
