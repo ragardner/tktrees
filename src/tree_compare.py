@@ -229,10 +229,10 @@ class Tree_Compare(tk.Frame):
             )
         )
         self.sheetdisplay2.pack(side="top", fill="both", expand=True)
-        
+
         self.sheetdisplay1.bind("<<SheetModified>>", self.sheet_modified1)
         self.sheetdisplay2.bind("<<SheetModified>>", self.sheet_modified2)
-        
+
     def reset_selectors1(self, event=None):
         idcol = self.selector_1.get_id_col()
         parcols = self.selector_1.get_par_cols()
@@ -247,7 +247,7 @@ class Tree_Compare(tk.Frame):
                 self.selector_1.set_par_cols(parcols)
         except Exception:
             pass
-        
+
     def reset_selectors2(self, event=None):
         idcol = self.selector_2.get_id_col()
         parcols = self.selector_2.get_par_cols()
@@ -262,7 +262,7 @@ class Tree_Compare(tk.Frame):
                 self.selector_2.set_par_cols(parcols)
         except Exception:
             pass
-        
+
     def sheet_modified1(self, event):
         if "move" in event.eventname:
             self.selector_1.set_columns(self.sheetdisplay1.data[0])
@@ -271,7 +271,7 @@ class Tree_Compare(tk.Frame):
         else:
             self.reset_selectors1()
         self.sheetdisplay1.focus_set()
-        
+
     def sheet_modified2(self, event):
         if "move" in event.eventname:
             self.selector_2.set_columns(self.sheetdisplay2.data[0])
@@ -787,10 +787,25 @@ class Tree_Compare(tk.Frame):
         matching_hrs_names = sorted((k for k, v in pcold.items() if len(v) > 1), key=self.srtkey)
         matching_details_names = sorted((k for k, v in detcold.items() if len(v) > 1), key=self.srtkey)
 
-        # id column
-        if self.ic1 != self.ic2 or self.heads1[self.ic1] != self.heads2[self.ic2]:
-            self.report[f"ID Column {self.sheetname_1}"].append([f"{self.heads1[self.ic1]} #{self.ic1 + 1}"])
-            self.report[f"ID Column {self.sheetname_2}"].append([f"{self.heads2[self.ic2]} #{self.ic2 + 1}"])
+        # id column index
+        if self.ic1 != self.ic2:
+            self.report["Difference in ID Column Index"].append([f"{self.sheetname_1}", f"{self.sheetname_2}"])
+            self.report["Difference in ID Column Index"].append(
+                [
+                    f"{self.ic1 + 1}",
+                    f"{self.ic2 + 1}",
+                ]
+            )
+
+        # id column names
+        if self.heads1[self.ic1] != self.heads2[self.ic2]:
+            self.report["Difference in ID Column Name"].append([f"{self.sheetname_1}", f"{self.sheetname_2}"])
+            self.report["Difference in ID Column Name"].append(
+                [
+                    f"{self.heads1[self.ic1]}",
+                    f"{self.heads2[self.ic2]}",
+                ]
+            )
 
         # sheets have some or all matching parent column names
         if matching_hrs_names:
@@ -805,14 +820,14 @@ class Tree_Compare(tk.Frame):
                     [[f"{h}"] for h in hdset2 if h not in hdset1]
                 )
             if any(col_indexes[0] != col_indexes[1] for col_indexes in pcold.values() if len(col_indexes) > 1):
-                self.report["Parent Column Indexes"].append(
+                self.report["Differences in Parent Column Indexes"].append(
                     [
                         "NAME",
                         f"{self.sheetname_1}",
                         f"{self.sheetname_2}",
                     ]
                 )
-                self.report["Parent Column Indexes"].extend(
+                self.report["Differences in Parent Column Indexes"].extend(
                     [
                         [name, col_indexes[0], col_indexes[1]]
                         for name, col_indexes in pcold.items()
@@ -836,14 +851,14 @@ class Tree_Compare(tk.Frame):
                     [[f"{h}"] for h in hdset2 if h not in hdset1]
                 )
             if any(col_indexes[0] != col_indexes[1] for col_indexes in detcold.values() if len(col_indexes) > 1):
-                self.report["Detail Column Indexes"].append(
+                self.report["Differences in Detail Column Indexes"].append(
                     [
                         "NAME",
                         f"{self.sheetname_1}",
                         f"{self.sheetname_2}",
                     ]
                 )
-                self.report["Detail Column Indexes"].extend(
+                self.report["Differences in Detail Column Indexes"].extend(
                     [
                         [name, col_indexes[0], col_indexes[1]]
                         for name, col_indexes in detcold.items()
@@ -889,7 +904,7 @@ class Tree_Compare(tk.Frame):
                                     p2 = self.nodes2[ik].ps[h2]
                                 if p1 != p2 and p1 is None:
                                     if p2 == "":
-                                        self.report["Matching IDs"].append(
+                                        self.report["Differences in Parents/Details of Matched IDs"].append(
                                             [
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_2} and not {self.sheetname_1}",
@@ -898,7 +913,7 @@ class Tree_Compare(tk.Frame):
                                             ]
                                         )
                                     elif p2:
-                                        self.report["Matching IDs"].append(
+                                        self.report["Differences in Parents/Details of Matched IDs"].append(
                                             [
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_2} and not {self.sheetname_1}",
@@ -908,7 +923,7 @@ class Tree_Compare(tk.Frame):
                                         )
                                 elif p1 != p2 and p2 is None:
                                     if p1 == "":
-                                        self.report["Matching IDs"].append(
+                                        self.report["Differences in Parents/Details of Matched IDs"].append(
                                             [
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_1} and not {self.sheetname_2}",
@@ -917,7 +932,7 @@ class Tree_Compare(tk.Frame):
                                             ]
                                         )
                                     elif p1:
-                                        self.report["Matching IDs"].append(
+                                        self.report["Differences in Parents/Details of Matched IDs"].append(
                                             [
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_1} and not {self.sheetname_2}",
@@ -926,7 +941,7 @@ class Tree_Compare(tk.Frame):
                                             ]
                                         )
                                 elif p1 != p2 and p1 == "":
-                                    self.report["Matching IDs"].append(
+                                    self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -935,7 +950,7 @@ class Tree_Compare(tk.Frame):
                                         ]
                                     )
                                 elif p1 != p2 and p2 == "":
-                                    self.report["Matching IDs"].append(
+                                    self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -944,7 +959,7 @@ class Tree_Compare(tk.Frame):
                                         ]
                                     )
                                 elif p1 != p2:
-                                    self.report["Matching IDs"].append(
+                                    self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -956,7 +971,7 @@ class Tree_Compare(tk.Frame):
                                 c1 = self.sheet1[self.rns1[ik]][detcold[nx][0]]
                                 c2 = row[detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["Matching IDs"].append(
+                                    self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
                 elif self.row_len1 < self.row_len2:
@@ -976,7 +991,7 @@ class Tree_Compare(tk.Frame):
                                     p2 = self.nodes2[ik].ps[h2]
                                 if p1 != p2 and p1 is None:
                                     if p2 == "":
-                                        self.report["Matching IDs"].append(
+                                        self.report["Differences in Parents/Details of Matched IDs"].append(
                                             [
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_2} and not {self.sheetname_1}",
@@ -985,7 +1000,7 @@ class Tree_Compare(tk.Frame):
                                             ]
                                         )
                                     elif p2:
-                                        self.report["Matching IDs"].append(
+                                        self.report["Differences in Parents/Details of Matched IDs"].append(
                                             [
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_2} and not {self.sheetname_1}",
@@ -995,7 +1010,7 @@ class Tree_Compare(tk.Frame):
                                         )
                                 elif p1 != p2 and p2 is None:
                                     if p1 == "":
-                                        self.report["Matching IDs"].append(
+                                        self.report["Differences in Parents/Details of Matched IDs"].append(
                                             [
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_1} and not {self.sheetname_2}",
@@ -1004,7 +1019,7 @@ class Tree_Compare(tk.Frame):
                                             ]
                                         )
                                     elif p1:
-                                        self.report["Matching IDs"].append(
+                                        self.report["Differences in Parents/Details of Matched IDs"].append(
                                             [
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_1} and not {self.sheetname_2}",
@@ -1013,7 +1028,7 @@ class Tree_Compare(tk.Frame):
                                             ]
                                         )
                                 elif p1 != p2 and p1 == "":
-                                    self.report["Matching IDs"].append(
+                                    self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -1022,7 +1037,7 @@ class Tree_Compare(tk.Frame):
                                         ]
                                     )
                                 elif p1 != p2 and p2 == "":
-                                    self.report["Matching IDs"].append(
+                                    self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -1031,7 +1046,7 @@ class Tree_Compare(tk.Frame):
                                         ]
                                     )
                                 elif p1 != p2:
-                                    self.report["Matching IDs"].append(
+                                    self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -1043,7 +1058,7 @@ class Tree_Compare(tk.Frame):
                                 c1 = row[detcold[nx][0]]
                                 c2 = self.sheet2[self.rns2[ik]][detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["Matching IDs"].append(
+                                    self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
 
@@ -1056,7 +1071,7 @@ class Tree_Compare(tk.Frame):
                                 c1 = self.sheet1[self.rns1[ik]][detcold[nx][0]]
                                 c2 = row[detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["Matching IDs"].append(
+                                    self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
                 elif self.row_len1 < self.row_len2:
@@ -1067,18 +1082,18 @@ class Tree_Compare(tk.Frame):
                                 c1 = row[detcold[nx][0]]
                                 c2 = self.sheet2[self.rns2[ik]][detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["Matching IDs"].append(
+                                    self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
-            if "Matching IDs" in self.report:
-                self.report["Matching IDs"] = [
+            if "Differences in Parents/Details of Matched IDs" in self.report:
+                self.report["Differences in Parents/Details of Matched IDs"] = [
                     [
                         "ID",
                         "DIFFERENCE",
                         self.sheetname_1,
                         self.sheetname_2,
                     ]
-                ] + self.report["Matching IDs"]
+                ] + self.report["Differences in Parents/Details of Matched IDs"]
 
         if not self.report:
             self.report_header += " - Sheets are identical"

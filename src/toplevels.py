@@ -883,6 +883,7 @@ class Compare_Report_Popup(tk.Toplevel):
             default_row_index=None,
             outline_thickness=1,
             default_column_width=250,
+            display_selected_fg_over_highlights=True,
             treeview=True,
         )
         self.sheetdisplay1.enable_bindings(
