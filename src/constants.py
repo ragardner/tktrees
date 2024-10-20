@@ -204,6 +204,8 @@ isintlikere = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?$")
 remove_whitespace = re.compile(r"\s+")
 remove_nrt = re.compile(r"[\n\r\t]")
 
+blue_fill = PatternFill(start_color=Color("0078d7"), end_color=Color("0078d7"), fill_type="solid")
+green_fill = PatternFill(start_color=Color("648748"), end_color=Color("648748"), fill_type="solid")
 orange_fill = PatternFill(start_color=Color("FFA51E"), end_color=Color("FFA51E"), fill_type="solid")
 slate_fill = PatternFill(start_color=Color("E1E1E1"), end_color=Color("E1E1E1"), fill_type="solid")
 tan_fill = PatternFill(start_color=Color("EDEBE1"), end_color=Color("EDEBE1"), fill_type="solid")

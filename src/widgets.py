@@ -65,12 +65,6 @@ class Column_Selection(tk.Frame):
         self.selector.link_sheet(self.sheetdisplay)
         self.flattened_selector.link_sheet(self.sheetdisplay, self.flattened_choices)
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
-        self.sheetdisplay.extra_bindings(
-            [
-                ("begin_edit_cell", self.begin_edit),
-                ("end_edit_cell", self.end_edit),
-            ]
-        )
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
         self.sheetdisplay.headers(newheaders=0)
         self.sheetdisplay.grid(row=0, column=1, rowspan=3, sticky="nswe")
@@ -118,13 +112,6 @@ class Column_Selection(tk.Frame):
         except Exception:
             pass
 
-    def end_edit(self, event=None):
-        self.bind("<Escape>", self.cancel)
-
-    def begin_edit(self, event=None):
-        self.unbind("<Escape>")
-        return event.value
-
     def sheet_modified(self, event):
         if "move" in event.eventname:
             self.selector.set_columns(self.sheetdisplay.data[0])
@@ -142,12 +129,6 @@ class Column_Selection(tk.Frame):
         self.cont_.config(state="normal")
         self.sheetdisplay.basic_bindings(True)
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
-        self.sheetdisplay.extra_bindings(
-            [
-                ("begin_edit_cell", self.begin_edit),
-                ("end_edit_cell", self.end_edit),
-            ]
-        )
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
 
     def disable_widgets(self):
@@ -157,7 +138,6 @@ class Column_Selection(tk.Frame):
         self.cont_.config(state="disabled")
         self.sheetdisplay.basic_bindings(False)
         self.sheetdisplay.disable_bindings()
-        self.sheetdisplay.extra_bindings()
         self.sheetdisplay.unbind("<<SheetModified>>")
 
     def populate(self, columns):
@@ -337,13 +317,13 @@ class Id_Parent_Column_Selector(tk.Frame):
             show_horizontal_grid=False,
             header_align="w",
             row_index_align="w",
-            table_selected_cells_bg="#79A158",
-            table_selected_box_cells_fg="#79A158",
+            table_selected_cells_bg="#648748",
+            table_selected_box_cells_fg="#648748",
             table_selected_cells_fg="white",
             header_selected_cells_fg="white",
             index_selected_cells_fg="white",
-            header_selected_cells_bg="#79A158",
-            index_selected_cells_bg="#79A158",
+            header_selected_cells_bg="#648748",
+            index_selected_cells_bg="#648748",
             header_font=sheet_header_font,
             column_width=170,
             row_index_width=60,
@@ -520,13 +500,13 @@ class Id_Parent_Column_Selector(tk.Frame):
             index_selected_cells_bg="#0078d7",
         )
         self.par_col_selection.set_options(
-            table_selected_cells_bg="#79A158",
-            table_selected_box_cells_fg="#79A158",
+            table_selected_cells_bg="#648748",
+            table_selected_box_cells_fg="#648748",
             table_selected_cells_fg="white",
             header_selected_cells_fg="white",
             index_selected_cells_fg="white",
-            header_selected_cells_bg="#79A158",
-            index_selected_cells_bg="#79A158",
+            header_selected_cells_bg="#648748",
+            index_selected_cells_bg="#648748",
         )
         self.config(background=themes[theme].top_left_bg, highlightbackground=themes[theme].table_fg)
         self.id_col_display.my_entry.config(
@@ -616,10 +596,10 @@ class Flattened_Column_Selector(tk.Frame):
             show_selected_cells_border=False,
             header_align="w",
             row_index_align="w",
-            table_selected_cells_bg="#79A158",
-            table_selected_box_cells_fg="#79A158",
-            header_selected_cells_bg="#79A158",
-            index_selected_cells_bg="#79A158",
+            table_selected_cells_bg="#648748",
+            table_selected_box_cells_fg="#648748",
+            header_selected_cells_bg="#648748",
+            index_selected_cells_bg="#648748",
             header_selected_cells_fg="white",
             index_selected_cells_fg="white",
             table_selected_cells_fg="white",
@@ -702,10 +682,10 @@ class Flattened_Column_Selector(tk.Frame):
         self.config(bg=themes[theme].top_left_bg)
         self.par_col_selection.change_theme(theme)
         self.par_col_selection.set_options(
-            table_selected_cells_bg="#79A158",
-            table_selected_box_cells_fg="#79A158",
-            header_selected_cells_bg="#79A158",
-            index_selected_cells_bg="#79A158",
+            table_selected_cells_bg="#648748",
+            table_selected_box_cells_fg="#648748",
+            header_selected_cells_bg="#648748",
+            index_selected_cells_bg="#648748",
             header_selected_cells_fg="white",
             index_selected_cells_fg="white",
             table_selected_cells_fg="white",
@@ -739,10 +719,10 @@ class Single_Column_Selector(tk.Frame):
             align="w",
             header_align="w",
             row_index_align="w",
-            table_selected_cells_bg="#79A158",
-            table_selected_box_cells_fg="#79A158",
-            header_selected_cells_bg="#79A158",
-            index_selected_cells_bg="#79A158",
+            table_selected_cells_bg="#648748",
+            table_selected_box_cells_fg="#648748",
+            header_selected_cells_bg="#648748",
+            index_selected_cells_bg="#648748",
             header_selected_cells_fg="white",
             index_selected_cells_fg="white",
             table_selected_cells_fg="white",

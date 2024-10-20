@@ -1206,6 +1206,8 @@ class RowIndex(tk.Canvas):
                 new_w = self.MT.get_txt_w(f"{end_row}") + 20
             elif self.PAR.ops.default_row_index == "both":
                 new_w = self.MT.get_txt_w(f"{end_row + 1} {num2alpha(end_row)}") + 20
+            elif self.PAR.ops.default_row_index is None:
+                new_w = 20
         elif self.PAR.ops.auto_resize_row_index is True:
             new_w = self.get_index_text_width(only_rows=only_rows)
         else:

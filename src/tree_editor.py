@@ -1546,6 +1546,8 @@ class Tree_Editor(tk.Frame):
         self.C.frames["tree_compare"].selector_2.change_theme(theme)
         self.C.frames["tree_compare"].sheetdisplay1.change_theme(theme)
         self.C.frames["tree_compare"].sheetdisplay2.change_theme(theme)
+        self.C.frames["tree_compare"].file_label1.change_theme(theme)
+        self.C.frames["tree_compare"].file_label2.change_theme(theme)
         self.sheet.change_theme(theme)
         self.tree.change_theme(theme)
         self.C.frames["column_selection"].sheetdisplay.change_theme(theme)

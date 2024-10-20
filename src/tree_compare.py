@@ -16,6 +16,7 @@ from .classes import (
 )
 from .constants import (
     EF,
+    TF,
     sheet_header_font,
 )
 from .functions import (
@@ -37,6 +38,7 @@ from .widgets import (
     Button,
     Frame,
     Id_Parent_Column_Selector,
+    Label,
     Readonly_Entry,
 )
 
@@ -115,6 +117,9 @@ class Tree_Compare(tk.Frame):
         self.load_sheet1_STATE = "disabled"
         self.load_sheet1.grid(row=2, column=1, padx=10, pady=5, sticky="nsw")
 
+        self.file_label1 = Label(self.l_frame_btns, text="File 1", font=TF, theme=self.C.theme)
+        self.file_label1.grid(row=3, column=1, padx=10, pady=5, sticky="nw")
+
         self.selector_1 = Id_Parent_Column_Selector(self.l_frame_btns, expand=True)
         self.selector_1.config(width=400, height=330)
         self.selector_1.grid(row=3, column=0, sticky="nswe")
@@ -191,6 +196,9 @@ class Tree_Compare(tk.Frame):
         self.load_sheet2_STATE = "disabled"
         self.load_sheet2.grid(row=2, column=1, padx=10, pady=5, sticky="nsw")
 
+        self.file_label2 = Label(self.r_frame_btns, text="File 2", font=TF, theme=self.C.theme)
+        self.file_label2.grid(row=3, column=1, padx=10, pady=5, sticky="nw")
+
         self.selector_2 = Id_Parent_Column_Selector(self.r_frame_btns, expand=True)
         self.selector_2.config(width=400, height=330)
         self.selector_2.grid(row=3, column=0, sticky="nswe")
@@ -221,6 +229,57 @@ class Tree_Compare(tk.Frame):
             )
         )
         self.sheetdisplay2.pack(side="top", fill="both", expand=True)
+        
+        self.sheetdisplay1.bind("<<SheetModified>>", self.sheet_modified1)
+        self.sheetdisplay2.bind("<<SheetModified>>", self.sheet_modified2)
+        
+    def reset_selectors1(self, event=None):
+        idcol = self.selector_1.get_id_col()
+        parcols = self.selector_1.get_par_cols()
+        self.selector_1.set_columns(self.sheetdisplay1.data[0] if self.sheetdisplay1.data else [])
+        try:
+            if idcol is not None and self.sheetdisplay1.data:
+                self.selector_1.set_id_col(idcol)
+        except Exception:
+            pass
+        try:
+            if parcols and self.sheetdisplay1.data:
+                self.selector_1.set_par_cols(parcols)
+        except Exception:
+            pass
+        
+    def reset_selectors2(self, event=None):
+        idcol = self.selector_2.get_id_col()
+        parcols = self.selector_2.get_par_cols()
+        self.selector_2.set_columns(self.sheetdisplay2.data[0] if self.sheetdisplay2.data else [])
+        try:
+            if idcol is not None and self.sheetdisplay2.data:
+                self.selector_2.set_id_col(idcol)
+        except Exception:
+            pass
+        try:
+            if parcols and self.sheetdisplay2.data:
+                self.selector_2.set_par_cols(parcols)
+        except Exception:
+            pass
+        
+    def sheet_modified1(self, event):
+        if "move" in event.eventname:
+            self.selector_1.set_columns(self.sheetdisplay1.data[0])
+            self.selector_1.detect_id_col()
+            self.selector_1.detect_par_cols()
+        else:
+            self.reset_selectors1()
+        self.sheetdisplay1.focus_set()
+        
+    def sheet_modified2(self, event):
+        if "move" in event.eventname:
+            self.selector_2.set_columns(self.sheetdisplay2.data[0])
+            self.selector_2.detect_id_col()
+            self.selector_2.detect_par_cols()
+        else:
+            self.reset_selectors2()
+        self.sheetdisplay2.focus_set()
 
     def enable_widgets(self):
         self.C.menubar_state("normal", start=True)
@@ -232,6 +291,7 @@ class Tree_Compare(tk.Frame):
         self.selector_1.enable_me()
         self.sheetdisplay1.enable_bindings()
         self.sheetdisplay1.basic_bindings(True)
+        self.sheetdisplay1.bind("<<SheetModified>>", self.sheet_modified1)
 
         self.sheet_filename2.config(state="readonly")
         self.open_sheet2_button.config(state="normal")
@@ -242,6 +302,7 @@ class Tree_Compare(tk.Frame):
         self.sheetdisplay2.enable_bindings()
         self.run_compare_button.config(state="normal")
         self.sheetdisplay2.basic_bindings(True)
+        self.sheetdisplay2.bind("<<SheetModified>>", self.sheet_modified2)
 
     def disable_widgets(self):
         self.C.menubar_state("disabled")
@@ -254,6 +315,7 @@ class Tree_Compare(tk.Frame):
         self.selector_1.disable_me()
         self.sheetdisplay1.disable_bindings()
         self.sheetdisplay1.basic_bindings(False)
+        self.sheetdisplay1.unbind("<<SheetModified>>")
 
         self.sheet_filename2.config(state="disabled")
         self.open_sheet2_button.config(state="disabled")
@@ -265,6 +327,7 @@ class Tree_Compare(tk.Frame):
         self.sheetdisplay2.disable_bindings()
         self.run_compare_button.config(state="disabled")
         self.sheetdisplay2.basic_bindings(False)
+        self.sheetdisplay2.unbind("<<SheetModified>>")
 
     def start_work(self, msg=""):
         self.C.status_bar.change_text(msg)
@@ -648,11 +711,14 @@ class Tree_Compare(tk.Frame):
             Error(self, "An ID column cannot be the same as a parent column", theme=self.C.theme)
             return
         self.start_work("Creating report...   ")
-        sheetname_1 = os.path.basename(self.sheet_filename1.get())
-        sheetname_2 = os.path.basename(self.sheet_filename2.get())
-        if sheetname_1 == sheetname_2:
-            sheetname_1 = "Sheet 1 - Left Panel"
-            sheetname_2 = "Sheet 2 - Right Panel"
+        self.filename_1 = os.path.basename(self.sheet_filename1.get())
+        self.filename_2 = os.path.basename(self.sheet_filename2.get())
+        if self.filename_1 == self.filename_2:
+            self.sheetname_1 = "Sheet 1 - Left Panel"
+            self.sheetname_2 = "Sheet 2 - Right Panel"
+        else:
+            self.sheetname_1 = self.filename_1
+            self.sheetname_2 = self.filename_2
         self.sheet1 = []
         self.sheet2 = []
         self.nodes1 = {}
@@ -661,6 +727,7 @@ class Tree_Compare(tk.Frame):
         self.rns2 = {}
         self.set_row_lens()
         self.report = defaultdict(list)
+        self.report_header = f"Comparison report for:  {self.filename_1}  and  {self.filename_2}"
         self.heads1, addition1 = self.heads_comparison(self.sheetdisplay1.data[0].copy(), 1, [])
         self.sheet1, self.nodes1, addition1, self.rns1 = TreeBuilder().build(
             input_sheet=self.sheetdisplay1.data,
@@ -695,102 +762,115 @@ class Tree_Compare(tk.Frame):
         )
 
         if addition1:
-            self.report[f"WARNINGS - {sheetname_1} - "].extend([[warning] for warning in addition1])
+            self.report[f"Warnings {self.sheetname_1}:"].extend([[warning] for warning in addition1])
         if addition2:
-            self.report[f"WARNINGS - {sheetname_2} - "].extend([[warning] for warning in addition2])
+            self.report[f"Warnings {self.sheetname_2}:"].extend([[warning] for warning in addition2])
 
-        qhst1 = set(self.parent_cols1)
-        qhst2 = set(self.parent_cols2)
+        parcolset1 = set(self.parent_cols1)
+        parcolset2 = set(self.parent_cols2)
         pcold = defaultdict(list)
         for i, h in enumerate(self.heads1):
-            if i in qhst1:
+            if i in parcolset1:
                 pcold[h].append(i)
         for i, h in enumerate(self.heads2):
-            if i in qhst2:
+            if i in parcolset2:
                 pcold[h].append(i)
         detcold = defaultdict(list)
-        qhst1.add(self.ic1)
-        qhst2.add(self.ic2)
+        ic_parcolset1 = {self.ic1} | parcolset1
+        ic_parcolset2 = {self.ic2} | parcolset2
         for i, h in enumerate(self.heads1):
-            if i not in qhst1:
+            if i not in ic_parcolset1:
                 detcold[h].append(i)
         for i, h in enumerate(self.heads2):
-            if i not in qhst2:
+            if i not in ic_parcolset2:
                 detcold[h].append(i)
         matching_hrs_names = sorted((k for k, v in pcold.items() if len(v) > 1), key=self.srtkey)
         matching_details_names = sorted((k for k, v in detcold.items() if len(v) > 1), key=self.srtkey)
 
-        if self.ic1 == self.ic2 and self.heads1[self.ic1] == self.heads2[self.ic2]:
-            self.report["COLUMNS"].append([" - Sheets have the same ID column names and indexes"])
-        else:
-            self.report["COLUMNS"].append([f" - {sheetname_1} has ID column: {self.ic1 + 1} - {self.heads1[self.ic1]}"])
-            self.report["COLUMNS"].append([f" - {sheetname_2} has ID column: {self.ic2 + 1} - {self.heads2[self.ic2]}"])
+        # id column
+        if self.ic1 != self.ic2 or self.heads1[self.ic1] != self.heads2[self.ic2]:
+            self.report[f"ID Column {self.sheetname_1}"].append([f"{self.heads1[self.ic1]} #{self.ic1 + 1}"])
+            self.report[f"ID Column {self.sheetname_2}"].append([f"{self.heads2[self.ic2]} #{self.ic2 + 1}"])
 
-        if self.parent_cols1 == self.parent_cols2 and [self.heads1[pcol_1] for pcol_1 in self.parent_cols1] == [
-            self.heads2[pcol_2] for pcol_2 in self.parent_cols2
-        ]:
-            self.report["COLUMNS"].append([" - Sheets have the same Parent column names and indexes"])
-        else:
-            self.report["COLUMNS"].append([f" - {sheetname_1} has parent columns: "])
-            for pcol in self.parent_cols1:
-                self.report["COLUMNS"].append([f"       Column: {pcol+1} - {self.heads1[pcol]}"])
-            self.report["COLUMNS"].append([f" - {sheetname_2} has parent columns: "])
-            for pcol in self.parent_cols2:
-                self.report["COLUMNS"].append([f"       Column: {pcol+1} - {self.heads2[pcol]}"])
-
-        if len(matching_details_names) > 0:
-            hdset1 = {h for i, h in enumerate(self.heads1) if i not in qhst1}
-            hdset2 = {h for i, h in enumerate(self.heads2) if i not in qhst2}
-            if all(detcold[n][0] == detcold[n][1] for n in matching_details_names):
-                self.report["COLUMNS"].append([" - Sheets have the same detail column names and indexes"])
-            else:
-                self.report["COLUMNS"].append([" - Sheets have following matching detail column names:"])
-                for n in matching_details_names:
-                    self.report["COLUMNS"].append([f"   - {n}"])
-                    self.report["COLUMNS"].append([f"       Column {sheetname_1}: {detcold[n][0]}"])
-                    self.report["COLUMNS"].append([f"       Column {sheetname_2}: {detcold[n][1]}"])
+        # sheets have some or all matching parent column names
+        if matching_hrs_names:
+            hdset1 = {h for i, h in enumerate(self.heads1) if i in parcolset1}
+            hdset2 = {h for i, h in enumerate(self.heads2) if i in parcolset2}
             if any(h not in hdset2 for h in hdset1):
-                self.report["COLUMNS"].append(
-                    [f" - {sheetname_1} has following detail columns that {sheetname_2} doesn't:"]
+                self.report[f"New Parent Columns {self.sheetname_1}"].extend(
+                    [[f"{h}"] for h in hdset1 if h not in hdset2]
                 )
-                for h in hdset1:
-                    if h not in hdset2:
-                        self.report["COLUMNS"].append([f"       {h}"])
             if any(h not in hdset1 for h in hdset2):
-                self.report["COLUMNS"].append(
-                    [f" - {sheetname_2} has following detail columns that {sheetname_1} doesn't:"]
+                self.report[f"New Parent Columns {self.sheetname_2}"].extend(
+                    [[f"{h}"] for h in hdset2 if h not in hdset1]
                 )
-                for h in hdset2:
-                    if h not in hdset1:
-                        self.report["COLUMNS"].append([f"       {h}"])
+            if any(col_indexes[0] != col_indexes[1] for col_indexes in pcold.values() if len(col_indexes) > 1):
+                self.report["Parent Column Indexes"].append(
+                    [
+                        "NAME",
+                        f"{self.sheetname_1}",
+                        f"{self.sheetname_2}",
+                    ]
+                )
+                self.report["Parent Column Indexes"].extend(
+                    [
+                        [name, col_indexes[0], col_indexes[1]]
+                        for name, col_indexes in pcold.items()
+                        if len(col_indexes) > 1 and col_indexes[0] != col_indexes[1]
+                    ]
+                )
+        # sheets have no matching parent column names
         else:
-            self.report["COLUMNS"].append([" - Sheets have no matching detail column names"])
+            self.report["Parent Columns"].append(["Sheets have no matching parent column names."])
 
-        shared_ids = any(node in self.nodes2 for node in self.nodes1) or any(
-            node in self.nodes1 for node in self.nodes2
-        )
-        if not shared_ids:
-            self.report["MATCHING IDS"].append(["- Sheets have no matching IDs"])
-
-        elif shared_ids:
-            missids1 = any(ik not in self.nodes2 for ik in self.nodes1)
-            missids2 = any(ik not in self.nodes1 for ik in self.nodes2)
-            if missids1:
-                self.report["MISSING IDS"].append(
-                    [f" - {sheetname_1} has the following IDs that {sheetname_2} doesn't:"]
+        # sheets have some or all matching detail column names
+        if matching_details_names:
+            hdset1 = {h for i, h in enumerate(self.heads1) if i not in ic_parcolset1}
+            hdset2 = {h for i, h in enumerate(self.heads2) if i not in ic_parcolset2}
+            if any(h not in hdset2 for h in hdset1):
+                self.report[f"New Detail Columns {self.sheetname_1}"].extend(
+                    [[f"{h}"] for h in hdset1 if h not in hdset2]
                 )
-                self.report["MISSING IDS"].extend(
+            if any(h not in hdset1 for h in hdset2):
+                self.report[f"New Detail Columns {self.sheetname_2}"].extend(
+                    [[f"{h}"] for h in hdset2 if h not in hdset1]
+                )
+            if any(col_indexes[0] != col_indexes[1] for col_indexes in detcold.values() if len(col_indexes) > 1):
+                self.report["Detail Column Indexes"].append(
+                    [
+                        "NAME",
+                        f"{self.sheetname_1}",
+                        f"{self.sheetname_2}",
+                    ]
+                )
+                self.report["Detail Column Indexes"].extend(
+                    [
+                        [name, col_indexes[0], col_indexes[1]]
+                        for name, col_indexes in detcold.items()
+                        if len(col_indexes) > 1 and col_indexes[0] != col_indexes[1]
+                    ]
+                )
+        # sheets have no matching detail column names
+        else:
+            self.report["Detail Columns"].append(["Sheets have no matching detail column names."])
+
+        # sheets have no matching ids
+        if not any(node in self.nodes2 for node in self.nodes1) and not any(
+            node in self.nodes1 for node in self.nodes2
+        ):
+            self.report["IDs"].append(["Sheets have no matching IDs"])
+
+        # sheets share some or all ids
+        else:
+            if any(ik not in self.nodes2 for ik in self.nodes1):
+                self.report[f"New IDs {self.sheetname_1}"].extend(
                     [[f"{self.nodes1[ik].name}"] for ik in self.nodes1 if ik not in self.nodes2]
                 )
-            if missids2:
-                self.report["MISSING IDS"].append(
-                    [f" - {sheetname_2} has the following IDs that {sheetname_1} doesn't:"]
-                )
-                self.report["MISSING IDS"].extend(
+            if any(ik not in self.nodes1 for ik in self.nodes2):
+                self.report[f"New IDs {self.sheetname_2}"].extend(
                     [[f"{self.nodes2[ik].name}"] for ik in self.nodes2 if ik not in self.nodes1]
                 )
 
-            self.report["MATCHING IDS"].append(["ID", "DIFFERENCE", sheetname_1, sheetname_2])
             if matching_hrs_names:
                 if self.row_len1 >= self.row_len2:
                     for row in self.sheet2:
@@ -809,44 +889,44 @@ class Tree_Compare(tk.Frame):
                                     p2 = self.nodes2[ik].ps[h2]
                                 if p1 != p2 and p1 is None:
                                     if p2 == "":
-                                        self.report["MATCHING IDS"].append(
+                                        self.report["Matching IDs"].append(
                                             [
                                                 f"{ID}",
-                                                f"Present in hierarchy: {nx} in {sheetname_2} and not {sheetname_1}",
+                                                f"Present in hierarchy: {nx} in {self.sheetname_2} and not {self.sheetname_1}",
                                                 "Not present",
                                                 "Appears as top ID",
                                             ]
                                         )
                                     elif p2:
-                                        self.report["MATCHING IDS"].append(
+                                        self.report["Matching IDs"].append(
                                             [
                                                 f"{ID}",
-                                                f"Present in hierarchy: {nx} in {sheetname_2} and not {sheetname_1}",
+                                                f"Present in hierarchy: {nx} in {self.sheetname_2} and not {self.sheetname_1}",
                                                 "Not present",
                                                 f"{self.nodes2[ik].ps[h2].name}",
                                             ]
                                         )
                                 elif p1 != p2 and p2 is None:
                                     if p1 == "":
-                                        self.report["MATCHING IDS"].append(
+                                        self.report["Matching IDs"].append(
                                             [
                                                 f"{ID}",
-                                                f"Present in hierarchy: {nx} in {sheetname_1} and not {sheetname_2}",
+                                                f"Present in hierarchy: {nx} in {self.sheetname_1} and not {self.sheetname_2}",
                                                 "Appears as top ID",
                                                 "Not present",
                                             ]
                                         )
                                     elif p1:
-                                        self.report["MATCHING IDS"].append(
+                                        self.report["Matching IDs"].append(
                                             [
                                                 f"{ID}",
-                                                f"Present in hierarchy: {nx} in {sheetname_1} and not {sheetname_2}",
+                                                f"Present in hierarchy: {nx} in {self.sheetname_1} and not {self.sheetname_2}",
                                                 f"{self.nodes1[ik].ps[h1].name}",
                                                 "Not present",
                                             ]
                                         )
                                 elif p1 != p2 and p1 == "":
-                                    self.report["MATCHING IDS"].append(
+                                    self.report["Matching IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -855,7 +935,7 @@ class Tree_Compare(tk.Frame):
                                         ]
                                     )
                                 elif p1 != p2 and p2 == "":
-                                    self.report["MATCHING IDS"].append(
+                                    self.report["Matching IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -864,7 +944,7 @@ class Tree_Compare(tk.Frame):
                                         ]
                                     )
                                 elif p1 != p2:
-                                    self.report["MATCHING IDS"].append(
+                                    self.report["Matching IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -876,7 +956,7 @@ class Tree_Compare(tk.Frame):
                                 c1 = self.sheet1[self.rns1[ik]][detcold[nx][0]]
                                 c2 = row[detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["MATCHING IDS"].append(
+                                    self.report["Matching IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
                 elif self.row_len1 < self.row_len2:
@@ -896,44 +976,44 @@ class Tree_Compare(tk.Frame):
                                     p2 = self.nodes2[ik].ps[h2]
                                 if p1 != p2 and p1 is None:
                                     if p2 == "":
-                                        self.report["MATCHING IDS"].append(
+                                        self.report["Matching IDs"].append(
                                             [
                                                 f"{ID}",
-                                                f"Present in hierarchy: {nx} in {sheetname_2} and not {sheetname_1}",
+                                                f"Present in hierarchy: {nx} in {self.sheetname_2} and not {self.sheetname_1}",
                                                 "Not present",
                                                 "Appears as top ID",
                                             ]
                                         )
                                     elif p2:
-                                        self.report["MATCHING IDS"].append(
+                                        self.report["Matching IDs"].append(
                                             [
                                                 f"{ID}",
-                                                f"Present in hierarchy: {nx} in {sheetname_2} and not {sheetname_1}",
+                                                f"Present in hierarchy: {nx} in {self.sheetname_2} and not {self.sheetname_1}",
                                                 "Not present",
                                                 f"{self.nodes2[ik].ps[h2].name}",
                                             ]
                                         )
                                 elif p1 != p2 and p2 is None:
                                     if p1 == "":
-                                        self.report["MATCHING IDS"].append(
+                                        self.report["Matching IDs"].append(
                                             [
                                                 f"{ID}",
-                                                f"Present in hierarchy: {nx} in {sheetname_1} and not {sheetname_2}",
+                                                f"Present in hierarchy: {nx} in {self.sheetname_1} and not {self.sheetname_2}",
                                                 "Appears as top ID",
                                                 "Not present",
                                             ]
                                         )
                                     elif p1:
-                                        self.report["MATCHING IDS"].append(
+                                        self.report["Matching IDs"].append(
                                             [
                                                 f"{ID}",
-                                                f"Present in hierarchy: {nx} in {sheetname_1} and not {sheetname_2}",
+                                                f"Present in hierarchy: {nx} in {self.sheetname_1} and not {self.sheetname_2}",
                                                 f"{self.nodes1[ik].ps[h1].name}",
                                                 "Not present",
                                             ]
                                         )
                                 elif p1 != p2 and p1 == "":
-                                    self.report["MATCHING IDS"].append(
+                                    self.report["Matching IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -942,7 +1022,7 @@ class Tree_Compare(tk.Frame):
                                         ]
                                     )
                                 elif p1 != p2 and p2 == "":
-                                    self.report["MATCHING IDS"].append(
+                                    self.report["Matching IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -951,7 +1031,7 @@ class Tree_Compare(tk.Frame):
                                         ]
                                     )
                                 elif p1 != p2:
-                                    self.report["MATCHING IDS"].append(
+                                    self.report["Matching IDs"].append(
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
@@ -963,7 +1043,7 @@ class Tree_Compare(tk.Frame):
                                 c1 = row[detcold[nx][0]]
                                 c2 = self.sheet2[self.rns2[ik]][detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["MATCHING IDS"].append(
+                                    self.report["Matching IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
 
@@ -976,7 +1056,7 @@ class Tree_Compare(tk.Frame):
                                 c1 = self.sheet1[self.rns1[ik]][detcold[nx][0]]
                                 c2 = row[detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["MATCHING IDS"].append(
+                                    self.report["Matching IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
                 elif self.row_len1 < self.row_len2:
@@ -987,11 +1067,18 @@ class Tree_Compare(tk.Frame):
                                 c1 = row[detcold[nx][0]]
                                 c2 = self.sheet2[self.rns2[ik]][detcold[nx][1]]
                                 if c1.lower() != c2.lower():
-                                    self.report["MATCHING IDS"].append(
+                                    self.report["Matching IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
-        self.sheetname_1 = sheetname_1
-        self.sheetname_2 = sheetname_2
+            if "Matching IDs" in self.report:
+                self.report["Matching IDs"] = [
+                    [
+                        "ID",
+                        "DIFFERENCE",
+                        self.sheetname_1,
+                        self.sheetname_2,
+                    ]
+                ] + self.report["Matching IDs"]
 
         self.stop_work("Program ready")
         Compare_Report_Popup(self, theme=self.C.theme)

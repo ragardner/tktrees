@@ -110,8 +110,8 @@ class Sheet(tk.Frame):
         header: None | list[object] = None,
         row_index: None | list[object] = None,
         index: None | list[object] = None,
-        default_header: Literal["letters", "numbers", "both"] = "letters",
-        default_row_index: Literal["letters", "numbers", "both"] = "numbers",
+        default_header: Literal["letters", "numbers", "both"] | None = "letters",
+        default_row_index: Literal["letters", "numbers", "both"] | None = "numbers",
         data_reference: None | Sequence[Sequence[object]] = None,
         data: None | Sequence[Sequence[object]] = None,
         # either (start row, end row, "rows"), (start column, end column, "rows") or

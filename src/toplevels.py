@@ -13,6 +13,8 @@ from operator import itemgetter
 from tkinter import filedialog, ttk
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.cell import WriteOnlyCell
+from openpyxl.styles import Font
 from tksheet import (
     Sheet,
     convert_align,
@@ -29,6 +31,8 @@ from .constants import (
     ERR_ASK_FNT,
     TF,
     app_title,
+    blue_fill,
+    green_fill,
     changelog_header,
     ctrl_button,
     lge_font,
@@ -42,6 +46,7 @@ from .constants import (
     upone_dir,
     validation_allowed_date_chars,
     validation_allowed_num_chars,
+    
 )
 from .functions import (
     b32_x_dict,
@@ -875,8 +880,9 @@ class Compare_Report_Popup(tk.Toplevel):
             self,
             theme=theme,
             header_font=sheet_header_font,
+            default_row_index=None,
             outline_thickness=1,
-            default_column_width=220,
+            default_column_width=250,
             treeview=True,
         )
         self.sheetdisplay1.enable_bindings(
@@ -894,11 +900,26 @@ class Compare_Report_Popup(tk.Toplevel):
             "arrowkeys",
             "ctrl_select",
         )
+        self.sheetdisplay1.insert(text="", values=[self.C.report_header])
+        self.sheetdisplay1.column_width(0, "text")
         for header_row, rows in self.C.report.items():
-            self.sheetdisplay1.insert(iid=header_row, text="Expand for Results", values=[header_row])
-            self.sheetdisplay1.bulk_insert(data=rows, parent=header_row)
+            row = len(self.sheetdisplay1.data)
+            self.sheetdisplay1.insert(iid=header_row, text="Result", values=[header_row])
+            self.sheetdisplay1.highlight(
+                self.sheetdisplay1.span((row, 0)),
+                bg="#648748",
+                fg="white",
+            )
 
-        # self.sheetdisplay1.set_all_cell_sizes_to_text()
+            row = len(self.sheetdisplay1.data)
+            self.sheetdisplay1.bulk_insert(data=rows, parent=header_row)
+            if len(rows[0]) > 1:
+                self.sheetdisplay1.highlight(
+                    row,
+                    bg="#0078d7",
+                    fg="white",
+                )
+
         self.sheetdisplay1.grid(row=1, column=0, sticky="nswe")
 
         self.buttonframe = Frame(self, theme=theme)
@@ -993,11 +1014,12 @@ class Compare_Report_Popup(tk.Toplevel):
             self.grab_set()
             self.stop_work("Can only save .xlsx file type")
             return
+        white_font = Font(color="00FFFFFF")
         try:
             if newfile.lower().endswith(".xlsx"):
                 self.wb_ = Workbook(write_only=True)
                 ws = self.wb_.create_sheet(title="Report")
-                row_ctr = 2
+                row_ctr = 3
                 for header_row, rows in self.C.report.items():
                     ws.row_dimensions.group(
                         row_ctr,
@@ -1006,10 +1028,25 @@ class Compare_Report_Popup(tk.Toplevel):
                         hidden=True,
                     )
                     row_ctr += 1 + len(rows)
+                ws.append([self.C.report_header])
                 for header_row, rows in self.C.report.items():
-                    ws.append([header_row])
-                    for row in rows:
-                        ws.append((e if e else None for e in row))
+                    cell = WriteOnlyCell(ws, value=header_row)
+                    cell.fill = green_fill
+                    cell.font = white_font
+                    ws.append([cell])
+                    if len(rows[0]) > 1:
+                        row = []
+                        for val in rows[0]:
+                            cell = WriteOnlyCell(ws, value=val)
+                            cell.fill = blue_fill
+                            cell.font = white_font
+                            row.append(cell)
+                        ws.append(row)
+                        for row in islice(rows, 1, None):
+                            ws.append((e if e else None for e in row))
+                    else:
+                        for row in rows:
+                            ws.append((e if e else None for e in row))
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
         except Exception as error_msg:
