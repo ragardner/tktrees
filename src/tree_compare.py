@@ -1080,6 +1080,8 @@ class Tree_Compare(tk.Frame):
                     ]
                 ] + self.report["Matching IDs"]
 
+        if not self.report:
+            self.report_header += " - Sheets are identical"
         self.stop_work("Program ready")
         Compare_Report_Popup(self, theme=self.C.theme)
 
