@@ -1044,10 +1044,10 @@ class Compare_Report_Popup(tk.Toplevel):
                             row.append(cell)
                         ws.append(row)
                         for row in islice(rows, 1, None):
-                            ws.append((e if e else None for e in row))
+                            ws.append((e if e != "" else None for e in row))
                     else:
                         for row in rows:
-                            ws.append((e if e else None for e in row))
+                            ws.append((e if e != "" else None for e in row))
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
         except Exception as error_msg:
