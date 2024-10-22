@@ -1965,11 +1965,11 @@ class Tree_Editor(tk.Frame):
             self.refresh_rows = set()
             if tree_sel:
                 try:
-                    self.tree.selection_set(tree_sel)
                     self.tree.scroll_to_item(tree_sel)
+                    self.tree.selection_set(tree_sel)
                 except Exception:
+                    self.tree.scroll_to_item(newtext.lower())
                     self.tree.selection_set(newtext.lower())
-                    self.tree.scroll_to_item(newtext)
             else:
                 self.move_tree_pos()
             self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
@@ -2077,11 +2077,11 @@ class Tree_Editor(tk.Frame):
             return newtext
 
     def tree_set_cell_size_to_text(self, sheet_r, sheet_c):
-        if self.tree.exists(self.sheet.data[sheet_r][self.ic]) and self.tree.item_displayed(
-            self.sheet.data[sheet_r][self.ic]
+        if self.tree.exists(self.sheet.data[sheet_r][self.ic].lower()) and self.tree.item_displayed(
+            self.sheet.data[sheet_r][self.ic].lower()
         ):
             self.tree.set_cell_size_to_text(
-                self.tree.displayed_rows.index(self.tree.itemrow(self.sheet.data[sheet_r][self.ic])),
+                self.tree.displayed_rows.index(self.tree.itemrow(self.sheet.data[sheet_r][self.ic].lower())),
                 sheet_c,
                 only_set_if_too_small=True,
             )
@@ -2261,8 +2261,8 @@ class Tree_Editor(tk.Frame):
                     self.redo_tree_display()
                     self.redraw_sheets()
                     try:
+                        self.tree.scroll_to_item(self.sheet.MT.data[y1][self.ic].lower())
                         self.tree.selection_set(self.sheet.MT.data[y1][self.ic].lower())
-                        self.tree.scroll_to_item(self.sheet.MT.data[y1][self.ic])
                     except Exception:
                         pass
                     self.disable_paste()
@@ -2469,8 +2469,8 @@ class Tree_Editor(tk.Frame):
                 self.redo_tree_display()
                 self.redraw_sheets()
                 try:
+                    self.tree.scroll_to_item(self.sheet.MT.data[y1][self.ic].lower())
                     self.tree.selection_set(self.sheet.MT.data[y1][self.ic].lower())
-                    self.tree.scroll_to_item(self.sheet.MT.data[y1][self.ic])
                 except Exception:
                     pass
                 self.disable_paste()
@@ -2676,8 +2676,8 @@ class Tree_Editor(tk.Frame):
                 self.redo_tree_display()
                 self.redraw_sheets()
                 try:
+                    self.tree.scroll_to_item(self.tree.MT.data[tree_datarn][self.ic].lower())
                     self.tree.selection_set(self.tree.MT.data[tree_datarn][self.ic].lower())
-                    self.tree.scroll_to_item(self.tree.MT.data[tree_datarn][self.ic])
                 except Exception:
                     pass
                 self.disable_paste()
@@ -2847,8 +2847,8 @@ class Tree_Editor(tk.Frame):
                 self.redo_tree_display()
                 self.redraw_sheets()
                 try:
+                    self.tree.scroll_to_item(self.sheet.MT.data[y1][self.ic].lower())
                     self.tree.selection_set(self.sheet.MT.data[y1][self.ic].lower())
-                    self.tree.scroll_to_item(self.sheet.MT.data[y1][self.ic])
                 except Exception:
                     pass
                 self.disable_paste()
@@ -6800,8 +6800,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display(selections=False)
         self.redraw_sheets()
         all_iids = index_only + successful
-        self.tree.selection_set(all_iids)
         self.tree.scroll_to_item(all_iids[0])
+        self.tree.selection_set(all_iids)
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def snapshot_begin_drag_cols(self, event=None):
@@ -7479,8 +7479,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
+        self.tree.scroll_to_item(iid.lower())
         self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-        self.tree.scroll_to_item(iid)
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7534,8 +7534,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
+        self.tree.scroll_to_item(iid.lower())
         self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-        self.tree.scroll_to_item(iid)
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7581,8 +7581,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
+        self.tree.scroll_to_item(iid.lower())
         self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-        self.tree.scroll_to_item(iid)
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7628,8 +7628,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
+        self.tree.scroll_to_item(iid.lower())
         self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-        self.tree.scroll_to_item(iid)
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7683,8 +7683,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
+        self.tree.scroll_to_item(iid.lower())
         self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-        self.tree.scroll_to_item(iid)
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7730,8 +7730,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
+        self.tree.scroll_to_item(iid.lower())
         self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-        self.tree.scroll_to_item(iid)
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7783,8 +7783,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
+        self.tree.scroll_to_item(iid.lower())
         self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-        self.tree.scroll_to_item(iid)
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7844,8 +7844,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
+        self.tree.scroll_to_item(iid.lower())
         self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-        self.tree.scroll_to_item(iid)
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7897,8 +7897,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
+        self.tree.scroll_to_item(iid.lower())
         self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-        self.tree.scroll_to_item(iid)
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7950,9 +7950,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
-        successful = tuple(self.nodes[dct["id"]].k for dct in successful)
-        self.tree.selection_set(successful)
-        self.tree.scroll_to_item(successful[0])
+        self.tree.scroll_to_item(iid.lower())
+        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -8014,8 +8013,8 @@ class Tree_Editor(tk.Frame):
         if redo_tree:
             self.redo_tree_display()
             self.redraw_sheets()
+            self.tree.scroll_to_item(iid.lower())
             self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
-            self.tree.scroll_to_item(iid)
             self.disable_paste()
             self.stop_work(self.get_tree_editor_status_bar_text())
         return successful
@@ -8068,9 +8067,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
-        successful = tuple(self.nodes[dct["id"]].k for dct in successful)
-        self.tree.selection_set(successful)
-        self.tree.scroll_to_item(successful[0])
+        self.tree.scroll_to_item(iid.lower())
+        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -8108,7 +8106,7 @@ class Tree_Editor(tk.Frame):
                 )
             else:
                 tr.append(iid)
-        self.tree.selection_remove(tuple(tr))
+        self.tree.selection_remove(tr)
         self.enable_copy_paste()
         self.levels = defaultdict(list)
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
@@ -8193,8 +8191,8 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
-        self.tree.selection_set(self.nodes[new_ik].k)
         self.tree.scroll_to_item(self.nodes[new_ik].k)
+        self.tree.selection_set(self.nodes[new_ik].k)
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
@@ -8247,8 +8245,8 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
-        self.tree.selection_set(self.nodes[new_ik].k)
         self.tree.scroll_to_item(self.nodes[new_ik].k)
+        self.tree.selection_set(self.nodes[new_ik].k)
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
@@ -8286,8 +8284,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_dropdowns()
         if self.tree.exists(self.nodes[new_ik].k):
-            self.tree.selection_set(self.nodes[new_ik].k)
             self.tree.scroll_to_item(self.nodes[new_ik].k)
+            self.tree.selection_set(self.nodes[new_ik].k)
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
@@ -8324,8 +8322,8 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
-        self.tree.selection_set(self.nodes[new_ik].k)
         self.tree.scroll_to_item(self.nodes[new_ik].k)
+        self.tree.selection_set(self.nodes[new_ik].k)
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
@@ -8362,11 +8360,11 @@ class Tree_Editor(tk.Frame):
         self.redraw_sheets()
         if tree_sel:
             try:
-                self.tree.selection_set(tree_sel)
                 self.tree.scroll_to_item(tree_sel)
+                self.tree.selection_set(tree_sel)
             except Exception:
+                self.tree.scroll_to_item(popup.result.lower())
                 self.tree.selection_set(popup.result.lower())
-                self.tree.scroll_to_item(popup.result)
         else:
             self.move_tree_pos()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
@@ -8398,8 +8396,8 @@ class Tree_Editor(tk.Frame):
         self.refresh_all_formatting(rows=self.refresh_rows)
         self.refresh_rows = set()
         self.redraw_sheets()
+        self.tree.scroll_to_item(popup.result.lower())
         self.tree.selection_set(popup.result.lower())
-        self.tree.scroll_to_item(popup.result)
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def delete_selected(self, iids: tuple[str]):
@@ -8721,8 +8719,8 @@ class Tree_Editor(tk.Frame):
                         self.redo_tree_display()
                         self.redraw_sheets()
                         try:
+                            self.tree.scroll_to_item(self.sheet.MT.data[rn][self.ic].lower())
                             self.tree.selection_set(self.sheet.MT.data[rn][self.ic].lower())
-                            self.tree.scroll_to_item(self.sheet.MT.data[rn][self.ic])
                         except Exception:
                             pass
                         self.disable_paste()
@@ -8934,9 +8932,8 @@ class Tree_Editor(tk.Frame):
         self.snapshot_ctrl_x_v_del_key()
         cells_changed, idcol_hiers = 0, set(self.hiers) | {self.ic}
         for iid in self.tree.selection():
-            ID = iid
-            ik = ID.lower()
-            rn = self.rns[ik]
+            ID = self.nodes[iid].name
+            rn = self.rns[iid]
             for c, e in enumerate(self.copied_details["copied"]):
                 if c not in idcol_hiers and self.sheet.MT.data[rn][c] != e:
                     self.changelog_append_no_unsaved(
@@ -9045,8 +9042,8 @@ class Tree_Editor(tk.Frame):
                         self.redo_tree_display()
                         self.redraw_sheets()
                         try:
+                            self.tree.scroll_to_item(self.sheet.MT.data[rn][self.ic].lower())
                             self.tree.selection_set(self.sheet.MT.data[rn][self.ic].lower())
-                            self.tree.scroll_to_item(self.sheet.MT.data[rn][self.ic])
                         except Exception:
                             pass
                         self.disable_paste()
@@ -9176,9 +9173,8 @@ class Tree_Editor(tk.Frame):
         self.snapshot_ctrl_x_v_del_key()
         cells_changed, idcol_hiers = 0, set(self.hiers) | {self.ic}
         for iid in self.tree.selection():
-            ID = iid
-            ik = ID.lower()
-            rn = self.rns[ik]
+            ID = self.nodes[iid].name
+            rn = self.rns[iid]
             for c, e in enumerate(self.sheet.MT.data[rn]):
                 if c not in idcol_hiers and self.sheet.MT.data[rn][c] != "":
                     self.changelog_append_no_unsaved(
@@ -9370,8 +9366,8 @@ class Tree_Editor(tk.Frame):
             selected = hs[0]
         self.switch_displayed.set(f"{selected}")
         self.switch_hier()
+        self.tree.scroll_to_item(self.nodes[ik].k)
         self.tree.selection_set(self.nodes[ik].k)
-        self.tree.scroll_to_item(self.nodes[ik].name)
 
     def tree_go_to_tagged_id(self, event=None):
         if not (ik := self.tree_tagged_ids_dropdown.get_my_value().lower()):
@@ -9400,8 +9396,8 @@ class Tree_Editor(tk.Frame):
             self.sheet.select_row(self.rns[ik])
             self.sheet.see(row=self.rns[ik], keep_xscroll=True)
             if self.tree.exists(self.nodes[ik].k):
-                self.tree.selection_set(self.nodes[ik].k)
                 self.tree.scroll_to_item(self.nodes[ik].k)
+                self.tree.selection_set(self.nodes[ik].k)
         else:
             self.discard_tagged_id(ik)
 
@@ -9759,7 +9755,7 @@ class Tree_Editor(tk.Frame):
     def expand_id(self, event=None):
         if current := self.tree.selected:
             selections = self.tree.selection()
-            self.tree.tree_open({self.selected_ID.lower()} | set(self.tree.descendants(self.selected_ID)))
+            self.tree.tree_open({self.selected_ID.lower()} | set(self.tree.descendants(self.selected_ID.lower())))
             self.tree.selection_set(selections)
             self.tree.selected = current
 
@@ -9767,7 +9763,7 @@ class Tree_Editor(tk.Frame):
         if current := self.tree.selected:
             selections = self.tree.selection()
             current_iid = self.tree.tree_selected
-            self.tree.tree_close({self.selected_ID.lower()} | set(self.tree.descendants(self.selected_ID)))
+            self.tree.tree_close({self.selected_ID.lower()} | set(self.tree.descendants(self.selected_ID.lower())))
             self.tree.selection_set(set(filter(self.tree.item_displayed, selections)))
             if self.tree.item_displayed(current_iid):
                 self.tree.selected = current
@@ -9830,15 +9826,16 @@ class Tree_Editor(tk.Frame):
         self.sheet.set_yview(self.saved_info[self.pc].scrolls.sheety)
         self.sheet.set_xview(self.saved_info[self.pc].scrolls.sheetx)
 
-    def refresh_tree_item(self, iid):
+    def refresh_tree_item(self, ID):
+        iid = ID.lower()
         if self.tree.exists(iid):
-            rn = self.rns[(ik := iid.lower())]
+            rn = self.rns[iid]
             highlights = {
                 (rn, c): self.sheet.MT.cell_options[(rn, c)]["highlight"]
                 for c in range(self.row_len)
                 if (rn, c) in self.sheet.MT.cell_options and "highlight" in self.sheet.MT.cell_options[(rn, c)]
             }
-            tree_row = self.tree.itemrow(ik)
+            tree_row = self.tree.itemrow(iid)
             self.tree.dehighlight_cells(cells=[(tree_row, c) for c in range(self.row_len)])
             if highlights:
                 for cell, highlight in highlights.items():
@@ -9846,13 +9843,13 @@ class Tree_Editor(tk.Frame):
             r = self.sheet.MT.data[rn]
             if self.tv_lvls_bool:
                 self.tree.item(
-                    ik,
-                    text=f"{max(self.get_node_level(self.nodes[ik]))}. {r[self.tv_label_col]}",
+                    iid,
+                    text=f"{max(self.get_node_level(self.nodes[iid]))}. {r[self.tv_label_col]}",
                     values=r,
                 )
             else:
                 self.tree.item(
-                    ik,
+                    iid,
                     text=f"{r[self.tv_label_col]}",
                     values=r,
                 )
@@ -9906,6 +9903,7 @@ class Tree_Editor(tk.Frame):
                     open_ids=open_ids,
                     safety=False,
                     ncols=self.row_len,
+                    lower=True,
                 ).dehighlight_all()
             else:
                 self.tree.tree_build(
@@ -9917,6 +9915,7 @@ class Tree_Editor(tk.Frame):
                     open_ids=open_ids,
                     safety=False,
                     ncols=self.row_len,
+                    lower=True,
                 ).dehighlight_all()
         if self.saved_info[self.pc].theights:
             self.tree.set_safe_row_heights(self.tree_gen_heights_from_saved())

@@ -518,6 +518,16 @@ def index_exists(seq: Sequence[object], index: int) -> bool:
         return False
 
 
+def add_to_displayed(displayed: list[int], to_add: Iterator[int]) -> list[int]:
+    # assumes to_add is sorted in reverse
+    for i in reversed(to_add):
+        ins = bisect_left(displayed, i)
+        displayed[ins:] = [e + 1 for e in islice(displayed, ins, None)]
+    for i in reversed(to_add):
+        displayed.insert(bisect_left(displayed, i), i)
+    return displayed
+
+
 def move_elements_by_mapping(
     seq: list[object],
     new_idxs: dict[int, int],

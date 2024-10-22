@@ -46,7 +46,6 @@ from .constants import (
     upone_dir,
     validation_allowed_date_chars,
     validation_allowed_num_chars,
-    
 )
 from .functions import (
     b32_x_dict,
@@ -2807,7 +2806,7 @@ class View_Id_Popup(tk.Toplevel):
         self.sheetdisplay.refresh()
         self.sheetdisplay.recreate_all_selection_boxes()
         if scroll:
-            self.C.tree.scroll_to_item(self.sheetdisplay.data[self.C.ic][0])
+            self.C.tree.scroll_to_item(self.sheetdisplay.data[self.C.ic][0].lower())
 
     def cut(self, event=None):
         pass
@@ -2872,11 +2871,11 @@ class View_Id_Popup(tk.Toplevel):
             self.C.redraw_sheets()
             if tree_sel:
                 try:
-                    self.C.tree.selection_set(tree_sel)
                     self.C.tree.scroll_to_item(tree_sel[0])
+                    self.C.tree.selection_set(tree_sel)
                 except Exception:
-                    self.C.tree.selection_set(newtext)
-                    self.C.tree.scroll_to_item(newtext)
+                    self.C.tree.scroll_to_item(newtext.lower())
+                    self.C.tree.selection_set(newtext.lower())
             else:
                 self.C.move_tree_pos()
             self._changes_made()
@@ -2902,8 +2901,8 @@ class View_Id_Popup(tk.Toplevel):
                 self.C.refresh_all_formatting(rows=[y1])
                 self.C.redraw_sheets()
                 try:
-                    self.C.tree.selection_set(self.sheet[y1][self.ic])
-                    self.C.tree.scroll_to_item(self.sheet[y1][self.ic])
+                    self.C.tree.scroll_to_item(self.sheet[y1][self.ic].lower())
+                    self.C.tree.selection_set(self.sheet[y1][self.ic].lower())
                 except Exception:
                     pass
                 self.C.disable_paste()
