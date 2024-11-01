@@ -8106,7 +8106,8 @@ class Tree_Editor(tk.Frame):
                 )
             else:
                 tr.append(iid)
-        self.tree.selection_remove(tr)
+        if tr:
+            self.tree.selection_remove(tr)
         self.enable_copy_paste()
         self.levels = defaultdict(list)
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
