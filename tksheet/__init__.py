@@ -4,7 +4,7 @@
 tksheet - A Python tkinter table widget
 """
 
-__version__ = "7.2.20"
+__version__ = "7.2.21"
 
 from .colors import (
     color_map,
@@ -12,6 +12,8 @@ from .colors import (
 from .column_headers import ColumnHeaders
 from .formatters import (
     Formatter,
+    alt_percentage_to_str,
+    alt_to_percentage,
     bool_formatter,
     data_to_str,
     float_formatter,
@@ -28,6 +30,7 @@ from .formatters import (
     to_bool,
     to_float,
     to_int,
+    to_percentage,
     to_str,
     try_to_bool,
 )
