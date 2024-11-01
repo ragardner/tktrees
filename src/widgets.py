@@ -1519,7 +1519,7 @@ class Wrapped_Text_With_Find_And_Yscroll(tk.Frame):
     def save_text(self):
         newfile = filedialog.asksaveasfilename(
             parent=self,
-            title="Save text on popup window",
+            title="Save as",
             filetypes=[("Text File", ".txt"), ("CSV File", ".csv")],
             defaultextension=".txt",
             confirmoverwrite=True,

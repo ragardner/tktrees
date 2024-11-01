@@ -11879,7 +11879,7 @@ class Tree_Editor(tk.Frame):
             return
         newfile = filedialog.asksaveasfilename(
             parent=self.C,
-            title="Save sheet as .json, .xlsx or .csv   ",
+            title="Save as",
             filetypes=[
                 ("Excel file", ".xlsx"),
                 ("JSON file", ".json"),

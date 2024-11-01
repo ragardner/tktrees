@@ -663,7 +663,7 @@ To get started once you have closed this popup, either:
             if self.current_frame == "tree_edit":
                 self.frames["tree_edit"].open_from_within_treeframe()
                 return
-        fp = filedialog.askopenfilename(parent=self, title="Select file")
+        fp = filedialog.askopenfilename(parent=self, title="Select a file")
         if not fp:
             return
         self.disable_at_start()

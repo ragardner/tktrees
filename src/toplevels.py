@@ -330,7 +330,7 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.start_work("Opened save dialog")
         newfile = filedialog.asksaveasfilename(
             parent=self,
-            title="Save flattened sheet as",
+            title="Save as",
             filetypes=[("Excel file", ".xlsx"), ("JSON File", ".json"), ("CSV File", ".csv"), ("TSV File", ".tsv")],
             defaultextension=".xlsx",
             confirmoverwrite=True,
@@ -608,7 +608,7 @@ class Changelog_Popup(tk.Toplevel):
         self.start_work("Opened save dialog")
         newfile = filedialog.asksaveasfilename(
             parent=self,
-            title="Save changes as",
+            title="Save as",
             filetypes=[("CSV File", ".csv"), ("TSV File", ".tsv"), ("Excel file", ".xlsx"), ("JSON File", ".json")],
             defaultextension=".csv",
             confirmoverwrite=True,
@@ -667,7 +667,7 @@ class Changelog_Popup(tk.Toplevel):
         self.start_work("Opened save dialog")
         newfile = filedialog.asksaveasfilename(
             parent=self,
-            title="Save selected changes as",
+            title="Save as",
             filetypes=[("CSV File", ".csv"), ("TSV File", ".tsv"), ("Excel file", ".xlsx"), ("JSON File", ".json")],
             defaultextension=".csv",
             confirmoverwrite=True,
@@ -1420,7 +1420,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.reset()
         filepath = filedialog.askopenfilename(parent=self, title="Select file")
         if not filepath:
-            self.stop_work("Open a file to import data")
+            self.stop_work("Select a file")
             return
         try:
             filepath = os.path.normpath(filepath)
@@ -3284,7 +3284,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.reset()
         filepath = filedialog.askopenfilename(parent=self, title="Select file")
         if not filepath:
-            self.stop_work("Open a file to import data", sels=True)
+            self.stop_work("Select a file", sels=True)
             return
         try:
             filepath = os.path.normpath(filepath)
@@ -3782,7 +3782,7 @@ class Save_New_Version_Presave_Popup(tk.Toplevel):
         self.wait_window()
 
     def choose_loc(self, event=None):
-        folder = os.path.normpath(filedialog.askdirectory(parent=self, title="Select a folder to save new version in"))
+        folder = os.path.normpath(filedialog.askdirectory(parent=self, title="Select a folder"))
         if folder == ".":
             return
         self.file_loc_display.set_my_value(folder)
@@ -4790,7 +4790,7 @@ class Text_Popup(tk.Toplevel):
     def save_text(self, text):
         newfile = filedialog.asksaveasfilename(
             parent=self,
-            title="Save text on popup window",
+            title="Save as",
             filetypes=[("Text File", ".txt"), ("CSV File", ".csv")],
             defaultextension=".txt",
             confirmoverwrite=True,
