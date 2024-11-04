@@ -9938,13 +9938,13 @@ class Tree_Editor(tk.Frame):
                 fg="black",
                 end=False,
             )
-        iids_sheet_rns = {self.rns[node.iid]: node.iid for node in self.tree.MT._row_index if node.iid in self.rns}
         options = self.tree.MT.cell_options
-        for cell, highlight in self.sheet.get_cell_options(key="highlight").items():
-            if cell[0] in iids_sheet_rns:
-                options[(key := (tree_rns[iids_sheet_rns[cell[0]]], cell[1]))] = {}
+        tree, sheet = self.tree.RI.tree, self.sheet.MT.data
+        for cell, dct in self.sheet.MT.cell_options.items():
+            if "highlight" in dct and (iid := sheet[cell[0]][self.ic].lower()) in tree:
+                options[key := (tree_rns[iid], cell[1])] = {}
                 options[key]["highlight"] = Highlight(
-                    bg=highlight[0],
+                    bg=dct["highlight"][0],
                     fg="black",
                     end=False,
                 )
