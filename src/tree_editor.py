@@ -9759,6 +9759,8 @@ class Tree_Editor(tk.Frame):
             self.tree.tree_open({self.selected_ID.lower()} | set(self.tree.descendants(self.selected_ID.lower())))
             self.tree.selection_set(selections)
             self.tree.selected = current
+        else:
+            self.tree.tree_open()
 
     def collapse_id(self, event=None):
         if current := self.tree.selected:
@@ -9768,6 +9770,8 @@ class Tree_Editor(tk.Frame):
             self.tree.selection_set(set(filter(self.tree.item_displayed, selections)))
             if self.tree.item_displayed(current_iid):
                 self.tree.selected = current
+        else:
+            self.tree.tree_close()
 
     def apply_date_format_change(self, new_format, snapshot=True):
         if snapshot:
