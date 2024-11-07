@@ -424,7 +424,7 @@ class Post_Import_Changes_Popup(tk.Toplevel):
         self.sheetdisplay.grid(row=0, column=0, sticky="nswe")
         self.status_bar = Status_Bar(
             self,
-            text=f"Successful changes: {sum(1 for b in successful if b)}/{len(successful)}",
+            text=f"Successful changes: {sum(successful)}/{len(successful)}",
             theme=theme,
         )
         self.status_bar.grid(row=1, column=0, sticky="nswe")

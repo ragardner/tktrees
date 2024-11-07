@@ -11038,17 +11038,18 @@ class Tree_Editor(tk.Frame):
             except Exception:
                 successful.append(False)
                 continue
-        if all(not b for b in successful) or not successful:
-            self.vs.pop()
-            self.vp -= 1
-            self.set_undo_label()
-        else:
+        num_successful = sum(successful)
+        if num_successful:
             self.changelog_append(
-                f"Imported {sum(1 for b in successful if b)} changes from: {os.path.basename(fp)}",
-                f"# Unsuccessful: {sum(1 for b in successful if not b)} # Unnecessary: {excluded}",
+                f"Imported {num_successful} changes from: {os.path.basename(fp)}",
+                f"Unsuccessful: {len(successful) - num_successful} Unnecessary: {excluded}",
                 "",
                 "",
             )
+        else:
+            self.vs.pop()
+            self.vp -= 1
+            self.set_undo_label()
         self.pc = int(self.hiers[0])
         self.clear_copied_details()
         self.refresh_hier_dropdown(0)
