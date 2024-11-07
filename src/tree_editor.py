@@ -11044,7 +11044,7 @@ class Tree_Editor(tk.Frame):
             self.set_undo_label()
         else:
             self.changelog_append(
-                f"Imported {sum(1 for b in successful if b)} changes from filename: {os.path.basename(fp)}",
+                f"Imported {sum(1 for b in successful if b)} changes from: {os.path.basename(fp)}",
                 f"# Unsuccessful: {sum(1 for b in successful if not b)} # Unnecessary: {excluded}",
                 "",
                 "",

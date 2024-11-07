@@ -388,13 +388,9 @@ class Export_Flattened_Popup(tk.Toplevel):
 class Post_Import_Changes_Popup(tk.Toplevel):
     def __init__(self, C, changes, successful, width=1000, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Successful changes", resizable=True)
-        self.total_changes = f"Total changes: {len(changes)}"
+        self.C = new_toplevel_chores(self, C, f"{app_title} - Imported Changes", resizable=True)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
-        self.changes = changes
-        self.successful = successful
-
         self.sheetdisplay = Sheet(
             self,
             theme=theme,
@@ -417,18 +413,20 @@ class Post_Import_Changes_Popup(tk.Toplevel):
         )
         self.sheetdisplay.headers(newheaders=changelog_header)
         self.sheetdisplay.row_index(0)
-        self.sheetdisplay.data_reference(newdataref=self.changes, reset_col_positions=True, reset_row_positions=True)
-        for i, b in enumerate(self.successful):
-            if b:
-                self.sheetdisplay.highlight_cells(row=i, canvas="row_index", bg="#40bd59", fg="black")
-                for c in range(6):
-                    self.sheetdisplay.highlight_cells(row=i, column=c, bg="#40bd59", fg="black")
-            else:
-                self.sheetdisplay.highlight_cells(row=i, canvas="row_index", bg="#db7463", fg="black")
-                for c in range(6):
-                    self.sheetdisplay.highlight_cells(row=i, column=c, bg="#db7463", fg="black")
+        self.sheetdisplay.data_reference(newdataref=changes, reset_col_positions=True, reset_row_positions=True)
+        self.sheetdisplay.hide_columns(0)
+        for i, b in enumerate(successful):
+            self.sheetdisplay.highlight(
+                self.sheetdisplay.span(i, index=True),
+                bg="#40bd59" if b else "#db7463",
+                fg="black",
+            )
         self.sheetdisplay.grid(row=0, column=0, sticky="nswe")
-        self.status_bar = Status_Bar(self, text=self.total_changes, theme=theme)
+        self.status_bar = Status_Bar(
+            self,
+            text=f"Successful changes: {sum(1 for b in successful if b)}/{len(successful)}",
+            theme=theme,
+        )
         self.status_bar.grid(row=1, column=0, sticky="nswe")
         self.bind("<Escape>", self.cancel)
         center(self, width, height)
