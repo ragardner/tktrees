@@ -122,7 +122,6 @@ from .toplevels import (
     Sort_Sheet_Popup,
     Text_Popup,
     Treeview_Id_Finder,
-    View_Column_Text_Popup,
     View_Id_Popup,
 )
 from .widgets import (
@@ -1930,22 +1929,23 @@ class Tree_Editor(tk.Frame):
             y1, x1 = self.rns[self.tree.rowitem(event.row)], event.column
         elif event.sheetname == "sheet":
             y1, x1 = event.loc
-        if (newtext := event.value) == self.sheet.data[y1][x1]:
+
+        newtext = event.value
+
+        if self.headers[x1].type_ in ("ID", "Parent") and not self.allow_spaces_ids_var:
+            newtext = re.sub(r"[\n\t\s]*", "", newtext)
+
+        if newtext == self.sheet.data[y1][x1]:
             return None
+
         ID = self.sheet.data[y1][self.ic]
         ik = ID.lower()
-        successful = False
+
         if self.headers[x1].type_ == "ID":
             id_ = ID
             ik = id_.lower()
-            if self.tree.selection():
-                tree_sel = self.tree.selection()[0]
-            else:
-                tree_sel = False
-            if not self.allow_spaces_ids_var:
-                newtext = re.sub(r"[\n\t\s]*", "", newtext)
-            success = self.change_ID_name(id_, newtext)
-            if not success:
+            tree_sel = self.tree.selection()
+            if not self.change_ID_name(id_, newtext):
                 return None
             self.changelog_append(
                 "Rename ID",
@@ -1964,10 +1964,10 @@ class Tree_Editor(tk.Frame):
             self.redo_tree_display()
             self.refresh_rows = set()
             if tree_sel:
-                try:
-                    self.tree.scroll_to_item(tree_sel)
-                    self.tree.selection_set(tree_sel)
-                except Exception:
+                if self.tree.exists(tree_sel[0]):
+                    self.tree.scroll_to_item(tree_sel[0])
+                    self.tree.selection_set(tree_sel[0])
+                else:
                     self.tree.scroll_to_item(newtext.lower())
                     self.tree.selection_set(newtext.lower())
             else:
@@ -1976,15 +1976,15 @@ class Tree_Editor(tk.Frame):
             self.tree_set_cell_size_to_text(y1, x1)
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
             return newtext
+
         elif self.headers[x1].type_ == "Parent":
             self.snapshot_paste_id()
             oldparent = f"{self.sheet.data[y1][x1]}"
-            if not self.allow_spaces_ids_var:
-                newtext = re.sub(r"[\n\t\s]*", "", newtext)
-            if successful := self.cut_paste_edit_cell(self.sheet.data[y1][self.ic], oldparent, x1, newtext):
+            tree_sel = self.tree.selection()
+            if self.cut_paste_edit_cell(ID, oldparent, x1, newtext):
                 self.changelog_append(
                     "Cut and paste ID + children" if self.nodes[ik].cn[x1] else "Cut and paste ID",
-                    self.sheet.data[y1][self.ic],
+                    ID,
                     f"Old parent: {oldparent if oldparent else 'n/a - Top ID'} old column #{x1 + 1} named: {self.headers[x1].name}",
                     f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.headers[x1].name}",
                 )
@@ -1992,43 +1992,40 @@ class Tree_Editor(tk.Frame):
                 self.redo_tree_display()
                 self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
                 self.tree_set_cell_size_to_text(y1, x1)
+                if tree_sel:
+                    self.tree.scroll_to_item(tree_sel[0])
+                    self.tree.selection_set(tree_sel)
                 self.disable_paste()
                 self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
                 return newtext
+
             else:
                 self.vs.pop()
                 self.vp -= 1
                 self.set_undo_label()
-        if not successful and self.headers[x1].type_ not in (
-            "Text Detail",
-            "Numerical Detail",
-            "Date Detail",
-        ):
-            if not self.auto_sort_nodes_bool:
-                self.update()
-                confirm = Ask_Confirm(
-                    self,
-                    "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
-                    theme=self.C.theme,
+                if not self.auto_sort_nodes_bool:
+                    self.update()
+                    confirm = Ask_Confirm(
+                        self,
+                        "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
+                        theme=self.C.theme,
+                    )
+                    if not confirm.boolean:
+                        return None
+                self.changelog_append(
+                    "Edit cell",
+                    f"ID: {ID} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
+                    f"{self.sheet.data[y1][x1]}",
+                    f"{newtext}",
                 )
-                if not confirm.boolean:
-                    return None
-            self.changelog_append(
-                "Edit cell",
-                f"ID: {ID} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
-                f"{self.sheet.data[y1][x1]}",
-                f"{newtext}",
-            )
-            self.snapshot_ctrl_x_v_del_key_id_par()
-            self.sheet.MT.data[y1][x1] = f"{newtext}"
-            self.rebuild_tree(redraw=False)
-            self.refresh_all_formatting(rows=(y1,))
-            # self.tree.scroll_to_item(ik)
-            # self.tree.selection_set(ik)
-            # self.save_info_get_saved_info()
-            self.redo_tree_display()
-            self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-            return None
+                self.snapshot_ctrl_x_v_del_key_id_par()
+                self.sheet.MT.data[y1][x1] = f"{newtext}"
+                self.rebuild_tree(redraw=False)
+                self.refresh_all_formatting(rows=(y1,))
+                self.redo_tree_display()
+                self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+                return None
+
         else:
             if not self.detail_is_valid_for_col(x1, newtext):
                 Error(
@@ -2656,12 +2653,9 @@ class Tree_Editor(tk.Frame):
             if not self.tree.MT.data[tree_datarn][x1] and not data[0][0]:
                 self.stop_work(self.get_tree_editor_status_bar_text())
                 return
-            successful = False
             self.snapshot_paste_id()
             oldparent = f"{self.tree.MT.data[tree_datarn][x1]}"
             if self.cut_paste_edit_cell(self.tree.MT.data[tree_datarn][self.ic], oldparent, x1, data[0][0]):
-                successful = True
-            if successful:
                 self.changelog_append(
                     (
                         "Cut and paste ID + children"
@@ -2683,6 +2677,7 @@ class Tree_Editor(tk.Frame):
                 self.disable_paste()
                 self.stop_work(self.get_tree_editor_status_bar_text())
                 return
+
             else:
                 self.vs.pop()
                 self.vp -= 1
@@ -2707,6 +2702,7 @@ class Tree_Editor(tk.Frame):
                 self.rebuild_tree()
                 self.stop_work(self.get_tree_editor_status_bar_text())
                 return
+
         need_rebuild = False
         need_rebuild_ID = False
         for c in range(x1, x1 + numcols):
@@ -2762,6 +2758,7 @@ class Tree_Editor(tk.Frame):
                         else:
                             self.sheet.MT.data[sheet_rn][c] = data[ndr][ndc]
                         cells_changed += 1
+
         self.disable_paste()
         if not cells_changed:
             self.vp -= 1
@@ -2827,12 +2824,9 @@ class Tree_Editor(tk.Frame):
             if not self.sheet.MT.data[y1][x1] and not data[0][0]:
                 self.stop_work(self.get_tree_editor_status_bar_text())
                 return
-            successful = False
             self.snapshot_paste_id()
             oldparent = f"{self.sheet.MT.data[y1][x1]}"
             if self.cut_paste_edit_cell(self.sheet.MT.data[y1][self.ic], oldparent, x1, data[0][0]):
-                successful = True
-            if successful:
                 self.changelog_append(
                     (
                         "Cut and paste ID + children"
@@ -2854,6 +2848,7 @@ class Tree_Editor(tk.Frame):
                 self.disable_paste()
                 self.stop_work(self.get_tree_editor_status_bar_text())
                 return
+
             else:
                 self.vs.pop()
                 self.vp -= 1
@@ -2878,6 +2873,7 @@ class Tree_Editor(tk.Frame):
                 self.rebuild_tree()
                 self.stop_work(self.get_tree_editor_status_bar_text())
                 return
+
         need_rebuild = False
         need_rebuild_ID = False
         for c in range(x1, x1 + numcols):
@@ -8657,21 +8653,6 @@ class Tree_Editor(tk.Frame):
         self.copied_details = {"copied": [], "id": ""}
         return "break"
 
-    def sheet_view_column_text(self):
-        rn = self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)
-        if rn:
-            rn = rn[0]
-            text = self.sheet.MT.data[rn][self.treecolsel]
-            heading = self.headers[self.treecolsel].name
-            ID = self.sheet.MT.data[rn][self.ic]
-            View_Column_Text_Popup(self, ID, heading, text, theme=self.C.theme)
-
-    def view_column_text(self):
-        rn = self.rns[self.selected_ID.lower()]
-        text = self.sheet.MT.data[rn][self.treecolsel]
-        heading = self.headers[self.treecolsel].name
-        View_Column_Text_Popup(self, self.selected_ID, heading, text, theme=self.C.theme)
-
     def tree_sheet_edit_detail(self):
         if self.tree.has_focus():
             selected = self.tree.selected
@@ -8684,79 +8665,11 @@ class Tree_Editor(tk.Frame):
                 return
             rn = selected.row
         col = selected.column
-        ik = self.sheet.MT.data[rn][self.ic].lower()
         currentdetail = self.sheet.MT.data[rn][col]
         heading = self.headers[col].name
         ID = self.sheet.MT.data[rn][self.ic]
         if self.headers[col].type_ in ("ID", "Parent"):
             popup = Edit_Detail_Text_Popup(self, ID, heading, currentdetail, theme=self.C.theme)
-            if not popup.result or self.sheet.MT.data[rn][col] == popup.saved_string:
-                return
-            successful = False
-            newtext = popup.saved_string
-            if self.headers[col].type_ == "Parent":
-                try:
-                    self.snapshot_paste_id()
-                    oldparent = f"{self.sheet.MT.data[rn][col]}"
-                    if self.cut_paste_edit_cell(
-                        self.sheet.MT.data[rn][self.ic],
-                        oldparent,
-                        col,
-                        newtext,
-                    ):
-                        successful = True
-                    if not successful:
-                        self.vs.pop()
-                        self.vp -= 1
-                        self.set_undo_label()
-                    else:
-                        self.changelog_append(
-                            ("Cut and paste ID + children" if self.nodes[ik].cn[col] else "Cut and paste ID"),
-                            self.sheet.MT.data[rn][self.ic],
-                            f"Old parent: {oldparent} old column #{col + 1} named: {self.headers[col].name}",
-                            f"New parent: {newtext} new column #{col + 1} named: {self.headers[col].name}",
-                        )
-                        self.refresh_all_formatting(rows=[rn])
-                        self.redo_tree_display()
-                        self.redraw_sheets()
-                        try:
-                            self.tree.scroll_to_item(self.sheet.MT.data[rn][self.ic].lower())
-                            self.tree.selection_set(self.sheet.MT.data[rn][self.ic].lower())
-                        except Exception:
-                            pass
-                        self.disable_paste()
-                        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-                        return
-                except Exception:
-                    self.disable_paste()
-                    successful = False
-                    self.vs.pop()
-                    self.vp -= 1
-                    self.set_undo_label()
-            if (not successful or self.headers[col].type_ == "ID") and self.headers[col].type_ not in (
-                "Text Detail",
-                "Numerical Detail",
-                "Date Detail",
-            ):
-                if self.headers[col].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool:
-                    confirm = Ask_Confirm(
-                        self,
-                        "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
-                        theme=self.C.theme,
-                    )
-                    if not confirm.boolean:
-                        self.stop_work(self.get_tree_editor_status_bar_text())
-                        return
-                self.changelog_append(
-                    "Edit cell",
-                    f"ID: {ID} column #{col + 1} named: {self.headers[col].name} with type: {self.headers[col].type_}",
-                    f"{self.sheet.MT.data[rn][col]}",
-                    f"{newtext}",
-                )
-                self.snapshot_ctrl_x_v_del_key_id_par()
-                self.sheet.MT.data[rn][col] = newtext
-                self.rebuild_tree()
-                self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         else:
             validation = self.headers[col].validation
             if validation:
@@ -8809,58 +8722,14 @@ class Tree_Editor(tk.Frame):
                         self.DATE_FORM,
                         theme=self.C.theme,
                     )
-            if not popup.result or self.sheet.MT.data[rn][col] == popup.saved_string:
-                return
-            if not popup.saved_string:
-                self.changelog_append(
-                    "Edit cell",
-                    f"ID: {ID} column #{col + 1} named: {self.headers[col].name} with type: {self.headers[col].type_}",
-                    f"{self.sheet.MT.data[rn][col]}",
-                    "",
+        if popup.result:
+            self.tree_sheet_edit_cell(
+                event=DotDict(
+                    sheetname="sheet",
+                    value=popup.saved_string,
+                    loc=(rn, col),
                 )
-            else:
-                if self.headers[col].type_ == "Date Detail":
-                    if "/" in popup.saved_string or "-" in popup.saved_string:
-                        try:
-                            datetime.datetime.strptime(popup.saved_string, self.DATE_FORM)
-                        except Exception:
-                            if int(popup.saved_string[:2]) > 28:
-                                date_corrected = False
-                                x = 31
-                                for i in range(4):
-                                    popup.saved_string = str(x) + popup.saved_string[2:]
-                                    x -= 1
-                                    try:
-                                        datetime.datetime.strptime(popup.saved_string, self.DATE_FORM)
-                                        date_corrected = True
-                                        break
-                                    except Exception:
-                                        pass
-                                if not date_corrected:
-                                    Error(self, "Date invalid   ", theme=self.C.theme)
-                                    return
-                            else:
-                                Error(self, "Date invalid   ", theme=self.C.theme)
-                                return
-                self.changelog_append(
-                    "Edit cell",
-                    f"ID: {ID} column #{col + 1} named: {self.headers[col].name} with type: {self.headers[col].type_}",
-                    f"{self.sheet.MT.data[rn][col]}",
-                    f"{popup.saved_string}",
-                )
-            self.snapshot_ctrl_x_v_del_key()
-            self.vs[-1]["cells"][(rn, col)] = f"{self.sheet.MT.data[rn][col]}"
-            self.disable_paste()
-            self.sheet.MT.data[rn][col] = popup.saved_string
-            self.refresh_all_formatting(rows=[rn])
-            self.refresh_tree_item(ID)
-            self.sheet.set_cell_size_to_text(
-                rn,
-                col,
-                only_set_if_too_small=True,
-                redraw=True,
             )
-            self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def sheet_copy_details(self):
         rn = self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)[0]

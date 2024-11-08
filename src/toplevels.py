@@ -2830,13 +2830,17 @@ class View_Id_Popup(tk.Toplevel):
         return event.value
 
     def sheet_end_edit_cell(self, event=None):
-        r = event.row
-        newtext = event.value
         y1 = int(self.ids_rn)
-        x1 = int(r)
+        x1 = event.row
         ID = self.C.sheet.MT.data[self.ids_rn][self.C.ic]
         ik = ID.lower()
-        currentdetail = self.C.sheet.MT.data[self.ids_rn][r]
+
+        currentdetail = self.C.sheet.MT.data[self.ids_rn][x1]
+        newtext = event.value
+
+        if newtext is not None and self.C.headers[x1].type_ in ("ID", "Parent") and not self.C.allow_spaces_ids_var:
+            newtext = re.sub(r"[\n\t\s]*", "", newtext)
+
         if newtext == currentdetail or newtext is None:
             self.bind("<Escape>", self.cancel)
             return
@@ -2878,46 +2882,44 @@ class View_Id_Popup(tk.Toplevel):
                 self.C.move_tree_pos()
             self._changes_made()
             return newtext
-        successful = False
-        if self.C.headers[x1].type_ == "Parent":
+
+        elif self.C.headers[x1].type_ == "Parent":
             self.C.snapshot_paste_id()
             oldparent = f"{self.C.sheet.MT.data[y1][x1]}"
-            if self.C.cut_paste_edit_cell(self.C.sheet.MT.data[y1][self.C.ic], oldparent, x1, newtext):
-                successful = True
-            if not successful:
-                self.C.vs.pop()
-                self.C.vp -= 1
-                self.C.set_undo_label()
-            else:
+
+            if self.C.cut_paste_edit_cell(ID, oldparent, x1, newtext):
                 self.C.changelog_append(
                     "Cut and paste ID + children" if self.C.nodes[ik].cn[x1] else "Cut and paste ID",
-                    self.C.sheet.MT.data[y1][self.C.ic],
+                    ID,
                     f"Old parent: {oldparent if oldparent else 'n/a - Top ID'} old column #{x1 + 1} named: {self.C.headers[x1].name}",
                     f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.C.headers[x1].name}",
                 )
                 self.C.redo_tree_display()
                 self.C.refresh_all_formatting(rows=[y1])
                 self.C.redraw_sheets()
-                try:
-                    self.C.tree.scroll_to_item(self.sheet[y1][self.ic].lower())
-                    self.C.tree.selection_set(self.sheet[y1][self.ic].lower())
-                except Exception:
-                    pass
+                if self.C.tree.exists(ik):
+                    self.C.tree.scroll_to_item(ik)
+                    self.C.tree.selection_set(ik)
                 self.C.disable_paste()
                 self._changes_made(scroll=True)
                 return newtext
-        if not successful and self.C.headers[x1].type_ not in ("Text Detail", "Numerical Detail", "Date Detail"):
-            self.C.changelog_append(
-                "Edit cell",
-                f"ID: {ID} column #{x1 + 1} named: {self.C.headers[x1].name} with type: {self.C.headers[x1].type_}",
-                f"{self.C.sheet.MT.data[y1][x1]}",
-                f"{newtext}",
-            )
-            self.C.snapshot_ctrl_x_v_del_key_id_par()
-            self.C.sheet.MT.data[y1][x1] = newtext
-            self.C.rebuild_tree()
-            self._changes_made(scroll=True)
-            return newtext
+
+            else:
+                self.C.vs.pop()
+                self.C.vp -= 1
+                self.C.set_undo_label()
+                self.C.changelog_append(
+                    "Edit cell",
+                    f"ID: {ID} column #{x1 + 1} named: {self.C.headers[x1].name} with type: {self.C.headers[x1].type_}",
+                    f"{self.C.sheet.MT.data[y1][x1]}",
+                    f"{newtext}",
+                )
+                self.C.snapshot_ctrl_x_v_del_key_id_par()
+                self.C.sheet.MT.data[y1][x1] = newtext
+                self.C.rebuild_tree()
+                self._changes_made(scroll=True)
+                return newtext
+
         else:
             if not self.C.detail_is_valid_for_col(x1, newtext):
                 self.bind("<Escape>", self.cancel)
@@ -4077,7 +4079,7 @@ class Edit_Detail_Numerical_Popup(tk.Toplevel):
 
 class Edit_Detail_Text_Popup(tk.Toplevel):
     def __init__(self, C, ID, column, current_detail, validation_values=[], set_value=None, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1")
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Edit cell")
         self.grid_columnconfigure(1, weight=1)
         self.id_label = Label(self, text="ID:", font=EF, theme=theme)
@@ -4134,36 +4136,6 @@ class Edit_Detail_Text_Popup(tk.Toplevel):
         self.result = True
         self.saved_string = self.validation_dropdown.get_my_value()
         self.destroy()
-
-    def cancel(self, event=None):
-        self.destroy()
-
-
-class View_Column_Text_Popup(tk.Toplevel):
-    def __init__(self, C, ID, column, text, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - View text")
-        self.grid_columnconfigure(1, weight=1)
-        self.id_label = Label(self, text="ID:", font=EF, theme=theme)
-        self.id_label.grid(row=0, column=0, sticky="nswe", padx=20)
-        self.id_display = Readonly_Entry_With_Scrollbar(self, theme=theme)
-        self.id_display.set_my_value(ID)
-        self.id_display.grid(row=0, column=1, sticky="nswe", pady=(20, 5), padx=(0, 20))
-        self.col_label = Label(self, text="Column:", font=EF, theme=theme)
-        self.col_label.grid(row=2, column=0, sticky="nswe", padx=20)
-        self.col_display = Readonly_Entry_With_Scrollbar(self, theme=theme)
-        self.col_display.set_my_value(column)
-        self.col_display.grid(row=2, column=1, sticky="nswe", pady=5, padx=(0, 20))
-        self.text_widget = Wrapped_Text_With_Find_And_Yscroll(self, text, "disabled", 15, theme=theme)
-        self.text_widget.grid(row=3, column=0, sticky="nswe", columnspan=2)
-        self.cancel_button = Button(self, text="Close", style="EF.Std.TButton", command=self.cancel)
-        self.cancel_button.grid(row=4, column=0, columnspan=2, sticky="nswe", padx=220, pady=(25, 20))
-        self.bind("<Escape>", self.cancel)
-        self.result = False
-        center(self, 850, 545)
-        self.deiconify()
-        self.text_widget.place_cursor()
-        self.wait_window()
 
     def cancel(self, event=None):
         self.destroy()

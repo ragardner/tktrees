@@ -5477,7 +5477,7 @@ class Sheet(tk.Frame):
     def selection_add(self, *items, run_binding: bool = True, redraw: bool = True) -> Sheet:
         to_open = []
         quick_displayed_check = set(self.MT.displayed_rows)
-        for item in unpack(items):
+        for item in filter(self.RI.tree.__contains__, unpack(items)):
             if self.RI.tree_rns[item] not in quick_displayed_check and self.RI.tree[item].parent:
                 to_open.extend(list(self.RI.get_iid_ancestors(item)))
         if to_open:
@@ -5492,7 +5492,7 @@ class Sheet(tk.Frame):
                     self.MT.displayed_rows,
                     self.RI.tree_rns[item],
                 )
-                for item in unpack(items)
+                for item in filter(self.RI.tree.__contains__, unpack(items))
             )
         ):
             self.MT.create_selection_box(
