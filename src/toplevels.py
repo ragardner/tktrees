@@ -35,7 +35,6 @@ from .constants import (
     green_fill,
     changelog_header,
     ctrl_button,
-    lge_font,
     lge_font_size,
     menu_kwargs,
     rc_button,
@@ -5038,7 +5037,7 @@ class Settings_Popup(tk.Toplevel):
         )
         self.show_tv_lvls_button.pack(side="top", anchor="nw", fill="x", pady=10)
 
-        self.layout_label = Label(self.general, text="Layout: ", font=EF, theme=theme, anchor="nw")
+        self.layout_label = Label(self.general, text="Layout: ", font=EFB, theme=theme, anchor="nw")
         self.layout_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
 
         self.layout_dropdown = Ez_Dropdown(self.general, font=EF)
@@ -5063,7 +5062,7 @@ class Settings_Popup(tk.Toplevel):
         self.layout_dropdown.bind("<<ComboboxSelected>>", self.set_layout)
         self.layout_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
 
-        self.indent_label = Label(self.general, text="Treeview Level Indent: ", font=EF, theme=theme, anchor="nw")
+        self.indent_label = Label(self.general, text="Treeview Level Indent: ", font=EFB, theme=theme, anchor="nw")
         self.indent_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
 
         self.indent_dropdown = Ez_Dropdown(self.general, font=EF)
@@ -5188,7 +5187,7 @@ class Settings_Popup(tk.Toplevel):
         )
         self.json_app_data_button.pack(side="top", anchor="nw", fill="x", pady=10)
 
-        self.json_format_label = Label(self.json, text="json Format: ", font=EF, theme=theme, anchor="nw")
+        self.json_format_label = Label(self.json, text="json Format: ", font=EFB, theme=theme, anchor="nw")
         self.json_format_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
 
         self.json_format_dropdown = Ez_Dropdown(self.json, font=EF)
@@ -5222,7 +5221,7 @@ class Settings_Popup(tk.Toplevel):
         self.date_format_label = Label(
             self.date_format,
             text="Date Format (per file): ",
-            font=EF,
+            font=EFB,
             theme=theme,
             anchor="nw",
         )
@@ -5270,7 +5269,7 @@ class Settings_Popup(tk.Toplevel):
         )
         self.appearance_header.pack(side="top", anchor="nw", fill="x", pady=(0, 20))
 
-        self.theme_label = Label(self.appearance, text="Theme:", font=EF, theme=theme, anchor="nw")
+        self.theme_label = Label(self.appearance, text="Theme:", font=EFB, theme=theme, anchor="nw")
         self.theme_label.pack(side="top", anchor="nw", fill="x")
 
         self.theme_dropdown = Ez_Dropdown(self.appearance, font=EF)
@@ -5299,19 +5298,10 @@ class Settings_Popup(tk.Toplevel):
         self.theme_dropdown.bind("<<ComboboxSelected>>", self.set_theme)
         self.theme_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
 
-        self.alignments_label = Label(
-            self.appearance,
-            text="Cell alignments",
-            font=lge_font,
-            theme=theme,
-            anchor="nw",
-        )
-        self.alignments_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
-
         self.table_alignment_label = Label(
             self.appearance,
-            text="Main table default cell alignment:",
-            font=EF,
+            text="Table text alignment:",
+            font=EFB,
             theme=theme,
             anchor="nw",
         )
@@ -5331,8 +5321,8 @@ class Settings_Popup(tk.Toplevel):
 
         self.index_alignment_label = Label(
             self.appearance,
-            "Row index align:",
-            font=BF,
+            "Index text alignment:",
+            font=EFB,
             anchor="nw",
             theme=theme,
         )
@@ -5352,8 +5342,8 @@ class Settings_Popup(tk.Toplevel):
 
         self.header_alignment_label = Label(
             self.appearance,
-            "Headers align:",
-            font=BF,
+            "Header text alignment:",
+            font=EFB,
             anchor="nw",
             theme=theme,
         )
@@ -5523,7 +5513,6 @@ class Settings_Popup(tk.Toplevel):
         self.theme_label.change_theme(theme)
         self.flattened_header.change_theme(theme)
         self.flattened_divider.config(bg=themes[theme].table_fg)
-        self.alignments_label.change_theme(theme)
         self.table_alignment_label.change_theme(theme)
         self.index_alignment_label.change_theme(theme)
         self.header_alignment_label.change_theme(theme)
