@@ -95,6 +95,10 @@ def write_cfg(d: dict) -> bool:
     return True
 
 
+def sort_key(s: str):
+    return [int(e) if e.isdigit() else e for e in re.split("([0-9]+)", s)]
+
+
 def case_insensitive_replace(find_, repl, text):
     return re.sub("(?i)" + re.escape(find_), lambda m: repl, text)
 

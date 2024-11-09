@@ -36,8 +36,6 @@ from .constants import (
     changelog_header,
     ctrl_button,
     lge_font_size,
-    menu_kwargs,
-    rc_button,
     sheet_header_font,
     std_font_size,
     themes,
@@ -57,6 +55,7 @@ from .functions import (
     get_json_format,
     get_json_from_file,
     json_to_sheet,
+    sort_key,
     str_io_csv_writer,
     to_clipboard,
     ws_x_data,
@@ -69,7 +68,6 @@ from .widgets import (
     Button,
     Date_Entry,
     Display_Text,
-    Edit_Condition_Frame,
     Entry_With_Scrollbar,
     Error_Frame,
     Ez_Dropdown,
@@ -2259,8 +2257,8 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
     def __init__(self, C, column, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.window_destroyed = False
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Edit conditional formatting")
-
+        self.C = new_toplevel_chores(self, C, f"{app_title} - {C.headers[column].name} conditional formatting")
+        self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.column = column
@@ -2321,8 +2319,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
             "#f85037",
         )
         self.internal_colors = {v: k for k, v in self.displayed_colors_dct.items()}
-        ak = lambda key: [int(c) if c.isdigit() else c.lower() for c in re.split("([0-9]+)", key)]  # noqa: E731
-        self.displayed_colors = sorted(self.displayed_colors_dct, key=ak)
+        self.displayed_colors = sorted(self.displayed_colors_dct, key=sort_key)
 
         self.formatting_view = Sheet(
             self,
@@ -2333,75 +2330,76 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
             header_font=sheet_header_font,
             auto_resize_row_index=True,
             auto_resize_columns=200,
-            headers=[f"{self.C.headers[self.column].name} Conditions", "Color"],
+            headers=["If cell is:", "Make color:"],
         )
-        self.formatting_view.basic_bindings(True)
-        self.formatting_view.enable_bindings(
-            "single",
-            "row_drag_and_drop",
-            "drag_select",
-            "column_width_resize",
-            "double_click_column_resize",
-            "row_select",
-            "arrowkeys",
-        )
-        self.formatting_view.extra_bindings([("row_index_drag_drop", self.formatting_view_drag)])
-        self.formatting_view.set_column_widths(column_widths=[500, 100])
-        self.formatting_view.grid(row=0, column=0, sticky="nswe")
-        self.formatting_view.bind(rc_button, self.formatting_view_rc)
-        self.formatting_view.bind("<Double-Button-1>", self.formatting_view_double_b1)
-        self.formatting_view.bind("<Delete>", self.del_condition)
+        self.formatting_view.dropdown("B", values=[""] + list(self.displayed_colors_dct), state="readonly")
 
-        self.formatting_view_rc_menu = tk.Menu(self.formatting_view, tearoff=0, **menu_kwargs)
-        self.formatting_view_rc_menu.add_command(label="Add condition", command=self.add_condition, **menu_kwargs)
-        self.formatting_view_rc_menu.add_command(label="Edit condition", command=self.edit_condition, **menu_kwargs)
-        self.formatting_view_rc_menu.add_separator()
-        self.formatting_view_rc_menu.add_command(label="Del condition", command=self.del_condition, **menu_kwargs)
-        self.formatting_view_rc_menu.add_command(
-            label="Del all & add num scale",
-            command=lambda: self.add_auto_conditions("num"),
-            state="normal" if self.C.headers[self.column].type_ == "Numerical Detail" else "disabled",
-            **menu_kwargs,
-        )
-        self.formatting_view_rc_menu.add_command(
-            label="Del all & add date scale",
-            command=lambda: self.add_auto_conditions("date"),
-            state="normal" if self.C.headers[self.column].type_ == "Date Detail" else "disabled",
-            **menu_kwargs,
-        )
+        if self.C.headers[self.column].type_ == "Numerical Detail":
+            self.formatting_view.popup_menu_add_command(
+                "Del all & add number scale", func=lambda: self.add_auto_conditions("num")
+            )
+        elif self.C.headers[self.column].type_ == "Date Detail":
+            self.formatting_view.popup_menu_add_command(
+                "Del all & add date scale", func=lambda: self.add_auto_conditions("date")
+            )
+        if len(self.C.headers[self.column].formatting) < 35:
+            self.C.headers[self.column].formatting.extend(
+                [["", ""] for _ in range(35 - len(self.C.headers[self.column].formatting))]
+            )
+        self.formatting_view.grid(row=0, column=0, sticky="nswe")
         self.redo_formatting_view()
+        self.enable_formatting_view()
         self.bind("<Escape>", self.USER_HAS_CLOSED_WINDOW)
         center(self, 1150, 600)
         self.deiconify()
         self.wait_window()
 
-    def formatting_view_double_b1(self, event):
-        region = self.formatting_view.identify_region(event)
-        if region == "table":
-            column = self.formatting_view.identify_column(event, allow_end=False)
-            condition = self.formatting_view.identify_row(event, allow_end=False)
-            if column is not None and condition is not None:
-                self.formatting_view.select_row(condition)
-                self.cond_sel = int(condition)
-                self.edit_condition()
+    def enable_formatting_view(self):
+        self.formatting_view.basic_bindings(True)
+        self.formatting_view.enable_bindings(
+            "single",
+            "row_drag_and_drop",
+            "edit_cell",
+            "drag_select",
+            "delete",
+            "rc_menu",
+            "rc_select",
+            "column_width_resize",
+            "double_click_column_resize",
+            "row_select",
+            "column_select",
+            "ctrl_select",
+            "arrowkeys",
+        )
+        self.formatting_view.extra_bindings("delete", self.formatting_view_delete)
+        self.formatting_view.extra_bindings("edit_cell", self.formatting_view_edit)
+        self.formatting_view.extra_bindings("row_index_drag_drop", self.formatting_view_drag)
 
-    def formatting_view_rc(self, event):
-        column = self.formatting_view.identify_column(event, allow_end=False)
-        condition = self.formatting_view.identify_row(event, allow_end=False)
-        self.formatting_view_rc_menu.entryconfig("Add condition", state="normal")
-        if column is not None and condition is not None:
-            self.formatting_view.select_row(condition)
-            self.cond_sel = int(condition)
-            self.formatting_view_rc_menu.entryconfig("Edit condition", state="normal")
-            self.formatting_view_rc_menu.entryconfig("Del condition", state="normal")
-            if len(self.C.headers[self.column].formatting) > 35:
-                self.formatting_view_rc_menu.entryconfig("Add condition", state="disabled")
-        else:
-            self.formatting_view.deselect()
-            self.cond_sel = len(self.C.headers[self.column].formatting)
-            self.formatting_view_rc_menu.entryconfig("Edit condition", state="disabled")
-            self.formatting_view_rc_menu.entryconfig("Del condition", state="disabled")
-        self.formatting_view_rc_menu.tk_popup(event.x_root, event.y_root)
+    def disable_formatting_view(self):
+        self.formatting_view.unbind("<Double-Button-1>")
+        self.formatting_view.unbind("<Delete>")
+        self.formatting_view.basic_bindings(False)
+        self.formatting_view.disable_bindings()
+        self.formatting_view.extra_bindings()
+
+    def refresh_formatting_view(self):
+        boxes = self.formatting_view.boxes
+        self.redo_formatting_view()
+        self.formatting_view.boxes = boxes
+
+    def formatting_view_delete(self, event):
+        for cell in event.cells.table:
+            if cell[1] == 0:
+                self.C.headers[self.column].formatting[cell[0]] = (
+                    "",
+                    self.C.headers[self.column].formatting[cell[0]][1],
+                )
+            else:
+                self.C.headers[self.column].formatting[cell[0]] = (
+                    self.C.headers[self.column].formatting[cell[0]][0],
+                    "",
+                )
+        self.refresh_formatting_view()
 
     def formatting_view_drag(self, event_data):
         self.C.headers[self.column].formatting = move_elements_by_mapping(
@@ -2410,73 +2408,39 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
         )
         self.redo_formatting_view()
 
-    def enable_formatting_view(self):
-        self.formatting_view.bind(rc_button, self.formatting_view_rc)
-        self.formatting_view.bind("<Double-Button-1>", self.formatting_view_double_b1)
-        self.formatting_view.bind("<Delete>", self.del_condition)
-        self.formatting_view.basic_bindings(True)
-        self.formatting_view.enable_bindings(
-            "single",
-            "row_drag_and_drop",
-            "column_width_resize",
-            "double_click_column_resize",
-            "row_select",
-            "arrowkeys",
-        )
-        self.formatting_view.extra_bindings([("row_index_drag_drop", self.formatting_view_drag)])
-
-    def disable_formatting_view(self):
-        self.formatting_view.unbind(rc_button)
-        self.formatting_view.unbind("<Double-Button-1>")
-        self.formatting_view.unbind("<Delete>")
-        self.formatting_view.basic_bindings(False)
-        self.formatting_view.disable_bindings()
-        self.formatting_view.extra_bindings()
-
-    def edit_condition(self, event=None):
+    def formatting_view_edit(self, event):
         self.disable_formatting_view()
-        header = self.C.headers[self.column]
-        if header.formatting:
-            cond_tuple = header.formatting[self.cond_sel]
-        else:
-            cond_tuple = ("", self.displayed_colors[0])
-        self.new_frame = Edit_Condition_Frame(
-            self,
-            condition=cond_tuple[0],
-            colors=self.displayed_colors,
-            color=self.internal_colors[cond_tuple[1]],
-            coltype=header.type_,
-            theme=self.C.C.theme,
-        )
-        self.new_frame.grid(row=1, column=0, sticky="nswe")
-        self.bind("<Return>", self.new_frame.confirm)
-        self.new_frame.wait_window()
-        if self.window_destroyed:
-            return
-        self.unbind("<Return>")
-        if not self.new_frame.result:
-            self.enable_formatting_view()
-            return
-        condition = self.C.check_condition_validity(self.column, self.new_frame.new_condition)
-        if condition.startswith("Error:"):
-            self.new_frame = Error_Frame(
-                self,
-                f" {condition}   See 'Help' under the 'File' menu for instructions on conditional formatting   ",
-                theme=self.C.C.theme,
+        column = event.column
+        if column == 0:
+            if event.value:
+                condition = self.C.check_condition_validity(self.column, event.value)
+                if condition.startswith("Error:"):
+                    self.new_frame = Error_Frame(
+                        self,
+                        f" {condition}   See 'Help' under the 'File' menu for instructions on conditional formatting   ",
+                        theme=self.C.C.theme,
+                    )
+                    self.new_frame.grid(row=1, column=0, sticky="nswe")
+                    self.bind("<Return>", self.new_frame.confirm)
+                    self.new_frame.wait_window()
+                    if not self.window_destroyed:
+                        self.unbind("<Return>")
+                        self.enable_formatting_view()
+                    return
+            self.C.headers[self.column].formatting[event.row] = (
+                condition,
+                self.C.headers[self.column].formatting[event.row][1],
             )
-            self.new_frame.grid(row=1, column=0, sticky="nswe")
-            self.bind("<Return>", self.new_frame.confirm)
-            self.new_frame.wait_window()
-            if self.window_destroyed:
-                return
-            self.unbind("<Return>")
+            self.refresh_formatting_view()
             self.enable_formatting_view()
-            return
-        color = self.displayed_colors_dct[self.new_frame.color]
-        self.C.headers[self.column].formatting[self.cond_sel] = (condition, color)
-        self.redo_formatting_view()
-        self.enable_formatting_view()
-        self.formatting_view.select_row(f"{self.cond_sel}")
+
+        elif column == 1:
+            self.C.headers[self.column].formatting[event.row] = (
+                self.C.headers[self.column].formatting[event.row][0],
+                self.displayed_colors_dct[event.value] if event.value else "",
+            )
+            self.refresh_formatting_view()
+            self.enable_formatting_view()
 
     def add_auto_conditions(self, num_or_date="num"):
         self.disable_formatting_view()
@@ -2661,59 +2625,22 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                             ("".join(("<= ", s1, " and > ", s2)), self.scale_colors[i - 1])
                         )
                         v = v - step
-        self.redo_formatting_view()
+        self.refresh_formatting_view()
         self.enable_formatting_view()
 
-    def add_condition(self, event=None):
-        self.disable_formatting_view()
-        header = self.C.headers[self.column]
-        cond_tuple = ("", self.displayed_colors[0])
-        self.new_frame = Edit_Condition_Frame(
-            self,
-            condition=cond_tuple[0],
-            colors=self.displayed_colors,
-            color=cond_tuple[1],
-            coltype=header.type_,
-            confirm_text="Add condition",
-            theme=self.C.C.theme,
-        )
-        self.new_frame.grid(row=1, column=0, sticky="nswe")
-        self.bind("<Return>", self.new_frame.confirm)
-        self.new_frame.wait_window()
-        if self.window_destroyed:
-            return
-        self.unbind("<Return>")
-        if not self.new_frame.result:
-            self.enable_formatting_view()
-            return
-        condition = self.C.check_condition_validity(self.column, self.new_frame.new_condition)
-        if condition.startswith("Error:"):
-            self.new_frame = Error_Frame(
-                self,
-                f" {condition}   See 'Help' under the 'File' menu for instructions on conditional formatting   ",
-                theme=self.C.C.theme,
-            )
-            self.new_frame.grid(row=1, column=0, sticky="nswe")
-            self.bind("<Return>", self.new_frame.confirm)
-            self.new_frame.wait_window()
-            if self.window_destroyed:
-                return
-            self.unbind("<Return>")
-            self.enable_formatting_view()
-            return
-        color = self.displayed_colors_dct[self.new_frame.color]
-        self.C.headers[self.column].formatting.insert(self.cond_sel, (condition, color))
-        self.redo_formatting_view()
-        self.enable_formatting_view()
-        self.formatting_view.select_row(self.cond_sel)
-
-    def del_condition(self, event=None):
-        elements = self.formatting_view.get_selected_rows(get_cells_as_rows=True, return_tuple=True)
-        if not elements:
-            return
-        self.C.headers[self.column].formatting[elements[0] : elements[-1] + 1] = []
-        self.cond_sel = None
-        self.redo_formatting_view()
+    def redo_formatting_view(self):
+        self.formatting_view.deselect("all")
+        self.formatting_view.dehighlight_cells(all_=True, redraw=False)
+        self.formatting_view.dehighlight_cells(canvas="row_index", all_=True, redraw=False)
+        cws = self.formatting_view.get_column_widths(canvas_positions=True)
+        self.formatting_view.data = [["", ""] for _ in range(35)]
+        for rn, (cond, color) in enumerate(self.C.headers[self.column].formatting):
+            self.formatting_view.set_cell_data(rn, 0, cond)
+            if color:
+                self.formatting_view.set_cell_data(rn, 1, self.internal_colors[color])
+                self.formatting_view.highlight_cells(row=rn, column=1, bg=color, fg="black")
+        self.formatting_view.set_column_widths(column_widths=cws, canvas_positions=True)
+        self.formatting_view.refresh()
 
     def USER_HAS_CLOSED_WINDOW(self, event=None):
         self.window_destroyed = True
@@ -2721,18 +2648,6 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
             self.destroy()
         except Exception:
             pass
-
-    def redo_formatting_view(self):
-        self.formatting_view.deselect("all")
-        self.formatting_view.dehighlight_cells(all_=True, redraw=False)
-        self.formatting_view.dehighlight_cells(canvas="row_index", all_=True, redraw=False)
-        self.formatting_view.set_sheet_data(
-            [[cond, self.internal_colors[color]] for cond, color in self.C.headers[self.column].formatting]
-        )
-        for i, (cond, color) in enumerate(self.C.headers[self.column].formatting):
-            self.formatting_view.highlight_cells(row=i, column=1, bg=color, fg="black")
-        self.formatting_view.set_column_widths(column_widths=[650, 200])
-        self.formatting_view.refresh()
 
 
 class View_Id_Popup(tk.Toplevel):
@@ -4348,7 +4263,6 @@ class Edit_Validation_Popup(tk.Toplevel):
         return event.value
 
     def confirm(self, event=None):
-        self.result = True
         self.new_validation = ",".join(filter(None, map(lambda row: row[0], self.validation_display.data)))
         self.destroy()
 

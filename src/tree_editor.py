@@ -88,6 +88,7 @@ from .functions import (
     new_saved_info,
     path_numbers,
     path_without_numbers,
+    sort_key,
     str_io_csv_writer,
     to_clipboard,
     try_remove,
@@ -2220,7 +2221,6 @@ class Tree_Editor(tk.Frame):
             self.reset_tagged_ids_dropdowns()
             self.rehighlight_tagged_ids()
             self.disable_paste()
-            self.refresh_all_formatting()
             self.redo_tree_display()
             self.tree.selection_set(*[i for i in treeselection if self.tree.exists(i)])
             self.move_tree_pos()
@@ -3786,7 +3786,7 @@ class Tree_Editor(tk.Frame):
         if insert_row is not None and snapshot:
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         if snapshot:
-            self.refresh_all_formatting()
+            self.refresh_all_formatting(rows=[len(self.sheet.data) - 1 if insert_row is None else insert_row])
         return True
 
     def change_ID_name(self, ID, new_name, snapshot=True, errors=True):
@@ -4996,14 +4996,11 @@ class Tree_Editor(tk.Frame):
                     else:
                         woc.append(n.k)
             self.topnodes_order[self.hiers[0]] = (
-                list(current_nodes) + sorted(wc, key=self.sort_key) + sorted(woc, key=self.sort_key)
+                list(current_nodes) + sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
             )
 
     def sort_node_key(self, n):
         return [int(e) if e.isdigit() else e for e in re.split("([0-9]+)", n.k)]
-
-    def sort_key(self, s: str):
-        return [int(e) if e.isdigit() else e for e in re.split("([0-9]+)", s)]
 
     def sort_node_cn(self, cn, h):
         wc = []
@@ -5052,7 +5049,7 @@ class Tree_Editor(tk.Frame):
                         wc.append(n.k)
                     else:
                         woc.append(n.k)
-            self.topnodes_order[h] = sorted(wc, key=self.sort_key) + sorted(woc, key=self.sort_key)
+            self.topnodes_order[h] = sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
 
     def gen_sheet_w_headers(self):
         yield [h.name for h in self.headers]
@@ -5660,7 +5657,7 @@ class Tree_Editor(tk.Frame):
         if validation:
             self.apply_validation_to_col(col)
         self.refresh_dropdowns()
-        self.refresh_all_formatting()
+        self.refresh_all_formatting(columns=[col])
         self.redo_tree_display()
         self.redraw_sheets()
 
@@ -5669,7 +5666,8 @@ class Tree_Editor(tk.Frame):
             return
         self.save_info_get_saved_info()
         Edit_Conditional_Formatting_Popup(self, column=col, theme=self.C.theme)
-        self.refresh_all_formatting()
+        self.headers[col].formatting = [tup for tup in self.headers[col].formatting if tup[1]]
+        self.refresh_all_formatting(columns=[col])
         self.redo_tree_display()
         self.redraw_sheets()
 

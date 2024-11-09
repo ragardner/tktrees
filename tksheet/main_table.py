@@ -2760,7 +2760,7 @@ class MainTable(tk.Canvas):
             self.rc_insert_row_enabled = True
             self.rc_popup_menus_enabled = True
             self.rc_select_enabled = True
-        if binding in ("all", "right_click_popup_menu", "rc_popup_menu"):
+        if binding in ("all", "right_click_popup_menu", "rc_popup_menu", "rc_menu"):
             self.rc_popup_menus_enabled = True
             self.rc_select_enabled = True
         if binding in ("all", "right_click_select", "rc_select"):
@@ -2823,7 +2823,7 @@ class MainTable(tk.Canvas):
             self.rc_insert_column_enabled = False
         if binding in bind_add_rows:
             self.rc_insert_row_enabled = False
-        if binding in ("all", "right_click_popup_menu", "rc_popup_menu"):
+        if binding in ("all", "right_click_popup_menu", "rc_popup_menu", "rc_menu"):
             self.rc_popup_menus_enabled = False
         if binding in ("all", "right_click_select", "rc_select"):
             self.rc_select_enabled = False
@@ -5701,7 +5701,7 @@ class MainTable(tk.Canvas):
                                 rtopgridln,
                                 crightgridln,
                                 self.row_positions[r + 1],
-                                fill=fill,
+                                fill=fill if kwargs["state"] != "disabled" else self.PAR.ops.table_grid_fg,
                                 outline=fill,
                                 tag=f"dd_{r}_{c}",
                                 draw_outline=not dd_drawn,
@@ -5719,7 +5719,7 @@ class MainTable(tk.Canvas):
                                 rtopgridln,
                                 crightgridln,
                                 self.row_positions[r + 1],
-                                fill=fill,
+                                fill=fill if kwargs["state"] != "disabled" else self.PAR.ops.table_grid_fg,
                                 outline=fill,
                                 tag=f"dd_{r}_{c}",
                                 draw_outline=not dd_drawn,
@@ -5738,7 +5738,7 @@ class MainTable(tk.Canvas):
                                 rtopgridln,
                                 crightgridln,
                                 self.row_positions[r + 1],
-                                fill=fill,
+                                fill=fill if kwargs["state"] != "disabled" else self.PAR.ops.table_grid_fg,
                                 outline=fill,
                                 tag=f"dd_{r}_{c}",
                                 draw_outline=not dd_drawn,
@@ -6904,6 +6904,8 @@ class MainTable(tk.Canvas):
                         new_r, new_c = down_cell_within_box(r, c, r1, c1, r2, c2, numrows, numcols)
                     else:
                         new_r, new_c = None, None
+                else:
+                    new_r, new_c = None, None
                 if isinstance(new_r, int):
                     self.set_currently_selected(new_r, new_c, item=self.selected.fill_iid)
                     self.see(
@@ -7034,9 +7036,10 @@ class MainTable(tk.Canvas):
         datarn = self.datarn(r)
         datacn = self.datacn(c)
         kwargs = self.get_cell_kwargs(datarn, datacn, key="dropdown")
-        if kwargs["state"] == "normal":
-            if not self.open_text_editor(event=event, r=r, c=c, dropdown=True):
-                return
+        if kwargs["state"] == "disabled":
+            return
+        if kwargs["state"] == "normal" and not self.open_text_editor(event=event, r=r, c=c, dropdown=True):
+            return
         win_h, anchor = self.get_dropdown_height_anchor(r, c)
         win_w = self.col_positions[c + 1] - self.col_positions[c] + 1
         if anchor == "nw":
