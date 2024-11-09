@@ -5458,7 +5458,7 @@ class Tree_Editor(tk.Frame):
         if not rows:
             return
 
-        all_conditions = []
+        all_conditions = {}
         all_num_col_indexes = set()
         all_date_col_indexes = set()
         all_text_col_indexes = set()
@@ -5474,12 +5474,12 @@ class Tree_Editor(tk.Frame):
             
         for col in columns:
             if self.headers[col].type_ in ("ID", "Parent"):
-                all_conditions.append(self.headers[col].formatting)
+                all_conditions[col] = self.headers[col].formatting
                 if self.headers[col].formatting:
                     all_text_col_indexes.add(col)
 
             elif self.headers[col].type_ == "Text Detail":
-                all_conditions.append(self.headers[col].formatting)
+                all_conditions[col] = self.headers[col].formatting
                 if self.headers[col].formatting:
                     all_text_col_indexes.add(col)
 
@@ -5513,7 +5513,7 @@ class Tree_Editor(tk.Frame):
                     )
                 if conditions:
                     all_num_col_indexes.add(col)
-                all_conditions.append(modified_conditions)
+                all_conditions[col] = modified_conditions
                 all_num_col_indexes.update(col_indexes)
 
             elif self.headers[col].type_ == "Date Detail":
@@ -5556,7 +5556,7 @@ class Tree_Editor(tk.Frame):
                     modified_conditions.append((modified_condition, condition[1]))
                 if conditions:
                     all_date_col_indexes.add(col)
-                all_conditions.append(modified_conditions)
+                all_conditions[col] = modified_conditions
                 all_date_col_indexes.update(col_indexes)
 
         for rn in rows:
