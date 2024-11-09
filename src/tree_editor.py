@@ -1989,7 +1989,7 @@ class Tree_Editor(tk.Frame):
                     f"Old parent: {oldparent if oldparent else 'n/a - Top ID'} old column #{x1 + 1} named: {self.headers[x1].name}",
                     f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.headers[x1].name}",
                 )
-                self.refresh_all_formatting(rows=[y1])
+                self.refresh_all_formatting(rows=y1, columns=x1)
                 self.redo_tree_display()
                 self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
                 self.tree_set_cell_size_to_text(y1, x1)
@@ -2022,7 +2022,6 @@ class Tree_Editor(tk.Frame):
                 self.snapshot_ctrl_x_v_del_key_id_par()
                 self.sheet.MT.data[y1][x1] = f"{newtext}"
                 self.rebuild_tree(redraw=False)
-                self.refresh_all_formatting(rows=(y1,))
                 self.redo_tree_display()
                 self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
                 return None
@@ -2066,7 +2065,7 @@ class Tree_Editor(tk.Frame):
             self.snapshot_ctrl_x_v_del_key()
             self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
             self.sheet.MT.data[y1][x1] = f"{newtext}"
-            self.refresh_all_formatting(rows=[y1])
+            self.refresh_all_formatting(rows=y1, columns=x1)
             self.refresh_tree_item(ID)
             self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
             self.tree_set_cell_size_to_text(y1, x1)
@@ -2254,7 +2253,7 @@ class Tree_Editor(tk.Frame):
                         f"Old parent: {oldparent} old column #{x1 + 1} named: {self.headers[x1].name}",
                         f"New parent: n/a - Top ID new column #{x1 + 1} named: {self.headers[x1].name}",
                     )
-                    self.refresh_all_formatting(rows=[y1])
+                    self.refresh_all_formatting(rows=y1, columns=x1)
                     self.redo_tree_display()
                     self.redraw_sheets()
                     try:
@@ -2325,8 +2324,11 @@ class Tree_Editor(tk.Frame):
             if need_rebuild or need_rebuild_ID:
                 self.rebuild_tree()
             else:
-                self.refresh_all_formatting(rows=(row for row, col in rows_and_cols))
-                for row, col in rows_and_cols:
+                self.refresh_all_formatting(
+                    rows=(row for row, _ in rows_and_cols),
+                    columns=set(col for row, cols in rows_and_cols for col in cols),
+                )
+                for row, _ in rows_and_cols:
                     self.refresh_tree_item(self.sheet.MT.data[row][self.ic])
             if cells_changed > 1:
                 self.changelog_append(
@@ -2462,7 +2464,7 @@ class Tree_Editor(tk.Frame):
                     f"Old parent: {oldparent} old column #{x1 + 1} named: {self.headers[x1].name}",
                     f"New parent: n/a - Top ID new column #{x1 + 1} named: {self.headers[x1].name}",
                 )
-                self.refresh_all_formatting(rows=[y1])
+                self.refresh_all_formatting(rows=y1)
                 self.redo_tree_display()
                 self.redraw_sheets()
                 try:
@@ -2499,7 +2501,6 @@ class Tree_Editor(tk.Frame):
                         )
                         self.sheet.MT.data[r][c] = ""
                         cells_changed += 1
-            self.sheet.del_row_positions({r for r, _ in rows_and_cols})
             if cells_changed:
                 self.sheet.deselect("all", redraw=False)
             to_clipboard(self.C, s.getvalue())
@@ -2557,7 +2558,10 @@ class Tree_Editor(tk.Frame):
         if need_rebuild or need_rebuild_ID:
             self.rebuild_tree()
         else:
-            self.refresh_all_formatting(rows=(row for row, col in rows_and_cols))
+            self.refresh_all_formatting(
+                rows=(row for row, _ in rows_and_cols),
+                columns=set(col for _, cols in rows_and_cols for col in cols),
+            )
             for r, cols in rows_and_cols:
                 self.refresh_tree_item(self.sheet.MT.data[r][self.ic])
         if cells_changed > 1:
@@ -2666,7 +2670,7 @@ class Tree_Editor(tk.Frame):
                     f"Old parent: {oldparent} old column #{x1 + 1} named: {self.headers[x1].name}",
                     f"New parent: {data[0][0]} new column #{x1 + 1} named: {self.headers[x1].name}",
                 )
-                self.refresh_all_formatting(rows=[self.rns[id_col[0]]])
+                self.refresh_all_formatting(rows=self.rns[id_col[0]])
                 self.redo_tree_display()
                 self.redraw_sheets()
                 try:
@@ -2837,7 +2841,7 @@ class Tree_Editor(tk.Frame):
                     f"Old parent: {oldparent} old column #{x1 + 1} named: {self.headers[x1].name}",
                     f"New parent: {data[0][0]} new column #{x1 + 1} named: {self.headers[x1].name}",
                 )
-                self.refresh_all_formatting(rows=[y1])
+                self.refresh_all_formatting(rows=y1)
                 self.redo_tree_display()
                 self.redraw_sheets()
                 try:
@@ -2942,7 +2946,7 @@ class Tree_Editor(tk.Frame):
         if need_rebuild or need_rebuild_ID:
             self.rebuild_tree()
         else:
-            self.refresh_all_formatting(rows=list(range(y1, y1 + numrows)))
+            self.refresh_all_formatting(rows=range(y1, y1 + numrows))
             for rn in range(y1, y1 + numrows):
                 self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
         if cells_changed > 1:
@@ -3786,7 +3790,7 @@ class Tree_Editor(tk.Frame):
         if insert_row is not None and snapshot:
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         if snapshot:
-            self.refresh_all_formatting(rows=[len(self.sheet.data) - 1 if insert_row is None else insert_row])
+            self.refresh_all_formatting(rows=len(self.sheet.data) - 1 if insert_row is None else insert_row)
         return True
 
     def change_ID_name(self, ID, new_name, snapshot=True, errors=True):
@@ -5451,8 +5455,8 @@ class Tree_Editor(tk.Frame):
 
     def refresh_all_formatting(
         self,
-        rows: Iterator | None = None,
-        columns: Iterator | None = None,
+        rows: int | Iterator | None = None,
+        columns: int | Iterator | None = None,
         dehighlight: bool = False,
     ):
         if dehighlight:
@@ -5460,8 +5464,13 @@ class Tree_Editor(tk.Frame):
 
         if rows is None:
             rows = range(len(self.sheet.MT.data))
+        elif isinstance(rows, int):
+            rows = (rows,)
+
         if columns is None:
             columns = tuple(range(len(self.headers)))
+        elif isinstance(columns, int):
+            columns = (columns,)
 
         if not rows:
             return
@@ -5679,7 +5688,7 @@ class Tree_Editor(tk.Frame):
         if validation:
             self.apply_validation_to_col(col)
         self.refresh_dropdowns()
-        self.refresh_all_formatting(columns=[col])
+        self.refresh_all_formatting(columns=col)
         self.redo_tree_display()
         self.redraw_sheets()
 
@@ -5689,7 +5698,7 @@ class Tree_Editor(tk.Frame):
         self.save_info_get_saved_info()
         Edit_Conditional_Formatting_Popup(self, column=col, theme=self.C.theme)
         self.headers[col].formatting = [tup for tup in self.headers[col].formatting if tup[1]]
-        self.refresh_all_formatting(columns=[col])
+        self.refresh_all_formatting(columns=col)
         self.redo_tree_display()
         self.redraw_sheets()
 
@@ -5733,7 +5742,7 @@ class Tree_Editor(tk.Frame):
             if not self.check_condition_validity(col, tup[0]).startswith("Error:")
         ]
         self.set_headers()
-        self.refresh_all_formatting(columns=(col,))
+        self.refresh_all_formatting(columns=col)
         self.redo_tree_display()
         self.redraw_sheets()
 
@@ -5859,7 +5868,7 @@ class Tree_Editor(tk.Frame):
         ]
         self.set_headers()
         self.redo_tree_display()
-        self.refresh_all_formatting(columns=(col,))
+        self.refresh_all_formatting(columns=col)
         self.redraw_sheets()
 
     def change_coltype_date(self, col, detect_date_form=False, warnings=False):
@@ -6275,7 +6284,7 @@ class Tree_Editor(tk.Frame):
             rn = new_vs["row"]["rn"]
             if new_vs["row"]["added_or_changed"] == "changed":
                 self.sheet.MT.data[rn] = new_vs["row"]["stored"]
-                self.refresh_all_formatting(rows=[rn])
+                self.refresh_all_formatting(rows=rn)
             elif new_vs["row"]["added_or_changed"] == "added":
                 del self.sheet.MT.data[rn]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
@@ -6291,7 +6300,7 @@ class Tree_Editor(tk.Frame):
                 self.sheet.MT.data[rn][h] = v
             self.refresh_all_formatting(rows=rows, columns=cols)
             self.sheet.MT.data[new_vs["ikrow"][0]][self.ic] = new_vs["ikrow"][2]
-            self.refresh_all_formatting(rows=[new_vs["ikrow"][0]], columns=[self.ic])
+            self.refresh_all_formatting(rows=new_vs["ikrow"][0], columns=self.ic)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.redo_tree_display()
 
@@ -6346,13 +6355,13 @@ class Tree_Editor(tk.Frame):
             self.redo_tree_display()
 
         elif new_vs["type"] == "col type text":
-            self.refresh_all_formatting(columns=[new_vs["col_num"]])
+            self.refresh_all_formatting(columns=new_vs["col_num"])
             self.redo_tree_display()
 
         elif new_vs["type"] == "col type num date":
             for rn, c in enumerate(pickle.loads(zlib.decompress(new_vs["col"]))):
                 self.sheet.MT.data[rn][new_vs["col_num"]] = c
-            self.refresh_all_formatting(columns=[new_vs["col_num"]])
+            self.refresh_all_formatting(columns=new_vs["col_num"])
             self.redo_tree_display()
 
         elif new_vs["type"] == "sort":
@@ -9212,17 +9221,18 @@ class Tree_Editor(tk.Frame):
         result_ok = True
         if result.iid not in self.rns:
             result_ok = False
-        sheet_rn = self.rns[result.iid]
-        try:
-            sheet_cell = self.sheet.data[sheet_rn][result.column].lower()
-            if (
-                (result.hierarchy not in self.hiers)
-                or (result.exact and sheet_cell != result.term)
-                or (not result.exact and result.term not in sheet_cell)
-            ):
+        else:
+            sheet_rn = self.rns[result.iid]
+            try:
+                sheet_cell = self.sheet.data[sheet_rn][result.column].lower()
+                if (
+                    (result.hierarchy not in self.hiers)
+                    or (result.exact and sheet_cell != result.term)
+                    or (not result.exact and result.term not in sheet_cell)
+                ):
+                    result_ok = False
+            except Exception:
                 result_ok = False
-        except Exception:
-            result_ok = False
         if not result_ok:
             Error(
                 self,

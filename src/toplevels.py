@@ -2063,6 +2063,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
             self.C.snapshot_ctrl_x_v_del_key()
 
         refresh_rows = set()
+        refresh_cols = set()
         newtext2 = ""
         if event == "mapping":
             failed_name_changes = set()
@@ -2153,6 +2154,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
                     if do_replace:
                         refresh_rows.add(r)
+                        refresh_cols.add(c)
                         if not ids:
                             self.C.vs[-1]["cells"][(r, c)] = f"{cell}"
                         self.C.changelog_append_no_unsaved(
@@ -2174,6 +2176,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
                     and self.C.detail_is_valid_for_col(c, case_insensitive_replace(search, newtext, cell))
                 ):
                     refresh_rows.add(r)
+                    refresh_cols.add(c)
                     if not ids:
                         self.C.vs[-1]["cells"][(r, c)] = f"{cell}"
                     newtext2 = case_insensitive_replace(search, newtext, cell)
@@ -2211,7 +2214,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         elif details_changed:
             self.C.disable_paste()
-            self.C.refresh_all_formatting(rows=refresh_rows)
+            self.C.refresh_all_formatting(rows=refresh_rows, columns=refresh_cols)
             for rn in refresh_rows:
                 self.C.refresh_tree_item(sheet_data[rn][self.C.ic])
             self.C.redraw_sheets()
@@ -2809,7 +2812,7 @@ class View_Id_Popup(tk.Toplevel):
                     f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.C.headers[x1].name}",
                 )
                 self.C.redo_tree_display()
-                self.C.refresh_all_formatting(rows=[y1])
+                self.C.refresh_all_formatting(rows=y1)
                 self.C.redraw_sheets()
                 if self.C.tree.exists(ik):
                     self.C.tree.scroll_to_item(ik)
@@ -2850,7 +2853,7 @@ class View_Id_Popup(tk.Toplevel):
             self.C.snapshot_ctrl_x_v_del_key()
             self.C.vs[-1]["cells"][(y1, x1)] = f"{self.C.sheet.MT.data[y1][x1]}"
             self.C.sheet.MT.data[y1][x1] = f"{newtext}"
-            self.C.refresh_all_formatting(rows=[y1])
+            self.C.refresh_all_formatting(rows=y1, columns=x1)
             self.C.refresh_tree_item(ID)
             self.C.disable_paste()
             self.C.redraw_sheets()
