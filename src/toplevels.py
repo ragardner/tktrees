@@ -2333,18 +2333,25 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
             header_font=sheet_header_font,
             auto_resize_row_index=True,
             auto_resize_columns=200,
-            headers=["If cell is:", "Make color:"],
         )
+
         self.formatting_view.dropdown("B", values=[""] + list(self.displayed_colors_dct), state="readonly")
 
         if self.C.headers[self.column].type_ == "Numerical Detail":
+            headers = ["If cell is: e.g. > 0 and < 5", "Make color:"]
             self.formatting_view.popup_menu_add_command(
                 "Del all & add number scale", func=lambda: self.add_auto_conditions("num")
             )
         elif self.C.headers[self.column].type_ == "Date Detail":
+            headers = ["If cell is: e.g. > 01/01/2020 and < 01/10/2020", "Make color:"]
             self.formatting_view.popup_menu_add_command(
                 "Del all & add date scale", func=lambda: self.add_auto_conditions("date")
             )
+        else:
+            headers = ["If cell is:", "Make color:"]
+
+        self.formatting_view.headers(headers)
+
         if len(self.C.headers[self.column].formatting) < 35:
             self.C.headers[self.column].formatting.extend(
                 [["", ""] for _ in range(35 - len(self.C.headers[self.column].formatting))]
