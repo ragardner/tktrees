@@ -9698,15 +9698,17 @@ class Tree_Editor(tk.Frame):
             except Exception:
                 self.saved_info[self.pc].boxes = tuple()
                 self.saved_info[self.pc].selected = tuple()
-        options = self.tree.RI.cell_options
         tree_rns = self.tree.RI.tree_rns
-        for ik in filter(self.tree.RI.tree.__contains__, self.tagged_ids):
-            options[tree_rns[ik]] = {}
-            options[tree_rns[ik]]["highlight"] = Highlight(
+        if self.tagged_ids:
+            options = self.tree.RI.cell_options
+            highlight = Highlight(
                 bg="orange",
                 fg="black",
                 end=False,
             )
+            for ik in filter(self.tree.RI.tree.__contains__, self.tagged_ids):
+                options[tree_rns[ik]] = {}
+                options[tree_rns[ik]]["highlight"] = highlight
         options = self.tree.MT.cell_options
         tree, sheet = self.tree.RI.tree, self.sheet.MT.data
         for cell, dct in self.sheet.MT.cell_options.items():
