@@ -5449,12 +5449,20 @@ class Tree_Editor(tk.Frame):
         # pass
         return condition
 
-    def refresh_all_formatting(self, rows: Iterator | None = None, columns: Iterator | None = None):
+    def refresh_all_formatting(
+        self,
+        rows: Iterator | None = None,
+        columns: Iterator | None = None,
+        dehighlight: bool = False,
+    ):
+        if dehighlight:
+            self.sheet.dehighlight_cells(all_=True, redraw=False)
+
         if rows is None:
             rows = range(len(self.sheet.MT.data))
         if columns is None:
             columns = tuple(range(len(self.headers)))
-            
+
         if not rows:
             return
 
@@ -5462,7 +5470,7 @@ class Tree_Editor(tk.Frame):
         all_num_col_indexes = set()
         all_date_col_indexes = set()
         all_text_col_indexes = set()
-        
+
         # used within eval if a date column condition contains "cd"
         try:
             cd = datetime.datetime.strptime(
@@ -5471,7 +5479,7 @@ class Tree_Editor(tk.Frame):
             )  # noqa: F841
         except Exception:
             cd = datetime.timedelta(days=0)  # noqa: F841
-            
+
         for col in columns:
             if self.headers[col].type_ in ("ID", "Parent"):
                 all_conditions[col] = self.headers[col].formatting
@@ -6230,8 +6238,7 @@ class Tree_Editor(tk.Frame):
         self.reset_tagged_ids_dropdowns()
         self.clear_copied_details()
         self.headers = new_vs["required_data"]["pickled"]["headers"]
-        if new_vs["type"] != "ctrl x, v, del key":
-            self.sheet.dehighlight_cells(all_=True, redraw=False)
+
         if new_vs["type"] in (
             "merge sheets",
             "ctrl x, v, del key",
@@ -6310,7 +6317,7 @@ class Tree_Editor(tk.Frame):
                     for h, par in zip(self.hiers, pickle.loads(zlib.decompress(obj.row))):
                         self.sheet.MT.data[obj.rn][h] = par
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting()
+            self.refresh_all_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "add col":
@@ -6318,7 +6325,7 @@ class Tree_Editor(tk.Frame):
             for r in range(len(self.sheet.MT.data)):
                 del self.sheet.MT.data[r][c]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting()
+            self.refresh_all_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "del cols":
@@ -6326,13 +6333,13 @@ class Tree_Editor(tk.Frame):
                 for rn, v in rowdict.items():
                     self.sheet.MT.data[rn].insert(cn, v)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting()
+            self.refresh_all_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "edit validation":
             for rn, c in enumerate(pickle.loads(zlib.decompress(new_vs["col"]))):
                 self.sheet.MT.data[rn][new_vs["col_num"]] = c
-            self.refresh_all_formatting()
+            self.refresh_all_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "rename col":
@@ -6353,7 +6360,7 @@ class Tree_Editor(tk.Frame):
                 self.sheet.MT.data[self.rns[new_vs["ids"][oldrn]]] for oldrn in range(len(new_vs["ids"]))
             ]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting()
+            self.refresh_all_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "prune changelog":
@@ -6397,7 +6404,7 @@ class Tree_Editor(tk.Frame):
             self.warnings = new_vs["build_warnings"]
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting()
+            self.refresh_all_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "get clipboard data":
@@ -6406,13 +6413,13 @@ class Tree_Editor(tk.Frame):
             self.warnings = new_vs["build_warnings"]
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting()
+            self.refresh_all_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "ctrl x, v, del key id par":
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting()
+            self.refresh_all_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "ctrl x, v, del key":
@@ -9695,11 +9702,7 @@ class Tree_Editor(tk.Frame):
         for cell, dct in self.sheet.MT.cell_options.items():
             if "highlight" in dct and (iid := sheet[cell[0]][self.ic].lower()) in tree:
                 options[key := (tree_rns[iid], cell[1])] = {}
-                options[key]["highlight"] = Highlight(
-                    bg=dct["highlight"][0],
-                    fg="black",
-                    end=False,
-                )
+                options[key]["highlight"] = dct["highlight"]
         return "break"
 
     def get_clipboard_data(self, event=None):
