@@ -9781,14 +9781,21 @@ class Tree_Editor(tk.Frame):
         self.selected_PAR = ""
         self.tree.reset()
         self.sheet.deselect("all", redraw=False)
-        self.sheet.dehighlight_cells(all_=True, redraw=False)
         self.pc = int(self.hiers[0])
         self.tv_label_col = self.ic
-        self.headers = self.fix_headers(self.new_sheet.pop(0), self.row_len)
-        self.headers = [Header(name) for name in self.headers]
-        self.headers[self.ic].type_ = "ID"
+
+        headers = self.fix_headers(self.new_sheet.pop(0), self.row_len)
+        headers = [Header(name) for name in headers]
+        headers[self.ic].type_ = "ID"
         for h in self.hiers:
-            self.headers[h].type_ = "Parent"
+            headers[h].type_ = "Parent"
+        existing_headers = {h.name: i for i, h in enumerate(self.headers)}
+        for h in headers:
+            if h.name in existing_headers and h.type_ == self.headers[existing_headers[h.name]].type_:
+                h.validation = self.headers[existing_headers[h.name]].validation
+                h.formatting = self.headers[existing_headers[h.name]].formatting
+        self.headers = headers
+
         self.sheet.MT.data = self.new_sheet
         self.new_sheet = []
         self.saved_info = new_saved_info(self.hiers)
@@ -9820,6 +9827,7 @@ class Tree_Editor(tk.Frame):
         self.tagged_ids = set(filter(self.rns.__contains__, self.tagged_ids))
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
+        self.refresh_all_formatting(dehighlight=True)
         self.redo_tree_display()
         self.refresh_dropdowns()
         self.changelog_append(
