@@ -9792,7 +9792,6 @@ class Tree_Editor(tk.Frame):
         existing_headers = {h.name: i for i, h in enumerate(self.headers)}
         for h in headers:
             if h.name in existing_headers and h.type_ == self.headers[existing_headers[h.name]].type_:
-                h.validation = self.headers[existing_headers[h.name]].validation
                 h.formatting = self.headers[existing_headers[h.name]].formatting
         self.headers = headers
 
