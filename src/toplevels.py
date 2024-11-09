@@ -5221,6 +5221,19 @@ class Settings_Popup(tk.Toplevel):
 
         self.theme_dropdown.bind("<<ComboboxSelected>>", self.set_theme)
         self.theme_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
+        
+        self.alternate_color_label = Label(self.appearance, text="Alternate row color:", font=EFB, theme=theme, anchor="nw")
+        self.alternate_color_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
+
+        self.alternate_color_dropdown = Ez_Dropdown(self.appearance, font=EF)
+        self.alternate_color_dropdown["values"] = [
+            "",
+            "light sky blue",
+            "dark slate gray",
+        ]
+        self.alternate_color_dropdown.set_my_value(self.C.tree.ops.alternate_color)
+        self.alternate_color_dropdown.bind("<<ComboboxSelected>>", self.set_alternate_color)
+        self.alternate_color_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
 
         self.table_alignment_label = Label(
             self.appearance,
@@ -5440,6 +5453,7 @@ class Settings_Popup(tk.Toplevel):
         self.table_alignment_label.change_theme(theme)
         self.index_alignment_label.change_theme(theme)
         self.header_alignment_label.change_theme(theme)
+        self.alternate_color_label.change_theme(theme)
         self.date_format.config(bg=themes[theme].top_left_bg)
         self.date_format_header.change_theme(theme)
         self.date_format_label.change_theme(theme)
@@ -5464,6 +5478,11 @@ class Settings_Popup(tk.Toplevel):
         self.C.tree.header_align(align, redraw=False)
         self.C.sheet.header_align(align, redraw=False)
         self.C.redraw_sheets()
+        
+    def set_alternate_color(self, event=None):
+        color = self.alternate_color_dropdown.get_my_value()
+        self.C.tree.set_options(alternate_color=color)
+        self.C.tree.set_options(show_horizontal_grid=False if color else True)
 
     def set_date_format(self, event=None):
         fmt = self.date_format_dropdown.get_my_value()

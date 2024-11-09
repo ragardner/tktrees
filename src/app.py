@@ -308,6 +308,7 @@ To get started once you have closed this popup, either:
             "Treeview indent": self.frames["tree_edit"].tree.ops.treeview_indent,
             "Treeview levels": self.frames["tree_edit"].tv_lvls_bool,
             "Auto select sheet id": self.frames["tree_edit"].mirror_var,
+            "Alternate color": self.frames["tree_edit"].tree.ops.alternate_color
         }
         self.check_window_size_settings()
 
@@ -343,6 +344,7 @@ To get started once you have closed this popup, either:
             "Treeview indent": self.frames["tree_edit"].tree.ops.treeview_indent,
             "Treeview levels": self.frames["tree_edit"].tv_lvls_bool,
             "Auto select sheet id": self.frames["tree_edit"].mirror_var,
+            "Alternate color": self.frames["tree_edit"].tree.ops.alternate_color,
         }
 
     def save_cfg(self, event=None, get_settings=True):
@@ -399,6 +401,8 @@ To get started once you have closed this popup, either:
         self.frames["tree_edit"].xlsx_flattened_add_index = self.configsettings["Flatten add index"]
         if "Treeview indent" in self.configsettings:
             self.frames["tree_edit"].tree.ops.treeview_indent = self.configsettings["Treeview indent"]
+        if "Alternate color" in self.configsettings:
+            self.frames["tree_edit"].tree.ops.alternate_color = self.configsettings["Alternate color"]
         if "Treeview levels" in self.configsettings:
             self.frames["tree_edit"].tv_lvls_bool = self.configsettings["Treeview levels"]
         if "Auto select sheet id" in self.configsettings:
