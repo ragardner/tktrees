@@ -5228,8 +5228,8 @@ class Settings_Popup(tk.Toplevel):
         self.alternate_color_dropdown = Ez_Dropdown(self.appearance, font=EF)
         self.alternate_color_dropdown["values"] = [
             "",
-            "light sky blue",
-            "dark slate gray",
+            "#f5f8fa",
+            "#1f1f26",
         ]
         self.alternate_color_dropdown.set_my_value(self.C.tree.ops.alternate_color)
         self.alternate_color_dropdown.bind("<<ComboboxSelected>>", self.set_alternate_color)

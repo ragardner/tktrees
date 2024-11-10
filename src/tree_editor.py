@@ -1429,6 +1429,7 @@ class Tree_Editor(tk.Frame):
         self.copied = []
         self.cut_children_dct = {}
         self.sheet.row_index(self.ic)
+        self.tree.set_options(show_horizontal_grid=False if self.tree.ops.alternate_color else True)
         self.refresh_all_formatting()
         self.redo_tree_display()
         self.disable_paste()
@@ -9853,8 +9854,7 @@ class Tree_Editor(tk.Frame):
             Error(self, "Invalid file format   ", theme=self.C.theme)
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
-        check = os.path.isfile(fp)
-        if not check:
+        if not os.path.isfile(fp):
             Error(self, "Filepath invalid   ", theme=self.C.theme)
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
@@ -10826,10 +10826,10 @@ class Tree_Editor(tk.Frame):
         self.set_headers()
         self.sheet.deselect().set_column_widths().row_index(newindex=self.ic)
         self.sheet.delete_out_of_bounds_options()
-        self.refresh_all_formatting()
         self.refresh_rows = set()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
+        self.refresh_all_formatting()
         self.redo_tree_display()
         self.refresh_dropdowns()
         self.stop_work(self.get_tree_editor_status_bar_text())
