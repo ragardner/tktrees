@@ -5229,7 +5229,7 @@ class Settings_Popup(tk.Toplevel):
         self.alternate_color_dropdown["values"] = [
             "",
             "#f5f8fa",
-            "#1f1f26",
+            "#14141b",
         ]
         self.alternate_color_dropdown.set_my_value(self.C.tree.ops.alternate_color)
         self.alternate_color_dropdown.bind("<<ComboboxSelected>>", self.set_alternate_color)
