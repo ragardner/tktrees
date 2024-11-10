@@ -2023,8 +2023,7 @@ class Tree_Editor(tk.Frame):
                 )
                 self.snapshot_ctrl_x_v_del_key_id_par()
                 self.sheet.MT.data[y1][x1] = f"{newtext}"
-                self.rebuild_tree(redraw=False)
-                self.redo_tree_display()
+                self.rebuild_tree()
                 self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
                 return None
 
