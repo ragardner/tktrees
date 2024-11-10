@@ -500,6 +500,7 @@ class Tree_Editor(tk.Frame):
             default_column_width=200,
             treeview=True,
             row_drag_and_drop_perform=False,
+            alternate_color="#f6f9fb",
         )
         self.tree.grid(row=0, column=0, sticky="nswe")
 

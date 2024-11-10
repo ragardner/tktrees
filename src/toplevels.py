@@ -5230,7 +5230,7 @@ class Settings_Popup(tk.Toplevel):
         # self.alternate_color_dropdown = Ez_Dropdown(self.appearance, font=EF)
         # self.alternate_color_dropdown["values"] = [
         #     "",
-        #     "#f5f8fa",
+        #     "#f6f9fb",
         #     "#14141b",
         # ]
         # self.alternate_color_dropdown.set_my_value(self.C.tree.ops.alternate_color)
@@ -5319,7 +5319,7 @@ class Settings_Popup(tk.Toplevel):
         self.general_button = Button(
             self.page_chooser_frame,
             text="General",
-            style="EF.Std.TButton",
+            style="ERR_ASK_FNT.Std.TButton",
             command=self.goto_general,
         )
         self.general_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
@@ -5327,7 +5327,7 @@ class Settings_Popup(tk.Toplevel):
         self.xlsx_button = Button(
             self.page_chooser_frame,
             text="xlsx Save Options",
-            style="EF.Std.TButton",
+            style="ERR_ASK_FNT.Std.TButton",
             command=self.goto_xlsx,
         )
         self.xlsx_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
@@ -5335,7 +5335,7 @@ class Settings_Popup(tk.Toplevel):
         self.json_button = Button(
             self.page_chooser_frame,
             text="json Save Options",
-            style="EF.Std.TButton",
+            style="ERR_ASK_FNT.Std.TButton",
             command=self.goto_json,
         )
         self.json_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
@@ -5343,7 +5343,7 @@ class Settings_Popup(tk.Toplevel):
         self.date_format_button = Button(
             self.page_chooser_frame,
             text="Date Format",
-            style="EF.Std.TButton",
+            style="ERR_ASK_FNT.Std.TButton",
             command=self.goto_date_format,
         )
         self.date_format_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
@@ -5351,14 +5351,14 @@ class Settings_Popup(tk.Toplevel):
         self.appearance_button = Button(
             self.page_chooser_frame,
             text="Appearance",
-            style="EF.Std.TButton",
+            style="ERR_ASK_FNT.Std.TButton",
             command=self.goto_appearance,
         )
         self.appearance_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
 
         self.general.tkraise()
         self.bind("<Escape>", self.cancel)
-        center(self, 540, 650)
+        center(self, 600, 650)
         self.deiconify()
         self.wait_window()
 
@@ -5503,7 +5503,7 @@ class Settings_Popup(tk.Toplevel):
         on = self.alternate_color_button.get_checked()
         if on:
             if self.theme_dropdown.get_my_value().lower().startswith("light"):
-                color = "#f5f8fa"
+                color = "#f6f9fb"
             else:
                 color = "#14141b"
         else:

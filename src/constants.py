@@ -69,6 +69,7 @@ config_name = ".tktrees.json"
 if USER_OS == "darwin":
     TF = ("Calibri", 16, "bold")
     BF = ("Calibri", 13, "normal")
+    BFB = ("Calibri", 13, "bold")
     STSF = ("Calibri", 13, "bold")
     EF = ("Calibri", 13, "normal")
     EFB = ("Calibri", 14, "bold")
@@ -79,6 +80,7 @@ if USER_OS == "darwin":
 else:
     TF = ("Calibri", 15, "bold")
     BF = ("Calibri", 11, "normal")
+    BFB = ("Calibri", 11, "bold")
     STSF = ("Calibri", 11, "bold")
     EF = ("Calibri", 11, "normal")
     EFB = ("Calibri", 13, "bold")
