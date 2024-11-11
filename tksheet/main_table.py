@@ -5175,60 +5175,65 @@ class MainTable(tk.Canvas):
             kwargs = self.get_cell_kwargs(datarn, datacn, key="highlight")
         if alt := bool(not kwargs and alternate_color and r % 2):
             kwargs = alternate_color
+
         if kwargs:
-            # cell is not actually highlighted
+            fill = kwargs[0]
+            if fill and not fill.startswith("#"):
+                fill = color_map[fill]
+
+            # cell is a single currently selected cell box
+            #         not highlighted
+            #         on an alternate row color
             if alt and dont_blend:
-                tf = self.PAR.ops.table_fg if kwargs[1] is None else kwargs[1]
-                if kwargs[0] is not None:
-                    fill = kwargs[0]
+                txtfg = self.PAR.ops.table_fg
+
             # cell is highlighted and cell selected
             elif "cells" in selections and (r, c) in selections["cells"]:
-                tf = (
+                txtfg = (
                     self.PAR.ops.table_selected_cells_fg
                     if kwargs[1] is None or self.PAR.ops.display_selected_fg_over_highlights
                     else kwargs[1]
                 )
-                if kwargs[0] is not None:
-                    c_1 = kwargs[0] if kwargs[0].startswith("#") else color_map[kwargs[0]]
+                if fill:
                     fill = (
-                        f"#{int((int(c_1[1:3], 16) + sel_cells_bg[0]) / 2):02X}"
-                        + f"{int((int(c_1[3:5], 16) + sel_cells_bg[1]) / 2):02X}"
-                        + f"{int((int(c_1[5:], 16) + sel_cells_bg[2]) / 2):02X}"
+                        f"#{int((int(fill[1:3], 16) + sel_cells_bg[0]) / 2):02X}"
+                        + f"{int((int(fill[3:5], 16) + sel_cells_bg[1]) / 2):02X}"
+                        + f"{int((int(fill[5:], 16) + sel_cells_bg[2]) / 2):02X}"
                     )
+
             # cell is highlighted and row selected
             elif "rows" in selections and r in selections["rows"]:
-                tf = (
+                txtfg = (
                     self.PAR.ops.table_selected_rows_fg
                     if kwargs[1] is None or self.PAR.ops.display_selected_fg_over_highlights
                     else kwargs[1]
                 )
-                if kwargs[0] is not None:
-                    c_1 = kwargs[0] if kwargs[0].startswith("#") else color_map[kwargs[0]]
+                if fill:
                     fill = (
-                        f"#{int((int(c_1[1:3], 16) + sel_rows_bg[0]) / 2):02X}"
-                        + f"{int((int(c_1[3:5], 16) + sel_rows_bg[1]) / 2):02X}"
-                        + f"{int((int(c_1[5:], 16) + sel_rows_bg[2]) / 2):02X}"
+                        f"#{int((int(fill[1:3], 16) + sel_rows_bg[0]) / 2):02X}"
+                        + f"{int((int(fill[3:5], 16) + sel_rows_bg[1]) / 2):02X}"
+                        + f"{int((int(fill[5:], 16) + sel_rows_bg[2]) / 2):02X}"
                     )
+
             # cell is highlighted and column selected
             elif "columns" in selections and c in selections["columns"]:
-                tf = (
+                txtfg = (
                     self.PAR.ops.table_selected_columns_fg
                     if kwargs[1] is None or self.PAR.ops.display_selected_fg_over_highlights
                     else kwargs[1]
                 )
-                if kwargs[0] is not None:
-                    c_1 = kwargs[0] if kwargs[0].startswith("#") else color_map[kwargs[0]]
+                if fill:
                     fill = (
-                        f"#{int((int(c_1[1:3], 16) + sel_cols_bg[0]) / 2):02X}"
-                        + f"{int((int(c_1[3:5], 16) + sel_cols_bg[1]) / 2):02X}"
-                        + f"{int((int(c_1[5:], 16) + sel_cols_bg[2]) / 2):02X}"
+                        f"#{int((int(fill[1:3], 16) + sel_cols_bg[0]) / 2):02X}"
+                        + f"{int((int(fill[3:5], 16) + sel_cols_bg[1]) / 2):02X}"
+                        + f"{int((int(fill[5:], 16) + sel_cols_bg[2]) / 2):02X}"
                     )
+
             # cell is just highlighted
             else:
-                tf = self.PAR.ops.table_fg if kwargs[1] is None else kwargs[1]
-                if kwargs[0] is not None:
-                    fill = kwargs[0]
-            if kwargs[0] is not None:
+                txtfg = self.PAR.ops.table_fg if kwargs[1] is None else kwargs[1]
+
+            if fill:
                 highlight_fn = partial(
                     self.redraw_highlight,
                     x1=fc + 1,
@@ -5258,14 +5263,14 @@ class MainTable(tk.Canvas):
                     )
         elif not kwargs:
             if "cells" in selections and (r, c) in selections["cells"]:
-                tf = self.PAR.ops.table_selected_cells_fg
+                txtfg = self.PAR.ops.table_selected_cells_fg
             elif "rows" in selections and r in selections["rows"]:
-                tf = self.PAR.ops.table_selected_rows_fg
+                txtfg = self.PAR.ops.table_selected_rows_fg
             elif "columns" in selections and c in selections["columns"]:
-                tf = self.PAR.ops.table_selected_columns_fg
+                txtfg = self.PAR.ops.table_selected_columns_fg
             else:
-                tf = self.PAR.ops.table_fg
-        return tf, redrawn
+                txtfg = self.PAR.ops.table_fg
+        return txtfg, redrawn
 
     def redraw_highlight(self, x1, y1, x2, y2, fill, outline, tag, can_width=None, pc=None):
         if not is_type_int(pc) or pc >= 100:
