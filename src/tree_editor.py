@@ -2216,7 +2216,6 @@ class Tree_Editor(tk.Frame):
             else:
                 self.changelog_singular("Delete ID from all hierarchies")
             self.sheet.del_rows(rows, redraw=False)
-            self.sheet.delete_out_of_bounds_options()
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.reset_tagged_ids_dropdowns()
             self.rehighlight_tagged_ids()
@@ -4541,7 +4540,6 @@ class Tree_Editor(tk.Frame):
                     )
         if snapshot:
             self.refresh_all_formatting(rows=to_refresh)
-            self.sheet.delete_out_of_bounds_options()
 
     def del_id_orphan(self, ID, parent, snapshot=True):
         ik = ID.lower()
@@ -4595,7 +4593,6 @@ class Tree_Editor(tk.Frame):
                     )
         if snapshot:
             self.refresh_all_formatting(rows=to_refresh)
-            self.sheet.delete_out_of_bounds_options()
 
     def del_id_all_hiers_orphan(self, ID, snapshot=True):
         ik = ID.lower()
@@ -4788,7 +4785,6 @@ class Tree_Editor(tk.Frame):
             if pk == "":
                 try_remove(self.topnodes_order[self.pc], ik)
         if snapshot:
-            self.sheet.delete_out_of_bounds_options()
             self.refresh_all_formatting(rows=to_refresh)
 
     def del_id_and_children_all_hiers(self, ID, parent, snapshot=True):
@@ -4838,8 +4834,6 @@ class Tree_Editor(tk.Frame):
                     self.topnodes_order[self.pc].remove(ik)
         except Exception:
             pass
-        if snapshot:
-            self.sheet.delete_out_of_bounds_options()
 
     def details(self, ik):
         allrows = []
@@ -6093,7 +6087,6 @@ class Tree_Editor(tk.Frame):
         self.row_len -= len(cols)
         self.adjust_hiers_del_cols(cols)
         if snapshot:
-            self.sheet.delete_out_of_bounds_options()
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def del_cols_rc(self, event=None):
@@ -8537,7 +8530,6 @@ class Tree_Editor(tk.Frame):
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
-        self.sheet.delete_out_of_bounds_options()
         self.redo_tree_display()
         self.redraw_sheets()
         self.focus_tree()
@@ -8638,7 +8630,6 @@ class Tree_Editor(tk.Frame):
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
-        self.sheet.delete_out_of_bounds_options()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
         self.redraw_sheets()
@@ -8661,7 +8652,6 @@ class Tree_Editor(tk.Frame):
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
-        self.sheet.delete_out_of_bounds_options()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
         self.redraw_sheets()
@@ -9712,10 +9702,17 @@ class Tree_Editor(tk.Frame):
                 options[tree_rns[ik]]["highlight"] = highlight
         options = self.tree.MT.cell_options
         tree, sheet = self.tree.RI.tree, self.sheet.MT.data
+        numrows = len(sheet)
+        out_of_bounds = []
         for cell, dct in self.sheet.MT.cell_options.items():
-            if "highlight" in dct and (iid := sheet[cell[0]][self.ic].lower()) in tree:
+            if cell[0] >= numrows or cell[1] >= self.row_len:
+                out_of_bounds.append(cell)
+            elif "highlight" in dct and (iid := sheet[cell[0]][self.ic].lower()) in tree:
                 options[key := (tree_rns[iid], cell[1])] = {}
                 options[key]["highlight"] = dct["highlight"]
+        if out_of_bounds:
+            for cell in out_of_bounds:
+                del self.sheet.MT.cell_options[cell]
         return "break"
 
     def get_clipboard_data(self, event=None):
@@ -9823,7 +9820,6 @@ class Tree_Editor(tk.Frame):
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.sheet.set_row_heights().set_column_widths().row_index(newindex=self.ic)
-        self.sheet.delete_out_of_bounds_options()
         self.tagged_ids = set(filter(self.rns.__contains__, self.tagged_ids))
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
@@ -10825,7 +10821,6 @@ class Tree_Editor(tk.Frame):
         self.refresh_hier_dropdown(0)
         self.set_headers()
         self.sheet.deselect().set_column_widths().row_index(newindex=self.ic)
-        self.sheet.delete_out_of_bounds_options()
         self.refresh_rows = set()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
