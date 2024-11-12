@@ -6648,7 +6648,6 @@ class Tree_Editor(tk.Frame):
         )
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.disable_paste()
-        self.rehighlight_tagged_ids()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.redraw_sheets()
 
