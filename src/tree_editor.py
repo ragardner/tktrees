@@ -1328,6 +1328,7 @@ class Tree_Editor(tk.Frame):
             self.remake_topnodes_order()
             self.tree.set_column_widths()
             self.sheet.set_row_heights().set_column_widths()
+        self.saved_sheet_row_heights = {}
         self.reset_tree_search_dropdown()
         self.reset_sheet_search_dropdown()
         self.selected_ID = ""
@@ -1850,6 +1851,19 @@ class Tree_Editor(tk.Frame):
             )
         )
 
+    def edit_cell_rebuild(self, ID, y1, x1, value):
+        self.changelog_append(
+            "Edit cell",
+            f"ID: {ID} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
+            f"{self.sheet.data[y1][x1]}",
+            f"{value}",
+        )
+        self.snapshot_ctrl_x_v_del_key_id_par()
+        self.sheet.MT.data[y1][x1] = f"{value}"
+        self.rebuild_tree()
+        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        return None
+
     def tree_sheet_edit_cell(self, event=None):
         if not event or event.value is None:
             return None
@@ -1873,8 +1887,10 @@ class Tree_Editor(tk.Frame):
             id_ = ID
             ik = id_.lower()
             tree_sel = self.tree.selection()
-            if not self.change_ID_name(id_, newtext):
+            if not self.change_ID_name(id_, newtext, errors=False):
+                self.edit_cell_rebuild(ID, y1, x1, newtext)
                 return None
+
             self.changelog_append(
                 "Rename ID",
                 id_,
@@ -1940,17 +1956,7 @@ class Tree_Editor(tk.Frame):
                     )
                     if not confirm.boolean:
                         return None
-                self.changelog_append(
-                    "Edit cell",
-                    f"ID: {ID} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
-                    f"{self.sheet.data[y1][x1]}",
-                    f"{newtext}",
-                )
-                self.snapshot_ctrl_x_v_del_key_id_par()
-                self.sheet.MT.data[y1][x1] = f"{newtext}"
-                self.rebuild_tree()
-                self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-                return None
+                self.edit_cell_rebuild(ID, y1, x1, newtext)
 
         else:
             if not self.detail_is_valid_for_col(x1, newtext):
@@ -2040,7 +2046,7 @@ class Tree_Editor(tk.Frame):
                         iids_cols[self.tree.rowitem(row)].update(
                             (self.tree.data_c(c) for c in range(box.coords.from_c, box.coords.upto_c))
                         )
-                self.delete_boxes(
+                self.clear_cells(
                     rows_and_cols=sorted(
                         ((self.rns[iid], sorted(cols)) for iid, cols in iids_cols.items()),
                         key=itemgetter(0),
@@ -2049,7 +2055,7 @@ class Tree_Editor(tk.Frame):
                 )
         elif self.sheet.has_focus():
             if rows := sorted(self.sheet.get_selected_rows(), reverse=True):
-                self.delete_boxes(rows=rows)
+                self.clear_cells(rows=rows)
             elif boxes := self.sheet.boxes:
                 iids_cols = defaultdict(set)
                 for box in boxes:
@@ -2057,7 +2063,7 @@ class Tree_Editor(tk.Frame):
                         iids_cols[self.sheet.data[self.sheet.data_r(row)][self.ic].lower()].update(
                             (self.sheet.data_c(c) for c in range(box.coords.from_c, box.coords.upto_c))
                         )
-                self.delete_boxes(
+                self.clear_cells(
                     rows_and_cols=sorted(
                         ((self.rns[iid], sorted(cols)) for iid, cols in iids_cols.items()),
                         key=itemgetter(0),
@@ -2067,16 +2073,106 @@ class Tree_Editor(tk.Frame):
 
     def tree_del_selected_all_hiers(self):
         if iids := self.tree.selection():
-            self.delete_boxes(rows=sorted(map(self.rns.get, iids), reverse=True))
+            self.clear_cells(rows=sorted(map(self.rns.get, iids), reverse=True))
 
-    def delete_boxes(
+    def rebuild_tree(self, deselect=True, redraw=False):
+        if deselect:
+            self.sheet.deselect("all", redraw=False)
+        self.nodes = {}
+        self.clear_copied_details()
+        self.auto_sort_nodes_bool = True
+        self.save_info_get_saved_info()
+        self.sheet.MT.data, self.nodes = TreeBuilder().build(
+            input_sheet=self.sheet.MT.data,
+            output_sheet=self.new_sheet,
+            row_len=self.row_len,
+            ic=self.ic,
+            hiers=self.hiers,
+            nodes=self.nodes,
+            add_warnings=False,
+            strip=not self.allow_spaces_ids_var,
+        )
+        self.new_sheet = []
+        self.fix_associate_sort_edit_cells()
+        self.rns = {}
+        rhs = []
+        default_row_height = self.sheet.MT.get_default_row_height()
+        for i, r in enumerate(self.sheet.data):
+            ik = r[self.ic].lower()
+            self.rns[ik] = i
+            if ik in self.saved_sheet_row_heights:
+                rhs.append(self.saved_sheet_row_heights[ik])
+            else:
+                rhs.append(default_row_height)
+        self.sheet.set_row_heights(rhs)
+        self.reset_tagged_ids_dropdowns()
+        self.rehighlight_tagged_ids()
+        self.refresh_rows = set()
+        self.refresh_all_formatting()
+        if redraw:
+            self.redraw_sheets()
+        self.redo_tree_display()
+        return
+
+    def cut_key(self, event: object = None) -> None:
+        if self.tree.has_focus():
+            if iids := tuple(
+                self.tree.rowitem(row)
+                for box in self.tree.boxes
+                for row in range(box.coords.from_r, box.coords.upto_r)
+                if box[1] == "rows"
+            ):
+                self.cut_ids(iids=iids)
+            elif boxes := self.tree.ctrl_boxes:
+                iids_cols = defaultdict(set)
+                for box in boxes:
+                    for row in range(box.from_r, box.upto_r):
+                        iids_cols[self.tree.rowitem(row)].update(
+                            (self.tree.data_c(c) for c in range(box.from_c, box.upto_c))
+                        )
+                self.clear_cells(
+                    rows_and_cols=[(self.rns[iid], sorted(cols)) for iid, cols in iids_cols.items()], clipboard=True
+                )
+        elif self.sheet.has_focus():
+            if boxes := self.sheet.ctrl_boxes:
+                iids_cols = defaultdict(set)
+                for box in boxes:
+                    for row in range(box.from_r, box.upto_r):
+                        iids_cols[self.sheet.data[self.sheet.data_r(row)][self.ic].lower()].update(
+                            (self.sheet.data_c(c) for c in range(box.from_c, box.upto_c))
+                        )
+                self.clear_cells(
+                    rows_and_cols=sorted(
+                        ((self.rns[iid], sorted(cols)) for iid, cols in iids_cols.items()),
+                        key=itemgetter(0),
+                    ),
+                    clipboard=True,
+                )
+
+    def get_need_rebuild(
+        self,
+        rows_and_cols: tuple[int, tuple[int]],
+    ) -> tuple[bool, bool]:
+        need_rebuild = False
+        need_rebuild_ID = False
+        for _, cols in rows_and_cols:
+            if need_rebuild_ID and need_rebuild:
+                break
+            for c in cols:
+                if need_rebuild_ID and need_rebuild:
+                    break
+                if c == self.ic:
+                    need_rebuild_ID = True
+                if self.headers[c].type_ == "Parent":
+                    need_rebuild = True
+        return need_rebuild, need_rebuild_ID
+
+    def clear_cells(
         self,
         rows: Sequence[int] | None = None,
         rows_and_cols: tuple[int, tuple[int]] | None = None,
+        clipboard: bool = False,
     ) -> None:
-        """
-        rows must be datarns sorted in reverse order
-        """
         if rows:
             newline = "\n"
             confirm = Ask_Confirm(
@@ -2150,256 +2246,28 @@ class Tree_Editor(tk.Frame):
             self.move_tree_pos()
             self.redraw_sheets()
             self.stop_work(self.get_tree_editor_status_bar_text())
-        elif rows_and_cols:
-            self.start_work("Editing cells... ")
-            successful = False
-            if (
-                len(rows_and_cols) == 1
-                and len(rows_and_cols[0][1]) == 1
-                and self.headers[rows_and_cols[0][1][0]].type_ == "Parent"
-            ):
-                y1 = rows_and_cols[0][0]
-                x1 = rows_and_cols[0][1][0]
-                if not self.sheet.MT.data[y1][x1]:
-                    self.stop_work(self.get_tree_editor_status_bar_text())
-                    return
-                self.snapshot_paste_id()
-                oldparent = f"{self.sheet.MT.data[y1][x1]}"
-                if self.cut_paste_edit_cell(self.sheet.MT.data[y1][self.ic], oldparent, x1, ""):
-                    successful = True
-                if successful:
-                    self.changelog_append(
-                        (
-                            "Cut and paste ID + children"
-                            if self.nodes[self.sheet.MT.data[y1][self.ic].lower()].cn[x1]
-                            else "Cut and paste ID"
-                        ),
-                        self.sheet.MT.data[y1][self.ic],
-                        f"Old parent: {oldparent} old column #{x1 + 1} named: {self.headers[x1].name}",
-                        f"New parent: n/a - Top ID new column #{x1 + 1} named: {self.headers[x1].name}",
-                    )
-                    self.refresh_all_formatting(rows=y1, columns=x1)
-                    self.redo_tree_display()
-                    self.redraw_sheets()
-                    try:
-                        self.tree.scroll_to_item(self.sheet.MT.data[y1][self.ic].lower())
-                        self.tree.selection_set(self.sheet.MT.data[y1][self.ic].lower())
-                    except Exception:
-                        pass
-                    self.disable_paste()
-                    self.stop_work(self.get_tree_editor_status_bar_text())
-                    return
-                else:
-                    self.vs.pop()
-                    self.vp -= 1
-                    self.set_undo_label()
-            cells_changed = 0
-            need_rebuild, need_rebuild_ID = self.get_need_rebuild(rows_and_cols=rows_and_cols)
-            if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool:
-                confirm = Ask_Confirm(
-                    self,
-                    "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
-                    theme=self.C.theme,
-                )
-                if not confirm.boolean:
-                    self.stop_work(self.get_tree_editor_status_bar_text())
-                    return
-            if need_rebuild_ID:
-                self.snapshot_ctrl_x_v_del_key_id_par()
-                for r, cols in rows_and_cols:
-                    self.untag_id(self.sheet.MT.data[r][self.ic].lower())
-                    for c in cols:
-                        if self.sheet.MT.data[r][c] != "":
-                            self.changelog_append_no_unsaved(
-                                "Edit cell |",
-                                f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                                f"{self.sheet.MT.data[r][c]}",
-                                "",
-                            )
-                            self.sheet.MT.data[r][c] = ""
-                            cells_changed += 1
-                if cells_changed:
-                    self.sheet.deselect("all", redraw=False)
-            elif need_rebuild:
-                self.snapshot_ctrl_x_v_del_key_id_par()
-            else:
-                self.snapshot_ctrl_x_v_del_key()
-            if not need_rebuild_ID:
-                for r, cols in rows_and_cols:
-                    for c in cols:
-                        if self.sheet.MT.data[r][c] != "":
-                            if not need_rebuild:
-                                self.vs[-1]["cells"][(r, c)] = f"{self.sheet.MT.data[r][c]}"
-                            self.changelog_append_no_unsaved(
-                                "Edit cell |",
-                                f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                                f"{self.sheet.MT.data[r][c]}",
-                                "",
-                            )
-                            self.sheet.MT.data[r][c] = ""
-                            cells_changed += 1
-            self.disable_paste()
-            if not cells_changed:
-                self.vs.pop()
-                self.vp -= 1
-                self.set_undo_label()
-                self.redraw_sheets()
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-            if need_rebuild or need_rebuild_ID:
-                self.rebuild_tree()
-            else:
-                self.refresh_all_formatting(
-                    rows=(row for row, _ in rows_and_cols),
-                    columns=set(col for row, cols in rows_and_cols for col in cols),
-                )
-                for row, _ in rows_and_cols:
-                    self.refresh_tree_item(self.sheet.MT.data[row][self.ic])
-            if cells_changed > 1:
-                self.changelog_append(
-                    f"Edit {cells_changed} cells",
-                    "",
-                    "",
-                    "",
-                )
-            else:
-                self.changelog_singular("Edit cell")
-            self.redraw_sheets()
-            self.stop_work(self.get_tree_editor_status_bar_text())
+            return
 
-    def rebuild_tree(self, deselect=True, redraw=False):
-        if deselect:
-            self.sheet.deselect("all", redraw=False)
-        self.nodes = {}
-        self.clear_copied_details()
-        self.auto_sort_nodes_bool = True
-        self.sheet.MT.data, self.nodes = TreeBuilder().build(
-            input_sheet=self.sheet.MT.data,
-            output_sheet=self.new_sheet,
-            row_len=self.row_len,
-            ic=self.ic,
-            hiers=self.hiers,
-            nodes=self.nodes,
-            add_warnings=False,
-            strip=not self.allow_spaces_ids_var,
-        )
-        self.save_info_get_saved_info()
-        self.new_sheet = []
-        self.fix_associate_sort_edit_cells()
-        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.reset_tagged_ids_dropdowns()
-        self.rehighlight_tagged_ids()
-        self.refresh_rows = set()
-        self.refresh_all_formatting()
-        if redraw:
-            self.redraw_sheets()
-        self.redo_tree_display()
-        return
+        if not rows_and_cols:
+            return
 
-    def cut_key(self, event: object = None) -> None:
-        if self.tree.has_focus():
-            if iids := tuple(
-                self.tree.rowitem(row)
-                for box in self.tree.boxes
-                for row in range(box.coords.from_r, box.coords.upto_r)
-                if box[1] == "rows"
-            ):
-                self.cut_ids(iids=iids)
-            elif boxes := self.tree.ctrl_boxes:
-                iids_cols = defaultdict(set)
-                for box in boxes:
-                    for row in range(box.from_r, box.upto_r):
-                        iids_cols[self.tree.rowitem(row)].update(
-                            (self.tree.data_c(c) for c in range(box.from_c, box.upto_c))
-                        )
-                self.cut_boxes(rows_and_cols=[(self.rns[iid], sorted(cols)) for iid, cols in iids_cols.items()])
-        elif self.sheet.has_focus():
-            if boxes := self.sheet.ctrl_boxes:
-                iids_cols = defaultdict(set)
-                for box in boxes:
-                    for row in range(box.from_r, box.upto_r):
-                        iids_cols[self.sheet.data[self.sheet.data_r(row)][self.ic].lower()].update(
-                            (self.sheet.data_c(c) for c in range(box.from_c, box.upto_c))
-                        )
-                self.cut_boxes(
-                    rows_and_cols=sorted(
-                        ((self.rns[iid], sorted(cols)) for iid, cols in iids_cols.items()),
-                        key=itemgetter(0),
-                    )
-                )
-
-    def get_need_rebuild(
-        self,
-        rows_and_cols: tuple[int, tuple[int]],
-    ) -> tuple[bool, bool]:
-        need_rebuild = False
-        need_rebuild_ID = False
-        for _, cols in rows_and_cols:
-            if need_rebuild_ID and need_rebuild:
-                break
-            for c in cols:
-                if need_rebuild_ID and need_rebuild:
-                    break
-                if c == self.ic:
-                    need_rebuild_ID = True
-                if self.headers[c].type_ == "Parent":
-                    need_rebuild = True
-        return need_rebuild, need_rebuild_ID
-
-    def cut_boxes(
-        self,
-        rows_and_cols: tuple[int, tuple[int]] | None = None,
-    ) -> None:
-        """
-        Handles
-        - all cut events in sheet
-        - cell + column cut events in tree, but not row
-        """
         s, writer = str_io_csv_writer(dialect=csv.excel_tab)
-        self.start_work("Working... ")
-        successful = False
-        # editing a single parent cell
-        if (
-            len(rows_and_cols) == 1
-            and len(rows_and_cols[0][1]) == 1
-            and self.headers[rows_and_cols[0][1][0]].type_ == "Parent"
-        ):
+        # editing a single cell
+        if len(rows_and_cols) == 1 and len(rows_and_cols[0][1]) == 1:
             y1 = rows_and_cols[0][0]
             x1 = rows_and_cols[0][1][0]
-            to_clipboard(self.C, self.sheet.MT.data[y1][x1])
-            if not self.sheet.MT.data[y1][x1]:
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-            self.snapshot_paste_id()
-            oldparent = f"{self.sheet.MT.data[y1][x1]}"
-            if self.cut_paste_edit_cell(self.sheet.MT.data[y1][self.ic], oldparent, x1, ""):
-                successful = True
-            if not successful:
-                self.vs.pop()
-                self.vp -= 1
-                self.set_undo_label()
-            else:
-                self.changelog_append(
-                    (
-                        "Cut and paste ID + children"
-                        if self.nodes[self.sheet.MT.data[y1][self.ic].lower()].cn[x1]
-                        else "Cut and paste ID"
-                    ),
-                    self.sheet.MT.data[y1][self.ic],
-                    f"Old parent: {oldparent} old column #{x1 + 1} named: {self.headers[x1].name}",
-                    f"New parent: n/a - Top ID new column #{x1 + 1} named: {self.headers[x1].name}",
+            if clipboard:
+                to_clipboard(self.C, self.sheet.MT.data[y1][x1])
+            self.tree_sheet_edit_cell(
+                event=DotDict(
+                    sheetname="sheet",
+                    value="",
+                    loc=(rows_and_cols[0][0], rows_and_cols[0][1][0]),
                 )
-                self.refresh_all_formatting(rows=y1)
-                self.redo_tree_display()
-                self.redraw_sheets()
-                try:
-                    self.tree.scroll_to_item(self.sheet.MT.data[y1][self.ic].lower())
-                    self.tree.selection_set(self.sheet.MT.data[y1][self.ic].lower())
-                except Exception:
-                    pass
-                self.disable_paste()
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
+            )
+            return
+
+        self.start_work("Working... ")
         cells_changed = 0
         need_rebuild, need_rebuild_ID = self.get_need_rebuild(rows_and_cols=rows_and_cols)
         if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool:
@@ -2411,25 +2279,7 @@ class Tree_Editor(tk.Frame):
             if not confirm.boolean:
                 self.stop_work(self.get_tree_editor_status_bar_text())
                 return
-        if need_rebuild_ID:
-            self.snapshot_ctrl_x_v_del_key_id_par()
-            for r, cols in rows_and_cols:
-                self.untag_id(self.sheet.MT.data[r][self.ic].lower())
-                writer.writerow(self.sheet.MT.data[r])
-                for c in cols:
-                    if self.sheet.MT.data[r][c] != "":
-                        self.changelog_append_no_unsaved(
-                            "Edit cell |",
-                            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                            f"{self.sheet.MT.data[r][c]}",
-                            "",
-                        )
-                        self.sheet.MT.data[r][c] = ""
-                        cells_changed += 1
-            if cells_changed:
-                self.sheet.deselect("all", redraw=False)
-            to_clipboard(self.C, s.getvalue())
-        elif need_rebuild:
+        if need_rebuild:
             clipboarded = []
             self.snapshot_ctrl_x_v_del_key_id_par()
             for r, cols in rows_and_cols:
@@ -2447,10 +2297,11 @@ class Tree_Editor(tk.Frame):
                         cells_changed += 1
                 clipboarded.append(_row)
                 writer.writerow(_row)
-            if len(clipboarded) == 1 and len(clipboarded[0]) == 1 and "\n" not in clipboarded[0][0]:
-                to_clipboard(self.C, clipboarded[0][0])
-            else:
-                to_clipboard(self.C, s.getvalue())
+            if clipboard:
+                if len(clipboarded) == 1 and len(clipboarded[0]) == 1 and "\n" not in clipboarded[0][0]:
+                    to_clipboard(self.C, clipboarded[0][0])
+                else:
+                    to_clipboard(self.C, s.getvalue())
         else:
             self.snapshot_ctrl_x_v_del_key()
             for r, cols in rows_and_cols:
@@ -2468,10 +2319,11 @@ class Tree_Editor(tk.Frame):
                         self.sheet.MT.data[r][c] = ""
                         cells_changed += 1
                 writer.writerow(_row)
-            if len(self.vs[-1]["cells"]) == 1 and "\n" not in next(iter(self.vs[-1]["cells"].values())):
-                to_clipboard(self.C, next(iter(self.vs[-1]["cells"].values())))
-            else:
-                to_clipboard(self.C, s.getvalue())
+            if clipboard:
+                if len(self.vs[-1]["cells"]) == 1 and "\n" not in next(iter(self.vs[-1]["cells"].values())):
+                    to_clipboard(self.C, next(iter(self.vs[-1]["cells"].values())))
+                else:
+                    to_clipboard(self.C, s.getvalue())
         self.disable_paste()
         if not cells_changed:
             self.vs.pop()
@@ -2565,7 +2417,6 @@ class Tree_Editor(tk.Frame):
                 return
         except Exception:
             return
-        self.start_work("Pasting cells... ")
         numcols = equalize_sublist_lens(data)
         numrows, numcols, data = self.extend_data(data, len(data), numcols, selected)
         tree_disprn, x1 = selected.box.from_r, id_col[1]
@@ -2574,64 +2425,17 @@ class Tree_Editor(tk.Frame):
             numcols = self.row_len - x1
         if tree_disprn + numrows > len(self.tree.displayed_rows):
             numrows = len(self.tree.displayed_rows) - tree_disprn
-        if (
-            (x1 + numcols) - x1 == 1
-            and (tree_disprn + numrows) - tree_disprn == 1
-            and self.headers[x1].type_ == "Parent"
-        ):
-            if not self.tree.MT.data[tree_datarn][x1] and not data[0][0]:
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-            self.snapshot_paste_id()
-            oldparent = f"{self.tree.MT.data[tree_datarn][x1]}"
-            if self.cut_paste_edit_cell(self.tree.MT.data[tree_datarn][self.ic], oldparent, x1, data[0][0]):
-                self.changelog_append(
-                    (
-                        "Cut and paste ID + children"
-                        if self.nodes[self.tree.MT.data[tree_datarn][self.ic].lower()].cn[x1]
-                        else "Cut and paste ID"
-                    ),
-                    self.tree.MT.data[tree_datarn][self.ic],
-                    f"Old parent: {oldparent} old column #{x1 + 1} named: {self.headers[x1].name}",
-                    f"New parent: {data[0][0]} new column #{x1 + 1} named: {self.headers[x1].name}",
+        if (x1 + numcols) - x1 == 1 and (tree_disprn + numrows) - tree_disprn == 1:
+            self.tree_sheet_edit_cell(
+                event=DotDict(
+                    sheetname="sheet",
+                    value=data[0][0],
+                    loc=(self.rns[self.tree.MT.data[tree_datarn][self.ic].lower()], x1),
                 )
-                self.refresh_all_formatting(rows=self.rns[id_col[0]])
-                self.redo_tree_display()
-                self.redraw_sheets()
-                try:
-                    self.tree.scroll_to_item(self.tree.MT.data[tree_datarn][self.ic].lower())
-                    self.tree.selection_set(self.tree.MT.data[tree_datarn][self.ic].lower())
-                except Exception:
-                    pass
-                self.disable_paste()
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
+            )
+            return
 
-            else:
-                self.vs.pop()
-                self.vp -= 1
-                self.set_undo_label()
-                if self.headers[x1].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool:
-                    confirm = Ask_Confirm(
-                        self,
-                        "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
-                        theme=self.C.theme,
-                    )
-                    if not confirm.boolean:
-                        self.stop_work(self.get_tree_editor_status_bar_text())
-                        return
-                self.changelog_append(
-                    "Edit cell",
-                    f"ID: {self.tree.MT.data[tree_datarn][self.ic]} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
-                    f"{self.tree.MT.data[tree_datarn][x1]}",
-                    f"{data[0][0]}",
-                )
-                self.snapshot_ctrl_x_v_del_key_id_par()
-                self.sheet.MT.data[self.rns[id_col[0]]][x1] = data[0][0]
-                self.rebuild_tree()
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-
+        self.start_work("Pasting cells... ")
         need_rebuild = False
         need_rebuild_ID = False
         for c in range(x1, x1 + numcols):
@@ -2741,7 +2545,7 @@ class Tree_Editor(tk.Frame):
                 return
         except Exception:
             return
-        self.start_work("Pasting cells... ")
+
         numcols = equalize_sublist_lens(data)
         numrows, numcols, data = self.extend_data(data, len(data), numcols, selected)
         y1, x1 = self.rns[id_col[0]], id_col[1]
@@ -2749,60 +2553,17 @@ class Tree_Editor(tk.Frame):
             numcols = self.row_len - x1
         if y1 + numrows > len(self.sheet.MT.data):
             numrows = len(self.sheet.MT.data) - y1
-        if (x1 + numcols) - x1 == 1 and (y1 + numrows) - y1 == 1 and self.headers[x1].type_ == "Parent":
-            if not self.sheet.MT.data[y1][x1] and not data[0][0]:
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-            self.snapshot_paste_id()
-            oldparent = f"{self.sheet.MT.data[y1][x1]}"
-            if self.cut_paste_edit_cell(self.sheet.MT.data[y1][self.ic], oldparent, x1, data[0][0]):
-                self.changelog_append(
-                    (
-                        "Cut and paste ID + children"
-                        if self.nodes[self.sheet.MT.data[y1][self.ic].lower()].cn[x1]
-                        else "Cut and paste ID"
-                    ),
-                    self.sheet.MT.data[y1][self.ic],
-                    f"Old parent: {oldparent} old column #{x1 + 1} named: {self.headers[x1].name}",
-                    f"New parent: {data[0][0]} new column #{x1 + 1} named: {self.headers[x1].name}",
+        if (x1 + numcols) - x1 == 1 and (y1 + numrows) - y1 == 1:
+            self.tree_sheet_edit_cell(
+                event=DotDict(
+                    sheetname="sheet",
+                    value=data[0][0],
+                    loc=(y1, x1),
                 )
-                self.refresh_all_formatting(rows=y1)
-                self.redo_tree_display()
-                self.redraw_sheets()
-                try:
-                    self.tree.scroll_to_item(self.sheet.MT.data[y1][self.ic].lower())
-                    self.tree.selection_set(self.sheet.MT.data[y1][self.ic].lower())
-                except Exception:
-                    pass
-                self.disable_paste()
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
+            )
+            return
 
-            else:
-                self.vs.pop()
-                self.vp -= 1
-                self.set_undo_label()
-                if self.headers[x1].type_ in ("ID", "Parent") and not self.auto_sort_nodes_bool:
-                    confirm = Ask_Confirm(
-                        self,
-                        "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
-                        theme=self.C.theme,
-                    )
-                    if not confirm.boolean:
-                        self.stop_work(self.get_tree_editor_status_bar_text())
-                        return
-                self.changelog_append(
-                    "Edit cell",
-                    f"ID: {self.sheet.MT.data[y1][self.ic]} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
-                    f"{self.sheet.MT.data[y1][x1]}",
-                    f"{data[0][0]}",
-                )
-                self.snapshot_ctrl_x_v_del_key_id_par()
-                self.sheet.MT.data[y1][x1] = data[0][0]
-                self.rebuild_tree()
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-
+        self.start_work("Pasting cells... ")
         need_rebuild = False
         need_rebuild_ID = False
         for c in range(x1, x1 + numcols):
@@ -3729,6 +3490,10 @@ class Tree_Editor(tk.Frame):
         if nnk in self.nodes and ik != nnk:
             if errors:
                 Error(self, "New name already exists   ", theme=self.C.theme)
+            return False
+        if not nnk:
+            if errors:
+                Error(self, "New name cannot be empty   ", theme=self.C.theme)
             return False
         if snapshot:
             self.snapshot_rename_id()
@@ -6343,8 +6108,9 @@ class Tree_Editor(tk.Frame):
                 cols.add(k[1])
             self.refresh_all_formatting(rows=rows, columns=cols)
             self.redo_tree_display()
-
-        self.sheet_set_heights_widths_from_undo(new_vs["required_data"]["pickled"])
+        self.sheet.row_index(newindex=self.ic)
+        self.sheet.set_column_widths(new_vs["required_data"]["pickled"]["sheet_col_positions"], canvas_positions=True)
+        self.sheet.set_safe_row_heights(new_vs["required_data"]["pickled"]["sheet_row_positions"])
         self.set_headers()
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.rehighlight_tagged_ids()
@@ -6373,10 +6139,11 @@ class Tree_Editor(tk.Frame):
         default_col_width = self.tree.ops.default_column_width
         return (widths_dict[h.name] if h.name in widths_dict else default_col_width for h in self.headers)
 
-    def sheet_set_heights_widths_from_undo(self, new_vs):
-        self.sheet.row_index(newindex=self.ic)
-        self.sheet.set_column_widths(new_vs["sheet_col_positions"], canvas_positions=True)
-        self.sheet.set_safe_row_heights(new_vs["sheet_row_positions"])
+    def save_sheet_row_heights(self) -> None:
+        quick_data = self.sheet.MT.data
+        self.saved_sheet_row_heights = {
+            quick_data[rn][self.ic].lower(): h for rn, h in enumerate(self.sheet.get_row_heights())
+        }
 
     def ctrl_z(self, event=None):
         if self.vs:
@@ -6449,6 +6216,7 @@ class Tree_Editor(tk.Frame):
 
     def snapshot_ctrl_x_v_del_key_id_par(self):
         self.snapshot_chore()
+        self.save_sheet_row_heights()
         self.vs.append(
             {
                 "type": "ctrl x, v, del key id par",
@@ -9654,18 +9422,20 @@ class Tree_Editor(tk.Frame):
         self.selected_PAR = ""
         self.pc = int(self.hiers[0])
         self.tv_label_col = self.ic
-        
+
         new_headers = self.fix_headers(self.new_sheet.pop(0), self.row_len)
         new_headers = [Header(name) for name in new_headers]
         new_headers[self.ic].type_ = "ID"
         for h in self.hiers:
             new_headers[h].type_ = "Parent"
         existing_headers = {h.name: i for i, h in enumerate(self.headers)}
-        existing_col_alignments = {self.headers[c].name: align for c, align in self.sheet.get_column_alignments().items()}
-        
+        existing_col_alignments = {
+            self.headers[c].name: align for c, align in self.sheet.get_column_alignments().items()
+        }
+
         self.tree.reset()
         self.sheet.reset()
-        
+
         for h in new_headers:
             if h.name in existing_headers and h.type_ == self.headers[existing_headers[h.name]].type_:
                 h.formatting = self.headers[existing_headers[h.name]].formatting
