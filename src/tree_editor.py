@@ -2459,7 +2459,6 @@ class Tree_Editor(tk.Frame):
             for ndr, r in enumerate(range(tree_disprn, tree_disprn + numrows)):
                 ik = self.tree.rowitem(r)
                 sheet_rn = self.rns[ik]
-                self.untag_id(ik)
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
                     valid = self.detail_is_valid_for_col(c, data[ndr][ndc], allow_id_col=True)
                     if valid and self.sheet.MT.data[sheet_rn][c] != data[ndr][ndc]:
@@ -2585,7 +2584,6 @@ class Tree_Editor(tk.Frame):
         if need_rebuild_ID or need_rebuild:
             self.snapshot_ctrl_x_v_del_key_id_par()
             for ndr, r in enumerate(range(y1, y1 + numrows)):
-                self.untag_id(self.sheet.MT.data[r][self.ic].lower())
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
                     valid = self.detail_is_valid_for_col(c, data[ndr][ndc], allow_id_col=True)
                     if valid and self.sheet.MT.data[r][c] != data[ndr][ndc]:
@@ -8720,12 +8718,17 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
 
     def reset_tagged_ids_dropdowns(self, event=None):
-        x = sorted(self.nodes[ik].name for ik in self.tagged_ids)
-        self.tree_tagged_ids_dropdown["values"] = x
-        self.sheet_tagged_ids_dropdown["values"] = x
+        res = []
+        for ik in tuple(self.tagged_ids):
+            if ik in self.nodes:
+                res.append(self.nodes[ik].name)
+            else:
+                self.tagged_ids.discard(ik)
+        self.tree_tagged_ids_dropdown["values"] = res
+        self.sheet_tagged_ids_dropdown["values"] = res
         if self.tagged_ids:
-            self.sheet_tagged_ids_dropdown.set_my_value(x[0])
-            self.tree_tagged_ids_dropdown.set_my_value(x[0])
+            self.sheet_tagged_ids_dropdown.set_my_value(res[0])
+            self.tree_tagged_ids_dropdown.set_my_value(res[0])
         else:
             self.sheet_tagged_ids_dropdown.set_my_value("")
             self.tree_tagged_ids_dropdown.set_my_value("")
