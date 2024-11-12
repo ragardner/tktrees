@@ -2453,6 +2453,7 @@ class Tree_Editor(tk.Frame):
                 self.stop_work(self.get_tree_editor_status_bar_text())
                 return
 
+        idcols = set(self.hiers) | {self.ic}
         cells_changed = 0
         if need_rebuild_ID or need_rebuild:
             self.snapshot_ctrl_x_v_del_key_id_par()
@@ -2460,15 +2461,9 @@ class Tree_Editor(tk.Frame):
                 ik = self.tree.rowitem(r)
                 sheet_rn = self.rns[ik]
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
-                    valid = self.detail_is_valid_for_col(c, data[ndr][ndc], allow_id_col=True)
-                    if valid and self.sheet.MT.data[sheet_rn][c] != data[ndr][ndc]:
-                        self.changelog_append_no_unsaved(
-                            "Edit cell |",
-                            f"ID: {self.sheet.MT.data[sheet_rn][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                            f"{self.sheet.MT.data[sheet_rn][c]}",
-                            data[ndr][ndc],
-                        )
-                        self.sheet.MT.data[sheet_rn][c] = data[ndr][ndc]
+                    value = data[ndr][ndc]
+                    if c in idcols or (self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[sheet_rn][c] != value):
+                        self.edit_cell_paste(sheet_rn, c, value)
                         cells_changed += 1
 
         else:
@@ -2476,19 +2471,10 @@ class Tree_Editor(tk.Frame):
             for ndr, r in enumerate(range(tree_disprn, tree_disprn + numrows)):
                 sheet_rn = self.rns[self.tree.rowitem(r)]
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
-                    valid = self.detail_is_valid_for_col(c, data[ndr][ndc])
-                    if valid and self.sheet.MT.data[sheet_rn][c] != data[ndr][ndc]:
+                    value = data[ndr][ndc]
+                    if self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[sheet_rn][c] != value:
                         self.vs[-1]["cells"][(sheet_rn, c)] = f"{self.sheet.MT.data[sheet_rn][c]}"
-                        self.changelog_append_no_unsaved(
-                            "Edit cell |",
-                            f"ID: {self.sheet.MT.data[sheet_rn][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                            f"{self.sheet.MT.data[sheet_rn][c]}",
-                            data[ndr][ndc],
-                        )
-                        if self.headers[c].type_ == "Date Detail":
-                            self.sheet.MT.data[sheet_rn][c] = self.convert_date(data[ndr][ndc], self.DATE_FORM)
-                        else:
-                            self.sheet.MT.data[sheet_rn][c] = data[ndr][ndc]
+                        self.edit_cell_paste(sheet_rn, c, value)
                         cells_changed += 1
 
         self.disable_paste()
@@ -2581,39 +2567,26 @@ class Tree_Editor(tk.Frame):
                 return
 
         cells_changed = 0
+        idcols = set(self.hiers) | {self.ic}
         if need_rebuild_ID or need_rebuild:
             self.snapshot_ctrl_x_v_del_key_id_par()
             for ndr, r in enumerate(range(y1, y1 + numrows)):
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
-                    valid = self.detail_is_valid_for_col(c, data[ndr][ndc], allow_id_col=True)
-                    if valid and self.sheet.MT.data[r][c] != data[ndr][ndc]:
-                        self.changelog_append_no_unsaved(
-                            "Edit cell |",
-                            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                            f"{self.sheet.MT.data[r][c]}",
-                            data[ndr][ndc],
-                        )
-                        self.sheet.MT.data[r][c] = data[ndr][ndc]
+                    value = data[ndr][ndc]
+                    if c in idcols or (self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value):
+                        self.edit_cell_paste(r, c, value)
                         cells_changed += 1
 
         else:
             self.snapshot_ctrl_x_v_del_key()
             for ndr, r in enumerate(range(y1, y1 + numrows)):
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
-                    valid = self.detail_is_valid_for_col(c, data[ndr][ndc])
-                    if valid and self.sheet.MT.data[r][c] != data[ndr][ndc]:
+                    value = data[ndr][ndc]
+                    if self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value:
                         self.vs[-1]["cells"][(r, c)] = f"{self.sheet.MT.data[r][c]}"
-                        self.changelog_append_no_unsaved(
-                            "Edit cell |",
-                            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                            f"{self.sheet.MT.data[r][c]}",
-                            data[ndr][ndc],
-                        )
-                        if self.headers[c].type_ == "Date Detail":
-                            self.sheet.MT.data[r][c] = self.convert_date(data[ndr][ndc], self.DATE_FORM)
-                        else:
-                            self.sheet.MT.data[r][c] = data[ndr][ndc]
+                        self.edit_cell_paste(r, c, value)
                         cells_changed += 1
+                        
         self.disable_paste()
         if not cells_changed:
             self.vp -= 1
@@ -2644,6 +2617,18 @@ class Tree_Editor(tk.Frame):
             self.changelog_singular("Edit cell")
         self.redraw_sheets()
         self.stop_work(self.get_tree_editor_status_bar_text())
+        
+    def edit_cell_paste(self, r: int, c: int, value: object) -> None:
+        self.changelog_append_no_unsaved(
+            "Edit cell |",
+            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
+            f"{self.sheet.MT.data[r][c]}",
+            value,
+        )
+        if self.headers[c].type_ == "Date Detail":
+            self.sheet.MT.data[r][c] = self.convert_date(value, self.DATE_FORM)
+        else:
+            self.sheet.MT.data[r][c] = value
 
     def select_id_in_treeview_from_sheet(self, event=None):
         ik = self.sheet.MT.data[self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)[0]][
@@ -5491,7 +5476,7 @@ class Tree_Editor(tk.Frame):
     def is_in_validation(self, validation, text):
         return text in validation
 
-    def detail_is_valid_for_col(self, col, detail, allow_id_col=False, strict_date=False):
+    def detail_is_valid_for_col(self, col, detail, strict_date=False):
         t = self.headers[col].type_
         if self.headers[col].validation and not self.is_in_validation(self.headers[col].validation, detail):
             return False
@@ -5517,11 +5502,9 @@ class Tree_Editor(tk.Frame):
                     return True
                 else:
                     return False
-        if allow_id_col:
-            return True
         return False
 
-    def why_isnt_detail_valid(self, col, detail, allow_id_col=False, strict_date=False):
+    def why_isnt_detail_valid(self, col, detail, strict_date=False):
         t = self.headers[col].type_
         if self.headers[col].validation and not self.is_in_validation(self.headers[col].validation, detail):
             return "Entered detail is not in column validation"
@@ -5533,8 +5516,6 @@ class Tree_Editor(tk.Frame):
                 return "Entered detail is not a valid date"
             elif not isint(detail) and not self.detect_date_form(detail):
                 return "Entered detail is not a valid date or integer"
-        if not allow_id_col and t == "ID":
-            return "Cannot enter text into ID column at this time"
 
     def rc_change_coltype_date(self, event=None):
         if (col := self.rc_selected_col()) is None:
