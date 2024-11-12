@@ -652,20 +652,9 @@ class Tree_Editor(tk.Frame):
 
         # SINGLE CELL MENU - SHEET AND TREE
         self.tree_sheet_rc_menu_single_cell = tk.Menu(self.sheet, tearoff=0, **menu_kwargs)
-        self.tree_sheet_rc_menu_single_cell_align = create_cell_align_selector_menu(
-            parent=self.tree_sheet_rc_menu_single_cell,
-            command=self.tree_sheet_align,
-            menu_kwargs=menu_kwargs,
-            icons=self.align_icons,
-        )
         self.tree_sheet_rc_menu_single_cell.add_command(
             label="Detail",
             state="disabled",
-            **menu_kwargs,
-        )
-        self.tree_sheet_rc_menu_single_cell.add_cascade(
-            label="Alignment",
-            menu=self.tree_sheet_rc_menu_single_cell_align,
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_cell.add_command(
@@ -702,17 +691,6 @@ class Tree_Editor(tk.Frame):
         self.tree_sheet_rc_menu_multi_cell = tk.Menu(
             self.sheet,
             tearoff=0,
-            **menu_kwargs,
-        )
-        self.tree_sheet_rc_menu_multi_cell_align = create_cell_align_selector_menu(
-            parent=self.tree_sheet_rc_menu_multi_cell,
-            command=self.tree_sheet_align,
-            menu_kwargs=menu_kwargs,
-            icons=self.align_icons,
-        )
-        self.tree_sheet_rc_menu_multi_cell.add_cascade(
-            label="Alignment",
-            menu=self.tree_sheet_rc_menu_multi_cell_align,
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_multi_cell.add_command(
@@ -928,17 +906,6 @@ class Tree_Editor(tk.Frame):
 
         # MULTI ROW MENU - TREE
         self.tree_rc_menu_multi_row = tk.Menu(self.treeframe, tearoff=0, **menu_kwargs)
-        self.tree_rc_menu_multi_row_align = create_cell_align_selector_menu(
-            parent=self.tree_rc_menu_multi_row,
-            command=self.tree_sheet_align,
-            menu_kwargs=menu_kwargs,
-            icons=self.align_icons,
-        )
-        self.tree_rc_menu_multi_row.add_cascade(
-            label="Alignment",
-            menu=self.tree_rc_menu_multi_row_align,
-            **menu_kwargs,
-        )
         self.tree_rc_menu_multi_row.add_command(
             label="Find & Replace",
             accelerator="Ctrl+F",
@@ -1006,17 +973,6 @@ class Tree_Editor(tk.Frame):
 
         # SINGLE ROW MENU - TREE
         self.tree_rc_menu_single_row = tk.Menu(self.treeframe, tearoff=0, **menu_kwargs)
-        self.tree_rc_menu_single_row_align = create_cell_align_selector_menu(
-            parent=self.tree_rc_menu_single_row,
-            command=self.tree_sheet_align,
-            menu_kwargs=menu_kwargs,
-            icons=self.align_icons,
-        )
-        self.tree_rc_menu_single_row.add_cascade(
-            label="Alignment",
-            menu=self.tree_rc_menu_single_row_align,
-            **menu_kwargs,
-        )
         self.tree_rc_menu_single_row.add_command(
             label="Find & Replace",
             accelerator="Ctrl+F",
@@ -1154,17 +1110,6 @@ class Tree_Editor(tk.Frame):
 
         # SINGLE ROW MENU - SHEET
         self.sheet_rc_menu_single_row = tk.Menu(self.sheet, tearoff=0, **menu_kwargs)
-        self.sheet_rc_menu_single_row_align = create_cell_align_selector_menu(
-            parent=self.sheet_rc_menu_single_row,
-            command=self.tree_sheet_align,
-            menu_kwargs=menu_kwargs,
-            icons=self.align_icons,
-        )
-        self.sheet_rc_menu_single_row.add_cascade(
-            label="Alignment",
-            menu=self.sheet_rc_menu_single_row_align,
-            **menu_kwargs,
-        )
         self.sheet_rc_menu_single_row.add_command(
             label="Find & Replace",
             accelerator="Ctrl+F",
@@ -1244,17 +1189,6 @@ class Tree_Editor(tk.Frame):
         self.sheet_rc_menu_multi_row = tk.Menu(
             self.sheet,
             tearoff=0,
-            **menu_kwargs,
-        )
-        self.sheet_rc_menu_multi_row_align = create_cell_align_selector_menu(
-            parent=self.sheet_rc_menu_multi_row,
-            command=self.tree_sheet_align,
-            menu_kwargs=menu_kwargs,
-            icons=self.align_icons,
-        )
-        self.sheet_rc_menu_multi_row.add_cascade(
-            label="Alignment",
-            menu=self.sheet_rc_menu_multi_row_align,
             **menu_kwargs,
         )
         self.sheet_rc_menu_multi_row.add_command(
@@ -1355,8 +1289,8 @@ class Tree_Editor(tk.Frame):
             self.sheet.align(program_data.sheet_table_align, redraw=False)
             self.sheet.row_index_align(program_data.sheet_index_align, redraw=False)
             self.sheet.header_align(program_data.sheet_header_align, redraw=False)
-            self.tree.align(program_data.tree_table_align, redraw=False)
-            self.tree.header_align(program_data.tree_header_align, redraw=False)
+            self.tree.align(program_data.sheet_table_align, redraw=False)
+            self.tree.header_align(program_data.sheet_header_align, redraw=False)
             self.nodes = self.nodes_json_x_dict(program_data.nodes, hiers=self.hiers)
             self.topnodes_order = {int(h): v for h, v in program_data.topnodes_order.items()}
             self.auto_sort_nodes_bool = bool(program_data.auto_sort_nodes_bool)
@@ -1372,18 +1306,9 @@ class Tree_Editor(tk.Frame):
                 dct["theights"] = {k: self.tree.valid_row_height(int(v)) for k, v in dct["theights"].items()}
                 dct["twidths"] = {k: int(v) for k, v in dct["twidths"].items()}
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            for (r, c), align in program_data.sheet_cell_alignments.items():
-                self.sheet.align_cells(int(r), int(c), align=align, redraw=False)
             for c, align in program_data.sheet_column_alignments.items():
                 self.sheet.align_columns(int(c), align=align, redraw=False)
-            for r, align in program_data.sheet_row_alignments.items():
-                self.sheet.align_rows(int(r), align=align, redraw=False)
-            for (r, c), align in program_data.tree_cell_alignments.items():
-                self.tree.align_cells(int(r), int(c), align=align, redraw=False)
-            for c, align in program_data.tree_column_alignments.items():
                 self.tree.align_columns(int(c), align=align, redraw=False)
-            for r, align in program_data.tree_row_alignments.items():
-                self.tree.align_rows(int(r), align=align, redraw=False)
             self.allow_spaces_ids_var = bool(program_data.allow_spaces_ids)
             self.allow_spaces_columns_var = bool(program_data.allow_spaces_columns)
             self.set_headers()
@@ -6214,28 +6139,12 @@ class Tree_Editor(tk.Frame):
         self.topnodes_order = new_vs["required_data"]["pickled"]["topnodes_order"]
         self.saved_info = new_vs["required_data"]["pickled"]["saved_info"]
         self.tagged_ids = new_vs["required_data"]["pickled"]["tagged_ids"]
-        self.sheet.align_cells(
-            cells=new_vs["required_data"]["pickled"]["sheet_cell_alignments"],
-            redraw=False,
-        )
-        self.sheet.align_rows(
-            rows=new_vs["required_data"]["pickled"]["sheet_row_alignments"],
-            redraw=False,
-        )
         self.sheet.align_columns(
             columns=new_vs["required_data"]["pickled"]["sheet_column_alignments"],
             redraw=False,
         )
-        self.tree.align_cells(
-            cells=new_vs["required_data"]["pickled"]["tree_cell_alignments"],
-            redraw=False,
-        )
-        self.tree.align_rows(
-            rows=new_vs["required_data"]["pickled"]["tree_row_alignments"],
-            redraw=False,
-        )
         self.tree.align_columns(
-            columns=new_vs["required_data"]["pickled"]["tree_column_alignments"],
+            columns=new_vs["required_data"]["pickled"]["sheet_column_alignments"],
             redraw=False,
         )
         self.reset_tagged_ids_dropdowns()
@@ -6379,7 +6288,6 @@ class Tree_Editor(tk.Frame):
             new_vs["column_mapping"] = dict(zip(new_vs["column_mapping"].values(), new_vs["column_mapping"]))
             self.sheet.mapping_move_columns(new_vs["column_mapping"])
             self.tree.mapping_move_columns(new_vs["column_mapping"])
-            self.redo_tree_display()
 
         elif new_vs["type"] == "node sort":
             self.redo_tree_display()
@@ -6518,12 +6426,7 @@ class Tree_Editor(tk.Frame):
                     "topnodes_order": self.topnodes_order,
                     "tv_label_col": self.tv_label_col,
                     "tagged_ids": self.tagged_ids,
-                    "sheet_cell_alignments": self.sheet.get_cell_alignments(),
                     "sheet_column_alignments": self.sheet.get_column_alignments(),
-                    "sheet_row_alignments": self.sheet.get_row_alignments(),
-                    "tree_cell_alignments": self.tree.get_cell_alignments(),
-                    "tree_column_alignments": self.tree.get_column_alignments(),
-                    "tree_row_alignments": self.tree.get_row_alignments(),
                     "headers": self.copy_headers(),
                     "ic": self.ic,
                     "pc": self.pc,
@@ -9021,46 +8924,19 @@ class Tree_Editor(tk.Frame):
 
     def tree_sheet_align(self, align):
         if self.sheet.has_focus():
-            for box in self.sheet.boxes:
-                if box.type_ == "cells":
-                    self.sheet.align(
-                        box.coords.from_r,
-                        box.coords.from_c,
-                        box.coords.upto_r,
-                        box.coords.upto_c,
-                        align=align,
-                    )
-                elif box.type_ == "rows":
-                    self.sheet.align(
-                        slice(box.coords.from_r, box.coords.upto_r),
-                        align=align,
-                    )
-                elif box.type_ == "columns":
-                    self.sheet.align(
-                        f"{num2alpha(box.coords.from_c)}:{num2alpha(box.coords.upto_c - 1)}",
-                        align=align,
-                    )
-        elif self.tree.has_focus():
-            for box in self.tree.boxes:
-                if box.type_ == "cells":
-                    self.tree.align_cells(
-                        cells=(
-                            (r, c)
-                            for r in range(box.coords.from_r, box.coords.upto_r)
-                            for c in range(box.coords.from_c, box.coords.upto_c)
-                        ),
-                        align=align,
-                    )
-                elif box.type_ == "rows":
-                    self.tree.align_rows(
-                        rows=(self.tree.data_r(r) for r in range(box.coords.from_r, box.coords.upto_r)),
-                        align=align,
-                    )
-                elif box.type_ == "columns":
-                    self.tree.align_columns(
-                        columns=range(box.coords.from_c, box.coords.upto_c),
-                        align=align,
-                    )
+            boxes = self.sheet.boxes
+        else:
+            boxes = self.tree.boxes
+        for box in boxes:
+            if box.type_ == "columns":
+                self.sheet.align(
+                    f"{num2alpha(box.coords.from_c)}:{num2alpha(box.coords.upto_c - 1)}",
+                    align=align,
+                )
+                self.tree.align(
+                    f"{num2alpha(box.coords.from_c)}:{num2alpha(box.coords.upto_c - 1)}",
+                    align=align,
+                )
 
     def untag_id(self, ik):
         if ik in self.tagged_ids:
@@ -9777,22 +9653,28 @@ class Tree_Editor(tk.Frame):
             self.hiers = popup.pcols
         self.selected_ID = ""
         self.selected_PAR = ""
-        self.tree.reset()
-        self.sheet.deselect("all", redraw=False)
         self.pc = int(self.hiers[0])
         self.tv_label_col = self.ic
-
-        headers = self.fix_headers(self.new_sheet.pop(0), self.row_len)
-        headers = [Header(name) for name in headers]
-        headers[self.ic].type_ = "ID"
+        
+        new_headers = self.fix_headers(self.new_sheet.pop(0), self.row_len)
+        new_headers = [Header(name) for name in new_headers]
+        new_headers[self.ic].type_ = "ID"
         for h in self.hiers:
-            headers[h].type_ = "Parent"
+            new_headers[h].type_ = "Parent"
         existing_headers = {h.name: i for i, h in enumerate(self.headers)}
-        for h in headers:
+        existing_col_alignments = {self.headers[c].name: align for c, align in self.sheet.get_column_alignments().items()}
+        
+        self.tree.reset()
+        self.sheet.reset()
+        
+        for h in new_headers:
             if h.name in existing_headers and h.type_ == self.headers[existing_headers[h.name]].type_:
                 h.formatting = self.headers[existing_headers[h.name]].formatting
-        self.headers = headers
+            if h.name in existing_col_alignments:
+                self.tree.align_columns(existing_headers[h.name], existing_col_alignments[h.name])
+                self.sheet.align_columns(existing_headers[h.name], existing_col_alignments[h.name])
 
+        self.headers = new_headers
         self.sheet.MT.data = self.new_sheet
         self.new_sheet = []
         self.saved_info = new_saved_info(self.hiers)
@@ -11351,17 +11233,10 @@ class Tree_Editor(tk.Frame):
         d["changelog"] = self.changelog
         d["row_heights"] = self.sheet.get_safe_row_heights()
         d["column_widths"] = self.sheet.get_column_widths()
-        d["sheet_cell_alignments"] = self.sheet.get_cell_alignments()
         d["sheet_column_alignments"] = self.sheet.get_column_alignments()
-        d["sheet_row_alignments"] = self.sheet.get_row_alignments()
-        d["tree_cell_alignments"] = self.tree.get_cell_alignments()
-        d["tree_column_alignments"] = self.tree.get_column_alignments()
-        d["tree_row_alignments"] = self.tree.get_row_alignments()
         d["sheet_table_align"] = self.sheet.table_align()
         d["sheet_header_align"] = self.sheet.header_align()
         d["sheet_index_align"] = self.sheet.index_align()
-        d["tree_table_align"] = self.tree.table_align()
-        d["tree_header_align"] = self.tree.header_align()
         d["saved_info"] = self.save_info_get_saved_info()
         d["tv_label_col"] = self.tv_label_col
         d["topnodes_order"] = self.topnodes_order
