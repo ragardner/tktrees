@@ -27,7 +27,6 @@ from tksheet import (
     DotDict,
     Highlight,
     Sheet,
-    get_data_from_clipboard,
     is_contiguous,
     move_elements_by_mapping,
     num2alpha,
@@ -2397,6 +2396,21 @@ class Tree_Editor(tk.Frame):
                     data[rn].extend(r.copy())
             numcols *= int(lastbox_numcols / numcols)
         return numrows, numcols, data
+    
+    def paste_get_clipboard_data(self, selected):
+        try:
+            if not (
+                data := csv_str_x_data(
+                    self.clipboard_get(),
+                    discard_empty_rows=False,
+                    paste=True,
+                )
+            ):
+                return
+        except Exception:
+            return
+        numcols = equalize_sublist_lens(data)
+        return self.extend_data(data, len(data), numcols, selected)
 
     def tree_paste(
         self,
@@ -2407,18 +2421,9 @@ class Tree_Editor(tk.Frame):
         Handles
         - tree paste events which don't involve selected rows or empty space
         """
-        try:
-            if not (
-                data := get_data_from_clipboard(
-                    widget=self,
-                    delimiters="\t,",
-                )
-            ):
-                return
-        except Exception:
+        if not (res := self.paste_get_clipboard_data(selected=selected)):
             return
-        numcols = equalize_sublist_lens(data)
-        numrows, numcols, data = self.extend_data(data, len(data), numcols, selected)
+        numrows, numcols, data = res
         tree_disprn, x1 = selected.box.from_r, id_col[1]
         tree_datarn = self.tree.itemrow(id_col[0])
         if x1 + numcols > self.row_len:
@@ -2523,20 +2528,9 @@ class Tree_Editor(tk.Frame):
         Handles
         - all paste events in sheet
         """
-        try:
-            if not (
-                data := csv_str_x_data(
-                    self.clipboard_get(),
-                    discard_empty_rows=False,
-                    paste=True,
-                )
-            ):
-                return
-        except Exception:
+        if not (res := self.paste_get_clipboard_data(selected=selected)):
             return
-
-        numcols = equalize_sublist_lens(data)
-        numrows, numcols, data = self.extend_data(data, len(data), numcols, selected)
+        numrows, numcols, data = res
         y1, x1 = self.rns[id_col[0]], id_col[1]
         if x1 + numcols > self.row_len:
             numcols = self.row_len - x1
