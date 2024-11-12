@@ -6798,7 +6798,7 @@ class Tree_Editor(tk.Frame):
         ]
         if sheet:
             self.sheet.headers(
-                headers.copy(),
+                headers,
                 reset_col_positions=False,
                 show_headers_if_not_sheet=False,
             )
