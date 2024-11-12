@@ -2443,6 +2443,8 @@ class Tree_Editor(tk.Frame):
                 need_rebuild_ID = True
             if self.headers[c].type_ == "Parent":
                 need_rebuild = True
+            if need_rebuild and need_rebuild_ID:
+                break
         if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool:
             confirm = Ask_Confirm(
                 self,
@@ -2462,7 +2464,9 @@ class Tree_Editor(tk.Frame):
                 sheet_rn = self.rns[ik]
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
                     value = data[ndr][ndc]
-                    if c in idcols or (self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[sheet_rn][c] != value):
+                    if c in idcols or (
+                        self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[sheet_rn][c] != value
+                    ):
                         self.edit_cell_paste(sheet_rn, c, value)
                         cells_changed += 1
 
@@ -2586,7 +2590,7 @@ class Tree_Editor(tk.Frame):
                         self.vs[-1]["cells"][(r, c)] = f"{self.sheet.MT.data[r][c]}"
                         self.edit_cell_paste(r, c, value)
                         cells_changed += 1
-                        
+
         self.disable_paste()
         if not cells_changed:
             self.vp -= 1
@@ -2617,7 +2621,7 @@ class Tree_Editor(tk.Frame):
             self.changelog_singular("Edit cell")
         self.redraw_sheets()
         self.stop_work(self.get_tree_editor_status_bar_text())
-        
+
     def edit_cell_paste(self, r: int, c: int, value: object) -> None:
         self.changelog_append_no_unsaved(
             "Edit cell |",
@@ -9576,10 +9580,7 @@ class Tree_Editor(tk.Frame):
                     if type_ == "Detail":
                         type_ = f"{c3s[-2]} {type_}"
                     if self.headers[col].validation:
-                        if self.is_in_validation(self.headers[col].validation, change[4]):
-                            validation_check = True
-                        else:
-                            validation_check = False
+                        validation_check = self.is_in_validation(self.headers[col].validation, change[4])
                     else:
                         validation_check = True
                     if (
