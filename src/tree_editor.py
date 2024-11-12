@@ -6288,6 +6288,7 @@ class Tree_Editor(tk.Frame):
             new_vs["column_mapping"] = dict(zip(new_vs["column_mapping"].values(), new_vs["column_mapping"]))
             self.sheet.mapping_move_columns(new_vs["column_mapping"])
             self.tree.mapping_move_columns(new_vs["column_mapping"])
+            self.redo_tree_display()
 
         elif new_vs["type"] == "node sort":
             self.redo_tree_display()
