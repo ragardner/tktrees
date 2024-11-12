@@ -9586,9 +9586,8 @@ class Tree_Editor(tk.Frame):
             elif "highlight" in dct and (iid := sheet[cell[0]][self.ic].lower()) in tree:
                 options[key := (tree_rns[iid], cell[1])] = {}
                 options[key]["highlight"] = dct["highlight"]
-        if out_of_bounds:
-            for cell in out_of_bounds:
-                del self.sheet.MT.cell_options[cell]
+        for cell in out_of_bounds:
+            del self.sheet.MT.cell_options[cell]
         return "break"
 
     def get_clipboard_data(self, event=None):
