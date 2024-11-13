@@ -1366,7 +1366,7 @@ class Tree_Editor(tk.Frame):
         self.cut_children_dct = {}
         self.sheet.row_index(self.ic)
         self.tree.set_options(show_horizontal_grid=False if self.tree.ops.alternate_color else True)
-        self.refresh_all_formatting()
+        self.refresh_formatting()
         self.redo_tree_display()
         self.disable_paste()
         self.refresh_dropdowns()
@@ -1866,7 +1866,7 @@ class Tree_Editor(tk.Frame):
         self.rebuild_tree()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         return value
-        
+
     def edit_cell_single(self, r: int, c: int, value: object) -> None:
         if self.headers[c].type_ == "Numerical Detail":
             value = self.convert_num(value)
@@ -1880,7 +1880,7 @@ class Tree_Editor(tk.Frame):
         )
         self.sheet.MT.data[r][c] = value
         return value
-        
+
     def edit_cell_multiple(self, r: int, c: int, value: object) -> None:
         if self.headers[c].type_ == "Numerical Detail":
             value = self.convert_num(value)
@@ -1935,7 +1935,7 @@ class Tree_Editor(tk.Frame):
                 self.reset_tagged_ids_dropdowns()
             self.disable_paste()
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting(rows=self.refresh_rows)
+            self.refresh_formatting(rows=self.refresh_rows)
             self.redo_tree_display()
             self.refresh_rows = set()
             if tree_sel:
@@ -1963,7 +1963,7 @@ class Tree_Editor(tk.Frame):
                     f"Old parent: {oldparent if oldparent else 'n/a - Top ID'} old column #{x1 + 1} named: {self.headers[x1].name}",
                     f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.headers[x1].name}",
                 )
-                self.refresh_all_formatting(rows=y1, columns=x1)
+                self.refresh_formatting(rows=y1, columns=x1)
                 self.redo_tree_display()
                 self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
                 self.tree_set_cell_size_to_text(y1, x1)
@@ -2001,7 +2001,7 @@ class Tree_Editor(tk.Frame):
             self.snapshot_ctrl_x_v_del_key()
             self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
             newtext = self.edit_cell_single(y1, x1, newtext)
-            self.refresh_all_formatting(rows=y1, columns=x1)
+            self.refresh_formatting(rows=y1, columns=x1)
             self.refresh_tree_item(ID)
             self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
             self.tree_set_cell_size_to_text(y1, x1)
@@ -2112,7 +2112,7 @@ class Tree_Editor(tk.Frame):
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
         self.refresh_rows = set()
-        self.refresh_all_formatting()
+        self.refresh_formatting()
         if redraw:
             self.redraw_sheets()
         self.redo_tree_display()
@@ -2339,7 +2339,7 @@ class Tree_Editor(tk.Frame):
         if need_rebuild or need_rebuild_ID:
             self.rebuild_tree()
         else:
-            self.refresh_all_formatting(
+            self.refresh_formatting(
                 rows=(row for row, _ in rows_and_cols),
                 columns=set(col for _, cols in rows_and_cols for col in cols),
             )
@@ -2507,7 +2507,7 @@ class Tree_Editor(tk.Frame):
         if need_rebuild or need_rebuild_ID:
             self.rebuild_tree()
         else:
-            self.refresh_all_formatting(
+            self.refresh_formatting(
                 rows=(self.rns[self.tree.rowitem(rn)] for rn in range(tree_disprn, tree_disprn + numrows))
             )
             for rn in range(tree_disprn, tree_disprn + numrows):
@@ -2606,7 +2606,7 @@ class Tree_Editor(tk.Frame):
         if need_rebuild or need_rebuild_ID:
             self.rebuild_tree()
         else:
-            self.refresh_all_formatting(rows=range(y1, y1 + numrows))
+            self.refresh_formatting(rows=range(y1, y1 + numrows))
             for rn in range(y1, y1 + numrows):
                 self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
         if cells_changed > 1:
@@ -3450,7 +3450,7 @@ class Tree_Editor(tk.Frame):
         if insert_row is not None and snapshot:
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         if snapshot:
-            self.refresh_all_formatting(rows=len(self.sheet.data) - 1 if insert_row is None else insert_row)
+            self.refresh_formatting(rows=len(self.sheet.data) - 1 if insert_row is None else insert_row)
         return True
 
     def change_ID_name(self, ID, new_name, snapshot=True, errors=True):
@@ -4203,7 +4203,7 @@ class Tree_Editor(tk.Frame):
                         self.nodes[pk].ps[self.pc].cn[self.pc], self.pc
                     )
         if snapshot:
-            self.refresh_all_formatting(rows=to_refresh)
+            self.refresh_formatting(rows=to_refresh)
 
     def del_id_orphan(self, ID, parent, snapshot=True):
         ik = ID.lower()
@@ -4256,7 +4256,7 @@ class Tree_Editor(tk.Frame):
                         self.nodes[pk].ps[self.pc].cn[self.pc], self.pc
                     )
         if snapshot:
-            self.refresh_all_formatting(rows=to_refresh)
+            self.refresh_formatting(rows=to_refresh)
 
     def del_id_all_hiers_orphan(self, ID, snapshot=True):
         ik = ID.lower()
@@ -4449,7 +4449,7 @@ class Tree_Editor(tk.Frame):
             if pk == "":
                 try_remove(self.topnodes_order[self.pc], ik)
         if snapshot:
-            self.refresh_all_formatting(rows=to_refresh)
+            self.refresh_formatting(rows=to_refresh)
 
     def del_id_and_children_all_hiers(self, ID, parent, snapshot=True):
         if snapshot:
@@ -5112,7 +5112,7 @@ class Tree_Editor(tk.Frame):
         # pass
         return condition
 
-    def refresh_all_formatting(
+    def refresh_formatting(
         self,
         rows: int | Iterator | None = None,
         columns: int | Iterator | None = None,
@@ -5137,7 +5137,6 @@ class Tree_Editor(tk.Frame):
         all_conditions = {}
         all_num_col_indexes = set()
         all_date_col_indexes = set()
-        all_text_col_indexes = set()
 
         # used within eval if a date column condition contains "cd"
         try:
@@ -5149,44 +5148,40 @@ class Tree_Editor(tk.Frame):
             cd = datetime.timedelta(days=0)  # noqa: F841
 
         for col in columns:
-            if self.headers[col].type_ in ("ID", "Parent"):
+            if self.headers[col].type_ in ("ID", "Parent", "Text Detail"):
                 all_conditions[col] = self.headers[col].formatting
-                if self.headers[col].formatting:
-                    all_text_col_indexes.add(col)
-
-            elif self.headers[col].type_ == "Text Detail":
-                all_conditions[col] = self.headers[col].formatting
-                if self.headers[col].formatting:
-                    all_text_col_indexes.add(col)
 
             elif self.headers[col].type_ == "Numerical Detail":
                 col_indexes = set()
                 conditions = self.headers[col].formatting
                 modified_conditions = []
                 for condition in conditions:
-                    modified_condition = re.split("([cC][0-9]+)", condition[0])
-                    for i in range(len(modified_condition)):
-                        e = modified_condition[i]
-                        x = e.lower()
-                        if "c" in x and "d" not in x:
-                            e = [xx for xx in re.split("([cC])", modified_condition[i].lower()) if xx]
-                            e = f"self.sheet.MT.data[rn][{int(e[1]) - 1}]"
-                        elif x == "cd":
-                            e = "cd"
-                        modified_condition[i] = e
-                    modified_condition = "".join(modified_condition)
-                    col_indexes.update(
-                        {
-                            int("".join(re.findall("([0-9]+)", form_col))) - 1
-                            for form_col in re.findall("([cC][0-9]+)", modified_condition)
-                        }
-                    )
-                    modified_conditions.append(
-                        (
-                            modified_condition.replace("and", "and cell").replace("or", "or cell"),
-                            condition[1],
+                    if condition[0]:
+                        modified_condition = re.split("([cC][0-9]+)", condition[0])
+                        for i in range(len(modified_condition)):
+                            e = modified_condition[i]
+                            x = e.lower()
+                            if "c" in x and "d" not in x:
+                                e = [xx for xx in re.split("([cC])", modified_condition[i].lower()) if xx]
+                                e = f"self.sheet.MT.data[rn][{int(e[1]) - 1}]"
+                            elif x == "cd":
+                                e = "cd"
+                            modified_condition[i] = e
+                        modified_condition = "".join(modified_condition)
+                        col_indexes.update(
+                            {
+                                int("".join(re.findall("([0-9]+)", form_col))) - 1
+                                for form_col in re.findall("([cC][0-9]+)", modified_condition)
+                            }
                         )
-                    )
+                        modified_conditions.append(
+                            (
+                                "cell " + modified_condition.replace("and", "and cell").replace("or", "or cell"),
+                                condition[1],
+                            )
+                        )
+                    else:
+                        modified_conditions.append(("not cell", condition[1]))
                 if conditions:
                     all_num_col_indexes.add(col)
                 all_conditions[col] = modified_conditions
@@ -5197,39 +5192,42 @@ class Tree_Editor(tk.Frame):
                 conditions = self.headers[col].formatting
                 modified_conditions = []
                 for condition in conditions:
-                    modified_condition = re.split("([cC][0-9]+|[cC][dD])", condition[0])
-                    for i in range(len(modified_condition)):
-                        e = modified_condition[i]
-                        x = e.lower()
-                        if "c" in x and "d" not in x:
-                            e = [xx for xx in re.split("([cC])", modified_condition[i].lower()) if xx]
-                            e = f"self.sheet.MT.data[rn][{int(e[1]) - 1}]"
-                        elif x == "cd":
-                            e = "cd"
-                        modified_condition[i] = e
-                    modified_condition = "".join(modified_condition)
-                    col_indexes.update(
-                        {
-                            int("".join(re.findall("([0-9]+)", form_col))) - 1
-                            for form_col in re.findall("([cC][0-9]+)", modified_condition)
-                        }
-                    )
-                    modified_condition = modified_condition.replace("and", "and cell").replace("or", "or cell")
-                    modified_condition = "".join(
-                        [
-                            (
-                                f"datetime.timedelta(days=int({e}))"
-                                if isreal(e)
-                                else (
-                                    f"datetime.datetime.strptime('{e}',self.convert_hyphen_to_slash_date_form(self.DATE_FORM))"
-                                    if "/" in e
-                                    else e
+                    if condition[0]:
+                        modified_condition = re.split("([cC][0-9]+|[cC][dD])", condition[0])
+                        for i in range(len(modified_condition)):
+                            e = modified_condition[i]
+                            x = e.lower()
+                            if "c" in x and "d" not in x:
+                                e = [xx for xx in re.split("([cC])", modified_condition[i].lower()) if xx]
+                                e = f"self.sheet.MT.data[rn][{int(e[1]) - 1}]"
+                            elif x == "cd":
+                                e = "cd"
+                            modified_condition[i] = e
+                        modified_condition = "".join(modified_condition)
+                        col_indexes.update(
+                            {
+                                int("".join(re.findall("([0-9]+)", form_col))) - 1
+                                for form_col in re.findall("([cC][0-9]+)", modified_condition)
+                            }
+                        )
+                        modified_condition = modified_condition.replace("and", "and cell").replace("or", "or cell")
+                        modified_condition = "cell " + "".join(
+                            [
+                                (
+                                    f"datetime.timedelta(days=int({e}))"
+                                    if isreal(e)
+                                    else (
+                                        f"datetime.datetime.strptime('{e}',self.convert_hyphen_to_slash_date_form(self.DATE_FORM))"
+                                        if "/" in e
+                                        else e
+                                    )
                                 )
-                            )
-                            for e in re.split("([0-9/]+)", modified_condition)
-                        ]
-                    )
-                    modified_conditions.append((modified_condition, condition[1]))
+                                for e in re.split("([0-9/]+)", modified_condition)
+                            ]
+                        )
+                        modified_conditions.append((modified_condition, condition[1]))
+                    else:
+                        modified_conditions.append(("not cell", condition[1]))
                 if conditions:
                     all_date_col_indexes.add(col)
                 all_conditions[col] = modified_conditions
@@ -5244,6 +5242,8 @@ class Tree_Editor(tk.Frame):
 
                 cell = self.sheet.MT.data[rn][col]
 
+                # cell only converted if != ""
+                # it will still potentially receive conditional formatting
                 if cell:
                     if col in all_num_col_indexes:
                         if isint(cell):
@@ -5261,61 +5261,40 @@ class Tree_Editor(tk.Frame):
                                 cell = datetime.datetime.strptime(cell, self.DATE_FORM)
                             except Exception:
                                 pass
-
-                if self.headers[col].type_ in ("ID", "Parent"):
+                            
+                if col in all_num_col_indexes or col in all_date_col_indexes:
+                    for modified_condition in all_conditions[col]:
+                        try:
+                            if eval(modified_condition[0]):
+                                self.sheet.highlight_cells(
+                                    row=rn,
+                                    column=col,
+                                    bg=modified_condition[1],
+                                    fg="black",
+                                )
+                                break
+                        except Exception:
+                            continue
+                    
+                else:
                     for condition in all_conditions[col]:
                         if cell.lower() == condition[0].lower():
                             self.sheet.highlight_cells(row=rn, column=col, bg=condition[1], fg="black")
                             break
 
-                elif self.headers[col].type_ == "Text Detail":
-                    for condition in all_conditions[col]:
-                        if cell.lower() == condition[0].lower():
-                            self.sheet.highlight_cells(row=rn, column=col, bg=condition[1], fg="black")
-                            break
-
-                elif self.headers[col].type_ == "Numerical Detail":
-                    if cell != "":
-                        for modified_condition in all_conditions[col]:
-                            try:
-                                if eval(f"cell {modified_condition[0]}"):
-                                    self.sheet.highlight_cells(
-                                        row=rn,
-                                        column=col,
-                                        bg=modified_condition[1],
-                                        fg="black",
-                                    )
-                                    break
-                            except Exception:
-                                continue
-
-                elif self.headers[col].type_ == "Date Detail":
-                    if cell != "":
-                        for modified_condition in all_conditions[col]:
-                            try:
-                                if eval(f"cell {modified_condition[0]}"):
-                                    self.sheet.highlight_cells(
-                                        row=rn,
-                                        column=col,
-                                        bg=modified_condition[1],
-                                        fg="black",
-                                    )
-                                    break
-                            except Exception:
-                                continue
-
-                if col in all_num_col_indexes:
-                    cell = f"{cell}"
-
-                elif col in all_date_col_indexes:
-                    if isinstance(cell, datetime.timedelta):
-                        cell = f"{cell.days}"
-                    elif isinstance(cell, datetime.datetime):
-                        cell = cell.strftime(self.DATE_FORM)
-                    elif cell != "":
+                if cell != "":
+                    if col in all_num_col_indexes:
                         cell = f"{cell}"
 
-                self.sheet.MT.data[rn][col] = cell
+                    elif col in all_date_col_indexes:
+                        if isinstance(cell, datetime.timedelta):
+                            cell = f"{cell.days}"
+                        elif isinstance(cell, datetime.datetime):
+                            cell = cell.strftime(self.DATE_FORM)
+                        elif cell != "":
+                            cell = f"{cell}"
+
+                    self.sheet.MT.data[rn][col] = cell
 
         self.refresh_rows = set()
 
@@ -5347,7 +5326,7 @@ class Tree_Editor(tk.Frame):
         if validation:
             self.apply_validation_to_col(col)
         self.refresh_dropdowns()
-        self.refresh_all_formatting(columns=col)
+        self.refresh_formatting(columns=col)
         self.redo_tree_display()
         self.redraw_sheets()
 
@@ -5357,7 +5336,7 @@ class Tree_Editor(tk.Frame):
         self.save_info_get_saved_info()
         Edit_Conditional_Formatting_Popup(self, column=col, theme=self.C.theme)
         self.headers[col].formatting = [tup for tup in self.headers[col].formatting if tup[1]]
-        self.refresh_all_formatting(columns=col)
+        self.refresh_formatting(columns=col)
         self.redo_tree_display()
         self.redraw_sheets()
 
@@ -5401,7 +5380,7 @@ class Tree_Editor(tk.Frame):
             if not self.check_condition_validity(col, tup[0]).startswith("Error:")
         ]
         self.set_headers()
-        self.refresh_all_formatting(columns=col)
+        self.refresh_formatting(columns=col)
         self.redo_tree_display()
         self.redraw_sheets()
 
@@ -5421,7 +5400,7 @@ class Tree_Editor(tk.Frame):
                 if cell and not isreal(cell):
                     self.sheet.MT.data[rn][col] = ""
                     self.refresh_tree_item(self.sheet.data[rn][self.ic])
-                    
+
     def convert_num(self, num):
         if isint(num):
             return f"{int(num)}"
@@ -5512,7 +5491,7 @@ class Tree_Editor(tk.Frame):
         ]
         self.set_headers()
         self.redo_tree_display()
-        self.refresh_all_formatting(columns=col)
+        self.refresh_formatting(columns=col)
         self.redraw_sheets()
 
     def change_coltype_date(self, col, detect_date_form=False, warnings=False):
@@ -5911,7 +5890,7 @@ class Tree_Editor(tk.Frame):
             rn = new_vs["row"]["rn"]
             if new_vs["row"]["added_or_changed"] == "changed":
                 self.sheet.MT.data[rn] = new_vs["row"]["stored"]
-                self.refresh_all_formatting(rows=rn)
+                self.refresh_formatting(rows=rn)
             elif new_vs["row"]["added_or_changed"] == "added":
                 del self.sheet.MT.data[rn]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
@@ -5925,9 +5904,9 @@ class Tree_Editor(tk.Frame):
                 rows.add(rn)
                 cols.add(h)
                 self.sheet.MT.data[rn][h] = v
-            self.refresh_all_formatting(rows=rows, columns=cols)
+            self.refresh_formatting(rows=rows, columns=cols)
             self.sheet.MT.data[new_vs["ikrow"][0]][self.ic] = new_vs["ikrow"][2]
-            self.refresh_all_formatting(rows=new_vs["ikrow"][0], columns=self.ic)
+            self.refresh_formatting(rows=new_vs["ikrow"][0], columns=self.ic)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.redo_tree_display()
 
@@ -5942,7 +5921,7 @@ class Tree_Editor(tk.Frame):
                 cols.add(fromcol)
                 cols.add(tocol)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting(rows=rows, columns=cols)
+            self.refresh_formatting(rows=rows, columns=cols)
             self.redo_tree_display()
 
         elif new_vs["type"] == "delete id" or new_vs["type"] == "delete ids":
@@ -5953,7 +5932,7 @@ class Tree_Editor(tk.Frame):
                     for h, par in zip(self.hiers, pickle.loads(zlib.decompress(obj.row))):
                         self.sheet.MT.data[obj.rn][h] = par
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting(dehighlight=True)
+            self.refresh_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "add col":
@@ -5961,7 +5940,7 @@ class Tree_Editor(tk.Frame):
             for r in range(len(self.sheet.MT.data)):
                 del self.sheet.MT.data[r][c]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting(dehighlight=True)
+            self.refresh_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "del cols":
@@ -5969,26 +5948,26 @@ class Tree_Editor(tk.Frame):
                 for rn, v in rowdict.items():
                     self.sheet.MT.data[rn].insert(cn, v)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting(dehighlight=True)
+            self.refresh_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "edit validation":
             for rn, c in enumerate(pickle.loads(zlib.decompress(new_vs["col"]))):
                 self.sheet.MT.data[rn][new_vs["col_num"]] = c
-            self.refresh_all_formatting(dehighlight=True)
+            self.refresh_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "rename col":
             self.redo_tree_display()
 
         elif new_vs["type"] == "col type text":
-            self.refresh_all_formatting(columns=new_vs["col_num"])
+            self.refresh_formatting(columns=new_vs["col_num"])
             self.redo_tree_display()
 
         elif new_vs["type"] == "col type num date":
             for rn, c in enumerate(pickle.loads(zlib.decompress(new_vs["col"]))):
                 self.sheet.MT.data[rn][new_vs["col_num"]] = c
-            self.refresh_all_formatting(columns=new_vs["col_num"])
+            self.refresh_formatting(columns=new_vs["col_num"])
             self.redo_tree_display()
 
         elif new_vs["type"] == "sort":
@@ -5996,7 +5975,7 @@ class Tree_Editor(tk.Frame):
                 self.sheet.MT.data[self.rns[new_vs["ids"][oldrn]]] for oldrn in range(len(new_vs["ids"]))
             ]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting(dehighlight=True)
+            self.refresh_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "prune changelog":
@@ -6031,7 +6010,7 @@ class Tree_Editor(tk.Frame):
                         except Exception:
                             pass
                     self.sheet.MT.data[rn][col] = cell
-            self.refresh_all_formatting(columns=date_cols)
+            self.refresh_formatting(columns=date_cols)
             self.redo_tree_display()
 
         elif new_vs["type"] == "merge sheets":
@@ -6040,7 +6019,7 @@ class Tree_Editor(tk.Frame):
             self.warnings = new_vs["build_warnings"]
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting(dehighlight=True)
+            self.refresh_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "get clipboard data":
@@ -6049,13 +6028,13 @@ class Tree_Editor(tk.Frame):
             self.warnings = new_vs["build_warnings"]
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting(dehighlight=True)
+            self.refresh_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "ctrl x, v, del key id par":
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_all_formatting(dehighlight=True)
+            self.refresh_formatting(dehighlight=True)
             self.redo_tree_display()
 
         elif new_vs["type"] == "ctrl x, v, del key":
@@ -6065,7 +6044,7 @@ class Tree_Editor(tk.Frame):
                 self.sheet.MT.data[k[0]][k[1]] = v
                 rows.add(k[0])
                 cols.add(k[1])
-            self.refresh_all_formatting(rows=rows, columns=cols)
+            self.refresh_formatting(rows=rows, columns=cols)
             self.redo_tree_display()
         self.sheet.row_index(newindex=self.ic)
         self.sheet.set_column_widths(new_vs["required_data"]["pickled"]["sheet_col_positions"], canvas_positions=True)
@@ -6685,7 +6664,7 @@ class Tree_Editor(tk.Frame):
         if snapshot:
             self.disable_paste()
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-            self.refresh_all_formatting()
+            self.refresh_formatting()
             self.reset_tagged_ids_dropdowns()
             self.rehighlight_tagged_ids()
             self.redraw_sheets()
@@ -6716,7 +6695,7 @@ class Tree_Editor(tk.Frame):
         self.sheet.set_row_heights(nrhs)
         if snapshot:
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-            self.refresh_all_formatting()
+            self.refresh_formatting()
             self.reset_tagged_ids_dropdowns()
             self.rehighlight_tagged_ids()
             self.disable_paste()
@@ -7052,7 +7031,7 @@ class Tree_Editor(tk.Frame):
             f"Old parent: {iid} old column #{self.cut_children_dct['hier'] + 1} named: {self.headers[self.cut_children_dct['hier']].name}",
             f"New parent: {np} new column #{self.pc + 1} named: {self.headers[self.pc].name}",
         )
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7085,7 +7064,7 @@ class Tree_Editor(tk.Frame):
             f"Old parent: {iid} old column #{self.cut_children_dct['hier'] + 1} named: {self.headers[self.cut_children_dct['hier']].name}",
             f"New parent: n/a - No parent new column #{self.pc + 1} named: {self.headers[self.pc].name}",
         )
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7133,7 +7112,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Copy and paste ID")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7188,7 +7167,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Copy and paste ID")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7235,7 +7214,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Copy and paste ID")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7282,7 +7261,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Copy and paste ID + children")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7337,7 +7316,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Copy and paste ID + children")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7384,7 +7363,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Copy and paste ID + children")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7437,7 +7416,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Cut and paste ID")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7498,7 +7477,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Cut and paste ID")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7551,7 +7530,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Cut and paste ID")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7604,7 +7583,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Cut and paste ID + children")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -7666,7 +7645,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Cut and paste ID + children")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.refresh_rows = set()
         if redo_tree:
             self.redo_tree_display()
@@ -7721,7 +7700,7 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Cut and paste ID + children")
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -8013,7 +7992,7 @@ class Tree_Editor(tk.Frame):
             self.reset_tagged_ids_dropdowns()
         self.disable_paste()
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -8051,7 +8030,7 @@ class Tree_Editor(tk.Frame):
             self.reset_tagged_ids_dropdowns()
         self.disable_paste()
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.refresh_all_formatting(rows=self.refresh_rows)
+        self.refresh_formatting(rows=self.refresh_rows)
         self.redo_tree_display()
         self.refresh_rows = set()
         self.redraw_sheets()
@@ -8156,7 +8135,7 @@ class Tree_Editor(tk.Frame):
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.refresh_all_formatting(rows=to_refresh)
+        self.refresh_formatting(rows=to_refresh)
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
@@ -8437,7 +8416,7 @@ class Tree_Editor(tk.Frame):
                     rows.add(rn)
                     cols.add(c)
                     cells_changed += 1
-        self.refresh_all_formatting(rows=rows, columns=cols)
+        self.refresh_formatting(rows=rows, columns=cols)
         for rn in rows:
             self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
         if not cells_changed:
@@ -8482,7 +8461,7 @@ class Tree_Editor(tk.Frame):
                     rows.add(rn)
                     cols.add(c)
                     cells_changed += 1
-        self.refresh_all_formatting(rows=rows, columns=cols)
+        self.refresh_formatting(rows=rows, columns=cols)
         for rn in rows:
             self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
         if not cells_changed:
@@ -8526,7 +8505,7 @@ class Tree_Editor(tk.Frame):
                     rows.add(rn)
                     cols.add(c)
                     cells_changed += 1
-        self.refresh_all_formatting(rows=rows, columns=cols)
+        self.refresh_formatting(rows=rows, columns=cols)
         for rn in rows:
             self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
         if not cells_changed:
@@ -8571,7 +8550,7 @@ class Tree_Editor(tk.Frame):
                     rows.add(rn)
                     cols.add(c)
                     cells_changed += 1
-        self.refresh_all_formatting(rows=rows, columns=cols)
+        self.refresh_formatting(rows=rows, columns=cols)
         for rn in rows:
             self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
         if not cells_changed:
@@ -9438,7 +9417,7 @@ class Tree_Editor(tk.Frame):
         self.tagged_ids = set(filter(self.rns.__contains__, self.tagged_ids))
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
-        self.refresh_all_formatting(dehighlight=True)
+        self.refresh_formatting(dehighlight=True)
         self.redo_tree_display()
         self.refresh_dropdowns()
         self.changelog_append(
@@ -10436,7 +10415,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
-        self.refresh_all_formatting()
+        self.refresh_formatting()
         self.redo_tree_display()
         self.refresh_dropdowns()
         self.stop_work(self.get_tree_editor_status_bar_text())
@@ -10890,7 +10869,7 @@ class Tree_Editor(tk.Frame):
                 self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                 self.sheet.deselect()
                 self.set_headers()
-                self.refresh_all_formatting()
+                self.refresh_formatting()
                 self.reset_tagged_ids_dropdowns()
                 self.rehighlight_tagged_ids()
                 self.redo_tree_display()

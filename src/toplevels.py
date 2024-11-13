@@ -2196,7 +2196,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         elif details_changed:
             self.C.disable_paste()
-            self.C.refresh_all_formatting(rows=refresh_rows, columns=refresh_cols)
+            self.C.refresh_formatting(rows=refresh_rows, columns=refresh_cols)
             for rn in refresh_rows:
                 self.C.refresh_tree_item(sheet_data[rn][self.C.ic])
             self.C.redraw_sheets()
@@ -2773,7 +2773,7 @@ class View_Id_Popup(tk.Toplevel):
             self.C.disable_paste()
             self.C.rns = {r[self.C.ic].lower(): i for i, r in enumerate(self.C.sheet.data)}
             self.C.redo_tree_display()
-            self.C.refresh_all_formatting(rows=self.C.refresh_rows)
+            self.C.refresh_formatting(rows=self.C.refresh_rows)
             self.C.refresh_rows = []
             self.C.redraw_sheets()
             if tree_sel:
@@ -2800,7 +2800,7 @@ class View_Id_Popup(tk.Toplevel):
                     f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.C.headers[x1].name}",
                 )
                 self.C.redo_tree_display()
-                self.C.refresh_all_formatting(rows=y1)
+                self.C.refresh_formatting(rows=y1)
                 self.C.redraw_sheets()
                 if self.C.tree.exists(ik):
                     self.C.tree.scroll_to_item(ik)
@@ -2832,7 +2832,7 @@ class View_Id_Popup(tk.Toplevel):
             self.C.snapshot_ctrl_x_v_del_key()
             self.C.vs[-1]["cells"][(y1, x1)] = f"{self.C.sheet.MT.data[y1][x1]}"
             newtext = self.C.edit_cell_single(y1, x1, newtext)
-            self.C.refresh_all_formatting(rows=y1, columns=x1)
+            self.C.refresh_formatting(rows=y1, columns=x1)
             self.C.refresh_tree_item(ID)
             self.C.disable_paste()
             self.C.redraw_sheets()
