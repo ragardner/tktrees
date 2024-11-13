@@ -2447,11 +2447,11 @@ class Tree_Editor(tk.Frame):
             return
 
         self.start_work("Pasting cells... ")
-        idcols = set(self.hiers) | {self.ic}
         cells_changed = 0
         need_rebuild = any(c == self.ic or self.headers[c].type_ == "Parent" for c in range(x1, x1 + numcols))
         if need_rebuild:
             self.snapshot_ctrl_x_v_del_key_id_par()
+            idcols = set(self.hiers) | {self.ic}
             for ndr, r in enumerate(range(tree_disprn, tree_disprn + numrows)):
                 ik = self.tree.rowitem(r)
                 sheet_rn = self.rns[ik]
@@ -2536,10 +2536,10 @@ class Tree_Editor(tk.Frame):
 
         self.start_work("Pasting cells... ")
         cells_changed = 0
-        idcols = set(self.hiers) | {self.ic}
         need_rebuild = any(c == self.ic or self.headers[c].type_ == "Parent" for c in range(x1, x1 + numcols))
         if need_rebuild:
             self.snapshot_ctrl_x_v_del_key_id_par()
+            idcols = set(self.hiers) | {self.ic}
             for ndr, r in enumerate(range(y1, y1 + numrows)):
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
                     value = data[ndr][ndc]
