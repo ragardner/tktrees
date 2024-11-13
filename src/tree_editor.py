@@ -1860,7 +1860,7 @@ class Tree_Editor(tk.Frame):
             )
         )
 
-    def edit_cell_rebuild(self, ID, y1, x1, value):
+    def edit_cell_rebuild(self, ID, y1, x1, value) -> object:
         self.changelog_append(
             "Edit cell",
             f"ID: {ID} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
@@ -1871,6 +1871,7 @@ class Tree_Editor(tk.Frame):
         self.sheet.MT.data[y1][x1] = f"{value}"
         self.rebuild_tree()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        return value
         
     def edit_cell_single(self, r: int, c: int, value: object) -> None:
         if self.headers[c].type_ == "Numerical Detail":
@@ -1884,6 +1885,7 @@ class Tree_Editor(tk.Frame):
             value,
         )
         self.sheet.MT.data[r][c] = value
+        return value
         
     def edit_cell_multiple(self, r: int, c: int, value: object) -> None:
         if self.headers[c].type_ == "Numerical Detail":
@@ -1897,6 +1899,7 @@ class Tree_Editor(tk.Frame):
             value,
         )
         self.sheet.MT.data[r][c] = value
+        return value
 
     def tree_sheet_edit_cell(self, event=None):
         if not event or event.value is None:
@@ -2003,7 +2006,7 @@ class Tree_Editor(tk.Frame):
                 return None
             self.snapshot_ctrl_x_v_del_key()
             self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
-            self.edit_cell_single(y1, x1, newtext)
+            newtext = self.edit_cell_single(y1, x1, newtext)
             self.refresh_all_formatting(rows=y1, columns=x1)
             self.refresh_tree_item(ID)
             self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)

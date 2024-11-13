@@ -1856,10 +1856,10 @@ class Find_And_Replace_Popup(tk.Toplevel):
         event.column = c
         event.loc = (r, c)
         old_value = f"{self.C.sheet.MT.data[r][c]}"
-        if isinstance(self.C.tree_sheet_edit_cell(event=event), str):
-            self.stop_work(f"Replaced {old_value} with {newtext}")
+        if self.C.tree_sheet_edit_cell(event=event) is None:
+            self.stop_work("Replace either failed or required tree rebuild")
         else:
-            self.stop_work(f"Failed to replace {old_value} with {newtext}")
+            self.stop_work(f"Replaced {old_value} with {newtext}")
 
     def tree_replace_next(self, event=None):
         if not self.C.sheet.data:
@@ -1977,10 +1977,10 @@ class Find_And_Replace_Popup(tk.Toplevel):
         event.column = c
         event.loc = (r, c)
         old_value = f"{self.C.sheet.MT.data[r][c]}"
-        if isinstance(self.C.tree_sheet_edit_cell(event=event), str):
-            self.stop_work(f"Replaced {old_value} with {newtext}")
+        if self.C.tree_sheet_edit_cell(event=event) is None:
+            self.stop_work("Replace either failed or required tree rebuild")
         else:
-            self.stop_work(f"Failed to replace {old_value} with {newtext}")
+            self.stop_work(f"Replaced {old_value} with {newtext}")
 
     def get_cells(self, where=True, widget=None):
         if not widget:
@@ -2831,7 +2831,7 @@ class View_Id_Popup(tk.Toplevel):
                 return
             self.C.snapshot_ctrl_x_v_del_key()
             self.C.vs[-1]["cells"][(y1, x1)] = f"{self.C.sheet.MT.data[y1][x1]}"
-            self.C.edit_cell_single(y1, x1, newtext)
+            newtext = self.C.edit_cell_single(y1, x1, newtext)
             self.C.refresh_all_formatting(rows=y1, columns=x1)
             self.C.refresh_tree_item(ID)
             self.C.disable_paste()
