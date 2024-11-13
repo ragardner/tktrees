@@ -77,7 +77,7 @@ from .widgets import (
     Id_Parent_Column_Selector,
     Label,
     Normal_Entry,
-    Numerical_Entry_With_Scrollbar,
+    Number_Entry_With_Scrollbar,
     Readonly_Entry_With_Scrollbar,
     Scrollbar,
     Single_Column_Selector,
@@ -2319,7 +2319,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
 
         self.formatting_view.dropdown("B", values=[""] + list(self.displayed_colors_dct), state="readonly")
 
-        if self.C.headers[self.column].type_ == "Numerical Detail":
+        if self.C.headers[self.column].type_ == "Number Detail":
             headers = ["If cell is: e.g. > 0 and < 5", "Make color:"]
             self.formatting_view.popup_menu_add_command(
                 "Del all & add number scale", func=lambda: self.add_auto_conditions("num")
@@ -2496,7 +2496,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                 return
             self.C.headers[self.column].formatting = []
             step = (max_v - min_v) / 20
-            if header.type_ == "Numerical Detail":
+            if header.type_ == "Number Detail":
                 if self.new_frame.order == "ASCENDING":
                     v = float(min_v)
                     for i in range(1, 21):
@@ -3848,15 +3848,15 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
             self.date_label.grid(row=0, column=0, sticky="nswe", padx=(20, 10), pady=10)
             self.date_entry_widget = Date_Entry(self.entries_frame, DATE_FORM, theme=theme)
             self.date_entry_widget.grid(row=0, column=1, sticky="nswe", padx=(0, 30), pady=10)
-            self.numerical_label = Label(self.entries_frame, text="OR set Number:", font=EF, theme=theme)
-            self.numerical_label.grid(row=0, column=2, sticky="nswe", padx=(0, 10), pady=10)
-            self.numerical_entry_widget = Numerical_Entry_With_Scrollbar(self.entries_frame, theme=theme)
-            self.numerical_entry_widget.grid(row=0, column=3, sticky="nswe", padx=(0, 20), pady=15)
+            self.number_label = Label(self.entries_frame, text="OR set Number:", font=EF, theme=theme)
+            self.number_label.grid(row=0, column=2, sticky="nswe", padx=(0, 10), pady=10)
+            self.number_entry_widget = Number_Entry_With_Scrollbar(self.entries_frame, theme=theme)
+            self.number_entry_widget.grid(row=0, column=3, sticky="nswe", padx=(0, 20), pady=15)
             if "/" in current_detail or "-" in current_detail:
                 self.date_entry_widget.set_my_value(current_detail)
             else:
-                self.numerical_entry_widget.set_my_value(current_detail)
-            self.numerical_entry_widget.my_entry.bind("<Return>", self.confirm_normal)
+                self.number_entry_widget.set_my_value(current_detail)
+            self.number_entry_widget.my_entry.bind("<Return>", self.confirm_normal)
             self.date_entry_widget.entry_1.bind("<Return>", self.confirm_normal)
             self.date_entry_widget.entry_2.bind("<Return>", self.confirm_normal)
             self.date_entry_widget.entry_3.bind("<Return>", self.confirm_normal)
@@ -3884,7 +3884,7 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
     def confirm_normal(self, event=None):
         self.result = True
         x1 = self.date_entry_widget.get_my_value()
-        x2 = self.numerical_entry_widget.get_my_value()
+        x2 = self.number_entry_widget.get_my_value()
         if not all(c in ("/", "-") for c in x1):
             self.saved_string = x1
         elif x2:
@@ -3902,10 +3902,10 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
         self.destroy()
 
 
-class Edit_Detail_Numerical_Popup(tk.Toplevel):
+class Edit_Detail_Number_Popup(tk.Toplevel):
     def __init__(self, C, ID, column, current_detail, validation_values=[], set_value=None, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Change numerical detail")
+        self.C = new_toplevel_chores(self, C, f"{app_title} - Change number detail")
         self.grid_columnconfigure(1, weight=1)
         self.id_label = Label(self, text="ID:", font=EF, theme=theme)
         self.id_label.grid(row=0, column=0, sticky="nswe", padx=20)
@@ -3934,7 +3934,7 @@ class Edit_Detail_Numerical_Popup(tk.Toplevel):
             height_ = 225
             self.bind("<Return>", self.confirm_validation)
         else:
-            self.entry_widget = Numerical_Entry_With_Scrollbar(self, theme=theme)
+            self.entry_widget = Number_Entry_With_Scrollbar(self, theme=theme)
             self.entry_widget.set_my_value(current_detail)
             self.entry_widget.grid(row=3, column=0, columnspan=2, sticky="nswe", padx=20, pady=10)
             self.entry_widget.my_entry.bind("<Return>", self.confirm_normal)
@@ -4195,7 +4195,7 @@ class Edit_Validation_Popup(tk.Toplevel):
         self.C = new_toplevel_chores(self, C, f"{app_title} - Edit validation")
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
-        if coltype == "Numerical Detail":
+        if coltype == "Number Detail":
             self.allowed_chars = validation_allowed_num_chars
         elif coltype == "Date Detail":
             self.allowed_chars = validation_allowed_date_chars
@@ -4341,7 +4341,7 @@ class Add_Detail_Column_Popup(tk.Toplevel):
         self.grid_columnconfigure(2, weight=1)
         self.grid_rowconfigure(1, weight=1)
         self.type_display = Ez_Dropdown(self, EF)
-        self.type_display["values"] = ("Text Detail", "Numerical Detail", "Date Detail")
+        self.type_display["values"] = ("Text Detail", "Number Detail", "Date Detail")
         self.type_display.set_my_value("Text Detail")
         self.type_display.grid(row=0, column=0, sticky="nswe", padx=(20, 0), pady=(20, 5))
         self.type_display.bind("<<ComboboxSelected>>", lambda focus: self.detail_name_display.place_cursor())

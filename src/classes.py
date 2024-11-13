@@ -606,11 +606,20 @@ class Header:
     def __init__(
         self,
         name: str,
-        type_: Literal["ID", "Parent", "Text Detail", "Numerical Detail", "Date Detail"] = "Text Detail",
+        type_: Literal[
+            "ID",
+            "Parent",
+            "Text Detail",
+            "Number Detail",
+            "Numerical Detail",
+            "Date Detail",
+        ] = "Text Detail",
         formatting: None | list[object] = None,
         validation: None | list[str] = None,
     ):
         self.name = name
+        if type_ == "Numerical Detail":
+            type_ = "Number Detail"
         self.type_ = type_
         if formatting is None:
             self.formatting = []

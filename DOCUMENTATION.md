@@ -110,7 +110,7 @@ Right clicking on columns in the header will show a popup menu with a few column
 
 #### Column types:
 
-A detail column can have one of three different types, Text, Numerical and Date. Text details can be any text, Numerical details can be any number and Date details can be either a date one of three formats (YYYY/MM/DD, DD/MM/YYYY, MM/DD/YYYY) or a whole number (integer).
+A detail column can have one of three different types, Text, Number and Date. Text details can be any text, Number details can be any number and Date details can be either a date one of three formats (YYYY/MM/DD, DD/MM/YYYY, MM/DD/YYYY) or a whole number (integer).
 
 Changing a column type will result in any details, formatting or validation being evaluated and potentially deleted if they do not meet the column types requirements.
 
@@ -122,7 +122,7 @@ To add a condition in the conditional formatting popup right click in the empty 
 
 For Text Detail columns conditions are limited to text matching, e.g. if the cell contains exactly the user input. Text conditions are not case sensitive.
 
-For Numerical Detail columns the following characters are allowed:
+For Number Detail columns the following characters are allowed:
 ```
 c   Column e.g. c5
 0-9 Any number

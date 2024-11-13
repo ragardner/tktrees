@@ -837,11 +837,11 @@ class Auto_Add_Condition_Num_Frame(tk.Frame):
         self.grid_rowconfigure(3, weight=1)
         self.min_label = Label(self, text="Min:", font=EFB, theme=theme)
         self.min_label.grid(row=0, column=0, sticky="nswe", padx=(20, 10), pady=(5, 0))
-        self.min_entry = Numerical_Entry_With_Scrollbar(self, theme=theme)
+        self.min_entry = Number_Entry_With_Scrollbar(self, theme=theme)
         self.min_entry.grid(row=0, column=1, sticky="nswe", padx=(20, 0), pady=(20, 0))
         self.max_label = Label(self, text="Max:", font=EFB, theme=theme)
         self.max_label.grid(row=0, column=2, sticky="nswe", padx=(10, 10), pady=(5, 0))
-        self.max_entry = Numerical_Entry_With_Scrollbar(self, theme=theme)
+        self.max_entry = Number_Entry_With_Scrollbar(self, theme=theme)
         self.max_entry.grid(row=0, column=3, sticky="nswe", padx=(10, 20), pady=(20, 0))
         self.get_col_min = Button(self, text="Get column minimum", style="EF.Std.TButton", command=self.get_col_min_val)
         self.get_col_min.grid(row=1, column=1, sticky="nswe", padx=(20, 0))
@@ -1837,13 +1837,13 @@ class Ez_Dropdown(ttk.Combobox):
         self.displayed.set(value)
 
 
-class Numerical_Entry_With_Scrollbar(tk.Frame):
+class Number_Entry_With_Scrollbar(tk.Frame):
     def __init__(self, parent, theme="dark"):
         tk.Frame.__init__(self, parent, background=themes[theme].top_left_bg)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
-        self.my_entry = Numerical_Normal_Entry(self, font=EF, theme=theme)
+        self.my_entry = Number_Normal_Entry(self, font=EF, theme=theme)
         self.my_entry.grid(row=0, column=0, sticky="nswe")
         self.my_scrollbar = Scrollbar(self, self.my_entry.xview, "horizontal", self.my_entry)
         self.my_scrollbar.grid(row=1, column=0, sticky="ew")
@@ -1861,7 +1861,7 @@ class Numerical_Entry_With_Scrollbar(tk.Frame):
         self.my_entry.set_my_value(val)
 
 
-class Numerical_Normal_Entry(tk.Entry):
+class Number_Normal_Entry(tk.Entry):
     def __init__(self, parent, font, width_=None, theme="dark"):
         tk.Entry.__init__(
             self,
