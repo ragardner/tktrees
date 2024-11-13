@@ -4892,10 +4892,6 @@ class Tree_Editor(tk.Frame):
             if d["="] > 4:
                 return "Error: Too many = characters"
 
-            # column identifier mixed with / character
-            if re.findall("([cC][0-9]+[/]+[0-9]+)", condition):
-                return "Error: Column identifier contained / character"
-
             # number larger or less than 10 trillion
             for n in re.findall("([0-9]+)", condition):
                 x = float(n)
@@ -4907,26 +4903,6 @@ class Tree_Editor(tk.Frame):
                 if n.count(".") > 1:
                     return "Error: A number contained more than one . character"
 
-            cond_cols = set(re.findall("([cC][0-9]+|[cC][dD])", condition))
-
-            # if any col is greater than total cols
-            # if col that is being checked is in condition
-            set_hiers = set(self.hiers)
-            for cond_col in cond_cols:
-                if cond_col.lower() == "cd":
-                    continue
-                x = int("".join(re.findall("([0-9]+)", cond_col)))
-                if x > self.row_len:
-                    return f"Error: {cond_col} larger than total columns"
-                x -= 1
-                if heads[x].type_ != heads[col].type_:
-                    return "Error: Condition contained column with a different type to the one being checked"
-                if x == col:
-                    return (f"Error: Column being checked by condition ({col + 1}) not allowed in condition",)
-                if x == self.ic:
-                    return "Error: Condition contains ID column"
-                if x in set_hiers:
-                    return f"Error: Condition contains Parent column #{x + 1} named: {heads[x].name}"
         if heads[col].type_ == "Number Detail":
             for last_char, char in zip(
                 islice(condition, 0, len(condition)),
@@ -4994,7 +4970,7 @@ class Tree_Editor(tk.Frame):
 
                 # /
                 if last_char == "/" or char == "/":
-                    return "Error: / not allowed in Number Detail condition"
+                    return "Error: / not allowed in Number Detail conditions"
 
                 # .
                 if last_char == "." and char not in nums:
@@ -5009,10 +4985,8 @@ class Tree_Editor(tk.Frame):
                     return "Error: A space must be before - characters"
 
                 # c
-                if last_char == "c" and char not in nums:
-                    return "Error: A number must follow a c character in number conditions"
-                if char == "c" and last_char != " ":
-                    return "Error: A space must be before a c character"
+                if char == "c":
+                    return "Error: c character not allowed in Number Detail conditions"
 
             if condition[-1] not in nums:
                 return "Error: Condition can only end in a number"
@@ -5098,10 +5072,10 @@ class Tree_Editor(tk.Frame):
                     return "Error: - characters not allowed in Date conditions"
 
                 # c
-                if last_char == "c" and char != "d" and char not in nums:
-                    return "Error: Current date (cd) or column number spelt incorrectly"
+                if last_char == "c" and char != "d":
+                    return "Error: Current date (cd) spelt incorrectly"
                 if char == "c" and last_char != " ":
-                    return "Error: A space must be before a column number or current date (cd)"
+                    return "Error: A space must be before current date (cd)"
 
             if condition[-1] == "d" and condition[-2] != "c":
                 return "Error: Current date (cd) spelt incorrectly"
@@ -5111,21 +5085,6 @@ class Tree_Editor(tk.Frame):
         # elif heads[col].type_ in ("ID", "Parent", "Text Detail"):
         # pass
         return condition
-
-    def set_up_condition_columns(self, condition, pattern, columns) -> str:
-        modified_condition = re.split(pattern, condition)
-        for i in range(len(modified_condition)):
-            e = modified_condition[i]
-            x = e.lower()
-            if "c" in x and "d" not in x:
-                e = [xx for xx in re.split("([cC])", modified_condition[i].lower()) if xx]
-                col = int(e[1]) - 1
-                columns.add(col)
-                e = f"self.sheet.MT.data[rn][{col}]"
-            elif x == "cd":
-                e = "cd"
-            modified_condition[i] = e
-        return "".join(modified_condition), columns
 
     def format_str_number(self, s):
         if not s:
@@ -5199,32 +5158,22 @@ class Tree_Editor(tk.Frame):
             all_conditions[col] = {}
 
             if self.headers[col].type_ in ("ID", "Parent", "Text Detail"):
-                all_conditions[col]["conds"] = self.headers[col].formatting
-                all_conditions[col]["convert"] = set()
+                all_conditions[col] = self.headers[col].formatting
 
             elif self.headers[col].type_ == "Number Detail":
-                cols_to_convert = set()
                 for condition in self.headers[col].formatting:
                     cond, color = condition
                     if cond:
-                        if "c" in cond:
-                            cond, cols_to_convert = self.set_up_condition_columns(cond, "([cC][0-9]+)", cols_to_convert)
                         cond = "cell " + cond.replace("and", "and cell").replace("or", "or cell")
                         modified_conditions.append((cond, color))
                     else:
                         modified_conditions.append(("not cell", color))
-                all_conditions[col]["conds"] = modified_conditions
-                all_conditions[col]["convert"] = cols_to_convert
+                all_conditions[col] = modified_conditions
 
             elif self.headers[col].type_ == "Date Detail":
-                cols_to_convert = set()
                 for condition in self.headers[col].formatting:
                     cond, color = condition
                     if cond:
-                        if "c" in cond:
-                            cond, cols_to_convert = self.set_up_condition_columns(
-                                cond, "([cC][0-9]+|[cC][dD])", cols_to_convert
-                            )
                         cond = cond.replace("and", "and cell").replace("or", "or cell")
                         cond = "cell " + "".join(
                             [
@@ -5243,8 +5192,7 @@ class Tree_Editor(tk.Frame):
                         modified_conditions.append((cond, color))
                     else:
                         modified_conditions.append(("not cell", color))
-                all_conditions[col]["conds"] = modified_conditions
-                all_conditions[col]["convert"] = cols_to_convert
+                all_conditions[col] = modified_conditions
 
         quick_data = self.sheet.MT.data
         for rn in rows:
@@ -5256,22 +5204,16 @@ class Tree_Editor(tk.Frame):
 
                 cell = quick_data[rn][col]
 
-                # convert all involved cells to numbers, dates
+                # convert cell to number/date
                 if cell:
                     if col in number_cols:
                         cell = self.format_str_number(cell)
                     elif col in date_cols:
                         cell = self.format_str_date(cell)
 
-                for xcol in all_conditions[col]["convert"]:
-                    if xcol in number_cols:
-                        quick_data[rn][xcol] = self.format_str_number(quick_data[rn][xcol])
-                    elif xcol in date_cols:
-                        quick_data[rn][xcol] = self.format_str_date(quick_data[rn][xcol])
-
                 # apply highlights
                 if col in number_cols or col in date_cols:
-                    for cond, color in all_conditions[col]["conds"]:
+                    for cond, color in all_conditions[col]:
                         try:
                             if eval(cond):
                                 self.sheet.highlight_cells(
@@ -5285,23 +5227,17 @@ class Tree_Editor(tk.Frame):
                             continue
 
                 else:
-                    for cond, color in all_conditions[col]["conds"]:
+                    for cond, color in all_conditions[col]:
                         if cell.lower() == cond.lower():
                             self.sheet.highlight_cells(row=rn, column=col, bg=color, fg="black")
                             break
 
-                # convert all involved cells back to strings
+                # convert cell back to string
                 if cell != "":
                     if col in number_cols:
                         quick_data[rn][col] = f"{cell}"
                     elif col in date_cols:
                         quick_data[rn][col] = self.format_date_str(cell)
-
-                for xcol in all_conditions[col]["convert"]:
-                    if xcol in number_cols:
-                        quick_data[rn][xcol] = f"{quick_data[rn][xcol]}"
-                    elif xcol in date_cols:
-                        quick_data[rn][xcol] = self.format_date_str(quick_data[rn][xcol])
 
         self.refresh_rows = set()
 

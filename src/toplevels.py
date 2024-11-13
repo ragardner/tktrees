@@ -2378,6 +2378,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
         boxes = self.formatting_view.boxes
         self.redo_formatting_view()
         self.formatting_view.boxes = boxes
+        self.enable_formatting_view()
 
     def formatting_view_delete(self, event):
         for cell in event.cells.table:
@@ -2413,18 +2414,19 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                         theme=self.C.C.theme,
                     )
                     self.new_frame.grid(row=1, column=0, sticky="nswe")
+                    self.new_frame.focus_set()
                     self.bind("<Return>", self.new_frame.confirm)
                     self.new_frame.wait_window()
                     if not self.window_destroyed:
                         self.unbind("<Return>")
-                        self.enable_formatting_view()
+                        self.refresh_formatting_view()
+                        self.formatting_view.focus_set()
                     return
             self.C.headers[self.column].formatting[event.row] = (
                 condition,
                 self.C.headers[self.column].formatting[event.row][1],
             )
             self.refresh_formatting_view()
-            self.enable_formatting_view()
 
         elif column == 1:
             self.C.headers[self.column].formatting[event.row] = (
@@ -2432,7 +2434,6 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                 self.displayed_colors_dct[event.value] if event.value else "",
             )
             self.refresh_formatting_view()
-            self.enable_formatting_view()
 
     def add_auto_conditions(self, num_or_date="num"):
         self.disable_formatting_view()
@@ -2618,7 +2619,6 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                         )
                         v = v - step
         self.refresh_formatting_view()
-        self.enable_formatting_view()
 
     def redo_formatting_view(self):
         self.formatting_view.deselect("all")

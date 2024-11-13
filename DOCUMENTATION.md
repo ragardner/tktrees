@@ -118,13 +118,10 @@ Changing a column type will result in any details, formatting or validation bein
 
 You can add conditional formatting to columns, meaning when certain conditions are met the cells in that column will be filled with a chosen color. You can set a maximum of 35 conditions.
 
-To add a condition in the conditional formatting popup right click in the empty space. To manage individual conditions right click on their rows.
-
 For Text Detail columns conditions are limited to text matching, e.g. if the cell contains exactly the user input. Text conditions are not case sensitive.
 
 For Number Detail columns the following characters are allowed:
 ```
-c   Column e.g. c5
 0-9 Any number
 .   Decimal place
 -   Negative number
@@ -142,7 +139,6 @@ e.g. > 100 and < 200
 
 For Date Detail columns the following characters are allowed:
 ```
-c   Column e.g. c5
 cd  Current date
 0-9 Any number
 .   Decimal place
