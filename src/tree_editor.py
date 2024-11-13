@@ -1860,15 +1860,9 @@ class Tree_Editor(tk.Frame):
             )
         )
 
-    def edit_cell_rebuild(self, ID, y1, x1, value) -> object:
-        self.changelog_append(
-            "Edit cell",
-            f"ID: {ID} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
-            f"{self.sheet.data[y1][x1]}",
-            f"{value}",
-        )
+    def edit_cell_rebuild(self, r, c, value) -> object:
         self.snapshot_ctrl_x_v_del_key_id_par()
-        self.sheet.MT.data[y1][x1] = f"{value}"
+        self.edit_cell_single(r, c, value)
         self.rebuild_tree()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         return value
@@ -1925,7 +1919,7 @@ class Tree_Editor(tk.Frame):
             ik = id_.lower()
             tree_sel = self.tree.selection()
             if not self.change_ID_name(id_, newtext, errors=False):
-                self.edit_cell_rebuild(ID, y1, x1, newtext)
+                self.edit_cell_rebuild(y1, x1, newtext)
                 return None
 
             self.changelog_append(
@@ -1993,7 +1987,7 @@ class Tree_Editor(tk.Frame):
                     )
                     if not confirm.boolean:
                         return None
-                self.edit_cell_rebuild(ID, y1, x1, newtext)
+                self.edit_cell_rebuild(y1, x1, newtext)
                 return None
 
         else:
