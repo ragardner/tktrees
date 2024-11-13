@@ -11265,7 +11265,6 @@ class Tree_Editor(tk.Frame):
             self.undo_unsaved_changes_passed_0 = False
         if not quitting:
             self.stop_work(self.get_tree_editor_status_bar_text())
-            self.focus_tree()
         return successful
 
     def save_as(self, event=None, quitting=False):
@@ -11320,7 +11319,6 @@ class Tree_Editor(tk.Frame):
             self.undo_unsaved_changes_passed_0 = False
         if not quitting:
             self.stop_work(self.get_tree_editor_status_bar_text())
-            self.focus_tree()
         return successful
 
     def save_new_vrsn(self, event=None):
@@ -11418,5 +11416,4 @@ class Tree_Editor(tk.Frame):
             self.undo_unsaved_changes_passed_0 = False
             popup = Save_New_Version_Postsave_Popup(self, folder, os.path.basename(newfile), theme=self.C.theme)
         self.stop_work(self.get_tree_editor_status_bar_text())
-        self.focus_tree()
         return successful
