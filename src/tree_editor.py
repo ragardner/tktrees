@@ -2447,28 +2447,10 @@ class Tree_Editor(tk.Frame):
             return
 
         self.start_work("Pasting cells... ")
-        need_rebuild = False
-        need_rebuild_ID = False
-        for c in range(x1, x1 + numcols):
-            if c == self.ic:
-                need_rebuild_ID = True
-            if self.headers[c].type_ == "Parent":
-                need_rebuild = True
-            if need_rebuild and need_rebuild_ID:
-                break
-        if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool:
-            confirm = Ask_Confirm(
-                self,
-                "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
-                theme=self.C.theme,
-            )
-            if not confirm.boolean:
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-
         idcols = set(self.hiers) | {self.ic}
         cells_changed = 0
-        if need_rebuild_ID or need_rebuild:
+        need_rebuild = any(c == self.ic or self.headers[c].type_ == "Parent" for c in range(x1, x1 + numcols))
+        if need_rebuild:
             self.snapshot_ctrl_x_v_del_key_id_par()
             for ndr, r in enumerate(range(tree_disprn, tree_disprn + numrows)):
                 ik = self.tree.rowitem(r)
@@ -2505,7 +2487,7 @@ class Tree_Editor(tk.Frame):
             start_cell=(x1, tree_disprn),
             end_cell=(x1 + numcols, tree_disprn + numrows),
         )
-        if need_rebuild or need_rebuild_ID:
+        if need_rebuild:
             self.rebuild_tree()
         else:
             self.refresh_formatting(
@@ -2553,26 +2535,10 @@ class Tree_Editor(tk.Frame):
             return
 
         self.start_work("Pasting cells... ")
-        need_rebuild = False
-        need_rebuild_ID = False
-        for c in range(x1, x1 + numcols):
-            if c == self.ic:
-                need_rebuild_ID = True
-            if self.headers[c].type_ == "Parent":
-                need_rebuild = True
-        if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool:
-            confirm = Ask_Confirm(
-                self,
-                "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
-                theme=self.C.theme,
-            )
-            if not confirm.boolean:
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-
         cells_changed = 0
         idcols = set(self.hiers) | {self.ic}
-        if need_rebuild_ID or need_rebuild:
+        need_rebuild = any(c == self.ic or self.headers[c].type_ == "Parent" for c in range(x1, x1 + numcols))
+        if need_rebuild:
             self.snapshot_ctrl_x_v_del_key_id_par()
             for ndr, r in enumerate(range(y1, y1 + numrows)):
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
@@ -2604,7 +2570,7 @@ class Tree_Editor(tk.Frame):
             start_cell=(x1, y1),
             end_cell=(x1 + numcols, y1 + numrows),
         )
-        if need_rebuild or need_rebuild_ID:
+        if need_rebuild:
             self.rebuild_tree()
         else:
             self.refresh_formatting(rows=range(y1, y1 + numrows))
