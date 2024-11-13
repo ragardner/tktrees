@@ -118,7 +118,7 @@ Changing a column type will result in any details, formatting or validation bein
 
 You can add conditional formatting to columns, meaning when certain conditions are met the cells in that column will be filled with a chosen color. You can set a maximum of 35 conditions.
 
-For Text Detail columns conditions are limited to text matching, e.g. if the cell contains exactly the user input. Text conditions are not case sensitive.
+For Text detail columns conditions are limited to text matching, e.g. if the cell contains exactly the user input. Text conditions are not case sensitive.
 
 For Number Detail columns the following characters are allowed:
 ```

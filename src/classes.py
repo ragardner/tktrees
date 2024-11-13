@@ -609,17 +609,20 @@ class Header:
         type_: Literal[
             "ID",
             "Parent",
-            "Text Detail",
-            "Number Detail",
-            "Numerical Detail",
-            "Date Detail",
-        ] = "Text Detail",
+            "Text",
+            "Number",
+            "Date",
+        ] = "Text",
         formatting: None | list[object] = None,
         validation: None | list[str] = None,
     ):
         self.name = name
+        # backwards compatibility
         if type_ == "Numerical Detail":
-            type_ = "Number Detail"
+            type_ = "Number"
+        elif type_.endswith(" Detail"):
+            type_ = type_[:-7]
+
         self.type_ = type_
         if formatting is None:
             self.formatting = []

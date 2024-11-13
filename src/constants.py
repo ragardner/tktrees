@@ -114,6 +114,19 @@ sheet_bindings = tree_bindings
 validation_allowed_num_chars = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "-", "_", "."}
 validation_allowed_date_chars = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "/", "-", " "}
 
+# dict to maintain order
+date_formats_usable = {
+    "%d/%m/%Y": None,
+    "%m/%d/%Y": None,
+    "%Y/%m/%d": None,
+    "%d-%m-%Y": None,
+    "%m-%d-%Y": None,
+    "%Y-%m-%d": None,
+}
+# date_formats_entry = date_formats_usable.copy()
+# date_formats_entry["%B %d, %Y"] = None, # Full month name, e.g., January 01, 2023
+# date_formats_entry["%b %d, %Y"] = None, # Abbreviated month name, e.g., Jan 01, 2023
+
 themes = DotDict(
     {
         "light_blue": theme_light_blue,

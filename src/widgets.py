@@ -192,7 +192,7 @@ class Column_Selection(tk.Frame):
         self.C.frames.tree_edit.pc = hier_cols[0]
         self.C.frames.tree_edit.row_len = int(self.rowlen)
         self.C.frames.tree_edit.headers = [
-            Header(name, type_="ID" if i == idcol else "Parent" if i in hier_cols else "Text Detail")
+            Header(name, type_="ID" if i == idcol else "Parent" if i in hier_cols else "Text")
             for i, name in enumerate(
                 self.C.frames.tree_edit.fix_headers(self.C.frames.tree_edit.sheet.MT.data.pop(0), self.rowlen)
             )
@@ -1003,14 +1003,14 @@ class Auto_Add_Condition_Date_Frame(tk.Frame):
 
 class Edit_Condition_Frame(tk.Frame):
     def __init__(
-        self, parent, condition, colors, color=None, coltype="Text Detail", confirm_text="Save condition", theme="dark"
+        self, parent, condition, colors, color=None, coltype="Text", confirm_text="Save condition", theme="dark"
     ):
         tk.Frame.__init__(self, parent, height=160, bg=themes[theme].top_left_bg)
         self.grid_propagate(False)
         self.C = parent
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
-        if coltype in ("ID", "Parent", "Text Detail"):
+        if coltype in ("ID", "Parent", "Text"):
             self.if_cell_label = Label(self, text="If cell text is exactly:", font=EFB, theme=theme)
         else:
             self.if_cell_label = Label(self, text="If cell value is:", font=EFB, theme=theme)
@@ -1058,7 +1058,7 @@ class Edit_Condition_Frame(tk.Frame):
 
 
 class Condition_Entry_With_Scrollbar(tk.Frame):
-    def __init__(self, parent, coltype="Text Detail", theme="dark"):
+    def __init__(self, parent, coltype="Text", theme="dark"):
         tk.Frame.__init__(self, parent)
         self.config(bg=themes[theme].top_left_bg)
         self.grid_columnconfigure(0, weight=1)
@@ -1083,7 +1083,7 @@ class Condition_Entry_With_Scrollbar(tk.Frame):
 
 
 class Condition_Normal_Entry(tk.Entry):
-    def __init__(self, parent, font, coltype="Text Detail", width_=None, theme="dark"):
+    def __init__(self, parent, font, coltype="Text", width_=None, theme="dark"):
         tk.Entry.__init__(
             self,
             parent,
@@ -1098,11 +1098,11 @@ class Condition_Normal_Entry(tk.Entry):
         if width_:
             self.config(width=width_)
         self.coltype = coltype
-        if self.coltype not in ("ID", "Parent", "Text Detail"):
+        if self.coltype not in ("ID", "Parent", "Text"):
             self.validate_text = True
         else:
             self.validate_text = False
-        if coltype != "Date Detail":
+        if coltype != "Date":
             self.allowed_chars = {
                 "a",
                 "n",

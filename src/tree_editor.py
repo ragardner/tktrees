@@ -50,6 +50,7 @@ from .constants import (
     align_w_icon,
     changelog_header,
     ctrl_button,
+    date_formats_usable,
     menu_kwargs,
     rc_button,
     rc_motion,
@@ -803,17 +804,17 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col_type.add_command(
-            label="Text Detail",
+            label="Text",
             command=self.rc_change_coltype_text,
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col_type.add_command(
-            label="Number Detail",
+            label="Number",
             command=self.rc_change_coltype_number,
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col_type.add_command(
-            label="Date Detail",
+            label="Date",
             command=self.rc_change_coltype_date,
             **menu_kwargs,
         )
@@ -1868,9 +1869,9 @@ class Tree_Editor(tk.Frame):
         return value
 
     def edit_cell_single(self, r: int, c: int, value: object) -> None:
-        if self.headers[c].type_ == "Number Detail":
+        if self.headers[c].type_ == "Number":
             value = self.convert_num(value)
-        elif self.headers[c].type_ == "Date Detail":
+        elif self.headers[c].type_ == "Date":
             value = self.convert_date(value, self.DATE_FORM)
         self.changelog_append(
             "Edit cell",
@@ -1882,9 +1883,9 @@ class Tree_Editor(tk.Frame):
         return value
 
     def edit_cell_multiple(self, r: int, c: int, value: object) -> None:
-        if self.headers[c].type_ == "Number Detail":
+        if self.headers[c].type_ == "Number":
             value = self.convert_num(value)
-        elif self.headers[c].type_ == "Date Detail":
+        elif self.headers[c].type_ == "Date":
             value = self.convert_date(value, self.DATE_FORM)
         self.changelog_append_no_unsaved(
             "Edit cell |",
@@ -4697,10 +4698,10 @@ class Tree_Editor(tk.Frame):
     def check_validation_validity(self, col, validation):
         if validation == "":
             return []
-        if self.headers[col].type_ == "Number Detail":
+        if self.headers[col].type_ == "Number":
             for c in validation:
                 if c not in validation_allowed_num_chars:
-                    return "Error: Invalid character in validation for Number Detail. Error caused by: " + c
+                    return "Error: Invalid character in validation for Number column. Error caused by: " + c
             if "_" in validation:
                 validation = validation.split("_")
                 if len(validation) > 3:
@@ -4740,11 +4741,11 @@ class Tree_Editor(tk.Frame):
                 validation = validation.split(",")
             for e in validation:
                 if not isreal(e) and e != "":
-                    return "Error: Only numbers are allowed in Number Detail columns. Error caused by: " + e
-        elif self.headers[col].type_ == "Date Detail":
+                    return "Error: Only numbers are allowed in Number columns. Error caused by: " + e
+        elif self.headers[col].type_ == "Date":
             for c in validation:
                 if c not in validation_allowed_date_chars:
-                    return "Error: Invalid character in validation for Date Detail. Error caused by: " + c
+                    return "Error: Invalid character in validation for Date columns. Error caused by: " + c
             validation = validation.split(",")
             for i in range(len(validation)):
                 e = validation[i]
@@ -4753,9 +4754,9 @@ class Tree_Editor(tk.Frame):
                     if x and len(x) == 1 and x[0] != self.DATE_FORM:
                         e = datetime.datetime.strftime(datetime.datetime.strptime(e, x[0]), self.DATE_FORM)
                     elif not x:
-                        return "Error: Only dates are allowed in Date Detail columns. Error caused by: " + e
+                        return "Error: Only dates are allowed in Date columns. Error caused by: " + e
                 validation[i] = e
-        elif self.headers[col].type_ == "Text Detail":
+        elif self.headers[col].type_ == "Text":
             validation = validation.split(",")
         else:
             return "Error: Only Detail columns can have validation"
@@ -4774,7 +4775,7 @@ class Tree_Editor(tk.Frame):
             heads = input_headers
         else:
             heads = self.headers
-        if heads[col].type_ in ("Number Detail", "Date Detail"):
+        if heads[col].type_ in ("Number", "Date"):
             all_allowed_chars = {
                 "a",
                 "n",
@@ -4870,7 +4871,7 @@ class Tree_Editor(tk.Frame):
                 if n.count(".") > 1:
                     return "Error: A number contained more than one . character"
 
-        if heads[col].type_ == "Number Detail":
+        if heads[col].type_ == "Number":
             for last_char, char in zip(
                 islice(condition, 0, len(condition)),
                 islice(condition, 1, len(condition)),
@@ -4937,7 +4938,7 @@ class Tree_Editor(tk.Frame):
 
                 # /
                 if last_char == "/" or char == "/":
-                    return "Error: / not allowed in Number Detail conditions"
+                    return "Error: / not allowed in Number conditions"
 
                 # .
                 if last_char == "." and char not in nums:
@@ -4953,12 +4954,12 @@ class Tree_Editor(tk.Frame):
 
                 # c
                 if char == "c":
-                    return "Error: c character not allowed in Number Detail conditions"
+                    return "Error: c character not allowed in Number conditions"
 
             if condition[-1] not in nums:
                 return "Error: Condition can only end in a number"
 
-        elif heads[col].type_ == "Date Detail":
+        elif heads[col].type_ == "Date":
             for last_char, char in zip(
                 islice(condition, 0, len(condition)),
                 islice(condition, 1, len(condition)),
@@ -5049,7 +5050,7 @@ class Tree_Editor(tk.Frame):
 
             if condition[-1] not in nums and condition[-1] != "d":
                 return "Error: Condition can only end in a number or current date (cd)"
-        # elif heads[col].type_ in ("ID", "Parent", "Text Detail"):
+        # elif heads[col].type_ in ("ID", "Parent", "Text"):
         # pass
         return condition
 
@@ -5115,8 +5116,8 @@ class Tree_Editor(tk.Frame):
             cd = datetime.timedelta(days=0)  # noqa: F841
 
         all_conditions = {}
-        number_cols = {col for col, hdr in enumerate(self.headers) if hdr.type_ == "Number Detail"}
-        date_cols = {col for col, hdr in enumerate(self.headers) if hdr.type_ == "Date Detail"}
+        number_cols = {col for col, hdr in enumerate(self.headers) if hdr.type_ == "Number"}
+        date_cols = {col for col, hdr in enumerate(self.headers) if hdr.type_ == "Date"}
 
         for col in columns:
             if not self.headers[col].formatting:
@@ -5124,10 +5125,10 @@ class Tree_Editor(tk.Frame):
             modified_conditions = []
             all_conditions[col] = {}
 
-            if self.headers[col].type_ in ("ID", "Parent", "Text Detail"):
+            if self.headers[col].type_ in ("ID", "Parent", "Text"):
                 all_conditions[col] = self.headers[col].formatting
 
-            elif self.headers[col].type_ == "Number Detail":
+            elif self.headers[col].type_ == "Number":
                 for condition in self.headers[col].formatting:
                     cond, color = condition
                     if cond:
@@ -5137,7 +5138,7 @@ class Tree_Editor(tk.Frame):
                         modified_conditions.append(("not cell", color))
                 all_conditions[col] = modified_conditions
 
-            elif self.headers[col].type_ == "Date Detail":
+            elif self.headers[col].type_ == "Date":
                 for condition in self.headers[col].formatting:
                     cond, color = condition
                     if cond:
@@ -5268,7 +5269,7 @@ class Tree_Editor(tk.Frame):
         self.set_headers()
 
     def change_coltype_text(self, col):
-        self.headers[col].type_ = "Text Detail"
+        self.headers[col].type_ = "Text"
         if isinstance(self.check_validation_validity(col, ",".join(self.headers[col].validation)), str):
             self.headers[col].validation = []
         self.headers[col].formatting = []
@@ -5276,8 +5277,8 @@ class Tree_Editor(tk.Frame):
     def rc_change_coltype_number(self, event=None):
         if (col := self.rc_selected_col()) is None:
             return
-        self.snapshot_col_type_num_date(col, "Number Detail")
-        self.headers[col].type_ = "Number Detail"
+        self.snapshot_col_type_num_date(col, "Number")
+        self.headers[col].type_ = "Number"
         self.change_coltype_number(col)
         validation = self.check_validation_validity(col, ",".join(self.headers[col].validation))
         if isinstance(validation, str):
@@ -5300,7 +5301,7 @@ class Tree_Editor(tk.Frame):
                 cell = self.sheet.MT.data[rn][col]
                 if cell and not isreal(cell):
                     self.warnings.append(
-                        f" - Deleted cell row #{rn} column #{col} because {cell} was not valid for number detail column"
+                        f" - Deleted cell row #{rn} column #{col} because {cell} was not valid for Number column"
                     )
                     self.sheet.MT.data[rn][col] = ""
                     self.refresh_tree_item(self.sheet.data[rn][self.ic])
@@ -5318,14 +5319,7 @@ class Tree_Editor(tk.Frame):
 
     def detect_date_form(self, date):
         forms = []
-        for form in (
-            "%d/%m/%Y",
-            "%m/%d/%Y",
-            "%Y/%m/%d",
-            "%d-%m-%Y",
-            "%m-%d-%Y",
-            "%Y-%m-%d",
-        ):
+        for form in date_formats_usable:
             try:
                 datetime.datetime.strptime(date, form).date()
                 forms.append(form)
@@ -5336,14 +5330,7 @@ class Tree_Editor(tk.Frame):
     def convert_date(self, date, new_form):
         if isint(date):
             return f"{int(date)}"
-        for form in (
-            "%d/%m/%Y",
-            "%m/%d/%Y",
-            "%Y/%m/%d",
-            "%d-%m-%Y",
-            "%m-%d-%Y",
-            "%Y-%m-%d",
-        ):
+        for form in date_formats_usable:
             try:
                 return datetime.datetime.strftime(datetime.datetime.strptime(date, form), new_form)
             except Exception:
@@ -5355,8 +5342,7 @@ class Tree_Editor(tk.Frame):
             return "%d/%m/%Y"
         elif form.startswith("%m"):
             return "%m/%d/%Y"
-        else:
-            return "%Y/%m/%d"
+        return "%Y/%m/%d"
 
     def is_in_validation(self, validation, text):
         return text in validation
@@ -5365,13 +5351,13 @@ class Tree_Editor(tk.Frame):
         t = self.headers[col].type_
         if self.headers[col].validation and not self.is_in_validation(self.headers[col].validation, detail):
             return False
-        if t == "Text Detail":
+        if t == "Text":
             return True
-        elif t == "Number Detail":
+        elif t == "Number":
             if detail == "":
                 return True
             return isreal(detail)
-        elif t == "Date Detail":
+        elif t == "Date":
             if isint(detail):
                 return True
             return bool(self.detect_date_form(detail))
@@ -5381,16 +5367,16 @@ class Tree_Editor(tk.Frame):
         t = self.headers[col].type_
         if self.headers[col].validation and not self.is_in_validation(self.headers[col].validation, detail):
             return "Entered detail is not in column validation"
-        if t == "Number Detail":
+        if t == "Number":
             return "Entered detail is not a valid number"
-        elif t == "Date Detail":
+        elif t == "Date":
             return "Entered detail is not a valid date or integer"
 
     def rc_change_coltype_date(self, event=None):
         if (col := self.rc_selected_col()) is None:
             return
-        self.snapshot_col_type_num_date(col, "Date Detail")
-        self.headers[col].type_ = "Date Detail"
+        self.snapshot_col_type_num_date(col, "Date")
+        self.headers[col].type_ = "Date"
         self.change_coltype_date(col, detect_date_form=True)
         if isinstance(self.check_validation_validity(col, ",".join(self.headers[col].validation)), str):
             self.headers[col].validation = []
@@ -5427,7 +5413,7 @@ class Tree_Editor(tk.Frame):
                         except Exception:
                             if warnings:
                                 self.warnings.append(
-                                    f" - Deleted cell row #{rn} column #{col} because {cell} was not valid for date detail column"
+                                    f" - Deleted cell row #{rn} column #{col} because {cell} was not valid for Date columns"
                                 )
                             self.sheet.MT.data[rn][col] = ""
                         self.refresh_tree_item(self.sheet.data[rn][self.ic])
@@ -5909,7 +5895,7 @@ class Tree_Editor(tk.Frame):
         elif new_vs["type"] == "date form":
             self.DATE_FORM = new_vs["old_form"]
             xxform = new_vs["new_form"]
-            date_cols = [i for i, h in enumerate(self.headers) if h.type_ == "Date Detail"]
+            date_cols = [i for i, h in enumerate(self.headers) if h.type_ == "Date"]
             for col in date_cols:
                 for rn in range(len(self.sheet.MT.data)):
                     cell = self.sheet.MT.data[rn][col]
@@ -6213,7 +6199,7 @@ class Tree_Editor(tk.Frame):
             "Change detail column type",
             f"Column #{col + 1} named: {self.headers[col].name}",
             f"{self.headers[col].type_}",
-            "Text Detail",
+            "Text",
         )
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.vs.append(
@@ -6519,7 +6505,7 @@ class Tree_Editor(tk.Frame):
                 "",
                 "",
             )
-        if self.headers[col].type_ == "Date Detail":
+        if self.headers[col].type_ == "Date":
             date_rows = []
             num_rows = []
             nothing_rows = []
@@ -8224,7 +8210,7 @@ class Tree_Editor(tk.Frame):
                     set_value = currentdetail
                 else:
                     set_value = validation[0]
-                if self.headers[col].type_ == "Text Detail":
+                if self.headers[col].type_ == "Text":
                     popup = Edit_Detail_Text_Popup(
                         self,
                         ID,
@@ -8234,7 +8220,7 @@ class Tree_Editor(tk.Frame):
                         set_value=set_value,
                         theme=self.C.theme,
                     )
-                elif self.headers[col].type_ == "Number Detail":
+                elif self.headers[col].type_ == "Number":
                     popup = Edit_Detail_Number_Popup(
                         self,
                         ID,
@@ -8244,7 +8230,7 @@ class Tree_Editor(tk.Frame):
                         set_value=set_value,
                         theme=self.C.theme,
                     )
-                elif self.headers[col].type_ == "Date Detail":
+                elif self.headers[col].type_ == "Date":
                     popup = Edit_Detail_Date_Popup(
                         self,
                         ID,
@@ -8256,11 +8242,11 @@ class Tree_Editor(tk.Frame):
                         theme=self.C.theme,
                     )
             else:
-                if self.headers[col].type_ == "Text Detail":
+                if self.headers[col].type_ == "Text":
                     popup = Edit_Detail_Text_Popup(self, ID, heading, currentdetail, theme=self.C.theme)
-                elif self.headers[col].type_ == "Number Detail":
+                elif self.headers[col].type_ == "Number":
                     popup = Edit_Detail_Number_Popup(self, ID, heading, currentdetail, theme=self.C.theme)
-                elif self.headers[col].type_ == "Date Detail":
+                elif self.headers[col].type_ == "Date":
                     popup = Edit_Detail_Date_Popup(
                         self,
                         ID,
@@ -9029,7 +9015,7 @@ class Tree_Editor(tk.Frame):
     def apply_date_format_change(self, new_format, snapshot=True):
         if snapshot:
             self.snapshot_change_date_form(old_form=str(self.DATE_FORM), new_form=str(new_format))
-        date_cols = [i for i, h in enumerate(self.headers) if h.type_ == "Date Detail"]
+        date_cols = [i for i, h in enumerate(self.headers) if h.type_ == "Date"]
         old_formula_and_condition_dateform = self.convert_hyphen_to_slash_date_form(self.DATE_FORM)
         new_formula_and_condition_dateform = self.convert_hyphen_to_slash_date_form(new_format)
         for col in date_cols:
@@ -9623,9 +9609,9 @@ class Tree_Editor(tk.Frame):
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     coltype = f"{c3s[-2]} {c3s[-1]}"
                     if self.headers[colnum].type_ == coltype and self.headers[colnum].type_ in (
-                        "Number Detail",
-                        "Text Detail",
-                        "Date Detail",
+                        "Number",
+                        "Text",
+                        "Date",
                     ):
                         self.del_cols(cols=[colnum], snapshot=False)
                         self.changelog_append_no_unsaved(
@@ -9671,7 +9657,7 @@ class Tree_Editor(tk.Frame):
                     validation = change[4]
                     if (
                         self.headers[colnum].type_ == coltype
-                        and coltype in ("Text Detail", "Number Detail", "Date Detail")
+                        and coltype in ("Text", "Number", "Date")
                         and change[3] == ",".join(self.headers[colnum].validation)
                     ):
                         if validation:
@@ -9703,14 +9689,14 @@ class Tree_Editor(tk.Frame):
                     oldtype = change[3]
                     newtype = change[4]
                     if self.headers[colnum].type_ == oldtype and newtype in (
-                        "Text Detail",
-                        "Number Detail",
-                        "Date Detail",
+                        "Text",
+                        "Number",
+                        "Date",
                     ):
-                        if newtype == "Text Detail":
+                        if newtype == "Text":
                             self.change_coltype_text(colnum)
-                        elif newtype == "Number Detail":
-                            self.headers[colnum].type_ = "Number Detail"
+                        elif newtype == "Number":
+                            self.headers[colnum].type_ = "Number"
                             self.change_coltype_number(colnum)
                             validation = self.check_validation_validity(
                                 colnum, ",".join(self.headers[colnum].validation)
@@ -9725,7 +9711,7 @@ class Tree_Editor(tk.Frame):
                                 if not self.check_condition_validity(colnum, tup[0]).startswith("Error:")
                             ]
                         else:
-                            self.headers[colnum].type_ = "Date Detail"
+                            self.headers[colnum].type_ = "Date"
                             self.change_coltype_date(colnum, detect_date_form=True)
                             if isinstance(
                                 self.check_validation_validity(
@@ -9755,21 +9741,7 @@ class Tree_Editor(tk.Frame):
                 elif ctyp == "Date format change":
                     old_form = "%" + change[3][:2] + "%" + change[3][2:4] + "%" + change[3][4:]
                     new_form = "%" + change[4][:2] + "%" + change[4][2:4] + "%" + change[4][4:]
-                    if old_form in (
-                        "%Y/%m/%d",
-                        "%m/%d/%Y",
-                        "%d/%m/%Y",
-                        "%Y-%m-%d",
-                        "%m-%d-%Y",
-                        "%d-%m-%Y",
-                    ) and new_form in (
-                        "%Y/%m/%d",
-                        "%m/%d/%Y",
-                        "%d/%m/%Y",
-                        "%Y-%m-%d",
-                        "%m-%d-%Y",
-                        "%d-%m-%Y",
-                    ):
+                    if old_form in date_formats_usable and new_form in date_formats_usable:
                         self.apply_date_format_change(new_form, snapshot=False)
                         self.changelog_append_no_unsaved(
                             "Imported change | Date format change",
@@ -10420,14 +10392,14 @@ class Tree_Editor(tk.Frame):
             if popup.add_new_dcols:
                 new_dcols = [idx for colname, idx in ns_dcol_names.items() if colname not in os_header_names]
                 num_new_dcols = len(new_dcols)
-                self.headers.extend([Header(ns_headers[idx], "Text Detail") for idx in new_dcols])
+                self.headers.extend([Header(ns_headers[idx], "Text") for idx in new_dcols])
                 if num_new_dcols:
                     self.tree.insert_columns(num_new_dcols)
                     self.sheet.insert_columns(num_new_dcols)
                 for num, idx in enumerate(new_dcols, 1):
                     self.changelog_append_no_unsaved(
                         "Merge | Add new detail column",
-                        f"Column #{self.row_len + num} with name: {ns_headers[idx]} and type: Text Detail",
+                        f"Column #{self.row_len + num} with name: {ns_headers[idx]} and type: Text",
                         "",
                         "",
                     )

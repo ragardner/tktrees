@@ -32,9 +32,9 @@ from .constants import (
     TF,
     app_title,
     blue_fill,
-    green_fill,
     changelog_header,
     ctrl_button,
+    green_fill,
     lge_font_size,
     sheet_header_font,
     std_font_size,
@@ -2319,12 +2319,12 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
 
         self.formatting_view.dropdown("B", values=[""] + list(self.displayed_colors_dct), state="readonly")
 
-        if self.C.headers[self.column].type_ == "Number Detail":
+        if self.C.headers[self.column].type_ == "Number":
             headers = ["If cell is: e.g. > 0 and < 5", "Make color:"]
             self.formatting_view.popup_menu_add_command(
                 "Del all & add number scale", func=lambda: self.add_auto_conditions("num")
             )
-        elif self.C.headers[self.column].type_ == "Date Detail":
+        elif self.C.headers[self.column].type_ == "Date":
             headers = ["If cell is: e.g. > 01/01/2020 and < 01/10/2020", "Make color:"]
             self.formatting_view.popup_menu_add_command(
                 "Del all & add date scale", func=lambda: self.add_auto_conditions("date")
@@ -2497,7 +2497,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                 return
             self.C.headers[self.column].formatting = []
             step = (max_v - min_v) / 20
-            if header.type_ == "Number Detail":
+            if header.type_ == "Number":
                 if self.new_frame.order == "ASCENDING":
                     v = float(min_v)
                     for i in range(1, 21):
@@ -2522,7 +2522,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                                 ("".join(("<= ", str(v), " and > ", str(v - step))), self.scale_colors[i - 1])
                             )
                             v -= step
-            elif header.type_ == "Date Detail":
+            elif header.type_ == "Date":
                 if self.new_frame.order == "ASCENDING":
                     v = min_v
                     for i in range(1, 21):
@@ -4195,9 +4195,9 @@ class Edit_Validation_Popup(tk.Toplevel):
         self.C = new_toplevel_chores(self, C, f"{app_title} - Edit validation")
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
-        if coltype == "Number Detail":
+        if coltype == "Number":
             self.allowed_chars = validation_allowed_num_chars
-        elif coltype == "Date Detail":
+        elif coltype == "Date":
             self.allowed_chars = validation_allowed_date_chars
         else:
             self.allowed_chars = set()  # all chars allowed
@@ -4341,8 +4341,8 @@ class Add_Detail_Column_Popup(tk.Toplevel):
         self.grid_columnconfigure(2, weight=1)
         self.grid_rowconfigure(1, weight=1)
         self.type_display = Ez_Dropdown(self, EF)
-        self.type_display["values"] = ("Text Detail", "Number Detail", "Date Detail")
-        self.type_display.set_my_value("Text Detail")
+        self.type_display["values"] = ("Text", "Number", "Date")
+        self.type_display.set_my_value("Text")
         self.type_display.grid(row=0, column=0, sticky="nswe", padx=(20, 0), pady=(20, 5))
         self.type_display.bind("<<ComboboxSelected>>", lambda focus: self.detail_name_display.place_cursor())
         self.detail_name_label = Label(self, text="New detail\ncolumn name:", font=EF, theme=theme)
@@ -4362,7 +4362,7 @@ class Add_Detail_Column_Popup(tk.Toplevel):
         self.cancel_button = Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel)
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=(10, 20), pady=(10, 20))
         self.result = False
-        self.type_ = "Text Detail"
+        self.type_ = "Text"
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         center(self, 600, 155)
@@ -5193,9 +5193,9 @@ class Settings_Popup(tk.Toplevel):
 
         self.theme_dropdown.bind("<<ComboboxSelected>>", self.set_theme)
         self.theme_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
-        
+
         # alternate row color dropdown box code
-        
+
         # self.alternate_color_label = Label(self.appearance, text="Alternate row color:", font=EFB, theme=theme, anchor="nw")
         # self.alternate_color_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
 
@@ -5208,9 +5208,9 @@ class Settings_Popup(tk.Toplevel):
         # self.alternate_color_dropdown.set_my_value(self.C.tree.ops.alternate_color)
         # self.alternate_color_dropdown.bind("<<ComboboxSelected>>", self.set_alternate_color)
         # self.alternate_color_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
-        
+
         # alternate row color button code
-        
+
         self.alternate_color_button = X_Checkbutton(
             self.appearance,
             text="Alternate row colors ",
@@ -5465,12 +5465,12 @@ class Settings_Popup(tk.Toplevel):
         self.C.tree.header_align(align, redraw=False)
         self.C.sheet.header_align(align, redraw=False)
         self.C.redraw_sheets()
-        
+
     def set_alternate_color(self, event=None):
         color = self.alternate_color_dropdown.get_my_value()
         self.C.tree.set_options(alternate_color=color)
         self.C.tree.set_options(show_horizontal_grid=False if color else True)
-        
+
     def toggle_alternate_color(self, event=None):
         on = self.alternate_color_button.get_checked()
         if on:
