@@ -5189,8 +5189,8 @@ class Tree_Editor(tk.Frame):
             cd = datetime.timedelta(days=0)  # noqa: F841
 
         all_conditions = {}
-        number_cols = set()
-        date_cols = set()
+        number_cols = {col for col, hdr in enumerate(self.headers) if hdr.type_ == "Number Detail"}
+        date_cols = {col for col, hdr in enumerate(self.headers) if hdr.type_ == "Date Detail"}
 
         for col in columns:
             if not self.headers[col].formatting:
@@ -5203,7 +5203,6 @@ class Tree_Editor(tk.Frame):
                 all_conditions[col]["convert"] = set()
 
             elif self.headers[col].type_ == "Number Detail":
-                number_cols.add(col)
                 cols_to_convert = set()
                 for condition in self.headers[col].formatting:
                     cond, color = condition
@@ -5218,7 +5217,6 @@ class Tree_Editor(tk.Frame):
                 all_conditions[col]["convert"] = cols_to_convert
 
             elif self.headers[col].type_ == "Date Detail":
-                date_cols.add(col)
                 cols_to_convert = set()
                 for condition in self.headers[col].formatting:
                     cond, color = condition
