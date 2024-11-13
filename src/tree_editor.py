@@ -1251,6 +1251,16 @@ class Tree_Editor(tk.Frame):
             command=self.add_rows_rc,
             **menu_kwargs,
         )
+        self.sheet_rc_menu_empty.add_command(
+            label="Add detail",
+            command=self.rc_add_col,
+            **menu_kwargs,
+        )
+        self.sheet_rc_menu_empty.add_command(
+            label="Add hierarchy",
+            command=self.rc_add_hier_col,
+            **menu_kwargs,
+        )
 
         self.l_frame_id = self.main_canvas.create_window(
             (0, 0),
@@ -1861,7 +1871,32 @@ class Tree_Editor(tk.Frame):
         self.sheet.MT.data[y1][x1] = f"{value}"
         self.rebuild_tree()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-        return None
+        
+    def edit_cell_single(self, r: int, c: int, value: object) -> None:
+        if self.headers[c].type_ == "Numerical Detail":
+            value = self.convert_num(value)
+        elif self.headers[c].type_ == "Date Detail":
+            value = self.convert_date(value, self.DATE_FORM)
+        self.changelog_append(
+            "Edit cell",
+            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
+            f"{self.sheet.MT.data[r][c]}",
+            value,
+        )
+        self.sheet.MT.data[r][c] = value
+        
+    def edit_cell_multiple(self, r: int, c: int, value: object) -> None:
+        if self.headers[c].type_ == "Numerical Detail":
+            value = self.convert_num(value)
+        elif self.headers[c].type_ == "Date Detail":
+            value = self.convert_date(value, self.DATE_FORM)
+        self.changelog_append_no_unsaved(
+            "Edit cell |",
+            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
+            f"{self.sheet.MT.data[r][c]}",
+            value,
+        )
+        self.sheet.MT.data[r][c] = value
 
     def tree_sheet_edit_cell(self, event=None):
         if not event or event.value is None:
@@ -1956,6 +1991,7 @@ class Tree_Editor(tk.Frame):
                     if not confirm.boolean:
                         return None
                 self.edit_cell_rebuild(ID, y1, x1, newtext)
+                return None
 
         else:
             if not self.detail_is_valid_for_col(x1, newtext):
@@ -1965,37 +2001,9 @@ class Tree_Editor(tk.Frame):
                     theme=self.C.theme,
                 )
                 return None
-            if self.headers[x1].type_ == "Date Detail":
-                newtext = self.convert_date(newtext, self.DATE_FORM)
-                if "/" in newtext or "-" in newtext:
-                    try:
-                        datetime.datetime.strptime(newtext, self.DATE_FORM)
-                    except Exception:
-                        if int(newtext[:2]) > 28:
-                            date_corrected = False
-                            for x in range(31, 27, -1):
-                                newtext = f"{x}{newtext[2:]}"
-                                try:
-                                    datetime.datetime.strptime(newtext, self.DATE_FORM)
-                                    date_corrected = True
-                                    break
-                                except Exception:
-                                    pass
-                            if not date_corrected:
-                                Error(self, "Date invalid   ", theme=self.C.theme)
-                                return None
-                        else:
-                            Error(self, "Date invalid   ", theme=self.C.theme)
-                            return None
-            self.changelog_append(
-                "Edit cell",
-                f"ID: {ID} column #{x1 + 1} named: {self.headers[x1].name} with type: {self.headers[x1].type_}",
-                f"{self.sheet.MT.data[y1][x1]}",
-                f"{newtext}",
-            )
             self.snapshot_ctrl_x_v_del_key()
             self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
-            self.sheet.MT.data[y1][x1] = f"{newtext}"
+            self.edit_cell_single(y1, x1, newtext)
             self.refresh_all_formatting(rows=y1, columns=x1)
             self.refresh_tree_item(ID)
             self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
@@ -2396,7 +2404,7 @@ class Tree_Editor(tk.Frame):
                     data[rn].extend(r.copy())
             numcols *= int(lastbox_numcols / numcols)
         return numrows, numcols, data
-    
+
     def paste_get_clipboard_data(self, selected):
         try:
             if not (
@@ -2472,7 +2480,7 @@ class Tree_Editor(tk.Frame):
                     if c in idcols or (
                         self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[sheet_rn][c] != value
                     ):
-                        self.edit_cell_paste(sheet_rn, c, value)
+                        self.edit_cell_multiple(sheet_rn, c, value)
                         cells_changed += 1
 
         else:
@@ -2483,7 +2491,7 @@ class Tree_Editor(tk.Frame):
                     value = data[ndr][ndc]
                     if self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[sheet_rn][c] != value:
                         self.vs[-1]["cells"][(sheet_rn, c)] = f"{self.sheet.MT.data[sheet_rn][c]}"
-                        self.edit_cell_paste(sheet_rn, c, value)
+                        self.edit_cell_multiple(sheet_rn, c, value)
                         cells_changed += 1
 
         self.disable_paste()
@@ -2572,7 +2580,7 @@ class Tree_Editor(tk.Frame):
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
                     value = data[ndr][ndc]
                     if c in idcols or (self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value):
-                        self.edit_cell_paste(r, c, value)
+                        self.edit_cell_multiple(r, c, value)
                         cells_changed += 1
 
         else:
@@ -2582,7 +2590,7 @@ class Tree_Editor(tk.Frame):
                     value = data[ndr][ndc]
                     if self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value:
                         self.vs[-1]["cells"][(r, c)] = f"{self.sheet.MT.data[r][c]}"
-                        self.edit_cell_paste(r, c, value)
+                        self.edit_cell_multiple(r, c, value)
                         cells_changed += 1
 
         self.disable_paste()
@@ -2615,18 +2623,6 @@ class Tree_Editor(tk.Frame):
             self.changelog_singular("Edit cell")
         self.redraw_sheets()
         self.stop_work(self.get_tree_editor_status_bar_text())
-
-    def edit_cell_paste(self, r: int, c: int, value: object) -> None:
-        self.changelog_append_no_unsaved(
-            "Edit cell |",
-            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-            f"{self.sheet.MT.data[r][c]}",
-            value,
-        )
-        if self.headers[c].type_ == "Date Detail":
-            self.sheet.MT.data[r][c] = self.convert_date(value, self.DATE_FORM)
-        else:
-            self.sheet.MT.data[r][c] = value
 
     def select_id_in_treeview_from_sheet(self, event=None):
         ik = self.sheet.MT.data[self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)[0]][
@@ -5428,6 +5424,11 @@ class Tree_Editor(tk.Frame):
                 if cell and not isreal(cell):
                     self.sheet.MT.data[rn][col] = ""
                     self.refresh_tree_item(self.sheet.data[rn][self.ic])
+                    
+    def convert_num(self, num):
+        if isint(num):
+            return f"{int(num)}"
+        return f"{float(num)}"
 
     def detect_date_form(self, date):
         forms = []
@@ -5448,7 +5449,7 @@ class Tree_Editor(tk.Frame):
 
     def convert_date(self, date, new_form):
         if isint(date):
-            return date
+            return f"{int(date)}"
         for form in (
             "%d/%m/%Y",
             "%m/%d/%Y",
@@ -5474,7 +5475,7 @@ class Tree_Editor(tk.Frame):
     def is_in_validation(self, validation, text):
         return text in validation
 
-    def detail_is_valid_for_col(self, col, detail, strict_date=False):
+    def detail_is_valid_for_col(self, col, detail):
         t = self.headers[col].type_
         if self.headers[col].validation and not self.is_in_validation(self.headers[col].validation, detail):
             return False
@@ -5483,37 +5484,21 @@ class Tree_Editor(tk.Frame):
         elif t == "Numerical Detail":
             if detail == "":
                 return True
-            elif isreal(detail):
-                return True
-            else:
-                return False
+            return isreal(detail)
         elif t == "Date Detail":
             if isint(detail):
                 return True
-            elif strict_date:
-                if self.DATE_FORM in self.detect_date_form(detail):
-                    return True
-                else:
-                    return False
-            else:
-                if self.detect_date_form(detail):
-                    return True
-                else:
-                    return False
+            return bool(self.detect_date_form(detail))
         return False
 
-    def why_isnt_detail_valid(self, col, detail, strict_date=False):
+    def why_isnt_detail_valid(self, col, detail):
         t = self.headers[col].type_
         if self.headers[col].validation and not self.is_in_validation(self.headers[col].validation, detail):
             return "Entered detail is not in column validation"
         if t == "Numerical Detail":
-            if not isreal(detail) and detail != "":
-                return "Entered detail is not a valid number"
+            return "Entered detail is not a valid number"
         elif t == "Date Detail":
-            if strict_date and self.DATE_FORM not in self.detect_date_form(detail):
-                return "Entered detail is not a valid date"
-            elif not isint(detail) and not self.detect_date_form(detail):
-                return "Entered detail is not a valid date or integer"
+            return "Entered detail is not a valid date or integer"
 
     def rc_change_coltype_date(self, event=None):
         if (col := self.rc_selected_col()) is None:

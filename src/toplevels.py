@@ -2157,16 +2157,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
                         refresh_cols.add(c)
                         if not ids:
                             self.C.vs[-1]["cells"][(r, c)] = f"{cell}"
-                        self.C.changelog_append_no_unsaved(
-                            "Edit cell |",
-                            f"ID: {sheet_data[r][self.C.ic]} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
-                            f"{cell}",
-                            newtext2,
-                        )
-                        if self.C.headers[c].type_ == "Date Detail":
-                            sheet_data[r][c] = self.C.convert_date(newtext2, self.C.DATE_FORM)
-                        else:
-                            sheet_data[r][c] = newtext2
+                        self.C.edit_cell_multiple(r, c, newtext2)
                         details_changed += 1
 
                 elif (
@@ -2180,16 +2171,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
                     if not ids:
                         self.C.vs[-1]["cells"][(r, c)] = f"{cell}"
                     newtext2 = case_insensitive_replace(search, newtext, cell)
-                    self.C.changelog_append_no_unsaved(
-                        "Edit cell |",
-                        f"ID: {sheet_data[r][self.C.ic]} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
-                        f"{cell}",
-                        newtext2,
-                    )
-                    if self.C.headers[c].type_ == "Date Detail":
-                        sheet_data[r][c] = self.C.convert_date(newtext2, self.C.DATE_FORM)
-                    else:
-                        sheet_data[r][c] = newtext2
+                    self.C.edit_cell_multiple(r, c, newtext2)
                     details_changed += 1
 
         total_changed = ids_changed + details_changed
@@ -2775,8 +2757,7 @@ class View_Id_Popup(tk.Toplevel):
                 tree_sel = self.C.tree.selection()
             else:
                 tree_sel = False
-            success = self.C.change_ID_name(id_, newtext)
-            if not success:
+            if not self.C.change_ID_name(id_, newtext):
                 return
             self.C.changelog_append(
                 "Rename ID",
@@ -2848,18 +2829,9 @@ class View_Id_Popup(tk.Toplevel):
             if not self.C.detail_is_valid_for_col(x1, newtext):
                 self.bind("<Escape>", self.cancel)
                 return
-            if self.C.headers[x1].type_ == "Date Detail":
-                newtext = self.C.convert_date(newtext, self.C.DATE_FORM)
-            currentdetail = self.C.sheet.MT.data[y1][x1]
-            self.C.changelog_append(
-                "Edit cell",
-                f"ID: {ID} column #{x1 + 1} named: {self.C.headers[x1].name} with type: {self.C.headers[x1].type_}",
-                f"{self.C.sheet.MT.data[y1][x1]}",
-                f"{newtext}",
-            )
             self.C.snapshot_ctrl_x_v_del_key()
             self.C.vs[-1]["cells"][(y1, x1)] = f"{self.C.sheet.MT.data[y1][x1]}"
-            self.C.sheet.MT.data[y1][x1] = f"{newtext}"
+            self.C.edit_cell_single(y1, x1, newtext)
             self.C.refresh_all_formatting(rows=y1, columns=x1)
             self.C.refresh_tree_item(ID)
             self.C.disable_paste()
