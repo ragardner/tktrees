@@ -2116,6 +2116,7 @@ class Tree_Editor(tk.Frame):
         if redraw:
             self.redraw_sheets()
         self.redo_tree_display()
+        self.sheet.recreate_all_selection_boxes()
         return
 
     def cut_key(self, event: object = None) -> None:
