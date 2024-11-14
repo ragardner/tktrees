@@ -2758,7 +2758,9 @@ class View_Id_Popup(tk.Toplevel):
             else:
                 tree_sel = False
             if not self.C.change_ID_name(id_, newtext):
+                self.bind("<Escape>", self.cancel)
                 return
+            
             self.C.changelog_append(
                 "Rename ID",
                 id_,
@@ -2800,7 +2802,7 @@ class View_Id_Popup(tk.Toplevel):
                     f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.C.headers[x1].name}",
                 )
                 self.C.redo_tree_display()
-                self.C.refresh_formatting(rows=y1)
+                self.C.refresh_formatting(rows=y1, columns=x1)
                 self.C.redraw_sheets()
                 if self.C.tree.exists(ik):
                     self.C.tree.scroll_to_item(ik)

@@ -5392,50 +5392,41 @@ class Tree_Editor(tk.Frame):
 
     def change_coltype_date(self, col, detect_date_form=False, warnings=False):
         if detect_date_form:
-            sheet_date_form = set()
-            for row in self.sheet.MT.data:
-                cell = row[col]
-                if len(cell) == 10:
-                    x = self.detect_date_form(cell)
-                    if x:
-                        for form in x:
-                            sheet_date_form.add(form)
+            sheet_date_form = {
+                form for row in self.sheet.MT.data if len(row[col]) == 10 for form in self.detect_date_form(row[col])
+            }
             if len(sheet_date_form) == 1:
                 sheet_date_form = tuple(sheet_date_form)[0]
-                for rn in range(len(self.sheet.MT.data)):
-                    cell = self.sheet.MT.data[rn][col]
-                    if cell and not isint(cell):
+                quick_data = self.sheet.MT.data
+                for rn in range(len(quick_data)):
+                    if quick_data[rn][col] and not isint(quick_data[rn][col]):
                         try:
-                            self.sheet.MT.data[rn][col] = datetime.datetime.strftime(
-                                datetime.datetime.strptime(cell, sheet_date_form),
+                            quick_data[rn][col][rn][col] = datetime.datetime.strftime(
+                                datetime.datetime.strptime(quick_data[rn][col], sheet_date_form),
                                 self.DATE_FORM,
                             )
                         except Exception:
                             if warnings:
                                 self.warnings.append(
-                                    f" - Deleted cell row #{rn} column #{col} because {cell} was not valid for Date columns"
+                                    f" - Deleted cell row #{rn} column #{col} because {quick_data[rn][col]} was not valid for Date columns"
                                 )
-                            self.sheet.MT.data[rn][col] = ""
+                            quick_data[rn][col][rn][col] = ""
                         self.refresh_tree_item(self.sheet.data[rn][self.ic])
             else:
-                self.change_coltype_date_just_validate(col)
+                self.change_coltype_date_validate(col)
         else:
-            self.change_coltype_date_just_validate(col)
+            self.change_coltype_date_validate(col)
 
-    def change_coltype_date_just_validate(self, col):
-        for rn in range(len(self.sheet.MT.data)):
-            cell = self.sheet.MT.data[rn][col]
-            if cell:
-                if not isint(cell):
-                    if len(cell) != 10 or ("/" not in cell and "-" not in cell):
-                        self.sheet.MT.data[rn][col] = ""
-                        self.refresh_tree_item(self.sheet.data[rn][self.ic])
-                        continue
-                    for n in re.split(self.date_split_regex, cell):
-                        if not isint(n):
-                            self.sheet.MT.data[rn][col] = ""
-                            self.refresh_tree_item(self.sheet.data[rn][self.ic])
-                            break
+    def change_coltype_date_validate(self, col):
+        quick_data = self.sheet.MT.data
+        for rn in range(len(quick_data)):
+            if (
+                quick_data[rn][col]
+                and not isint(quick_data[rn][col])
+                and not self.detect_date_form(quick_data[rn][col])
+            ):
+                quick_data[rn][col] = ""
+                self.refresh_tree_item(quick_data[rn][self.ic])
 
     def increment_unsaved(self, n=1):
         self.C.number_unsaved_changes += n
