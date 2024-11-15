@@ -51,6 +51,7 @@ from .constants import (
     changelog_header,
     ctrl_button,
     date_formats_usable,
+    dropdown_font,
     menu_kwargs,
     rc_button,
     rc_motion,
@@ -74,6 +75,7 @@ from .functions import (
     csv_str_x_data,
     dict_x_b32,
     equalize_sublist_lens,
+    fixed_w_str,
     full_sheet_to_dict,
     get_json_format,
     get_json_from_file,
@@ -485,7 +487,7 @@ class Tree_Editor(tk.Frame):
         self.btns_tree.grid_rowconfigure(0, weight=1)
         self.btns_tree.grid_rowconfigure(1, weight=1)
         self.btns_tree.grid_columnconfigure(2, weight=1)
-        self.btns_tree.grid_columnconfigure(4, weight=1)
+        # self.btns_tree.grid_columnconfigure(4, weight=1)
 
         self.treeframe = Frame(self.l_frame)
         self.treeframe.pack(side="top", fill="both", expand=True)
@@ -548,29 +550,27 @@ class Tree_Editor(tk.Frame):
 
         # buttons for bottom left frame
         # switch hierarchy dropdown
-        self.switch_values = []
-        self.switch_displayed = tk.StringVar(self.btns_tree)
-        self.switch_displayed.set("")
-        self.switch = ttk.Combobox(
-            self.btns_tree,
-            textvariable=self.switch_displayed,
-            state="readonly",
-            font=BF,
-        )
-        self.switch.grid(row=0, column=4, sticky="nswe")
-        self.switch.bind("<<ComboboxSelected>>", self.switch_hier)
-
         self.switch_label = Button(
             self.btns_tree,
             text="Hierarchy: ",
             command=lambda: self.switch.event_generate("<1>"),
         )
         self.switch_label.grid(row=0, column=3, sticky="nswe")
-
+        self.switch_displayed = tk.StringVar(self.btns_tree)
+        self.switch_displayed.set("")
+        self.switch_hier_dropdown = ttk.Combobox(
+            self.btns_tree,
+            textvariable=self.switch_displayed,
+            state="readonly",
+            font=BF,
+        )
+        self.switch_hier_dropdown.grid(row=0, column=4, sticky="nswe")
+        self.switch_hier_dropdown.bind("<<ComboboxSelected>>", self.switch_hier)
+        
         # tag ID tree
         self.tree_tag_id_button = Button(self.btns_tree, text="Tagged IDs: ", underline=0, command=self.tag_ids)
         self.tree_tag_id_button.grid(row=1, column=3, ipady=1, sticky="nswe")
-        self.tree_tagged_ids_dropdown = Ez_Dropdown(self.btns_tree, EF)
+        self.tree_tagged_ids_dropdown = Ez_Dropdown(self.btns_tree, dropdown_font)
         self.tree_tagged_ids_dropdown.grid(row=1, column=4, sticky="nswe")
         self.tree_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.tree_go_to_tagged_id)
 
@@ -644,7 +644,7 @@ class Tree_Editor(tk.Frame):
         # tag ID
         self.sheet_tag_id_button = Button(self.btns_sheet, text="Tagged IDs: ", underline=0, command=self.tag_ids)
         self.sheet_tag_id_button.grid(row=0, column=3, ipady=1, sticky="nswe")
-        self.sheet_tagged_ids_dropdown = Ez_Dropdown(self.btns_sheet, EF)
+        self.sheet_tagged_ids_dropdown = Ez_Dropdown(self.btns_sheet, dropdown_font)
         self.sheet_tagged_ids_dropdown.grid(row=1, column=3, sticky="nswe")
         self.sheet_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.sheet_go_to_tagged_id)
 
@@ -1670,8 +1670,8 @@ class Tree_Editor(tk.Frame):
         self.search_entry.bind("<Return>", self.search_choice)
         self.search_dropdown.config(state="readonly")
         self.search_dropdown.bind("<<ComboboxSelected>>", self.show_search_result)
-        self.switch.config(state="readonly")
-        self.switch.bind("<<ComboboxSelected>>", self.switch_hier)
+        self.switch_hier_dropdown.config(state="readonly")
+        self.switch_hier_dropdown.bind("<<ComboboxSelected>>", self.switch_hier)
         self.sheet_search_button.config(state="normal")
         self.sheet_search_choice_dropdown.config(state="readonly")
         self.sheet_search_entry.enable_me()
@@ -1742,8 +1742,8 @@ class Tree_Editor(tk.Frame):
         self.search_entry.unbind("<Return>")
         self.search_dropdown.config(state="disabled")
         self.search_dropdown.unbind("<<ComboboxSelected>>")
-        self.switch.config(state="disabled")
-        self.switch.bind("<<ComboboxSelected>>")
+        self.switch_hier_dropdown.config(state="disabled")
+        self.switch_hier_dropdown.bind("<<ComboboxSelected>>")
         self.sheet_search_button.config(state="disabled")
         self.sheet_search_choice_dropdown.config(state="disabled")
         self.sheet_search_entry.disable_me()
@@ -3346,7 +3346,7 @@ class Tree_Editor(tk.Frame):
             self.switch_displayed.set(self.headers[hier].name)
             index = self.hiers.index(hier)
         else:
-            index = self.switch.current()
+            index = self.switch_hier_dropdown.current()
             if self.hiers[index] == self.pc:
                 self.focus_tree()
                 return
@@ -5667,9 +5667,9 @@ class Tree_Editor(tk.Frame):
             }
 
     def refresh_hier_dropdown(self, idx):
-        self.switch_values = [f"{self.headers[h].name}" for h in self.hiers]
-        self.switch["values"] = self.switch_values
-        self.switch_displayed.set(self.switch_values[idx])
+        switch_values = [f"{self.headers[h].name}" for h in self.hiers]
+        self.switch_hier_dropdown["values"] = switch_values
+        self.switch_displayed.set(switch_values[idx])
 
     def refresh_dropdowns(self):
         self.tree.del_dropdown("A:")
@@ -6645,10 +6645,14 @@ class Tree_Editor(tk.Frame):
                 if search in e.lower():
                     for h, par in node.ps.items():
                         if par is not None:
+                            hierarchy = fixed_w_str(self.headers[h].name)
+                            id_name = fixed_w_str(node.name)
+                            col_name = fixed_w_str(self.headers[i].name)
+                            detail = fixed_w_str(re.sub(remove_nrt, "", e))
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{self.headers[h].name}    {self.headers[i].name}    {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
+                                    text=f"{hierarchy} ID:{id_name} Col:{col_name} -{detail}",
                                     iid=iid,
                                     column=i,
                                     term=search,
@@ -6667,10 +6671,13 @@ class Tree_Editor(tk.Frame):
             if (exact and search == iid) or (not exact and search in iid):
                 for h, par in node.ps.items():
                     if par is not None:
+                        hierarchy = fixed_w_str(self.headers[h].name)
+                        id_name = fixed_w_str(node.name)
+                        col_name = fixed_w_str(self.headers[self.ic].name)
                         self.search_results.append(
                             SearchResult(
                                 hierarchy=h,
-                                text=f"{self.headers[h].name}    {self.headers[self.ic].name}    {node.name}",
+                                text=f"{hierarchy} ID:{id_name} Col:{col_name}",
                                 iid=iid,
                                 column=self.ic,
                                 term=search,
@@ -6691,10 +6698,14 @@ class Tree_Editor(tk.Frame):
                 if i not in idcol_hiers and ((exact and search == e.lower()) or (not exact and search in e.lower())):
                     for h, par in node.ps.items():
                         if par is not None:
+                            hierarchy = fixed_w_str(self.headers[h].name)
+                            id_name = fixed_w_str(node.name)
+                            col_name = fixed_w_str(self.headers[i].name)
+                            detail = fixed_w_str(re.sub(remove_nrt, "", e))
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{self.headers[h].name}    {self.headers[i].name}    {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
+                                    text=f"{hierarchy} ID:{id_name} Col:{col_name} -{detail}",
                                     iid=iid,
                                     column=i,
                                     term=search,
@@ -6719,10 +6730,13 @@ class Tree_Editor(tk.Frame):
         for r in self.sheet.MT.data:
             for i, e in enumerate(r):
                 if search in e.lower():
+                    id_name = fixed_w_str(r[self.ic])
+                    col_name = fixed_w_str(self.headers[i].name)
+                    detail = fixed_w_str(re.sub(remove_nrt, "", e))
                     self.sheet_search_results.append(
                         SearchResult(
                             hierarchy=self.pc,
-                            text=f"{self.headers[i].name}      {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
+                            text=f"ID: {id_name} Col:{col_name} -{detail}",
                             iid=r[self.ic].lower(),
                             column=i,
                             term=search,
@@ -6739,10 +6753,12 @@ class Tree_Editor(tk.Frame):
         search = search.lower()
         for r in self.sheet.MT.data:
             if (exact and search == r[self.ic].lower()) or (not exact and search in r[self.ic].lower()):
+                id_name = fixed_w_str(r[self.ic])
+                col_name = fixed_w_str(self.headers[self.ic].name)
                 self.sheet_search_results.append(
                     SearchResult(
                         hierarchy=self.pc,
-                        text=f"{self.headers[self.ic].name}      {r[self.ic]}",
+                        text=f"ID:{id_name} Col:{col_name}",
                         iid=r[self.ic].lower(),
                         column=self.ic,
                         term=search,
@@ -6761,10 +6777,13 @@ class Tree_Editor(tk.Frame):
         for r in self.sheet.MT.data:
             for i, e in enumerate(r):
                 if i not in idcol_hiers and ((exact and search == e.lower()) or (not exact and search in e.lower())):
+                    id_name = fixed_w_str(r[self.ic])
+                    col_name = fixed_w_str(self.headers[i].name)
+                    detail = fixed_w_str(re.sub(remove_nrt, "", e))
                     self.sheet_search_results.append(
                         SearchResult(
                             hierarchy=self.pc,
-                            text=f"{self.headers[i].name}    {re.sub(remove_nrt, "", e[:50] if len(e) > 50 else e)}",
+                            text=f"ID: {id_name} Col:{col_name} -{detail}",
                             iid=r[self.ic].lower(),
                             column=i,
                             term=search,

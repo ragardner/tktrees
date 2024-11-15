@@ -30,6 +30,7 @@ from .constants import (
     app_title,
     contact_email,
     ctrl_button,
+    dropdown_font,
     menu_kwargs,
     std_font_size,
     top_left_icon,
@@ -99,6 +100,7 @@ class AppGUI(tk.Tk):
         style.configure("ERR_ASK_FNT.Std.TButton", font=ERR_ASK_FNT, borderwidth=0)
         style.configure("x_button.Std.TButton", font=EF, anchor="e", borderwidth=0)
         style.configure("wx_button.Std.TButton", font=EF, anchor="w", borderwidth=0)
+        self.option_add('*TCombobox*Listbox.font', dropdown_font)
         self.style = style
 
         self.menubar = tk.Menu(self, **menu_kwargs)

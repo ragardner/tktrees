@@ -88,6 +88,7 @@ else:
     std_font_size = 11
     lge_font_size = 14
     sheet_header_font = ("Calibri", std_font_size, "normal")
+dropdown_font = "TkFixedFont"
 lge_font = ("Calibri", lge_font_size, "normal")
 
 tree_bindings = (
