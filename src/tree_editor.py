@@ -134,7 +134,7 @@ from .widgets import (
     Normal_Entry,
 )
 
-# OVERRIDE LOCALE DETECTION FOR DATE FORMAT HERE
+# OVERRIDE LOCALE DETECTION FOR DATE FORMAT
 override_locale = None
 
 # DEFAULT SETTING FOR SAVING WITH PROGRAM DATA
@@ -2248,7 +2248,7 @@ class Tree_Editor(tk.Frame):
             self.rehighlight_tagged_ids()
             self.disable_paste()
             self.redo_tree_display()
-            self.tree.selection_set(*[i for i in treeselection if self.tree.exists(i)])
+            self.tree.selection_set([i for i in treeselection if self.tree.exists(i)])
             self.move_tree_pos()
             self.redraw_sheets()
             self.stop_work(self.get_tree_editor_status_bar_text())
@@ -9171,6 +9171,9 @@ class Tree_Editor(tk.Frame):
                     ncols=self.row_len,
                     lower=True,
                 ).dehighlight_all()
+        else:
+            self.tree.reset(cell_options=False, column_widths=False, header=False, redraw=False)
+
         if self.saved_info[self.pc].theights:
             self.tree.set_safe_row_heights(self.tree_gen_heights_from_saved())
         else:
