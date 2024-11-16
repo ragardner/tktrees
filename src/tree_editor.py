@@ -568,7 +568,7 @@ class Tree_Editor(tk.Frame):
         self.switch_hier_dropdown.bind("<<ComboboxSelected>>", self.switch_hier)
         
         # tag ID tree
-        self.tree_tag_id_button = Button(self.btns_tree, text="Tagged IDs: ", underline=0, command=self.tag_ids)
+        self.tree_tag_id_button = Button(self.btns_tree, text="Tag ID: ", underline=0, command=self.tag_ids)
         self.tree_tag_id_button.grid(row=1, column=3, ipady=1, sticky="nswe")
         self.tree_tagged_ids_dropdown = Ez_Dropdown(self.btns_tree, dropdown_font)
         self.tree_tagged_ids_dropdown.grid(row=1, column=4, sticky="nswe")

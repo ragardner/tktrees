@@ -7046,13 +7046,34 @@ class MainTable(tk.Canvas):
 
     def dropdown_text_editor_modified(
         self,
-        dd_window: object,
-        event: dict,
-        modified_func: Callable | None,
+        event: tk.Misc,
     ) -> None:
-        if modified_func:
-            modified_func(event)
-        dd_window.search_and_see(event)
+        r, c = self.dropdown.get_coords()
+        event_data = event_dict(
+            name="table_dropdown_modified",
+            sheet=self.PAR.name,
+            value=self.text_editor.get(),
+            loc=Loc(r, c),
+            row=r,
+            column=c,
+            boxes=self.get_boxes(),
+            selected=self.selected,
+        )
+        try_binding(self.dropdown.window.modified_function, event_data)
+        val = self.dropdown.window.search_and_see(event_data)
+        # return to tk.Text action if control/command is held down
+        # or keysym was not a character
+        if (hasattr(event, "state") and event.state & (0x0004 | 0x00000010)) or (
+            hasattr(event, "keysym") and len(event.keysym) > 2
+        ):
+            return
+        self.text_editor.tktext.unbind("<KeyRelease>")
+        self.text_editor.autocomplete(val)
+        self.text_editor.tktext.bind(
+            "<KeyRelease>",
+            self.dropdown_text_editor_modified,
+        )
+        return "break"
 
     # c is displayed col
     def open_dropdown_window(
@@ -7089,6 +7110,8 @@ class MainTable(tk.Canvas):
             "outline_color": self.get_selected_box_bg_fg(type_="cells")[1],
             "align": self.get_cell_align(r, c),
             "values": kwargs["values"],
+            "search_function": kwargs["search_function"],
+            "modified_function": kwargs["modified_function"],
         }
         if self.dropdown.window:
             self.dropdown.window.reset(**reset_kwargs)
@@ -7100,7 +7123,6 @@ class MainTable(tk.Canvas):
                 self.winfo_toplevel(),
                 **reset_kwargs,
                 close_dropdown_window=self.close_dropdown_window,
-                search_function=kwargs["search_function"],
                 arrowkey_RIGHT=self.arrowkey_RIGHT,
                 arrowkey_LEFT=self.arrowkey_LEFT,
             )
@@ -7111,22 +7133,9 @@ class MainTable(tk.Canvas):
             )
         if kwargs["state"] == "normal":
             self.text_editor.tktext.bind(
-                "<<TextModified>>",
-                lambda _: self.dropdown.window.search_and_see(
-                    event_dict(
-                        name="table_dropdown_modified",
-                        sheet=self.PAR.name,
-                        value=self.text_editor.get(),
-                        loc=Loc(r, c),
-                        row=r,
-                        column=c,
-                        boxes=self.get_boxes(),
-                        selected=self.selected,
-                    )
-                ),
+                "<KeyRelease>",
+                self.dropdown_text_editor_modified,
             )
-            if kwargs["modified_function"] is not None:
-                self.dropdown.window.modified_function = kwargs["modified_function"]
             self.update_idletasks()
             try:
                 self.after(1, lambda: self.text_editor.tktext.focus())

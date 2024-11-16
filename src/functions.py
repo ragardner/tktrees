@@ -131,7 +131,7 @@ def xl_column_string(n):
     return s
 
 
-def fixed_w_str(s: str, nchars: int = 25) -> str:
+def fixed_w_str(s: str, nchars: int = 23) -> str:
     return s[: nchars - 2] + ".." if len(s) > nchars else s.ljust(nchars)
 
 
