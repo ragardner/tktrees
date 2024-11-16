@@ -53,6 +53,7 @@ from .functions import (
     b_index,
     box_is_single_cell,
     cell_right_within_box,
+    color_tup,
     consecutive_ranges,
     diff_gen,
     diff_list,
@@ -73,9 +74,9 @@ from .functions import (
     mod_span_widget,
     move_elements_by_mapping,
     new_tk_event,
-    stored_event_dict,
     rounded_box_coords,
     span_idxs_post_move,
+    stored_event_dict,
     try_binding,
     unpickle_obj,
 )
@@ -5652,37 +5653,36 @@ class MainTable(tk.Canvas):
                 )
         if redraw_table:
             selections = self.get_redraw_selections(text_start_row, grid_end_row, text_start_col, grid_end_col)
-            c_2 = (
-                self.PAR.ops.table_selected_cells_bg
-                if self.PAR.ops.table_selected_cells_bg.startswith("#")
-                else color_map[self.PAR.ops.table_selected_cells_bg]
-            )
-            sel_cells_bg = (int(c_2[1:3], 16), int(c_2[3:5], 16), int(c_2[5:], 16))
-            c_3 = (
-                self.PAR.ops.table_selected_columns_bg
-                if self.PAR.ops.table_selected_columns_bg.startswith("#")
-                else color_map[self.PAR.ops.table_selected_columns_bg]
-            )
-            sel_cols_bg = (int(c_3[1:3], 16), int(c_3[3:5], 16), int(c_3[5:], 16))
-            c_4 = (
-                self.PAR.ops.table_selected_rows_bg
-                if self.PAR.ops.table_selected_rows_bg.startswith("#")
-                else color_map[self.PAR.ops.table_selected_rows_bg]
-            )
-            sel_rows_bg = (int(c_4[1:3], 16), int(c_4[3:5], 16), int(c_4[5:], 16))
+            sel_cells_bg = color_tup(self.PAR.ops.table_selected_cells_bg)
+            sel_cols_bg = color_tup(self.PAR.ops.table_selected_columns_bg)
+            sel_rows_bg = color_tup(self.PAR.ops.table_selected_rows_bg)
+            if self.selected:
+                current_loc = (self.selected.row, self.selected.column)
+            else:
+                current_loc = tuple()
             if self.PAR.ops.alternate_color:
                 alternate_color = Highlight(
                     bg=self.PAR.ops.alternate_color,
                     fg=None,
                     end=False,
                 )
-                if self.selected and box_is_single_cell(*self.selected.box):
-                    dont_blend = (self.selected.row, self.selected.column)
+                if self.selected and box_is_single_cell(*self.selected.box) and self.PAR.ops.show_selected_cells_border:
+                    dont_blend = current_loc
                 else:
                     dont_blend = tuple()
             else:
                 alternate_color = None
                 dont_blend = tuple()
+
+            if not self.PAR.ops.show_selected_cells_border:
+                override = (
+                    color_tup(self.PAR.ops.table_selected_cells_fg),
+                    color_tup(self.PAR.ops.table_selected_columns_fg),
+                    color_tup(self.PAR.ops.table_selected_rows_fg),
+                    )
+            else:
+                override = tuple()
+
             rows_ = tuple(range(text_start_row, text_end_row))
             font = self.PAR.ops.table_font
             dd_coords = self.dropdown.get_coords()
@@ -5699,19 +5699,19 @@ class MainTable(tk.Canvas):
                     datacn = self.datacn(c)
 
                     fill, dd_drawn = self.redraw_highlight_get_text_fg(
-                        r,
-                        c,
-                        cleftgridln,
-                        rtopgridln,
-                        crightgridln,
-                        rbotgridln,
-                        sel_cells_bg,
-                        sel_cols_bg,
-                        sel_rows_bg,
-                        selections,
-                        datarn,
-                        datacn,
-                        can_width,
+                        r=r,
+                        c=c,
+                        fc=cleftgridln,
+                        fr=rtopgridln,
+                        sc=crightgridln,
+                        sr=rbotgridln,
+                        sel_cells_bg=override[0] if override and (r, c) == current_loc else sel_cells_bg,
+                        sel_cols_bg=override[1] if override and (r, c) == current_loc else sel_cols_bg,
+                        sel_rows_bg=override[2] if override and (r, c) == current_loc else sel_rows_bg,
+                        selections=selections,
+                        datarn=datarn,
+                        datacn=datacn,
+                        can_width=can_width,
                         dont_blend=(r, c) == dont_blend,
                         alternate_color=alternate_color,
                     )
@@ -6989,6 +6989,8 @@ class MainTable(tk.Canvas):
             bottom_right_corner=True,
             check_cell_visibility=True,
         )
+        if not self.PAR.ops.show_selected_cells_border:
+            self.refresh()
         return "break"
 
     def get_space_bot(self, r: int, text_editor_h: int | None = None) -> int:
