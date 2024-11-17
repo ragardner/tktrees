@@ -13,6 +13,7 @@ import tkinter as tk
 from base64 import b32decode as b32d
 from base64 import b32encode as b32e
 from itertools import islice, repeat
+from math import ceil
 from typing import Literal
 
 from openpyxl import Workbook
@@ -133,6 +134,34 @@ def xl_column_string(n):
 
 def nchars(s: str, n: int = 24) -> str:
     return s[: n - 2] + ".." if len(s) > n else s.ljust(n)
+
+
+def frame_w_to_nchars(frame_w, fixed_font_w, ncols):
+    # points = [(2100, 52), (1600, 37), (1100, 22), (600, 9)]
+    # # Calculate the slope m
+    # # m = (y2 - y1) / (x2 - x1), but we'll use all points for better accuracy
+    # x_sum = sum(point[0] for point in points)
+    # y_sum = sum(point[1] for point in points)
+    # n = len(points)
+    # x_mean = x_sum / n
+    # y_mean = y_sum / n
+
+    # numerator = sum((points[i][0] - x_mean) * (points[i][1] - y_mean) for i in range(n))
+    # denominator = sum((points[i][0] - x_mean) ** 2 for i in range(n))
+    # m = numerator / denominator if denominator != 0 else 0  # Slope
+
+    # # Calculate the y-intercept b
+    # b = y_mean - m * x_mean  # y = mx + b solved for b
+    # nchars = round(m * frame_w + b)
+    # print(frame_w, "=", nchars)
+    
+    nchars = ceil((frame_w / fixed_font_w) / ncols)
+    
+    if ncols == 4:
+        return nchars - 2
+    elif ncols == 3:
+        return nchars - 1
+    return nchars
 
 
 def level_to_color(level):

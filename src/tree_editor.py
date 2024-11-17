@@ -14,11 +14,12 @@ import zlib
 from bisect import bisect_left, bisect_right
 from collections import defaultdict, deque
 from collections.abc import Generator, Iterator, Sequence
+from functools import partial
 from itertools import cycle, filterfalse, islice, repeat
 from locale import getdefaultlocale
 from math import floor
 from operator import attrgetter, itemgetter
-from tkinter import filedialog, ttk
+from tkinter import filedialog, font, ttk
 from typing import Literal
 
 from openpyxl import Workbook, load_workbook
@@ -75,7 +76,7 @@ from .functions import (
     csv_str_x_data,
     dict_x_b32,
     equalize_sublist_lens,
-    nchars,
+    frame_w_to_nchars,
     full_sheet_to_dict,
     get_json_format,
     get_json_from_file,
@@ -86,6 +87,7 @@ from .functions import (
     isreal,
     json_to_sheet,
     level_to_color,
+    nchars,
     new_info_storage,
     new_saved_info,
     path_numbers,
@@ -173,6 +175,7 @@ class Tree_Editor(tk.Frame):
         self.tagged_ids = set()
         self.date_split_regex = "|".join(map(re.escape, ("/", "-")))
         self.find_popup = None
+        self.fixed_font_w = font.nametofont("TkFixedFont").measure("0")
 
         self.auto_resize_indexes = True
         self.mirror_var = False
@@ -486,7 +489,7 @@ class Tree_Editor(tk.Frame):
         self.btns_tree.pack(side="top", fill="x")
         self.btns_tree.grid_rowconfigure(0, weight=1)
         self.btns_tree.grid_rowconfigure(1, weight=1)
-        self.btns_tree.grid_columnconfigure(2, weight=1)
+        self.btns_tree.grid_columnconfigure(4, weight=1)
         # self.btns_tree.grid_columnconfigure(4, weight=1)
 
         self.treeframe = Frame(self.l_frame)
@@ -511,12 +514,38 @@ class Tree_Editor(tk.Frame):
         self.sts_tree.pack(side="top", fill="x")
         self.sts_tree.grid_rowconfigure(0, weight=1)
 
+        # buttons for bottom left frame
+        # switch hierarchy dropdown
+        self.switch_label = Button(
+            self.btns_tree,
+            text="Hierarchy:",
+            command=lambda: self.switch.event_generate("<1>"),
+        )
+        self.switch_label.grid(row=0, column=0, sticky="nswe")
+        self.switch_displayed = tk.StringVar(self.btns_tree)
+        self.switch_displayed.set("")
+        self.switch_hier_dropdown = ttk.Combobox(
+            self.btns_tree,
+            textvariable=self.switch_displayed,
+            state="readonly",
+            font=BF,
+        )
+        self.switch_hier_dropdown.grid(row=0, column=1, sticky="nswe")
+        self.switch_hier_dropdown.bind("<<ComboboxSelected>>", self.switch_hier)
+
+        # tag ID tree
+        self.tree_tag_id_button = Button(self.btns_tree, text="Tag ID:", underline=0, command=self.tag_ids)
+        self.tree_tag_id_button.grid(row=1, column=0, ipady=1, sticky="nswe")
+        self.tree_tagged_ids_dropdown = Ez_Dropdown(self.btns_tree, dropdown_font)
+        self.tree_tagged_ids_dropdown.grid(row=1, column=1, sticky="nswe")
+        self.tree_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.tree_go_to_tagged_id)
+
         # buttons for top left frame
         # tree search function
         self.search_displayed = tk.StringVar(self.btns_tree)
         self.search_displayed.set("")
         self.search_button = Button(self.btns_tree, text=" Find:", command=self.search_choice)
-        self.search_button.grid(row=0, column=0, sticky="nswe")
+        self.search_button.grid(row=0, column=2, sticky="nswe")
         self.search_choice_displayed = tk.StringVar(self.btns_tree)
         self.search_choice_displayed.set("Non-exact")
         self.search_choice_dropdown = ttk.Combobox(
@@ -533,9 +562,9 @@ class Tree_Editor(tk.Frame):
             "Detail non-exact",
             "Detail exact",
         ]
-        self.search_choice_dropdown.grid(row=0, column=1, sticky="nswe")
+        self.search_choice_dropdown.grid(row=0, column=3, sticky="nswe")
         self.search_entry = Normal_Entry(self.btns_tree, font=BF, theme="light_blue")
-        self.search_entry.grid(row=0, column=2, sticky="nswe")
+        self.search_entry.grid(row=0, column=4, sticky="nswe")
         self.search_entry.bind("<Return>", self.search_choice)
         self.search_dropdown = ttk.Combobox(
             self.btns_tree,
@@ -546,33 +575,7 @@ class Tree_Editor(tk.Frame):
         self.search_dropdown["values"] = []
         self.search_dropdown.bind("<<ComboboxSelected>>", self.show_search_result)
         self.search_choice_dropdown.bind("<<ComboboxSelected>>", lambda focus: self.search_entry.focus_set())
-        self.search_dropdown.grid(row=1, column=0, columnspan=3, sticky="nswe")
-
-        # buttons for bottom left frame
-        # switch hierarchy dropdown
-        self.switch_label = Button(
-            self.btns_tree,
-            text="Hierarchy: ",
-            command=lambda: self.switch.event_generate("<1>"),
-        )
-        self.switch_label.grid(row=0, column=3, sticky="nswe")
-        self.switch_displayed = tk.StringVar(self.btns_tree)
-        self.switch_displayed.set("")
-        self.switch_hier_dropdown = ttk.Combobox(
-            self.btns_tree,
-            textvariable=self.switch_displayed,
-            state="readonly",
-            font=BF,
-        )
-        self.switch_hier_dropdown.grid(row=0, column=4, sticky="nswe")
-        self.switch_hier_dropdown.bind("<<ComboboxSelected>>", self.switch_hier)
-
-        # tag ID tree
-        self.tree_tag_id_button = Button(self.btns_tree, text="Tag ID: ", underline=0, command=self.tag_ids)
-        self.tree_tag_id_button.grid(row=1, column=3, ipady=1, sticky="nswe")
-        self.tree_tagged_ids_dropdown = Ez_Dropdown(self.btns_tree, dropdown_font)
-        self.tree_tagged_ids_dropdown.grid(row=1, column=4, sticky="nswe")
-        self.tree_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.tree_go_to_tagged_id)
+        self.search_dropdown.grid(row=1, column=2, columnspan=3, sticky="nswe")
 
         # ======================= RIGHT FRAME ======================================================
         self.r_frame = tk.Frame(
@@ -587,7 +590,7 @@ class Tree_Editor(tk.Frame):
         self.btns_sheet.pack(side="top", fill="x")
         self.btns_sheet.grid_rowconfigure(0, weight=1)
         self.btns_sheet.grid_rowconfigure(1, weight=1)
-        self.btns_sheet.grid_columnconfigure(2, weight=1)
+        self.btns_sheet.grid_columnconfigure(3, weight=1)
 
         self.sheetframe = Frame(self.r_frame)
         self.sheetframe.pack(side="top", fill="both", expand=True)
@@ -603,11 +606,18 @@ class Tree_Editor(tk.Frame):
         self.sheet.pack(side="right", fill="both", expand=True)
 
         # buttons for top right frame
+        # tag ID
+        self.sheet_tag_id_button = Button(self.btns_sheet, text="↓Tag ID", underline=0, command=self.tag_ids)
+        self.sheet_tag_id_button.grid(row=0, column=0, ipady=1, sticky="nswe")
+        self.sheet_tagged_ids_dropdown = Ez_Dropdown(self.btns_sheet, dropdown_font)
+        self.sheet_tagged_ids_dropdown.grid(row=1, column=0, sticky="nswe")
+        self.sheet_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.sheet_go_to_tagged_id)
+
         # sheet search function
         self.sheet_search_displayed = tk.StringVar(self.btns_sheet)
         self.sheet_search_displayed.set("")
-        self.sheet_search_button = Button(self.btns_sheet, text=" Find:", command=self.sheet_search_choice)
-        self.sheet_search_button.grid(row=0, column=0, sticky="nswe")
+        self.sheet_search_button = Button(self.btns_sheet, text="Find:", command=self.sheet_search_choice)
+        self.sheet_search_button.grid(row=0, column=1, sticky="nswe")
         self.sheet_search_choice_displayed = tk.StringVar(self.btns_sheet)
         self.sheet_search_choice_displayed.set("Non-exact")
         self.sheet_search_choice_dropdown = ttk.Combobox(
@@ -624,9 +634,9 @@ class Tree_Editor(tk.Frame):
             "Detail non-exact",
             "Detail exact",
         ]
-        self.sheet_search_choice_dropdown.grid(row=0, column=1, sticky="nswe")
+        self.sheet_search_choice_dropdown.grid(row=0, column=2, sticky="nswe")
         self.sheet_search_entry = Normal_Entry(self.btns_sheet, font=BF, theme="light_blue")
-        self.sheet_search_entry.grid(row=0, column=2, sticky="nswe")
+        self.sheet_search_entry.grid(row=0, column=3, sticky="nswe")
         self.sheet_search_entry.bind("<Return>", self.sheet_search_choice)
         self.sheet_search_dropdown = ttk.Combobox(
             self.btns_sheet,
@@ -639,14 +649,7 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_choice_dropdown.bind(
             "<<ComboboxSelected>>", lambda focus: self.sheet_search_entry.focus_set()
         )
-        self.sheet_search_dropdown.grid(row=1, column=0, columnspan=3, sticky="nswe")
-
-        # tag ID
-        self.sheet_tag_id_button = Button(self.btns_sheet, text="Tagged IDs: ", underline=0, command=self.tag_ids)
-        self.sheet_tag_id_button.grid(row=0, column=3, ipady=1, sticky="nswe")
-        self.sheet_tagged_ids_dropdown = Ez_Dropdown(self.btns_sheet, dropdown_font)
-        self.sheet_tagged_ids_dropdown.grid(row=1, column=3, sticky="nswe")
-        self.sheet_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.sheet_go_to_tagged_id)
+        self.sheet_search_dropdown.grid(row=1, column=1, columnspan=3, sticky="nswe")
 
         # RIGHT CLICK MENUS
 
@@ -6640,6 +6643,14 @@ class Tree_Editor(tk.Frame):
             return
         self.reset_tree_search_dropdown()
         search = search.lower()
+        fn = partial(
+            nchars,
+            n=frame_w_to_nchars(
+                frame_w=self.search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=4,
+            ),
+        )
         for iid, node in self.nodes.items():
             for i, e in enumerate(self.sheet.MT.data[self.rns[iid]]):
                 if search in e.lower():
@@ -6648,7 +6659,7 @@ class Tree_Editor(tk.Frame):
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{nchars(self.headers[h].name)} {nchars(node.name)} {nchars(self.headers[i].name)} {nchars(re.sub(remove_nrt, "", e))}",
+                                    text=f"{fn(self.headers[h].name)} {fn(node.name)} {fn(self.headers[i].name)} {fn(re.sub(remove_nrt, "", e))}",
                                     iid=iid,
                                     column=i,
                                     term=search,
@@ -6663,6 +6674,14 @@ class Tree_Editor(tk.Frame):
             return
         self.reset_tree_search_dropdown()
         search = search.lower()
+        fn = partial(
+            nchars,
+            n=frame_w_to_nchars(
+                frame_w=self.search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=2,
+            ),
+        )
         for iid, node in self.nodes.items():
             if (exact and search == iid) or (not exact and search in iid):
                 for h, par in node.ps.items():
@@ -6670,7 +6689,7 @@ class Tree_Editor(tk.Frame):
                         self.search_results.append(
                             SearchResult(
                                 hierarchy=h,
-                                text=f"{nchars(self.headers[h].name)} {nchars(node.name)}",
+                                text=f"{fn(self.headers[h].name)} {fn(node.name)}",
                                 iid=iid,
                                 column=self.ic,
                                 term=search,
@@ -6686,6 +6705,14 @@ class Tree_Editor(tk.Frame):
         self.reset_tree_search_dropdown()
         search = search.lower()
         idcol_hiers = set(self.hiers) | {self.ic}
+        fn = partial(
+            nchars,
+            n=frame_w_to_nchars(
+                frame_w=self.search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=4,
+            ),
+        )
         for iid, node in self.nodes.items():
             for i, e in enumerate(self.sheet.MT.data[self.rns[iid]]):
                 if i not in idcol_hiers and ((exact and search == e.lower()) or (not exact and search in e.lower())):
@@ -6694,7 +6721,7 @@ class Tree_Editor(tk.Frame):
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{nchars(self.headers[h].name)} {nchars(node.name)} {nchars(self.headers[i].name)} {nchars(re.sub(remove_nrt, "", e))}",
+                                    text=f"{fn(self.headers[h].name)} {fn(node.name)} {fn(self.headers[i].name)} {fn(re.sub(remove_nrt, "", e))}",
                                     iid=iid,
                                     column=i,
                                     term=search,
@@ -6716,13 +6743,21 @@ class Tree_Editor(tk.Frame):
             return
         self.reset_sheet_search_dropdown()
         search = search.lower()
+        fn = partial(
+            nchars,
+            n=frame_w_to_nchars(
+                frame_w=self.sheet_search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=3,
+            ),
+        )
         for r in self.sheet.MT.data:
             for i, e in enumerate(r):
                 if search in e.lower():
                     self.sheet_search_results.append(
                         SearchResult(
                             hierarchy=self.pc,
-                            text=f"{nchars(r[self.ic])} {nchars(self.headers[i].name)} {nchars(re.sub(remove_nrt, "", e))}",
+                            text=f"{fn(r[self.ic])} {fn(self.headers[i].name)} {fn(re.sub(remove_nrt, "", e))}",
                             iid=r[self.ic].lower(),
                             column=i,
                             term=search,
@@ -6737,12 +6772,20 @@ class Tree_Editor(tk.Frame):
             return
         self.reset_sheet_search_dropdown()
         search = search.lower()
+        fn = partial(
+            nchars,
+            n=frame_w_to_nchars(
+                frame_w=self.sheet_search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=1,
+            ),
+        )
         for r in self.sheet.MT.data:
             if (exact and search == r[self.ic].lower()) or (not exact and search in r[self.ic].lower()):
                 self.sheet_search_results.append(
                     SearchResult(
                         hierarchy=self.pc,
-                        text=f"{nchars(r[self.ic])}",
+                        text=f"{fn(r[self.ic])}",
                         iid=r[self.ic].lower(),
                         column=self.ic,
                         term=search,
@@ -6758,13 +6801,21 @@ class Tree_Editor(tk.Frame):
         self.reset_sheet_search_dropdown()
         search = search.lower()
         idcol_hiers = set(self.hiers) | {self.ic}
+        fn = partial(
+            nchars,
+            n=frame_w_to_nchars(
+                frame_w=self.sheet_search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=3,
+            ),
+        )
         for r in self.sheet.MT.data:
             for i, e in enumerate(r):
                 if i not in idcol_hiers and ((exact and search == e.lower()) or (not exact and search in e.lower())):
                     self.sheet_search_results.append(
                         SearchResult(
                             hierarchy=self.pc,
-                            text=f"{nchars(r[self.ic])} {nchars(self.headers[i].name)} {nchars(re.sub(remove_nrt, "", e))}",
+                            text=f"{fn(r[self.ic])} {fn(self.headers[i].name)} {fn(re.sub(remove_nrt, "", e))}",
                             iid=r[self.ic].lower(),
                             column=i,
                             term=search,
