@@ -131,8 +131,8 @@ def xl_column_string(n):
     return s
 
 
-def fixed_w_str(s: str, nchars: int = 23) -> str:
-    return s[: nchars - 2] + ".." if len(s) > nchars else s.ljust(nchars)
+def nchars(s: str, n: int = 24) -> str:
+    return s[: n - 2] + ".." if len(s) > n else s.ljust(n)
 
 
 def level_to_color(level):

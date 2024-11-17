@@ -75,7 +75,7 @@ from .functions import (
     csv_str_x_data,
     dict_x_b32,
     equalize_sublist_lens,
-    fixed_w_str,
+    nchars,
     full_sheet_to_dict,
     get_json_format,
     get_json_from_file,
@@ -566,7 +566,7 @@ class Tree_Editor(tk.Frame):
         )
         self.switch_hier_dropdown.grid(row=0, column=4, sticky="nswe")
         self.switch_hier_dropdown.bind("<<ComboboxSelected>>", self.switch_hier)
-        
+
         # tag ID tree
         self.tree_tag_id_button = Button(self.btns_tree, text="Tag ID: ", underline=0, command=self.tag_ids)
         self.tree_tag_id_button.grid(row=1, column=3, ipady=1, sticky="nswe")
@@ -6645,14 +6645,10 @@ class Tree_Editor(tk.Frame):
                 if search in e.lower():
                     for h, par in node.ps.items():
                         if par is not None:
-                            hierarchy = fixed_w_str(self.headers[h].name)
-                            id_name = fixed_w_str(node.name)
-                            col_name = fixed_w_str(self.headers[i].name)
-                            detail = fixed_w_str(re.sub(remove_nrt, "", e))
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{hierarchy} ID:{id_name} Col:{col_name} -{detail}",
+                                    text=f"{nchars(self.headers[h].name)} {nchars(node.name)} {nchars(self.headers[i].name)} {nchars(re.sub(remove_nrt, "", e))}",
                                     iid=iid,
                                     column=i,
                                     term=search,
@@ -6671,13 +6667,10 @@ class Tree_Editor(tk.Frame):
             if (exact and search == iid) or (not exact and search in iid):
                 for h, par in node.ps.items():
                     if par is not None:
-                        hierarchy = fixed_w_str(self.headers[h].name)
-                        id_name = fixed_w_str(node.name)
-                        col_name = fixed_w_str(self.headers[self.ic].name)
                         self.search_results.append(
                             SearchResult(
                                 hierarchy=h,
-                                text=f"{hierarchy} ID:{id_name} Col:{col_name}",
+                                text=f"{nchars(self.headers[h].name)} {nchars(node.name)} {nchars(self.headers[self.ic].name)}",
                                 iid=iid,
                                 column=self.ic,
                                 term=search,
@@ -6698,14 +6691,10 @@ class Tree_Editor(tk.Frame):
                 if i not in idcol_hiers and ((exact and search == e.lower()) or (not exact and search in e.lower())):
                     for h, par in node.ps.items():
                         if par is not None:
-                            hierarchy = fixed_w_str(self.headers[h].name)
-                            id_name = fixed_w_str(node.name)
-                            col_name = fixed_w_str(self.headers[i].name)
-                            detail = fixed_w_str(re.sub(remove_nrt, "", e))
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{hierarchy} ID:{id_name} Col:{col_name} -{detail}",
+                                    text=f"{nchars(self.headers[h].name)} {nchars(node.name)} {nchars(self.headers[i].name)} {nchars(re.sub(remove_nrt, "", e))}",
                                     iid=iid,
                                     column=i,
                                     term=search,
@@ -6730,13 +6719,10 @@ class Tree_Editor(tk.Frame):
         for r in self.sheet.MT.data:
             for i, e in enumerate(r):
                 if search in e.lower():
-                    id_name = fixed_w_str(r[self.ic])
-                    col_name = fixed_w_str(self.headers[i].name)
-                    detail = fixed_w_str(re.sub(remove_nrt, "", e))
                     self.sheet_search_results.append(
                         SearchResult(
                             hierarchy=self.pc,
-                            text=f"ID: {id_name} Col:{col_name} -{detail}",
+                            text=f"{nchars(r[self.ic])} {nchars(self.headers[i].name)} {nchars(re.sub(remove_nrt, "", e))}",
                             iid=r[self.ic].lower(),
                             column=i,
                             term=search,
@@ -6753,12 +6739,10 @@ class Tree_Editor(tk.Frame):
         search = search.lower()
         for r in self.sheet.MT.data:
             if (exact and search == r[self.ic].lower()) or (not exact and search in r[self.ic].lower()):
-                id_name = fixed_w_str(r[self.ic])
-                col_name = fixed_w_str(self.headers[self.ic].name)
                 self.sheet_search_results.append(
                     SearchResult(
                         hierarchy=self.pc,
-                        text=f"ID:{id_name} Col:{col_name}",
+                        text=f"{nchars(r[self.ic])} {nchars(self.headers[self.ic].name)}",
                         iid=r[self.ic].lower(),
                         column=self.ic,
                         term=search,
@@ -6777,13 +6761,10 @@ class Tree_Editor(tk.Frame):
         for r in self.sheet.MT.data:
             for i, e in enumerate(r):
                 if i not in idcol_hiers and ((exact and search == e.lower()) or (not exact and search in e.lower())):
-                    id_name = fixed_w_str(r[self.ic])
-                    col_name = fixed_w_str(self.headers[i].name)
-                    detail = fixed_w_str(re.sub(remove_nrt, "", e))
                     self.sheet_search_results.append(
                         SearchResult(
                             hierarchy=self.pc,
-                            text=f"ID: {id_name} Col:{col_name} -{detail}",
+                            text=f"{nchars(r[self.ic])} {nchars(self.headers[i].name)} {nchars(re.sub(remove_nrt, "", e))}",
                             iid=r[self.ic].lower(),
                             column=i,
                             term=search,
