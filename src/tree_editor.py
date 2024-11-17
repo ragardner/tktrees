@@ -14,7 +14,6 @@ import zlib
 from bisect import bisect_left, bisect_right
 from collections import defaultdict, deque
 from collections.abc import Generator, Iterator, Sequence
-from functools import partial
 from itertools import cycle, filterfalse, islice, repeat
 from locale import getdefaultlocale
 from math import floor
@@ -87,11 +86,12 @@ from .functions import (
     isreal,
     json_to_sheet,
     level_to_color,
-    nchars,
     new_info_storage,
     new_saved_info,
     path_numbers,
     path_without_numbers,
+    process_search_results,
+    search_results_max_column_chars,
     sort_key,
     str_io_csv_writer,
     to_clipboard,
@@ -6643,14 +6643,6 @@ class Tree_Editor(tk.Frame):
             return
         self.reset_tree_search_dropdown()
         search = search.lower()
-        fn = partial(
-            nchars,
-            n=frame_w_to_nchars(
-                frame_w=self.search_dropdown.winfo_width(),
-                fixed_font_w=self.fixed_font_w,
-                ncols=4,
-            ),
-        )
         for iid, node in self.nodes.items():
             for i, e in enumerate(self.sheet.MT.data[self.rns[iid]]):
                 if search in e.lower():
@@ -6659,7 +6651,12 @@ class Tree_Editor(tk.Frame):
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{fn(self.headers[h].name)} {fn(node.name)} {fn(self.headers[i].name)} {fn(re.sub(remove_nrt, "", e))}",
+                                    text=(
+                                        self.headers[h].name,
+                                        node.name,
+                                        self.headers[i].name,
+                                        re.sub(remove_nrt, "", e),
+                                    ),
                                     iid=iid,
                                     column=i,
                                     term=search,
@@ -6667,6 +6664,17 @@ class Tree_Editor(tk.Frame):
                                     exact=False,
                                 )
                             )
+        if self.search_results:
+            col_chars = frame_w_to_nchars(
+                frame_w=self.search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=4,
+            )
+            process_search_results(
+                self.search_results,
+                search_results_max_column_chars(self.search_results, col_chars),
+                col_chars,
+            )
         self.display_search_results()
 
     def search_for_ID(self, find=None, exact=False):
@@ -6674,14 +6682,6 @@ class Tree_Editor(tk.Frame):
             return
         self.reset_tree_search_dropdown()
         search = search.lower()
-        fn = partial(
-            nchars,
-            n=frame_w_to_nchars(
-                frame_w=self.search_dropdown.winfo_width(),
-                fixed_font_w=self.fixed_font_w,
-                ncols=2,
-            ),
-        )
         for iid, node in self.nodes.items():
             if (exact and search == iid) or (not exact and search in iid):
                 for h, par in node.ps.items():
@@ -6689,7 +6689,7 @@ class Tree_Editor(tk.Frame):
                         self.search_results.append(
                             SearchResult(
                                 hierarchy=h,
-                                text=f"{fn(self.headers[h].name)} {fn(node.name)}",
+                                text=(self.headers[h].name, node.name),
                                 iid=iid,
                                 column=self.ic,
                                 term=search,
@@ -6697,6 +6697,17 @@ class Tree_Editor(tk.Frame):
                                 exact=exact,
                             )
                         )
+        if self.search_results:
+            col_chars = frame_w_to_nchars(
+                frame_w=self.search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=2,
+            )
+            process_search_results(
+                self.search_results,
+                search_results_max_column_chars(self.search_results, col_chars),
+                col_chars,
+            )
         self.display_search_results()
 
     def search_for_detail(self, find=None, exact=False):
@@ -6705,14 +6716,6 @@ class Tree_Editor(tk.Frame):
         self.reset_tree_search_dropdown()
         search = search.lower()
         idcol_hiers = set(self.hiers) | {self.ic}
-        fn = partial(
-            nchars,
-            n=frame_w_to_nchars(
-                frame_w=self.search_dropdown.winfo_width(),
-                fixed_font_w=self.fixed_font_w,
-                ncols=4,
-            ),
-        )
         for iid, node in self.nodes.items():
             for i, e in enumerate(self.sheet.MT.data[self.rns[iid]]):
                 if i not in idcol_hiers and ((exact and search == e.lower()) or (not exact and search in e.lower())):
@@ -6721,7 +6724,12 @@ class Tree_Editor(tk.Frame):
                             self.search_results.append(
                                 SearchResult(
                                     hierarchy=h,
-                                    text=f"{fn(self.headers[h].name)} {fn(node.name)} {fn(self.headers[i].name)} {fn(re.sub(remove_nrt, "", e))}",
+                                    text=(
+                                        self.headers[h].name,
+                                        node.name,
+                                        self.headers[i].name,
+                                        re.sub(remove_nrt, "", e),
+                                    ),
                                     iid=iid,
                                     column=i,
                                     term=search,
@@ -6729,6 +6737,17 @@ class Tree_Editor(tk.Frame):
                                     exact=exact,
                                 )
                             )
+        if self.search_results:
+            col_chars = frame_w_to_nchars(
+                frame_w=self.search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=4,
+            )
+            process_search_results(
+                self.search_results,
+                search_results_max_column_chars(self.search_results, col_chars),
+                col_chars,
+            )
         self.display_search_results()
 
     def display_search_results(self):
@@ -6743,21 +6762,17 @@ class Tree_Editor(tk.Frame):
             return
         self.reset_sheet_search_dropdown()
         search = search.lower()
-        fn = partial(
-            nchars,
-            n=frame_w_to_nchars(
-                frame_w=self.sheet_search_dropdown.winfo_width(),
-                fixed_font_w=self.fixed_font_w,
-                ncols=3,
-            ),
-        )
         for r in self.sheet.MT.data:
             for i, e in enumerate(r):
                 if search in e.lower():
                     self.sheet_search_results.append(
                         SearchResult(
                             hierarchy=self.pc,
-                            text=f"{fn(r[self.ic])} {fn(self.headers[i].name)} {fn(re.sub(remove_nrt, "", e))}",
+                            text=(
+                                r[self.ic],
+                                self.headers[i].name,
+                                re.sub(remove_nrt, "", e),
+                            ),
                             iid=r[self.ic].lower(),
                             column=i,
                             term=search,
@@ -6765,6 +6780,17 @@ class Tree_Editor(tk.Frame):
                             exact=False,
                         )
                     )
+        if self.sheet_search_results:
+            col_chars = frame_w_to_nchars(
+                frame_w=self.sheet_search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=3,
+            )
+            process_search_results(
+                self.sheet_search_results,
+                search_results_max_column_chars(self.sheet_search_results, col_chars),
+                col_chars,
+            )
         self.sheet_display_search_results()
 
     def sheet_search_for_ID(self, find=None, exact=False):
@@ -6772,20 +6798,12 @@ class Tree_Editor(tk.Frame):
             return
         self.reset_sheet_search_dropdown()
         search = search.lower()
-        fn = partial(
-            nchars,
-            n=frame_w_to_nchars(
-                frame_w=self.sheet_search_dropdown.winfo_width(),
-                fixed_font_w=self.fixed_font_w,
-                ncols=1,
-            ),
-        )
         for r in self.sheet.MT.data:
             if (exact and search == r[self.ic].lower()) or (not exact and search in r[self.ic].lower()):
                 self.sheet_search_results.append(
                     SearchResult(
                         hierarchy=self.pc,
-                        text=f"{fn(r[self.ic])}",
+                        text=(r[self.ic],),
                         iid=r[self.ic].lower(),
                         column=self.ic,
                         term=search,
@@ -6793,6 +6811,17 @@ class Tree_Editor(tk.Frame):
                         exact=exact,
                     )
                 )
+        if self.sheet_search_results:
+            col_chars = frame_w_to_nchars(
+                frame_w=self.sheet_search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=1,
+            )
+            process_search_results(
+                self.sheet_search_results,
+                search_results_max_column_chars(self.sheet_search_results, col_chars),
+                col_chars,
+            )
         self.sheet_display_search_results()
 
     def sheet_search_for_detail(self, find=None, exact=False):
@@ -6801,21 +6830,17 @@ class Tree_Editor(tk.Frame):
         self.reset_sheet_search_dropdown()
         search = search.lower()
         idcol_hiers = set(self.hiers) | {self.ic}
-        fn = partial(
-            nchars,
-            n=frame_w_to_nchars(
-                frame_w=self.sheet_search_dropdown.winfo_width(),
-                fixed_font_w=self.fixed_font_w,
-                ncols=3,
-            ),
-        )
         for r in self.sheet.MT.data:
             for i, e in enumerate(r):
                 if i not in idcol_hiers and ((exact and search == e.lower()) or (not exact and search in e.lower())):
                     self.sheet_search_results.append(
                         SearchResult(
                             hierarchy=self.pc,
-                            text=f"{fn(r[self.ic])} {fn(self.headers[i].name)} {fn(re.sub(remove_nrt, "", e))}",
+                            text=(
+                                r[self.ic],
+                                self.headers[i].name,
+                                re.sub(remove_nrt, "", e),
+                            ),
                             iid=r[self.ic].lower(),
                             column=i,
                             term=search,
@@ -6823,6 +6848,17 @@ class Tree_Editor(tk.Frame):
                             exact=exact,
                         )
                     )
+        if self.sheet_search_results:
+            col_chars = frame_w_to_nchars(
+                frame_w=self.sheet_search_dropdown.winfo_width(),
+                fixed_font_w=self.fixed_font_w,
+                ncols=3,
+            )
+            process_search_results(
+                self.sheet_search_results,
+                search_results_max_column_chars(self.sheet_search_results, col_chars),
+                col_chars,
+            )
         self.sheet_display_search_results()
 
     def sheet_display_search_results(self):

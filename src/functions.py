@@ -12,6 +12,7 @@ import re
 import tkinter as tk
 from base64 import b32decode as b32d
 from base64 import b32encode as b32e
+from collections import defaultdict
 from itertools import islice, repeat
 from math import ceil
 from typing import Literal
@@ -154,14 +155,45 @@ def frame_w_to_nchars(frame_w, fixed_font_w, ncols):
     # b = y_mean - m * x_mean  # y = mx + b solved for b
     # nchars = round(m * frame_w + b)
     # print(frame_w, "=", nchars)
-    
-    nchars = ceil((frame_w / fixed_font_w) / ncols)
-    
+    max_chars = ceil(frame_w / fixed_font_w)
+    col_chars = ceil(max_chars / ncols)
+
     if ncols == 4:
-        return nchars - 2
+        col_chars -= 4
     elif ncols == 3:
-        return nchars - 1
-    return nchars
+        col_chars -= 3
+    elif ncols == 2:
+        col_chars -= 1
+        
+    if col_chars < 9:
+        col_chars += 1
+
+    return col_chars
+
+
+def search_results_max_column_chars(results, limit):
+    max_lengths = defaultdict(int)
+
+    for result in results:
+        for idx, string in enumerate(result.text):
+            max_lengths[idx] = max(max_lengths[idx], len(string))
+    return [e if e <= limit else limit for e in max_lengths.values()]
+    # return [max_lengths[i] for i in range(max(max_lengths, default=-1) + 1)]
+
+
+def process_search_results(
+    objects: list[object],
+    max_lengths: list[int],
+    limit: int,
+    separator: str = " | ",
+) -> None:
+    shortfall = sum(limit - val for val in max_lengths if val < limit)
+    n_to_add_to = sum(1 for val in max_lengths if val == limit)
+    if n_to_add_to:
+        to_add = shortfall // n_to_add_to
+    max_lengths = [e + to_add if e == limit else e for e in max_lengths]
+    for obj in objects:
+        obj.text = separator.join(nchars(s, max_length) for s, max_length in zip(obj.text, max_lengths))
 
 
 def level_to_color(level):
