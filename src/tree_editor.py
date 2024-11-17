@@ -6689,7 +6689,10 @@ class Tree_Editor(tk.Frame):
                         self.search_results.append(
                             SearchResult(
                                 hierarchy=h,
-                                text=(self.headers[h].name, node.name),
+                                text=(
+                                    self.headers[h].name,
+                                    node.name,
+                                ),
                                 iid=iid,
                                 column=self.ic,
                                 term=search,
