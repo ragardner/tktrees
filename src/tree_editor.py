@@ -6670,7 +6670,7 @@ class Tree_Editor(tk.Frame):
                         self.search_results.append(
                             SearchResult(
                                 hierarchy=h,
-                                text=f"{nchars(self.headers[h].name)} {nchars(node.name)} {nchars(self.headers[self.ic].name)}",
+                                text=f"{nchars(self.headers[h].name)} {nchars(node.name)}",
                                 iid=iid,
                                 column=self.ic,
                                 term=search,
@@ -6742,7 +6742,7 @@ class Tree_Editor(tk.Frame):
                 self.sheet_search_results.append(
                     SearchResult(
                         hierarchy=self.pc,
-                        text=f"{nchars(r[self.ic])} {nchars(self.headers[self.ic].name)}",
+                        text=f"{nchars(r[self.ic])}",
                         iid=r[self.ic].lower(),
                         column=self.ic,
                         term=search,
