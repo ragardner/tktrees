@@ -519,7 +519,7 @@ class Tree_Editor(tk.Frame):
         self.switch_label = Button(
             self.btns_tree,
             text="Hierarchy:",
-            command=lambda: self.switch.event_generate("<1>"),
+            command=self.next_hier,
         )
         self.switch_label.grid(row=0, column=0, sticky="nswe")
         self.switch_displayed = tk.StringVar(self.btns_tree)
@@ -3361,6 +3361,12 @@ class Tree_Editor(tk.Frame):
         self.mirror_sels_disabler = True
         self.refresh_tree_dropdowns()
         self.focus_tree()
+        
+    def next_hier(self, event=None):
+        if self.pc == self.hiers[-1]:
+            self.switch_hier(hier=self.hiers[0]) 
+        else:
+            self.switch_hier(hier=self.hiers[self.switch_hier_dropdown.current() + 1]) 
 
     def check_cn(self, n, h):
         yield n.k
