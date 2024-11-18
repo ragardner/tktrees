@@ -218,7 +218,13 @@ def center(
     x=None,
     y=None,
     get=False,
+    scaling: float | None = None,
 ):
+    if isinstance(scaling, (int, float)):
+        if isinstance(desired_width, (int, float)):
+            desired_width *= scaling
+        if isinstance(desired_height, (int, float)):
+            desired_height *= scaling
     if x is not None:
         x = int(x)
     if y is not None:

@@ -149,6 +149,10 @@ class Tree_Editor(tk.Frame):
     def __init__(self, parent, C):
         tk.Frame.__init__(self, parent)
         self.C = C
+        try:
+            self.monitor_scale = self.C.call('tk', 'scaling')
+        except Exception:
+            self.monitor_scale = 1
         self.undo_unsaved_changes_passed_0 = False
         self.l_frame_proportion = float(0.50)
         self.last_width = 0

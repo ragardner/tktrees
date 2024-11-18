@@ -93,7 +93,7 @@ def new_toplevel_chores(toplevel, parent, title, grab=True, resizable=False):
     if grab:
         toplevel.grab_set()
     toplevel.withdraw()
-    toplevel.resizable(resizable, resizable)
+    toplevel.resizable(True, True)
     toplevel.tk.call("wm", "iconphoto", toplevel._w, tk.PhotoImage(format="gif", data=top_left_icon))
     toplevel.title(title)
     if grab:
@@ -1312,20 +1312,18 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.bind(f"<{ctrl_button}-z>", self.C.undo)
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
         self.result = False
-        center(self, 480, self.window_height(), move_left=True)
+        self.update_idletasks()
+        center(self, self.f2.winfo_reqwidth(), self.f2.winfo_reqheight(), move_left=True)
         self.deiconify()
         self.find_display.place_cursor()
         self.starting_up = False
 
-    def window_height(self) -> int:
-        return self.notebook.winfo_height() + self.status_bar.winfo_height()
-
     def notebook_tab_click(self, event=None):
         if not self.starting_up:
             if self.notebook.index(self.notebook.select()) != 1:
-                self.geometry(f"480x{self.window_height()}")
+                self.geometry(f"{self.f2.winfo_reqwidth()}x{self.winfo_reqheight()}")
             else:
-                self.geometry(f"720x{self.window_height()}")
+                self.geometry(f"{self.f3.winfo_reqwidth()}x{self.winfo_reqheight()}")
                 self.sheetdisplay.MT.focus_set()
 
     def enable_widgets(self):
@@ -3559,6 +3557,8 @@ class Ask_Confirm_Quit(tk.Toplevel):
     def __init__(self, C, changes, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Quit")
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
         self.action_label = Label(
             self,
             text=("Save your changes before quitting?" if changes > 1 else "Save your last change before quitting?"),
@@ -3598,7 +3598,8 @@ class Ask_Confirm_Quit(tk.Toplevel):
         self.bind("<Return>", self.save)
         self.bind("<Escape>", self.cancel)
         self.option = "cancel"
-        center(self, 415 if changes > 1 else 430, 150)
+        self.update_idletasks()
+        center(self, self.winfo_reqwidth(), self.winfo_reqheight())
         self.deiconify()
         self.wait_window()
 
