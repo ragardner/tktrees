@@ -6756,7 +6756,7 @@ class Tree_Editor(tk.Frame):
     def display_search_results(self):
         if self.search_results:
             self.search_results.sort(key=attrgetter("hierarchy"))
-            self.search_dropdown["values"] = tuple(result.text for result in self.search_results)
+            self.search_dropdown["values"] = [result.text for result in self.search_results]
             self.search_displayed.set(self.search_results[0].text)
             self.show_search_result()
 
@@ -6866,7 +6866,7 @@ class Tree_Editor(tk.Frame):
 
     def sheet_display_search_results(self):
         if self.sheet_search_results:
-            self.sheet_search_dropdown["values"] = tuple(result.text for result in self.sheet_search_results)
+            self.sheet_search_dropdown["values"] = [result.text for result in self.sheet_search_results]
             self.sheet_search_displayed.set(self.sheet_search_results[0].text)
             self.sheet_show_search_result()
 
