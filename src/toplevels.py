@@ -1314,7 +1314,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
         self.result = False
         self.update_idletasks()
-        center(self, self.f2.winfo_reqwidth(), self.f2.winfo_reqheight(), move_left=True)
+        center(self, self.f2.winfo_reqwidth(), self.f2.winfo_reqheight())
         self.deiconify()
         self.find_display.place_cursor()
         self.starting_up = False

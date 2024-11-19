@@ -214,7 +214,6 @@ def center(
     toplevel,
     desired_width=None,
     desired_height=None,
-    move_left=False,
     x=None,
     y=None,
     get=False,
@@ -241,9 +240,9 @@ def center(
     else:
         size = tuple(map(int, toplevel.geometry().split("+")[0].split("x")))
     if x is None or x > w or x < 0:
-        x = (w / 2 - size[0] / 2) if not move_left else (w / 2 - size[0] / 2) - 400
+        x = w / 2 - size[0] / 2
     if y is None or y > h or y < 0:
-        y = (h / 2 - size[1] / 2) - 20
+        y = h / 2 - size[1] / 2
     if not get:
         toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))
     return x, y
