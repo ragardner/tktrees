@@ -149,10 +149,10 @@ class Tree_Editor(tk.Frame):
     def __init__(self, parent, C):
         tk.Frame.__init__(self, parent)
         self.C = C
-        try:
-            self.monitor_scale = self.C.call('tk', 'scaling')
-        except Exception:
-            self.monitor_scale = 1
+        # try:
+        #     self.monitor_scale = self.C.call("tk", "scaling")
+        # except Exception:
+        #     self.monitor_scale = 1
         self.undo_unsaved_changes_passed_0 = False
         self.l_frame_proportion = float(0.50)
         self.last_width = 0
@@ -1986,15 +1986,6 @@ class Tree_Editor(tk.Frame):
                 self.vs.pop()
                 self.vp -= 1
                 self.set_undo_label()
-                if not self.auto_sort_nodes_bool:
-                    self.update()
-                    confirm = Ask_Confirm(
-                        self,
-                        "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
-                        theme=self.C.theme,
-                    )
-                    if not confirm.boolean:
-                        return None
                 self.edit_cell_rebuild(y1, x1, newtext)
                 return None
 
@@ -2162,24 +2153,6 @@ class Tree_Editor(tk.Frame):
                     clipboard=True,
                 )
 
-    def get_need_rebuild(
-        self,
-        rows_and_cols: tuple[int, tuple[int]],
-    ) -> tuple[bool, bool]:
-        need_rebuild = False
-        need_rebuild_ID = False
-        for _, cols in rows_and_cols:
-            if need_rebuild_ID and need_rebuild:
-                break
-            for c in cols:
-                if need_rebuild_ID and need_rebuild:
-                    break
-                if c == self.ic:
-                    need_rebuild_ID = True
-                if self.headers[c].type_ == "Parent":
-                    need_rebuild = True
-        return need_rebuild, need_rebuild_ID
-
     def clear_cells(
         self,
         rows: Sequence[int] | None = None,
@@ -2282,16 +2255,7 @@ class Tree_Editor(tk.Frame):
 
         self.start_work("Working... ")
         cells_changed = 0
-        need_rebuild, need_rebuild_ID = self.get_need_rebuild(rows_and_cols=rows_and_cols)
-        if (need_rebuild or need_rebuild_ID) and not self.auto_sort_nodes_bool:
-            confirm = Ask_Confirm(
-                self,
-                "Action will require a tree rebuild and sorting of treeview IDs, continue?   ",
-                theme=self.C.theme,
-            )
-            if not confirm.boolean:
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
+        need_rebuild = any(c == self.ic or self.headers[c].type_ == "Parent" for _, cols in rows_and_cols for c in cols)
         if need_rebuild:
             clipboarded = []
             self.snapshot_ctrl_x_v_del_key_id_par()
@@ -2345,7 +2309,7 @@ class Tree_Editor(tk.Frame):
             self.redraw_sheets()
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
-        if need_rebuild or need_rebuild_ID:
+        if need_rebuild:
             self.rebuild_tree()
         else:
             self.refresh_formatting(
@@ -3365,12 +3329,12 @@ class Tree_Editor(tk.Frame):
         self.mirror_sels_disabler = True
         self.refresh_tree_dropdowns()
         self.focus_tree()
-        
+
     def next_hier(self, event=None):
         if self.pc == self.hiers[-1]:
-            self.switch_hier(hier=self.hiers[0]) 
+            self.switch_hier(hier=self.hiers[0])
         else:
-            self.switch_hier(hier=self.hiers[self.switch_hier_dropdown.current() + 1]) 
+            self.switch_hier(hier=self.hiers[self.switch_hier_dropdown.current() + 1])
 
     def check_cn(self, n, h):
         yield n.k
@@ -5631,13 +5595,6 @@ class Tree_Editor(tk.Frame):
             )
             return
         cols = sorted(cols)
-        confirm = Ask_Confirm(
-            self,
-            f"Delete columns: {', '.join(self.headers[c].name for c in cols)}?   ",
-            theme=self.C.theme,
-        )
-        if not confirm.boolean:
-            return
         self.save_info_get_saved_info()
         self.del_cols(cols)
         self.clear_copied_details()

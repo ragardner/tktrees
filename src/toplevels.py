@@ -93,7 +93,7 @@ def new_toplevel_chores(toplevel, parent, title, grab=True, resizable=False):
     if grab:
         toplevel.grab_set()
     toplevel.withdraw()
-    toplevel.resizable(resizable, resizable)
+    toplevel.resizable(True, True)
     toplevel.tk.call("wm", "iconphoto", toplevel._w, tk.PhotoImage(format="gif", data=top_left_icon))
     toplevel.title(title)
     if grab:
@@ -2926,12 +2926,12 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.r_frame.grid_columnconfigure(1, weight=1)
 
         self.open_file_display = Readonly_Entry_With_Scrollbar(self.l_frame, font=EF, theme=theme)
-        self.open_file_display.grid(row=0, column=0, padx=2, pady=2, sticky="nswe")
+        self.open_file_display.grid(row=0, column=0, padx=5, pady=5, sticky="nswe")
         self.open_file_button = Button(self.l_frame, text="⯇ Open file", style="EF.Std.TButton", command=self.open_file)
-        self.open_file_button.grid(row=0, column=1, padx=(2, 10), pady=2, sticky="nswe")
+        self.open_file_button.grid(row=0, column=1, padx=10, pady=10, sticky="nswe")
         self.sheet_dropdown = Ez_Dropdown(self.l_frame, font=EF)
         self.sheet_dropdown.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
-        self.sheet_dropdown.grid(row=1, column=0, padx=2, pady=2, sticky="nswe")
+        self.sheet_dropdown.grid(row=1, column=0, padx=5, pady=5, sticky="nswe")
         self.select_sheet_button = Button(
             self.l_frame,
             text="⯇ Load sheet",
@@ -2939,10 +2939,10 @@ class Merge_Sheets_Popup(tk.Toplevel):
             state="disabled",
             command=self.select_sheet,
         )
-        self.select_sheet_button.grid(row=1, column=1, padx=(2, 10), pady=2, sticky="nswe")
+        self.select_sheet_button.grid(row=1, column=1, padx=10, pady=10, sticky="nswe")
 
         self.selector = Id_Parent_Column_Selector(self.l_frame, theme=theme)
-        self.selector.grid(row=2, column=0, rowspan=2, sticky="nswe")
+        self.selector.grid(row=2, column=0, rowspan=2, padx=5, pady=5, sticky="nswe")
 
         self.clipboard_button = Button(
             self.l_frame,
@@ -2951,7 +2951,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             state="normal",
             command=self.get_clipboard_data,
         )
-        self.clipboard_button.grid(row=2, column=1, padx=(2, 10), pady=(2, 20), sticky="nswe")
+        self.clipboard_button.grid(row=2, column=1, padx=10, pady=(10, 20), sticky="nswe")
 
         self.options_frame = Frame(self.l_frame, theme=theme)
         self.options_frame.grid(row=3, column=1, sticky="nswe")
@@ -3067,10 +3067,10 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.sheetdisplay.grid(row=0, column=1, sticky="nswe")
         if add_rows:
             self.toggle_left_panel()
-            self.toggle_left_button2.config(text="Options")
+            self.toggle_left_button2.config(text="Show\nOptions")
         self.bind("<Escape>", self.cancel)
         self.update_idletasks()
-        center(self, 800, self.winfo_reqheight())
+        center(self, 800, 600)
         self.deiconify()
         self.wait_window()
 
@@ -3087,7 +3087,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             self.l_frame.grid_forget()
             self.showing_left = False
             self.toggle_left_button2.grid(row=0, column=0, sticky="ns")
-            self.toggle_left_button2.config(text="Options")
+            self.toggle_left_button2.config(text="Show\nOptions")
             self.r_frame.grid(row=0, column=0, sticky="nswe")
         else:
             self.toggle_left_button2.grid_forget()
@@ -3476,11 +3476,14 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.ic = None
         self.pcols = []
         self.bind("<Escape>", self.cancel)
-        center(self, 1280, 620)
+        
         self.selector.grid_forget()
         self.flattened_selector.grid(row=0, column=0, pady=(0, 35), sticky="nsew")
         self.flattened_selector.grid_forget()
         self.selector.grid(row=0, column=0, sticky="nsew")
+        
+        self.update_idletasks()
+        center(self, self.winfo_reqwidth(), 600)
         self.deiconify()
         self.wait_window()
 
@@ -3643,7 +3646,8 @@ class Ask_Confirm(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.boolean = False
-        center(self, 530, 168)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.action_display.place_cursor()
         self.wait_window()
@@ -3683,7 +3687,8 @@ class Save_New_Version_Presave_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        center(self, 550, 185)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.file_loc_display.place_cursor()
         self.wait_window()
@@ -3722,7 +3727,8 @@ class Save_New_Version_Postsave_Popup(tk.Toplevel):
         self.bind("<Return>", self.cancel)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        center(self, 550, 210)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.file_name_display.place_cursor()
         self.wait_window()
@@ -3750,7 +3756,8 @@ class Save_New_Version_Error_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        center(self, 550, 130)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.wait_window()
 
@@ -3795,7 +3802,8 @@ class Sort_Sheet_Popup(tk.Toplevel):
         self.bind("<Escape>", self.go_back)
         self.order_dropdown.bind("<<ComboboxSelected>>", lambda event: self.focus_set())
         self.col_dropdown.bind("<<ComboboxSelected>>", lambda event: self.focus_set())
-        center(self, 550, 235)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.wait_window()
 
@@ -3844,7 +3852,6 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
             self.validation_dropdown.grid(row=3, column=0, columnspan=2, sticky="nswe", padx=20, pady=10)
             self.validation_dropdown.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
             width_ = 600
-            height_ = 225
             self.bind("<Return>", self.confirm_validation)
         else:
             self.entries_frame = Frame(self, theme=theme)
@@ -3872,7 +3879,6 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
             self.date_entry_widget.entry_2.bind("<Return>", self.confirm_normal)
             self.date_entry_widget.entry_3.bind("<Return>", self.confirm_normal)
             width_ = 850
-            height_ = 280
 
         self.confirm_button = Button(
             self.bf,
@@ -3885,7 +3891,8 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=(0, 20))
 
         self.result = False
-        center(self, width_, height_)
+        self.update_idletasks()
+        center(self, width_, self.winfo_reqheight())
         self.deiconify()
         self.bind("<Escape>", self.cancel)
         if not validation_values:
@@ -3942,7 +3949,6 @@ class Edit_Detail_Number_Popup(tk.Toplevel):
             self.validation_dropdown.grid(row=3, column=0, columnspan=2, sticky="nswe", padx=20, pady=10)
             self.validation_dropdown.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
             width_ = 600
-            height_ = 225
             self.bind("<Return>", self.confirm_validation)
         else:
             self.entry_widget = Number_Entry_With_Scrollbar(self, theme=theme)
@@ -3950,7 +3956,6 @@ class Edit_Detail_Number_Popup(tk.Toplevel):
             self.entry_widget.grid(row=3, column=0, columnspan=2, sticky="nswe", padx=20, pady=10)
             self.entry_widget.my_entry.bind("<Return>", self.confirm_normal)
             width_ = 600
-            height_ = 240
 
         self.confirm_button = Button(
             self.bf,
@@ -3963,7 +3968,8 @@ class Edit_Detail_Number_Popup(tk.Toplevel):
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=20)
 
         self.result = False
-        center(self, width_, height_)
+        self.update_idletasks()
+        center(self, width_, self.winfo_reqheight())
         self.deiconify()
         self.bind("<Escape>", self.cancel)
         if not validation_values:
@@ -4012,7 +4018,6 @@ class Edit_Detail_Text_Popup(tk.Toplevel):
             self.validation_dropdown.grid(row=3, column=0, columnspan=2, sticky="nswe", padx=20, pady=10)
             self.validation_dropdown.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
             width_ = 620
-            height_ = 225
             self.confirm_button = Button(self.bf, text="Save", style="EF.Std.TButton", command=self.confirm_validation)
             self.bind("<Return>", self.confirm_validation)
         else:
@@ -4020,12 +4025,12 @@ class Edit_Detail_Text_Popup(tk.Toplevel):
             self.text_widget = Wrapped_Text_With_Find_And_Yscroll(self, current_detail, "normal", 15, theme=theme)
             self.text_widget.grid(row=3, column=0, sticky="nswe", columnspan=2)
             width_ = 800
-            height_ = 595
             self.confirm_button = Button(self.bf, text="Save", style="EF.Std.TButton", command=self.confirm_normal)
         self.confirm_button.grid(row=0, column=0, sticky="e", padx=20, pady=20)
         self.cancel_button = Button(self.bf, text="Cancel", style="EF.Std.TButton", command=self.cancel)
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=20)
-        center(self, width_, height_)
+        self.update_idletasks()
+        center(self, width_, self.winfo_reqheight())
         self.result = False
         self.deiconify()
         self.grab_set()
@@ -4085,7 +4090,8 @@ class Add_Top_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        center(self, 600, 186 if self.C.tv_label_col == self.C.ic else 250)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.id_name_display.place_cursor()
         self.wait_window()
@@ -4166,7 +4172,8 @@ class Add_Child_Or_Sibling_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        center(self, 600, 237 if self.C.tv_label_col == self.C.ic else 305)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.id_name_display.place_cursor()
         self.wait_window()
@@ -4288,7 +4295,8 @@ class Rename_Column_Popup(tk.Toplevel):
         self.result = False
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        center(self, 600, 180)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.new_name_display.place_cursor()
         self.wait_window()
@@ -4329,7 +4337,8 @@ class Add_Hierarchy_Column_Popup(tk.Toplevel):
         self.result = False
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        center(self, 600, 150)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.hier_name_display.place_cursor()
         self.wait_window()
@@ -4376,7 +4385,8 @@ class Add_Detail_Column_Popup(tk.Toplevel):
         self.type_ = "Text"
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        center(self, 600, 155)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.detail_name_display.place_cursor()
         self.wait_window()
@@ -4420,7 +4430,8 @@ class Rename_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        center(self, 600, 185)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.new_name_display.place_cursor()
         self.wait_window()
@@ -4457,7 +4468,8 @@ class Enter_Sheet_Name_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        center(self, 600, 137)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.sheet_entry.place_cursor()
         self.wait_window()
@@ -4486,7 +4498,8 @@ class Error(tk.Toplevel):
         self.confirm_button.grid(row=1, column=1, sticky="e", padx=20, pady=(10, 20))
         self.bind("<Return>", self.cancel)
         self.bind("<Escape>", self.cancel)
-        center(self, 600, 180)
+        self.update_idletasks()
+        center(self, 600, self.winfo_reqheight())
         self.deiconify()
         self.wait_window()
 
@@ -4562,7 +4575,8 @@ class Treeview_Id_Finder(tk.Toplevel):
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=(20, 20))
 
         self.bind("<Escape>", self.cancel)
-        center(self, 400, 120)
+        self.update_idletasks()
+        center(self, 400, self.winfo_reqheight())
         self.deiconify()
         self.wait_window()
 
@@ -4581,7 +4595,7 @@ class Text_Popup(tk.Toplevel):
         C,
         text,
         width_=800,
-        height_=650,
+        height_=600,
         theme="dark",
         use_entry_bg=False,
         wrap="none",
@@ -4772,8 +4786,8 @@ class First_Start_Popup(tk.Toplevel):
         self,
         C,
         text,
-        width_=720,
-        height_=570,
+        width_=750,
+        height_=590,
         theme="dark",
         use_entry_bg=False,
         wrap="word",
@@ -4860,7 +4874,7 @@ class License_Popup(tk.Toplevel):
             self.bind("<D>", self.disagree)
             self.bind("<d>", self.disagree)
         self.bind("<Escape>", self.disagree)
-        center(self, 700, 650)
+        center(self, 700, 600)
         self.deiconify()
         self.wait_window()
 
@@ -5341,7 +5355,8 @@ class Settings_Popup(tk.Toplevel):
 
         self.general.tkraise()
         self.bind("<Escape>", self.cancel)
-        center(self, 600, 650)
+        self.update_idletasks()
+        center(self, self.winfo_reqwidth(), self.winfo_reqheight())
         self.deiconify()
         self.wait_window()
 
@@ -5662,7 +5677,7 @@ class Help_Popup(tk.Toplevel):
         self.yscrollb.grid(row=1, column=2, sticky="nswe")
         self.textbox.focus_set()
         self.bind("<Escape>", self.cancel)
-        center(self, 975, 650)
+        center(self, 800, 600)
         self.deiconify()
         self.wait_window()
 
