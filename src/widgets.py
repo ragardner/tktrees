@@ -701,7 +701,7 @@ class Flattened_Column_Selector(tk.Frame):
 
 
 class Single_Column_Selector(tk.Frame):
-    def __init__(self, parent, headers=[[]], width=250, height=350, theme="dark"):
+    def __init__(self, parent, command=None, headers=[[]], width=250, height=350, theme="dark"):
         tk.Frame.__init__(self, parent, width=width, height=height, bg=themes[theme].top_left_bg)
         self.grid_propagate(False)
         self.grid_rowconfigure(1, weight=1)
@@ -735,6 +735,8 @@ class Single_Column_Selector(tk.Frame):
         self.col_selection.data_reference(newdataref=self.headers)
         self.col_selection.extra_bindings([("cell_select", self.col_selection_B1), ("deselect", self.col_deselect)])
         self.col_selection.enable_bindings(("single", "column_width_resize", "double_click_column_resize"))
+        if command:
+            self.col_selection.bind("<<SheetSelect>>", command)
         self.col_selection.grid(row=1, column=0, sticky="nswe")
 
     def set_columns(self, columns):

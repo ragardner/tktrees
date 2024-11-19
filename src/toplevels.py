@@ -103,7 +103,7 @@ def new_toplevel_chores(toplevel, parent, title, grab=True, resizable=False):
 
 
 class Export_Flattened_Popup(tk.Toplevel):
-    def __init__(self, C, width=1280, height=800, theme="dark"):
+    def __init__(self, C, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(toplevel=self, parent=C, title=f"{app_title} - Flatten sheet", resizable=True)
 
@@ -112,14 +112,10 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.wb_ = None
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
-        self.selector = Single_Column_Selector(self, theme=theme)
+        self.selector = Single_Column_Selector(self, command=self.build_flattened, theme=theme)
         self.selector.enable_me()
 
         self.selector.set_columns([self.C.headers[h].name for h in self.C.hiers])
-        if self.C.pc == -1:
-            self.selector.set_col(0)
-        else:
-            self.selector.set_col(self.C.hiers.index(self.C.pc))
         self.selector.grid(row=0, column=0, sticky="nwe", pady=(10, 20), padx=10)
 
         self.include_details_button = X_Checkbutton(
@@ -128,6 +124,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             style="x_button.Std.TButton",
             compound="right",
             checked=self.C.xlsx_flattened_detail_columns,
+            command=self.build_flattened,
         )
         self.include_details_button.grid(row=1, column=0, sticky="new", pady=(10, 5), padx=10)
 
@@ -137,6 +134,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             style="x_button.Std.TButton",
             compound="right",
             checked=self.C.xlsx_flattened_justify,
+            command=self.build_flattened,
         )
         self.justify_left_button.grid(row=3, column=0, sticky="new", pady=5, padx=10)
 
@@ -146,6 +144,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             style="x_button.Std.TButton",
             compound="right",
             checked=self.C.xlsx_flattened_reverse_order,
+            command=self.build_flattened,
         )
         self.order_button.grid(row=4, column=0, sticky="new", pady=5, padx=10)
 
@@ -155,10 +154,11 @@ class Export_Flattened_Popup(tk.Toplevel):
             style="x_button.Std.TButton",
             compound="right",
             checked=self.C.xlsx_flattened_add_index,
+            command=self.build_flattened,
         )
         self.add_index_button.grid(row=5, column=0, sticky="new", pady=(10, 5), padx=10)
 
-        self.build_button = Button(self, text="  Flatten sheet  ", style="EF.Std.TButton", command=self.build_flattened)
+        self.build_button = Button(self, text=" Flatten sheet ", style="EF.Std.TButton", command=self.build_flattened)
         self.build_button.grid(row=7, column=0, pady=10, padx=10, sticky="nsew")
 
         self.sheetdisplay = Sheet(
@@ -180,21 +180,21 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.save_button.grid(row=0, column=0, padx=10, pady=20, sticky="e")
         self.clipboard_json_button = Button(
             self.button_frame,
-            text=" Clipboard as json ",
+            text=" Clipboard - json",
             style="EF.Std.TButton",
             command=self.clipboard_json,
         )
         self.clipboard_json_button.grid(row=0, column=1, padx=10, pady=20, sticky="e")
         self.clipboard_indent_button = Button(
             self.button_frame,
-            text=" Clipboard (indent separated) ",
+            text=" Clipboard - indent",
             style="EF.Std.TButton",
             command=self.clipboard_indent,
         )
         self.clipboard_indent_button.grid(row=0, column=2, padx=10, pady=20, sticky="e")
         self.clipboard_comma_button = Button(
             self.button_frame,
-            text=" Clipboard (comma separated) ",
+            text=" Clipboard - comma",
             style="EF.Std.TButton",
             command=self.clipboard_comma,
         )
@@ -207,11 +207,12 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.status_bar.grid(row=9, column=0, columnspan=2, sticky="nswe")
 
         self.bind("<Escape>", self.cancel)
-        self.build_flattened()
-
-        center(self, width, height)
+        # self.build_flattened()
+        self.update_idletasks()
+        center(self, self.winfo_reqwidth(), self.winfo_reqheight())
         self.deiconify()
         self.grab_set()
+        self.selector.set_col(self.C.hiers.index(self.C.pc))
         self.wait_window()
 
     def end_edit(self, event=None):
@@ -302,7 +303,7 @@ class Export_Flattened_Popup(tk.Toplevel):
         to_clipboard(self.C.C, s.getvalue().rstrip())
         self.stop_work("Sheet successfully copied to clipboard (comma separated)!")
 
-    def build_flattened(self):
+    def build_flattened(self, event=None):
         self.start_work("Flattening sheet...")
         self.sheetdisplay.deselect("all")
         self.sheetdisplay.set_sheet_data(
@@ -435,7 +436,7 @@ class Post_Import_Changes_Popup(tk.Toplevel):
 
 
 class Changelog_Popup(tk.Toplevel):
-    def __init__(self, C, width=999, height=800, theme="dark"):
+    def __init__(self, C, width=1000, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Changelog", resizable=True)
         self.USER_HAS_QUIT = False
@@ -2237,7 +2238,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
 
 class Edit_Conditional_Formatting_Popup(tk.Toplevel):
-    def __init__(self, C, column, theme="dark"):
+    def __init__(self, C, column, width=1000, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.window_destroyed = False
         self.C = new_toplevel_chores(self, C, f"{app_title} - {C.headers[column].name} conditional formatting")
@@ -2340,7 +2341,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
         self.redo_formatting_view()
         self.enable_formatting_view()
         self.bind("<Escape>", self.USER_HAS_CLOSED_WINDOW)
-        center(self, 1150, 600)
+        center(self, width, height)
         self.deiconify()
         self.wait_window()
 
