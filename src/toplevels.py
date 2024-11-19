@@ -93,7 +93,7 @@ def new_toplevel_chores(toplevel, parent, title, grab=True, resizable=False):
     if grab:
         toplevel.grab_set()
     toplevel.withdraw()
-    toplevel.resizable(True, True)
+    toplevel.resizable(resizable, resizable)
     toplevel.tk.call("wm", "iconphoto", toplevel._w, tk.PhotoImage(format="gif", data=top_left_icon))
     toplevel.title(title)
     if grab:
@@ -384,7 +384,7 @@ class Export_Flattened_Popup(tk.Toplevel):
 
 
 class Post_Import_Changes_Popup(tk.Toplevel):
-    def __init__(self, C, changes, successful, width=1000, height=800, theme="dark"):
+    def __init__(self, C, changes, successful, width=800, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Imported Changes", resizable=True)
         self.grid_columnconfigure(0, weight=1)
@@ -436,7 +436,7 @@ class Post_Import_Changes_Popup(tk.Toplevel):
 
 
 class Changelog_Popup(tk.Toplevel):
-    def __init__(self, C, width=1000, height=800, theme="dark"):
+    def __init__(self, C, width=800, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Changelog", resizable=True)
         self.USER_HAS_QUIT = False
@@ -840,7 +840,7 @@ class Changelog_Popup(tk.Toplevel):
 
 
 class Compare_Report_Popup(tk.Toplevel):
-    def __init__(self, C, width=1000, height=800, theme="dark"):
+    def __init__(self, C, width=800, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Comparison Report", resizable=True)
         self.USER_HAS_QUIT = False
@@ -2238,7 +2238,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
 
 class Edit_Conditional_Formatting_Popup(tk.Toplevel):
-    def __init__(self, C, column, width=1000, height=800, theme="dark"):
+    def __init__(self, C, column, width=800, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.window_destroyed = False
         self.C = new_toplevel_chores(self, C, f"{app_title} - {C.headers[column].name} conditional formatting")
@@ -2644,7 +2644,12 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
 class View_Id_Popup(tk.Toplevel):
     def __init__(self, C, ids_row, width=800, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - {C.sheet.MT.data[ids_row['rn']][C.ic]}", resizable=True)
+        self.C = new_toplevel_chores(
+            self,
+            C,
+            f"{app_title} - {C.sheet.MT.data[ids_row['rn']][C.ic]}",
+            resizable=True,
+        )
 
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
@@ -2689,9 +2694,10 @@ class View_Id_Popup(tk.Toplevel):
         )
         self.status_bar.grid(row=2, column=0, sticky="nswe")
         self.bind("<Escape>", self.cancel)
+        self.enable_bindings()
+        self.update_idletasks()
         center(self, width, height)
         self.deiconify()
-        self.enable_bindings()
         self.wait_window()
 
     def redo_display(self, event=None, scroll: bool = False):
@@ -2759,7 +2765,7 @@ class View_Id_Popup(tk.Toplevel):
             if not self.C.change_ID_name(id_, newtext):
                 self.bind("<Escape>", self.cancel)
                 return
-            
+
             self.C.changelog_append(
                 "Rename ID",
                 id_,
@@ -2906,17 +2912,17 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.C = new_toplevel_chores(self, C, f"{app_title} - Merge sheets", resizable=True)
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.USER_HAS_QUIT = False
-        self.grid_columnconfigure(0, weight=1, uniform="x")
-        self.grid_columnconfigure(1, weight=1, uniform="x")
         self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
 
         self.l_frame = Frame(self, theme=theme)
-        self.l_frame.grid(row=0, column=0, sticky="nswe")
-        self.r_frame = Frame(self, theme=theme)
-        self.r_frame.grid(row=0, column=1, sticky="nswe")
+        self.l_frame.grid_rowconfigure(2, weight=1)
         self.l_frame.grid_rowconfigure(3, weight=1)
-        self.r_frame.grid_rowconfigure(0, weight=1)
         self.l_frame.grid_columnconfigure(0, weight=1)
+        self.l_frame.grid(row=0, column=0, sticky="nswe")
+        
+        self.r_frame = Frame(self, theme=theme)
+        self.r_frame.grid_rowconfigure(0, weight=1)
         self.r_frame.grid_columnconfigure(1, weight=1)
 
         self.open_file_display = Readonly_Entry_With_Scrollbar(self.l_frame, font=EF, theme=theme)
@@ -3063,7 +3069,8 @@ class Merge_Sheets_Popup(tk.Toplevel):
             self.toggle_left_panel()
             self.toggle_left_button2.config(text="Options")
         self.bind("<Escape>", self.cancel)
-        center(self, 1280, 620)
+        self.update_idletasks()
+        center(self, 800, self.winfo_reqheight())
         self.deiconify()
         self.wait_window()
 
@@ -3077,14 +3084,14 @@ class Merge_Sheets_Popup(tk.Toplevel):
 
     def toggle_left_panel(self, event=None):
         if self.showing_left:
-            self.grid_columnconfigure(0, weight=0, uniform="y")
             self.l_frame.grid_forget()
             self.showing_left = False
             self.toggle_left_button2.grid(row=0, column=0, sticky="ns")
             self.toggle_left_button2.config(text="Options")
+            self.r_frame.grid(row=0, column=0, sticky="nswe")
         else:
-            self.grid_columnconfigure(0, weight=1, uniform="x")
             self.toggle_left_button2.grid_forget()
+            self.r_frame.grid_forget()
             self.l_frame.grid(row=0, column=0, sticky="nswe")
             self.showing_left = True
         self.update_idletasks()
