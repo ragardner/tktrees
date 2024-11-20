@@ -1170,7 +1170,7 @@ class Condition_Normal_Entry(tk.Entry):
             }
         self.sv = tk.StringVar()
         self.config(textvariable=self.sv)
-        self.sv.trace("w", lambda name, index, mode, sv=self.sv: self.validate_(self.sv))
+        self.sv.trace_add("w", lambda name, index, mode, sv=self.sv: self.validate_(self.sv))
         self.rc_popup_menu = tk.Menu(self, tearoff=0, **menu_kwargs)
         self.rc_popup_menu.add_command(label="Select all", accelerator="Ctrl+A", command=self.select_all, **menu_kwargs)
         self.rc_popup_menu.add_command(label="Cut", accelerator="Ctrl+X", command=self.cut, **menu_kwargs)
@@ -1881,7 +1881,7 @@ class Number_Normal_Entry(tk.Entry):
         self.allowed_chars = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "."}
         self.sv = tk.StringVar()
         self.config(textvariable=self.sv)
-        self.sv.trace("w", lambda name, index, mode, sv=self.sv: self.validate_(self.sv))
+        self.sv.trace_add("w", lambda name, index, mode, sv=self.sv: self.validate_(self.sv))
         self.rc_popup_menu = tk.Menu(self, tearoff=0, **menu_kwargs)
         self.rc_popup_menu.add_command(label="Select all", accelerator="Ctrl+A", command=self.select_all, **menu_kwargs)
         self.rc_popup_menu.add_command(label="Cut", accelerator="Ctrl+X", command=self.cut, **menu_kwargs)
@@ -1977,9 +1977,9 @@ class Date_Entry(tk.Frame):
             self, font=("Calibri", 30, "bold"), width_=2, relief="flat", border=0, textvariable=self.sv_3, theme=theme
         )
 
-        self.sv_1.trace("w", lambda name, index, mode, sv=self.sv_1: self.validate_1(self.sv_1))
-        self.sv_2.trace("w", lambda name, index, mode, sv=self.sv_2: self.validate_2(self.sv_2))
-        self.sv_3.trace("w", lambda name, index, mode, sv=self.sv_3: self.validate_3(self.sv_3))
+        self.sv_1.trace_add("w", lambda name, index, mode, sv=self.sv_1: self.validate_1(self.sv_1))
+        self.sv_2.trace_add("w", lambda name, index, mode, sv=self.sv_2: self.validate_2(self.sv_2))
+        self.sv_3.trace_add("w", lambda name, index, mode, sv=self.sv_3: self.validate_3(self.sv_3))
         self.entry_1.bind("<BackSpace>", self.e1_back)
         self.entry_2.bind("<BackSpace>", self.e2_back)
         self.entry_3.bind("<BackSpace>", self.e3_back)
