@@ -829,8 +829,7 @@ class X_Checkbutton(ttk.Button):
 
 class Auto_Add_Condition_Num_Frame(tk.Frame):
     def __init__(self, parent, col_sel, sheet, theme="dark"):
-        tk.Frame.__init__(self, parent, height=200, bg=themes[theme].top_left_bg)
-        self.grid_propagate(False)
+        tk.Frame.__init__(self, parent, bg=themes[theme].top_left_bg)
         self.C = parent
         self.col_sel = col_sel
         self.sheet_ref = sheet
@@ -869,6 +868,9 @@ class Auto_Add_Condition_Num_Frame(tk.Frame):
         self.max_val = ""
         self.order = ""
         self.min_entry.place_cursor()
+        self.update_idletasks()
+        self.config(height=self.winfo_reqheight())
+        self.grid_propagate(False)
 
     def get_col_min_val(self, event=None):
         c = self.col_sel
@@ -897,8 +899,7 @@ class Auto_Add_Condition_Num_Frame(tk.Frame):
 
 class Auto_Add_Condition_Date_Frame(tk.Frame):
     def __init__(self, parent, col_sel, sheet, DATE_FORM, theme="dark"):
-        tk.Frame.__init__(self, parent, height=225, bg=themes[theme].top_left_bg)
-        self.grid_propagate(False)
+        tk.Frame.__init__(self, parent, bg=themes[theme].top_left_bg)
         self.C = parent
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(2, weight=1)
@@ -947,6 +948,9 @@ class Auto_Add_Condition_Date_Frame(tk.Frame):
         self.max_val = ""
         self.order = ""
         self.min_entry.place_cursor()
+        self.update_idletasks()
+        self.config(height=self.winfo_reqheight())
+        self.grid_propagate(False)
 
     def detect_date_form(self, date):
         forms = []
@@ -1001,224 +1005,6 @@ class Auto_Add_Condition_Date_Frame(tk.Frame):
 
     def cancel(self, event=None):
         self.destroy()
-
-
-class Edit_Condition_Frame(tk.Frame):
-    def __init__(
-        self, parent, condition, colors, color=None, coltype="Text", confirm_text="Save condition", theme="dark"
-    ):
-        tk.Frame.__init__(self, parent, height=160, bg=themes[theme].top_left_bg)
-        self.grid_propagate(False)
-        self.C = parent
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        if coltype in ("ID", "Parent", "Text"):
-            self.if_cell_label = Label(self, text="If cell text is exactly:", font=EFB, theme=theme)
-        else:
-            self.if_cell_label = Label(self, text="If cell value is:", font=EFB, theme=theme)
-        self.if_cell_label.grid(row=0, column=0, sticky="nswe", padx=(20, 10), pady=(20, 40))
-        self.condition_display = Condition_Entry_With_Scrollbar(self, coltype=coltype, theme=theme)
-        self.condition_display.set_my_value(condition)
-        self.condition_display.grid(row=0, column=1, sticky="nswe", pady=(20, 20), padx=(0, 0))
-        self.color_dropdown = Ez_Dropdown(self, EF)
-        self.color_dropdown["values"] = colors
-        if color is None:
-            self.color_dropdown.set_my_value(colors[0])
-        else:
-            self.color_dropdown.set_my_value(color)
-        self.color_dropdown.grid(row=0, column=2, sticky="nswe", pady=(20, 20), padx=(0, 20))
-        self.button_frame = Frame(self, theme=theme)
-        self.button_frame.grid(row=1, column=0, columnspan=3, sticky="e")
-        self.button_frame.grid_rowconfigure(0, weight=1)
-        self.confirm_button = Button(self.button_frame, text=confirm_text, style="EF.Std.TButton", command=self.confirm)
-        self.confirm_button.grid(row=0, column=0, sticky="e", padx=(20, 10), pady=(0, 20))
-        self.cancel_button = Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel)
-        self.cancel_button.grid(row=0, column=1, sticky="e", padx=(10, 20), pady=(0, 20))
-        self.result = False
-        self.new_condition = ""
-        self.color_dropdown.bind("<<ComboboxSelected>>", self.disable_cancel)
-        self.condition_display.place_cursor()
-
-    def disable_cancel(self, event=None):
-        try:
-            self.cancel_button.config(state="disabled")
-            self.after(300, self.enable_cancel)
-        except Exception:
-            pass
-
-    def enable_cancel(self, event=None):
-        self.cancel_button.config(state="normal")
-
-    def confirm(self, event=None):
-        self.result = True
-        self.new_condition = self.condition_display.get_my_value()
-        self.color = self.color_dropdown.get_my_value()
-        self.destroy()
-
-    def cancel(self, event=None):
-        self.destroy()
-
-
-class Condition_Entry_With_Scrollbar(tk.Frame):
-    def __init__(self, parent, coltype="Text", theme="dark"):
-        tk.Frame.__init__(self, parent)
-        self.config(bg=themes[theme].top_left_bg)
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        self.my_entry = Condition_Normal_Entry(self, font=EF, coltype=coltype, theme=theme)
-        self.my_entry.grid(row=0, column=0, sticky="nswe")
-        self.my_scrollbar = Scrollbar(self, self.my_entry.xview, "horizontal", self.my_entry)
-        self.my_scrollbar.grid(row=1, column=0, sticky="ew")
-
-    def change_my_state(self, state, event=None):
-        self.my_entry.config(state=state)
-
-    def place_cursor(self, event=None):
-        self.my_entry.focus_set()
-
-    def get_my_value(self, event=None):
-        return self.my_entry.get()
-
-    def set_my_value(self, val, event=None):
-        self.my_entry.set_my_value(val)
-
-
-class Condition_Normal_Entry(tk.Entry):
-    def __init__(self, parent, font, coltype="Text", width_=None, theme="dark"):
-        tk.Entry.__init__(
-            self,
-            parent,
-            font=font,
-            background=themes[theme].top_left_bg,
-            foreground=themes[theme].table_fg,
-            disabledbackground=themes[theme].top_left_bg,
-            disabledforeground=themes[theme].table_fg,
-            insertbackground=themes[theme].table_fg,
-            readonlybackground=themes[theme].top_left_bg,
-        )
-        if width_:
-            self.config(width=width_)
-        self.coltype = coltype
-        if self.coltype not in ("ID", "Parent", "Text"):
-            self.validate_text = True
-        else:
-            self.validate_text = False
-        if coltype != "Date":
-            self.allowed_chars = {
-                "a",
-                "n",
-                "d",
-                "o",
-                "r",
-                "A",
-                "N",
-                "D",
-                "O",
-                "R",
-                "0",
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-                "7",
-                "8",
-                "9",
-                "!",
-                ">",
-                "<",
-                "=",
-                " ",
-                "-",
-                ".",
-                "C",
-                "c",
-            }
-        else:
-            self.allowed_chars = {
-                "a",
-                "n",
-                "d",
-                "o",
-                "r",
-                "A",
-                "N",
-                "D",
-                "O",
-                "R",
-                "0",
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-                "7",
-                "8",
-                "9",
-                "!",
-                ">",
-                "<",
-                "=",
-                " ",
-                "/",
-                "C",
-                "c",
-                "-",
-            }
-        self.sv = tk.StringVar()
-        self.config(textvariable=self.sv)
-        self.sv.trace_add("write", lambda name, index, mode, sv=self.sv: self.validate_(self.sv))
-        self.rc_popup_menu = tk.Menu(self, tearoff=0, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Select all", accelerator="Ctrl+A", command=self.select_all, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Cut", accelerator="Ctrl+X", command=self.cut, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Copy", accelerator="Ctrl+C", command=self.copy, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Paste", accelerator="Ctrl+V", command=self.paste, **menu_kwargs)
-        self.bind("<1>", lambda event: self.focus_set())
-        self.bind(rc_button, self.rc)
-        self.bind(f"<{ctrl_button}-a>", self.select_all)
-        self.bind(f"<{ctrl_button}-A>", self.select_all)
-        self.set_my_value(" ")
-
-    def validate_(self, sv):
-        if self.validate_text:
-            self.sv.set("".join([c.lower() for c in self.sv.get().replace("  ", " ") if c in self.allowed_chars]))
-
-    def rc(self, event):
-        self.focus_set()
-        self.rc_popup_menu.tk_popup(event.x_root, event.y_root)
-
-    def select_all(self, event: object = None) -> Literal["break"]:
-        self.select_range(0, "end")
-        return "break"
-
-    def cut(self, event=None):
-        self.event_generate(f"<{ctrl_button}-x>")
-        return "break"
-
-    def copy(self, event=None):
-        self.event_generate(f"<{ctrl_button}-c>")
-        return "break"
-
-    def paste(self, event=None):
-        self.event_generate(f"<{ctrl_button}-v>")
-        return "break"
-
-    def set_my_value(self, newvalue):
-        self.delete(0, "end")
-        self.insert(0, str(newvalue))
-
-    def enable_me(self):
-        self.config(state="normal")
-        self.bind("<1>", lambda event: self.focus_set())
-        self.bind(rc_button, self.rc)
-
-    def disable_me(self):
-        self.config(state="disabled")
-        self.unbind("<1>")
-        self.unbind(rc_button)
 
 
 class Askconfirm_Frame(tk.Frame):
