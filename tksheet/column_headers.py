@@ -2019,7 +2019,7 @@ class ColumnHeaders(tk.Canvas):
         # return to tk.Text action if control/command is held down
         # or keysym was not a character
         if (hasattr(event, "state") and event.state & (0x0004 | 0x00000010)) or (
-            hasattr(event, "keysym") and len(event.keysym) > 2
+            hasattr(event, "keysym") and len(event.keysym) > 2 and event.keysym != "space"
         ):
             return
         self.text_editor.autocomplete(val)
