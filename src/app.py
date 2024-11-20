@@ -336,7 +336,7 @@ To get started once you have closed this popup, either:
             "Flatten justify left": self.frames["tree_edit"].xlsx_flattened_justify,
             "Flatten reverse order": self.frames["tree_edit"].xlsx_flattened_reverse_order,
             "Flatten add index": self.frames["tree_edit"].xlsx_flattened_add_index,
-            "Json output format": self.get_json_output_format(),
+            "Json output format": self.frames["tree_edit"].json_format,
             "Save json with program data": self.frames["tree_edit"].save_json_with_program_data,
             "First GUI start": self.configsettings["First GUI start"],
             "Theme": f"{self.theme}",
@@ -355,42 +355,6 @@ To get started once you have closed this popup, either:
             self.get_configsettings()
         write_cfg(self.configsettings)
 
-    def get_json_output_format(self):
-        for i, x in enumerate(
-            (
-                self.frames["tree_edit"].json_format_one,
-                self.frames["tree_edit"].json_format_two,
-                self.frames["tree_edit"].json_format_three,
-                self.frames["tree_edit"].json_format_four,
-            ),
-            1,
-        ):
-            if x:
-                return i
-        return 1
-
-    def set_json_output_format(self):
-        if self.configsettings["Json output format"] == 1:
-            self.frames["tree_edit"].json_format_one = True
-            self.frames["tree_edit"].json_format_two = False
-            self.frames["tree_edit"].json_format_three = False
-            self.frames["tree_edit"].json_format_four = False
-        elif self.configsettings["Json output format"] == 2:
-            self.frames["tree_edit"].json_format_one = False
-            self.frames["tree_edit"].json_format_two = True
-            self.frames["tree_edit"].json_format_three = False
-            self.frames["tree_edit"].json_format_four = False
-        elif self.configsettings["Json output format"] == 3:
-            self.frames["tree_edit"].json_format_one = False
-            self.frames["tree_edit"].json_format_two = False
-            self.frames["tree_edit"].json_format_three = True
-            self.frames["tree_edit"].json_format_four = False
-        elif self.configsettings["Json output format"] == 4:
-            self.frames["tree_edit"].json_format_one = False
-            self.frames["tree_edit"].json_format_two = False
-            self.frames["tree_edit"].json_format_three = False
-            self.frames["tree_edit"].json_format_four = True
-
     def set_settings(self, d: None | dict = None):
         if isinstance(d, dict):
             self.configsettings = d
@@ -402,6 +366,7 @@ To get started once you have closed this popup, either:
         self.frames["tree_edit"].xlsx_flattened_justify = self.configsettings["Flatten justify left"]
         self.frames["tree_edit"].xlsx_flattened_reverse_order = self.configsettings["Flatten reverse order"]
         self.frames["tree_edit"].xlsx_flattened_add_index = self.configsettings["Flatten add index"]
+        self.frames["tree_edit"].json_format = int(self.configsettings["Json output format"])
         if "Treeview indent" in self.configsettings:
             self.frames["tree_edit"].tree.ops.treeview_indent = self.configsettings["Treeview indent"]
         if "Alternate color" in self.configsettings:
@@ -410,7 +375,6 @@ To get started once you have closed this popup, either:
             self.frames["tree_edit"].tv_lvls_bool = self.configsettings["Treeview levels"]
         if "Auto select sheet id" in self.configsettings:
             self.frames["tree_edit"].mirror_var = self.configsettings["Auto select sheet id"]
-        self.set_json_output_format()
         self.theme = self.configsettings["Theme"]
         self.frames["tree_edit"].set_display_option(self.configsettings["Editor display option"])
         self.frames["tree_edit"].change_theme(self.theme, write=False)

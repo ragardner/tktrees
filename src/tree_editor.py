@@ -194,10 +194,7 @@ class Tree_Editor(tk.Frame):
         self.xlsx_flattened_justify = True
         self.xlsx_flattened_reverse_order = False
         self.xlsx_flattened_add_index = False
-        self.json_format_one = True
-        self.json_format_two = False
-        self.json_format_three = False
-        self.json_format_four = False
+        self.json_format = 1
         self.black_theme_bool = True if self.C.theme == "black" else False
         self.dark_blue_theme_bool = True if self.C.theme == "dark_blue" else False
         self.dark_theme_bool = True if self.C.theme == "dark" else False
@@ -1550,34 +1547,6 @@ class Tree_Editor(tk.Frame):
         self.C.created_new = False
         self.C.change_app_title(title=None)
 
-    def change_json_format_one(self):
-        self.json_format_one = True
-        self.json_format_two = False
-        self.json_format_three = False
-        self.json_format_four = False
-        self.C.save_cfg()
-
-    def change_json_format_two(self):
-        self.json_format_two = True
-        self.json_format_one = False
-        self.json_format_three = False
-        self.json_format_four = False
-        self.C.save_cfg()
-
-    def change_json_format_three(self):
-        self.json_format_three = True
-        self.json_format_one = False
-        self.json_format_two = False
-        self.json_format_four = False
-        self.C.save_cfg()
-
-    def change_json_format_four(self):
-        self.json_format_four = True
-        self.json_format_one = False
-        self.json_format_two = False
-        self.json_format_three = False
-        self.C.save_cfg()
-
     def bind_or_unbind_save(self, save_menu_state: Literal["normal", "save as", "disabled"] | None = None):
         if isinstance(save_menu_state, str):
             self.C.save_menu_state = save_menu_state
@@ -1837,7 +1806,7 @@ class Tree_Editor(tk.Frame):
                     [h.name for h in self.headers],
                     self.sheet.MT.data,
                     include_headers=True,
-                    format_=self.which_json(),
+                    format_=self.json_format,
                 )
             ),
         )
@@ -8971,7 +8940,7 @@ class Tree_Editor(tk.Frame):
                                         changelog_header,
                                         self.changelog,
                                         include_headers=True,
-                                        format_=self.which_json(),
+                                        format_=self.json_format,
                                     ),
                                     indent=4,
                                 )
@@ -9012,7 +8981,7 @@ class Tree_Editor(tk.Frame):
                                         changelog_header,
                                         self.changelog[from_row:to_row] if self.sheet_changes else [],
                                         include_headers=True,
-                                        format_=self.which_json(),
+                                        format_=self.json_format,
                                     ),
                                     indent=4,
                                 )
@@ -10830,22 +10799,12 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
         self.new_sheet = []
 
-    def which_json(self) -> int:
-        if self.json_format_one:
-            return 1
-        elif self.json_format_two:
-            return 2
-        elif self.json_format_three:
-            return 3
-        elif self.json_format_four:
-            return 4
-
     def get_save_json(self, program_data=False):
         if not program_data:
             d = full_sheet_to_dict(
                 [h.name for h in self.headers],
                 self.sheet.MT.data,
-                format_=self.which_json(),
+                format_=self.json_format,
             )
         else:
             d = {}

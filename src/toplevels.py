@@ -282,7 +282,7 @@ class Export_Flattened_Popup(tk.Toplevel):
                     self.sheetdisplay.get_sheet_data()[0],
                     self.sheetdisplay.get_sheet_data()[1:],
                     include_headers=True,
-                    format_=self.C.which_json(),
+                    format_=self.C.json_format,
                 ),
                 indent=4,
             ),
@@ -359,7 +359,7 @@ class Export_Flattened_Popup(tk.Toplevel):
                                 self.sheetdisplay.get_sheet_data()[0],
                                 self.sheetdisplay.get_sheet_data()[1:],
                                 include_headers=True,
-                                format_=self.C.which_json(),
+                                format_=self.C.json_format,
                             ),
                             indent=4,
                         )
@@ -644,7 +644,7 @@ class Changelog_Popup(tk.Toplevel):
                                 changelog_header,
                                 self.C.changelog,
                                 include_headers=True,
-                                format_=self.C.which_json(),
+                                format_=self.C.json_format,
                             ),
                             indent=4,
                         )
@@ -705,7 +705,7 @@ class Changelog_Popup(tk.Toplevel):
                                 changelog_header,
                                 self.C.changelog[from_row:to_row],
                                 include_headers=True,
-                                format_=self.C.which_json(),
+                                format_=self.C.json_format,
                             ),
                             indent=4,
                         )
@@ -5118,17 +5118,7 @@ class Settings_Popup(tk.Toplevel):
             """3) [["Header", "Header"], ["id1", "par1"]]""",
             """4) 'tab delimited csv'""",
         ]
-        if self.C.json_format_one:
-            self.json_format_dropdown.set_my_value("""1) {"Header": [Column], ...}""")
-
-        elif self.C.json_format_two:
-            self.json_format_dropdown.set_my_value("""2) [{"Header": value,..}, ...]""")
-
-        elif self.C.json_format_three:
-            self.json_format_dropdown.set_my_value("""3) [["Header", "Header"], ["id1", "par1"]]""")
-
-        elif self.C.json_format_four:
-            self.json_format_dropdown.set_my_value("""4) 'tab delimited csv'""")
+        self.json_format_dropdown.set_my_value(self.json_format_dropdown["values"][self.C.json_format - 1])
 
         self.json_format_dropdown.bind("<<ComboboxSelected>>", self.set_json_format)
         self.json_format_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
@@ -5431,19 +5421,7 @@ class Settings_Popup(tk.Toplevel):
         self.C.C.save_cfg()
 
     def set_json_format(self, event=None):
-        fmt = self.json_format_dropdown.get_my_value()
-        if fmt.startswith("1"):
-            self.C.change_json_format_one()
-
-        elif fmt.startswith("2"):
-            self.C.change_json_format_two()
-
-        elif fmt.startswith("3"):
-            self.C.change_json_format_three()
-
-        elif fmt.startswith("4"):
-            self.C.change_json_format_four()
-
+        self.C.json_format = int(self.json_format_dropdown.get_my_value()[0])
         self.C.C.save_cfg()
 
     def set_theme(self, event=None):
