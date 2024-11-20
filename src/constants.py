@@ -65,6 +65,7 @@ about_system = "\n".join(
     )
 )
 config_name = ".tktrees.json"
+default_app_window_size = (1000, 760)
 
 if USER_OS == "darwin":
     TF = ("Calibri", 16, "bold")

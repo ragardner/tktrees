@@ -27,6 +27,7 @@ from .constants import (
     USER_OS,
     about_system,
     app_copyright,
+    default_app_window_size,
     app_title,
     contact_email,
     ctrl_button,
@@ -245,7 +246,7 @@ To get started once you have closed this popup, either:
             if self.configsettings["Window state"] == "normal":
                 self.configsettings["Window size"] = (self.winfo_width(), self.winfo_height())
             else:
-                self.configsettings["Window size"] = (1360, 760)
+                self.configsettings["Window size"] = default_app_window_size
             self.configsettings["Window coords"] = self.geometry().split("+")[1:]
         except Exception:
             pass
@@ -303,8 +304,8 @@ To get started once you have closed this popup, either:
             "First GUI start": True,
             "Theme": self.theme,
             "Window state": "zoomed",
-            "Window size": (1170, 760),
-            "Window coords": center(self, desired_height=760, desired_width=1000, get=True),
+            "Window size": default_app_window_size,
+            "Window coords": center(self, *default_app_window_size, get=True),
             # left, 50/50, adjustable, right
             "Editor display option": "left",
             "Treeview indent": self.frames["tree_edit"].tree.ops.treeview_indent,
