@@ -79,7 +79,7 @@ class AppGUI(tk.Tk):
         tk.Tk.__init__(self)
         self.withdraw()
         # DEBUGGING
-        # start_arg = ("","COAworkinprogress1.xlsx")
+        # start_arg = ("","40k wo.xlsx")
         self.theme = "light_green"
         self.working = False
         self.save_menu_state = "save as"
