@@ -164,7 +164,7 @@ def frame_w_to_nchars(frame_w, fixed_font_w, ncols):
         col_chars -= 3
     elif ncols == 2:
         col_chars -= 1
-        
+
     if col_chars < 9:
         col_chars += 1
 

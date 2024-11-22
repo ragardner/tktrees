@@ -101,7 +101,7 @@ class AppGUI(tk.Tk):
         style.configure("ERR_ASK_FNT.Std.TButton", font=ERR_ASK_FNT, borderwidth=0)
         style.configure("x_button.Std.TButton", font=EF, anchor="e", borderwidth=0)
         style.configure("wx_button.Std.TButton", font=EF, anchor="w", borderwidth=0)
-        self.option_add('*TCombobox*Listbox.font', dropdown_font)
+        self.option_add("*TCombobox*Listbox.font", dropdown_font)
         self.style = style
 
         self.menubar = tk.Menu(self, **menu_kwargs)
@@ -311,7 +311,7 @@ To get started once you have closed this popup, either:
             "Treeview indent": self.frames["tree_edit"].tree.ops.treeview_indent,
             "Treeview levels": self.frames["tree_edit"].tv_lvls_bool,
             "Auto select sheet id": self.frames["tree_edit"].mirror_var,
-            "Alternate color": self.frames["tree_edit"].tree.ops.alternate_color
+            "Alternate color": self.frames["tree_edit"].tree.ops.alternate_color,
         }
         self.check_window_size_settings()
 

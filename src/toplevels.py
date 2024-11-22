@@ -102,6 +102,26 @@ def new_toplevel_chores(toplevel, parent, title, grab=True, resizable=False):
     return parent
 
 
+def show_toplevel_chores(
+    toplevel: tk.Tk | tk.Toplevel,
+    width: None | int | tk.Misc = None,
+    height: None | int | tk.Misc = None,
+) -> None:
+    toplevel.update_idletasks()
+    if width is None:
+        width = toplevel.winfo_reqwidth()
+    elif isinstance(width, tk.Misc):
+        width = width.winfo_reqwidth()
+
+    if height is None:
+        height = toplevel.winfo_reqheight()
+    elif isinstance(height, tk.Misc):
+        height = height.winfo_reqheight()
+
+    toplevel.deiconify()
+    center(toplevel, width, height)
+
+
 class Export_Flattened_Popup(tk.Toplevel):
     def __init__(self, C, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
@@ -205,13 +225,10 @@ class Export_Flattened_Popup(tk.Toplevel):
             self, text="Use the parent column selector to change hierarchy output", theme=theme
         )
         self.status_bar.grid(row=9, column=0, columnspan=2, sticky="nswe")
-
-        self.bind("<Escape>", self.cancel)
         # self.build_flattened()
-        self.update_idletasks()
-        center(self, self.winfo_reqwidth(), self.winfo_reqheight())
-        self.deiconify()
-        self.grab_set()
+        self.bind("<Escape>", self.cancel)
+
+        show_toplevel_chores(self)
         self.selector.set_col(self.C.hiers.index(self.C.pc))
         self.wait_window()
 
@@ -338,7 +355,6 @@ class Export_Flattened_Popup(tk.Toplevel):
             return
         newfile = os.path.normpath(newfile)
         if not newfile.lower().endswith((".csv", ".xlsx", ".json", ".tsv")):
-            self.grab_set()
             self.stop_work("Can only save .json/.csv/.xlsx file types")
             return
         self.status_bar.change_text("Saving...")
@@ -374,7 +390,6 @@ class Export_Flattened_Popup(tk.Toplevel):
                     writer.writerows(self.sheetdisplay.get_sheet_data())
         except Exception as error_msg:
             self.try_to_close_wb()
-            self.grab_set()
             self.stop_work(f"Error saving file: {error_msg}")
             return
         self.stop_work("Success! Flattened sheet saved")
@@ -427,8 +442,7 @@ class Post_Import_Changes_Popup(tk.Toplevel):
         )
         self.status_bar.grid(row=1, column=0, sticky="nswe")
         self.bind("<Escape>", self.cancel)
-        center(self, width, height)
-        self.deiconify()
+        show_toplevel_chores(self, width, height)
         self.wait_window()
 
     def cancel(self, event=None):
@@ -511,8 +525,7 @@ class Changelog_Popup(tk.Toplevel):
         self.prune_button.pack(side="right", fill="x", padx=20, pady=20)
 
         self.bind("<Escape>", self.cancel)
-        center(self, width, height)
-        self.deiconify()
+        show_toplevel_chores(self, width, height)
         self.wait_window()
 
     def prune(self, event=None):
@@ -614,7 +627,6 @@ class Changelog_Popup(tk.Toplevel):
             return
         newfile = os.path.normpath(newfile)
         if not newfile.lower().endswith((".csv", ".xlsx", ".json", ".tsv")):
-            self.grab_set()
             self.stop_work("Can only save .csv/.xlsx/.json file types")
             return
         self.status_bar.change_text(f"{self.total_changes}Saving...")
@@ -651,7 +663,6 @@ class Changelog_Popup(tk.Toplevel):
                     )
         except Exception as error_msg:
             self.try_to_close_wb()
-            self.grab_set()
             self.stop_work(f"Error saving file: {error_msg}")
             return
         self.stop_work("Success! Changelog saved")
@@ -673,7 +684,6 @@ class Changelog_Popup(tk.Toplevel):
             return
         newfile = os.path.normpath(newfile)
         if not newfile.lower().endswith((".csv", ".xlsx", ".json", ".tsv")):
-            self.grab_set()
             self.stop_work("Can only save .csv/.xlsx/.json file types")
             return
         from_row = min(selectedrows)
@@ -712,7 +722,6 @@ class Changelog_Popup(tk.Toplevel):
                     )
         except Exception as error_msg:
             self.try_to_close_wb()
-            self.grab_set()
             self.stop_work(f"Error saving file: {error_msg}")
             return
         self.stop_work("Success! Changelog saved")
@@ -931,8 +940,7 @@ class Compare_Report_Popup(tk.Toplevel):
         self.save_text_button.pack(side="right", padx=(50, 30), pady=20)
 
         self.bind("<Escape>", self.cancel)
-        center(self, width, height)
-        self.deiconify()
+        show_toplevel_chores(self, width, height)
         self.wait_window()
 
     def start_work(self, msg=""):
@@ -1007,7 +1015,6 @@ class Compare_Report_Popup(tk.Toplevel):
             return
         newfile = os.path.normpath(newfile)
         if not newfile.lower().endswith(".xlsx"):
-            self.grab_set()
             self.stop_work("Can only save .xlsx file type")
             return
         white_font = Font(color="00FFFFFF")
@@ -1047,7 +1054,6 @@ class Compare_Report_Popup(tk.Toplevel):
                 self.try_to_close_wb()
         except Exception as error_msg:
             self.try_to_close_wb()
-            self.grab_set()
             self.stop_work(f"Error saving file: {error_msg}")
             return
         self.stop_work("Success! Report saved")
@@ -1313,11 +1319,9 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.bind(f"<{ctrl_button}-z>", self.C.undo)
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
         self.result = False
-        self.update_idletasks()
-        center(self, self.f2.winfo_reqwidth(), self.f2.winfo_reqheight())
-        self.deiconify()
         self.find_display.place_cursor()
         self.starting_up = False
+        show_toplevel_chores(self, self.f2, self.f2)
 
     def notebook_tab_click(self, event=None):
         if not self.starting_up:
@@ -2341,8 +2345,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
         self.redo_formatting_view()
         self.enable_formatting_view()
         self.bind("<Escape>", self.USER_HAS_CLOSED_WINDOW)
-        center(self, width, height)
-        self.deiconify()
+        show_toplevel_chores(self, width, height)
         self.wait_window()
 
     def enable_formatting_view(self):
@@ -2695,9 +2698,7 @@ class View_Id_Popup(tk.Toplevel):
         self.status_bar.grid(row=2, column=0, sticky="nswe")
         self.bind("<Escape>", self.cancel)
         self.enable_bindings()
-        self.update_idletasks()
-        center(self, width, height)
-        self.deiconify()
+        show_toplevel_chores(self, width, height)
         self.wait_window()
 
     def redo_display(self, event=None, scroll: bool = False):
@@ -2920,7 +2921,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.l_frame.grid_rowconfigure(3, weight=1)
         self.l_frame.grid_columnconfigure(0, weight=1)
         self.l_frame.grid(row=0, column=0, sticky="nswe")
-        
+
         self.r_frame = Frame(self, theme=theme)
         self.r_frame.grid_rowconfigure(0, weight=1)
         self.r_frame.grid_columnconfigure(1, weight=1)
@@ -3069,9 +3070,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             self.toggle_left_panel()
             self.toggle_left_button2.config(text="Show\nOptions")
         self.bind("<Escape>", self.cancel)
-        self.update_idletasks()
-        center(self, 800, 600)
-        self.deiconify()
+        show_toplevel_chores(self, 800, 600)
         self.wait_window()
 
     def setup_selectors(self, event=None):
@@ -3476,15 +3475,12 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.ic = None
         self.pcols = []
         self.bind("<Escape>", self.cancel)
-        
+
         self.selector.grid_forget()
         self.flattened_selector.grid(row=0, column=0, pady=(0, 35), sticky="nsew")
         self.flattened_selector.grid_forget()
         self.selector.grid(row=0, column=0, sticky="nsew")
-        
-        self.update_idletasks()
-        center(self, self.winfo_reqwidth(), 600)
-        self.deiconify()
+        show_toplevel_chores(self, height=600)
         self.wait_window()
 
     def begin_edit_cell(self, event):
@@ -3609,9 +3605,7 @@ class Ask_Confirm_Quit(tk.Toplevel):
         self.bind("<Return>", self.save)
         self.bind("<Escape>", self.cancel)
         self.option = "cancel"
-        self.update_idletasks()
-        center(self, self.winfo_reqwidth(), self.winfo_reqheight())
-        self.deiconify()
+        show_toplevel_chores(self)
         self.wait_window()
 
     def save(self, event=None):
@@ -3646,9 +3640,7 @@ class Ask_Confirm(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.boolean = False
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
+        show_toplevel_chores(self, width=600)
         self.action_display.place_cursor()
         self.wait_window()
 
@@ -3683,13 +3675,11 @@ class Save_New_Version_Presave_Popup(tk.Toplevel):
             style="EF.Std.TButton",
             command=self.choose_loc,
         )
-        self.choose_loc_button.grid(row=2, column=1, sticky="e", padx=20, pady=(5, 10))
+        self.choose_loc_button.grid(row=2, column=1, sticky="e", padx=20, pady=(5, 20))
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
+        show_toplevel_chores(self, width=600)
         self.file_loc_display.place_cursor()
         self.wait_window()
 
@@ -3727,10 +3717,8 @@ class Save_New_Version_Postsave_Popup(tk.Toplevel):
         self.bind("<Return>", self.cancel)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
         self.file_name_display.place_cursor()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def cancel(self, event=None):
@@ -3756,9 +3744,7 @@ class Save_New_Version_Error_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def confirm(self, event=None):
@@ -3802,9 +3788,7 @@ class Sort_Sheet_Popup(tk.Toplevel):
         self.bind("<Escape>", self.go_back)
         self.order_dropdown.bind("<<ComboboxSelected>>", lambda event: self.focus_set())
         self.col_dropdown.bind("<<ComboboxSelected>>", lambda event: self.focus_set())
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def sort_by_col(self, event=None):
@@ -3891,12 +3875,10 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=(0, 20))
 
         self.result = False
-        self.update_idletasks()
-        center(self, width_, self.winfo_reqheight())
-        self.deiconify()
         self.bind("<Escape>", self.cancel)
         if not validation_values:
             self.date_entry_widget.place_cursor()
+        show_toplevel_chores(self, width=width_)
         self.wait_window()
 
     def confirm_normal(self, event=None):
@@ -3968,12 +3950,10 @@ class Edit_Detail_Number_Popup(tk.Toplevel):
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=20)
 
         self.result = False
-        self.update_idletasks()
-        center(self, width_, self.winfo_reqheight())
-        self.deiconify()
         self.bind("<Escape>", self.cancel)
         if not validation_values:
             self.entry_widget.place_cursor()
+        show_toplevel_chores(self, width=width_)
         self.wait_window()
 
     def confirm_normal(self, event=None):
@@ -4029,14 +4009,11 @@ class Edit_Detail_Text_Popup(tk.Toplevel):
         self.confirm_button.grid(row=0, column=0, sticky="e", padx=20, pady=20)
         self.cancel_button = Button(self.bf, text="Cancel", style="EF.Std.TButton", command=self.cancel)
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=20)
-        self.update_idletasks()
-        center(self, width_, self.winfo_reqheight())
         self.result = False
-        self.deiconify()
-        self.grab_set()
         self.bind("<Escape>", self.cancel)
         if not validation_values:
             self.text_widget.place_cursor()
+        show_toplevel_chores(self, width=width_)
         self.wait_window()
 
     def confirm_normal(self, event=None):
@@ -4090,10 +4067,8 @@ class Add_Top_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
         self.id_name_display.place_cursor()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4172,10 +4147,8 @@ class Add_Child_Or_Sibling_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
         self.id_name_display.place_cursor()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4251,10 +4224,9 @@ class Edit_Validation_Popup(tk.Toplevel):
         self.cancel_button = Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel)
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=(10, 20), pady=(0, 20))
         self.new_validation = ""
-        center(self, 600, 500)
-        self.deiconify()
         self.validation_display.select_cell(0, 0)
         self.validation_display.focus_set()
+        show_toplevel_chores(self, 600, 500)
         self.wait_window()
 
     def edit_validation(self, event):
@@ -4295,10 +4267,8 @@ class Rename_Column_Popup(tk.Toplevel):
         self.result = False
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
         self.new_name_display.place_cursor()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4337,10 +4307,8 @@ class Add_Hierarchy_Column_Popup(tk.Toplevel):
         self.result = False
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
         self.hier_name_display.place_cursor()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4385,10 +4353,8 @@ class Add_Detail_Column_Popup(tk.Toplevel):
         self.type_ = "Text"
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
         self.detail_name_display.place_cursor()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4430,10 +4396,8 @@ class Rename_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
         self.new_name_display.place_cursor()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4468,10 +4432,8 @@ class Enter_Sheet_Name_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
         self.sheet_entry.place_cursor()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4498,9 +4460,7 @@ class Error(tk.Toplevel):
         self.confirm_button.grid(row=1, column=1, sticky="e", padx=20, pady=(10, 20))
         self.bind("<Return>", self.cancel)
         self.bind("<Escape>", self.cancel)
-        self.update_idletasks()
-        center(self, 600, self.winfo_reqheight())
-        self.deiconify()
+        show_toplevel_chores(self, width=600)
         self.wait_window()
 
     def cancel(self, event=None):
@@ -4545,8 +4505,7 @@ class Error_Sheet(tk.Toplevel):
         self.confirm_button.grid(row=1, column=1, sticky="e", padx=20, pady=(10, 20))
         self.bind("<Return>", self.cancel)
         self.bind("<Escape>", self.cancel)
-        center(self, 600, 420)
-        self.deiconify()
+        show_toplevel_chores(self, 600, 420)
         self.wait_window()
 
     def cancel(self, event=None):
@@ -4575,9 +4534,7 @@ class Treeview_Id_Finder(tk.Toplevel):
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=(20, 20))
 
         self.bind("<Escape>", self.cancel)
-        self.update_idletasks()
-        center(self, 400, self.winfo_reqheight())
-        self.deiconify()
+        show_toplevel_chores(self, width=400)
         self.wait_window()
 
     def confirm(self, event=None):
@@ -4670,8 +4627,7 @@ class Text_Popup(tk.Toplevel):
         )
         self.cancel_button.pack(side="right", fill="x", padx=20, pady=20)
         self.bind("<Escape>", self.cancel)
-        center(self, width_, height_)
-        self.deiconify()
+        show_toplevel_chores(self, width_, height_)
         self.wait_window()
 
     def copy_text(self, text):
@@ -4820,8 +4776,7 @@ class First_Start_Popup(tk.Toplevel):
         )
         self.cancel_button.pack(side="right", fill="x", padx=20, pady=20)
         self.bind("<Escape>", self.cancel)
-        center(self, width_, height_)
-        self.deiconify()
+        show_toplevel_chores(self, width_, height_)
         self.wait_window()
 
     def cancel(self, event=None):
@@ -4874,8 +4829,7 @@ class License_Popup(tk.Toplevel):
             self.bind("<D>", self.disagree)
             self.bind("<d>", self.disagree)
         self.bind("<Escape>", self.disagree)
-        center(self, 700, 600)
-        self.deiconify()
+        show_toplevel_chores(self, 700, 600)
         self.wait_window()
 
     def agree(self, event=None):
@@ -5345,9 +5299,7 @@ class Settings_Popup(tk.Toplevel):
 
         self.general.tkraise()
         self.bind("<Escape>", self.cancel)
-        self.update_idletasks()
-        center(self, self.winfo_reqwidth(), self.winfo_reqheight())
-        self.deiconify()
+        show_toplevel_chores(self)
         self.wait_window()
 
     def toggle_auto_resize_indexes(self):
@@ -5655,8 +5607,7 @@ class Help_Popup(tk.Toplevel):
         self.yscrollb.grid(row=1, column=2, sticky="nswe")
         self.textbox.focus_set()
         self.bind("<Escape>", self.cancel)
-        center(self, 800, 600)
-        self.deiconify()
+        show_toplevel_chores(self, 800, 600)
         self.wait_window()
 
     def open_docs_in_browser(self):
