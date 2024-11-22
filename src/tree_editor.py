@@ -5681,35 +5681,35 @@ class Tree_Editor(tk.Frame):
         self.headers = new_vs["required_data"]["pickled"]["headers"]
 
         if new_vs["type"] in (
-            "merge sheets",
+            "full sheet",
             "ctrl x, v, del key",
             "ctrl x, v, del key id par",
             "paste id",
             "delete ids",
         ):
-            del_up_to = None
-            for i, row in enumerate(reversed(self.changelog)):
-                if not i:
-                    continue
-                if not row[1].startswith(
-                    (
-                        "Merge | ",
-                        "Imported change |",
-                        "Edit cell |",
-                        "Delete ID from all hierarchies |",
-                        "Delete ID |",
-                        "Cut and paste ID + children |",
-                        "Copy and paste ID |",
-                        "Copy and paste ID + children |",
-                        "Cut and paste ID |",
+            try:
+                self.changelog = self.changelog[
+                    : len(self.changelog)
+                    - next(
+                        i
+                        for i, row in enumerate(islice(reversed(self.changelog), 1, None), start=1)
+                        if not row[1].startswith(
+                            (
+                                "Merge | ",
+                                "Imported change |",
+                                "Edit cell |",
+                                "Delete ID from all hierarchies |",
+                                "Delete ID |",
+                                "Cut and paste ID + children |",
+                                "Copy and paste ID |",
+                                "Copy and paste ID + children |",
+                                "Cut and paste ID |",
+                            )
+                        )
                     )
-                ):
-                    del_up_to = i
-                    break
-            if del_up_to is None:
+                ]
+            except Exception:
                 self.changelog = []
-            else:
-                self.changelog = self.changelog[: len(self.changelog) - del_up_to]
         else:
             del self.changelog[-1]
         if new_vs["type"] == "add id":
@@ -5839,16 +5839,7 @@ class Tree_Editor(tk.Frame):
             self.refresh_formatting(columns=date_cols)
             self.redo_tree_display()
 
-        elif new_vs["type"] == "merge sheets":
-            self.warnings_filepath = new_vs["og_file"]
-            self.warnings_sheet = new_vs["og_sheet"]
-            self.warnings = new_vs["build_warnings"]
-            self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(dehighlight=True)
-            self.redo_tree_display()
-
-        elif new_vs["type"] == "get clipboard data":
+        elif new_vs["type"].startswith("full"):
             self.warnings_filepath = new_vs["og_file"]
             self.warnings_sheet = new_vs["og_sheet"]
             self.warnings = new_vs["build_warnings"]
@@ -5999,24 +5990,11 @@ class Tree_Editor(tk.Frame):
             }
         )
 
-    def snapshot_merge_sheets(self):
+    def snapshot_sheet(self, type_: str = "full sheet"):
         self.snapshot_chore()
         self.vs.append(
             {
-                "type": "merge sheets",
-                "og_file": self.warnings_filepath,
-                "og_sheet": self.warnings_sheet,
-                "build_warnings": self.warnings,
-                "sheet": zlib.compress(pickle.dumps(self.sheet.MT.data)),
-                "required_data": self.get_required_snapshot_data(),
-            }
-        )
-
-    def snapshot_get_clipboard_data(self):
-        self.snapshot_chore()
-        self.vs.append(
-            {
-                "type": "get clipboard data",
+                "type": type_,
                 "og_file": self.warnings_filepath,
                 "og_sheet": self.warnings_sheet,
                 "build_warnings": self.warnings,
@@ -9261,7 +9239,7 @@ class Tree_Editor(tk.Frame):
             if not hier_cols:
                 return
         self.C.status_bar.change_text("Building tree...")
-        self.snapshot_get_clipboard_data()
+        self.snapshot_sheet("full overwrite")
         self.C.status_bar.change_text("Loading...   ")
         self.C.disable_at_start()
         self.warnings = []
@@ -9429,7 +9407,7 @@ class Tree_Editor(tk.Frame):
         equalize_sublist_lens(seq=changes, len_=row_len)
         successful = []
         excluded = 0
-        self.snapshot_merge_sheets()
+        self.snapshot_sheet()
         changes_len = len(changes)
         for changenum, change in enumerate(changes):
             if not changenum % 10:
@@ -10386,7 +10364,7 @@ class Tree_Editor(tk.Frame):
             else:
                 popup = popup_
             self.start_work("Merging sheets...")
-            self.snapshot_merge_sheets()
+            self.snapshot_sheet()
             self.warnings = []
             ns_ic = popup.ic
             ns_hiers = popup.pcols
