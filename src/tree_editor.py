@@ -8636,7 +8636,9 @@ class Tree_Editor(tk.Frame):
             self.discard_tagged_id(ik)
 
     def find_next_main(self, event=None):
-        if self.search_results and not self.sheet_search_results:
+        if self.find_popup:
+            self.find_popup.find_next()
+        elif self.search_results and not self.sheet_search_results:
             self.find_next()
         elif self.sheet_search_results and not self.search_results:
             self.sheet_find_next()

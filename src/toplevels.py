@@ -1413,6 +1413,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         except Exception:
             pass
         self.destroy()
+        self.C.find_popup = None
 
     def open_file(self):
         self.start_work("Loading...   ")
@@ -2239,7 +2240,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
             )
 
     def cancel(self, event=None):
-        self.destroy()
+        self.USER_HAS_CLOSED_WINDOW()
 
 
 class Edit_Conditional_Formatting_Popup(tk.Toplevel):
