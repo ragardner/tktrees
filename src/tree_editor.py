@@ -5658,7 +5658,7 @@ class Tree_Editor(tk.Frame):
         self.pc = new_vs["required_data"]["pickled"]["pc"]
         self.hiers = new_vs["required_data"]["pickled"]["hiers"]
         self.nodes = self.nodes_json_x_dict(
-            json.loads(new_vs["required_data"]["not_pickled"]["nodes"]),
+            new_vs["required_data"]["not_pickled"]["nodes"],
             hiers=self.hiers,
         )
         self.tv_label_col = new_vs["required_data"]["pickled"]["tv_label_col"]
@@ -5973,7 +5973,7 @@ class Tree_Editor(tk.Frame):
 
     def get_unpickleable_required_snapshot_data(self):
         return {
-            "nodes": json.dumps(self.jsonify_nodes()),
+            "nodes": self.jsonify_nodes(),
             "focus": self.tree.has_focus(),
             "sheet_selections": self.get_sheet_sel(),
         }
@@ -10858,7 +10858,7 @@ class Tree_Editor(tk.Frame):
             for n in self.nodes.values()
         }
 
-    def nodes_json_x_dict(self, njson, hiers):
+    def nodes_json_x_dict(self, njson: dict, hiers: Sequence[int]) -> dict:
         nodes = {
             name.lower(): Node(
                 name=name,
