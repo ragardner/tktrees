@@ -51,6 +51,7 @@ from .constants import (
     changelog_header,
     ctrl_button,
     date_formats_usable,
+    detail_column_types,
     dropdown_font,
     menu_kwargs,
     rc_button,
@@ -10384,7 +10385,7 @@ class Tree_Editor(tk.Frame):
             ns_rns = {row[ns_ic].lower(): i for i, row in enumerate(self.new_sheet)}
             shared_ids = {i: ik for ik, i in self.rns.items() if ik in ns_rns}
             os_pcol_names = {h.name.lower(): i for i, h in enumerate(self.headers) if h.type_ == "Parent"}
-            os_dcol_names = {h.name.lower(): i for i, h in enumerate(self.headers) if h.type_.endswith("Detail")}
+            os_dcol_names = {h.name.lower(): i for i, h in enumerate(self.headers) if h.type_ in detail_column_types}
             changes_made = 0
             rows_to_insert = []
 
