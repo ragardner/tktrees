@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "tk-trees"
 description = "Tkinter hierarchy management tool"
 readme = "README.md"
-version = "1.12.1"
+version = "1.12.2"
 authors = [{ name = "ragardner", email = "github@ragardner.simplelogin.com" }]
 requires-python = ">=3.9"
 license = {file = "LICENSE.txt"}
