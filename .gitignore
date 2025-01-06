@@ -1,4 +1,5 @@
 # lib
+_exclude/
 test*.py*
 MOD_VERSION.py
 _version.py
