@@ -1877,13 +1877,13 @@ class MainTable(tk.Canvas):
 
     def select_row_start(self, event: object) -> None:
         if self.selected:
-            self.select_cell(self.selected.row, 0)
             self.see(self.selected.row, 0)
+            self.select_cell(self.selected.row, 0, redraw=True)
 
     def select_a1(self, event: object) -> None:
         if len(self.row_positions) > 1 and len(self.col_positions) > 1:
-            self.select_cell(0, 0)
             self.see(0, 0)
+            self.select_cell(0, 0, redraw=True)
 
     def select_cell(
         self,
@@ -6215,7 +6215,7 @@ class MainTable(tk.Canvas):
 
     def hide_selection_box(self, item: int | None) -> bool:
         if item is None or item is True or item not in self.selection_boxes:
-            return
+            return False
         box = self.selection_boxes.pop(item)
         self.hide_box(box.fill_iid)
         self.hide_box(box.bd_iid)
