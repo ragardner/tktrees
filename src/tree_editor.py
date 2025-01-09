@@ -4657,29 +4657,16 @@ class Tree_Editor(tk.Frame):
                     return "Error: Too few numbers in validation"
                 if len(validation) == 2:
                     try:
-                        validation = [str(num) for num in range(int(validation[0]), int(validation[1]) + 1)]
+                        validation = [f"{num}" for num in range(int(validation[0]), int(validation[1]) + 1)]
                     except Exception:
                         return f"Error: Could not create range of values from: {'_'.join(validation)}"
                 elif len(validation) == 3:
                     try:
                         if int(validation[2]) > 0:
-                            validation = [
-                                str(num)
-                                for num in range(
-                                    int(validation[0]),
-                                    int(validation[1]) + 1,
-                                    int(validation[2]),
-                                )
-                            ]
+                            end = int(validation[1]) + 1
                         else:
-                            validation = [
-                                str(num)
-                                for num in range(
-                                    int(validation[0]),
-                                    int(validation[1]) - 1,
-                                    int(validation[2]),
-                                )
-                            ]
+                            end = int(validation[1]) - 1
+                        validation = [f"{num}" for num in range(int(validation[0]), end, int(validation[2]))]
                     except Exception:
                         return f"Error: Could not create range of values from: {'_'.join(validation)}"
                 else:
