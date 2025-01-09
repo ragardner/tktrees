@@ -5317,8 +5317,8 @@ class Tree_Editor(tk.Frame):
             if not self.check_condition_validity(col, tup[0]).startswith("Error:")
         ]
         self.set_headers()
-        self.redo_tree_display()
         self.refresh_formatting(columns=col)
+        self.redo_tree_display()
         self.redraw_sheets()
 
     def change_coltype_date(self, col, detect_date_form=False, warnings=False):
@@ -9683,13 +9683,10 @@ class Tree_Editor(tk.Frame):
                         elif newtype == "Number":
                             self.headers[colnum].type_ = "Number"
                             self.change_coltype_number(colnum)
-                            validation = self.check_validation_validity(
-                                colnum, ",".join(self.headers[colnum].validation)
-                            )
-                            if isinstance(validation, str):
+                            if isinstance(
+                                self.check_validation_validity(colnum, ",".join(self.headers[colnum].validation)), str
+                            ):
                                 self.headers[colnum].validation = []
-                            else:
-                                self.headers[colnum].validation = validation
                             self.headers[colnum].formatting = [
                                 tup
                                 for tup in self.headers[colnum].formatting
@@ -9699,11 +9696,7 @@ class Tree_Editor(tk.Frame):
                             self.headers[colnum].type_ = "Date"
                             self.change_coltype_date(colnum, detect_date_form=True)
                             if isinstance(
-                                self.check_validation_validity(
-                                    colnum,
-                                    ",".join(self.headers[colnum].validation),
-                                ),
-                                str,
+                                self.check_validation_validity(colnum, ",".join(self.headers[colnum].validation)), str
                             ):
                                 self.headers[colnum].validation = []
                             self.headers[colnum].formatting = [
