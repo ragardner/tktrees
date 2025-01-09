@@ -4674,7 +4674,7 @@ class Tree_Editor(tk.Frame):
             else:
                 validation = validation.split(",")
             for e in validation:
-                if not isreal(e) and e != "":
+                if e != "" and not isreal(e):
                     return f"Error: Only numbers are allowed in Number columns. Error caused by: {e}"
         elif self.headers[col].type_ == "Date":
             for c in validation:
