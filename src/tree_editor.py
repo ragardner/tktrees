@@ -5204,8 +5204,6 @@ class Tree_Editor(tk.Frame):
 
     def change_coltype_text(self, col):
         self.headers[col].type_ = "Text"
-        if isinstance(self.check_validation_validity(col, ",".join(self.headers[col].validation)), str):
-            self.headers[col].validation = []
         self.headers[col].formatting = []
 
     def rc_change_coltype_number(self, event=None):
@@ -5214,11 +5212,9 @@ class Tree_Editor(tk.Frame):
         self.snapshot_col_type_num_date(col, "Number")
         self.headers[col].type_ = "Number"
         self.change_coltype_number(col)
-        validation = self.check_validation_validity(col, ",".join(self.headers[col].validation))
-        if isinstance(validation, str):
+        if isinstance(self.check_validation_validity(col, ",".join(self.headers[col].validation)), str):
             self.headers[col].validation = []
-        else:
-            self.headers[col].validation = validation
+            self.refresh_dropdowns()
         self.headers[col].formatting = [
             tup
             for tup in self.headers[col].formatting
@@ -5314,6 +5310,7 @@ class Tree_Editor(tk.Frame):
         self.change_coltype_date(col, detect_date_form=True)
         if isinstance(self.check_validation_validity(col, ",".join(self.headers[col].validation)), str):
             self.headers[col].validation = []
+            self.refresh_dropdowns()
         self.headers[col].formatting = [
             tup
             for tup in self.headers[col].formatting
