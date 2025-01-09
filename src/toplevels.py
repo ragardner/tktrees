@@ -4210,7 +4210,7 @@ class Edit_Validation_Popup(tk.Toplevel):
         self.confirm_button.grid(row=0, column=0, sticky="e", padx=(20, 10), pady=(0, 20))
         self.cancel_button = Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel)
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=(10, 20), pady=(0, 20))
-        self.new_validation = ""
+        self.new_validation = None
         self.validation_display.select_cell(0, 0)
         self.validation_display.focus_set()
         show_toplevel_chores(self, 600, 500)

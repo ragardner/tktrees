@@ -5153,6 +5153,8 @@ class Tree_Editor(tk.Frame):
             self.headers[col].validation,
             self.C.theme,
         )
+        if popup.new_validation is None:
+            return
         if popup.new_validation:
             validation = self.check_validation_validity(col, popup.new_validation)
             if isinstance(validation, str):
