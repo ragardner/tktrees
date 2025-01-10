@@ -2162,7 +2162,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
                         refresh_cols.add(c)
                         if not ids:
                             self.C.vs[-1]["cells"][(r, c)] = f"{cell}"
-                        self.C.edit_cell_multiple(r, c, newtext2)
+                        self.C._edit_cell(r, c, newtext2, multi=True)
                         details_changed += 1
 
                 elif (
@@ -2176,7 +2176,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
                     if not ids:
                         self.C.vs[-1]["cells"][(r, c)] = f"{cell}"
                     newtext2 = case_insensitive_replace(search, newtext, cell)
-                    self.C.edit_cell_multiple(r, c, newtext2)
+                    self.C._edit_cell(r, c, newtext2, multi=True)
                     details_changed += 1
 
         total_changed = ids_changed + details_changed
@@ -2839,7 +2839,7 @@ class View_Id_Popup(tk.Toplevel):
                 return
             self.C.snapshot_ctrl_x_v_del_key()
             self.C.vs[-1]["cells"][(y1, x1)] = f"{self.C.sheet.MT.data[y1][x1]}"
-            newtext = self.C.edit_cell_single(y1, x1, newtext)
+            newtext = self.C._edit_cell(y1, x1, newtext)
             self.C.refresh_formatting(rows=y1, columns=x1)
             self.C.refresh_tree_item(ID)
             self.C.disable_paste()
