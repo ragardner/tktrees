@@ -8321,8 +8321,7 @@ class Tree_Editor(tk.Frame):
     def paste_details(self):
         self.snapshot_ctrl_x_v_del_key()
         cells_changed, idcol_hiers = 0, set(self.hiers) | {self.ic}
-        rows = set()
-        cols = set()
+        rows, cols = set(), set()
         for iid in self.tree.selection():
             ID = self.nodes[iid].name
             rn = self.rns[iid]
