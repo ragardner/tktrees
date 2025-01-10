@@ -8277,8 +8277,7 @@ class Tree_Editor(tk.Frame):
         self.snapshot_ctrl_x_v_del_key()
         cells_changed, idcol_hiers = 0, set(self.hiers) | {self.ic}
         selected_rows = self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)
-        rows = set()
-        cols = set()
+        rows, cols = set(), set()
         for rn in selected_rows:
             ID = self.sheet.MT.data[rn][self.ic]
             for c, e in enumerate(self.copied_details["copied"]):
