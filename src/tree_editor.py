@@ -1840,30 +1840,36 @@ class Tree_Editor(tk.Frame):
 
     def edit_cell_rebuild(self, r, c, value) -> object:
         self.snapshot_ctrl_x_v_del_key_id_par()
-        self._edit_cell(r, c, value)
+        self.edit_cell_single(r, c, value)
         self.rebuild_tree()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         return value
 
-    def _edit_cell(self, r: int, c: int, value: object, multi: bool = False) -> None:
+    def edit_cell_single(self, r: int, c: int, value: object) -> None:
         if self.headers[c].type_ == "Number":
             value = self.convert_num(value)
         elif self.headers[c].type_ == "Date":
             value = self.convert_date(value, self.DATE_FORM)
-        if multi:
-            self.changelog_append_no_unsaved(
-                "Edit cell |",
-                f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                f"{self.sheet.MT.data[r][c]}",
-                value,
-            )
-        else:
-            self.changelog_append(
-                "Edit cell",
-                f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                f"{self.sheet.MT.data[r][c]}",
-                value,
-            )
+        self.changelog_append(
+            "Edit cell",
+            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
+            f"{self.sheet.MT.data[r][c]}",
+            value,
+        )
+        self.sheet.MT.data[r][c] = value
+        return value
+
+    def edit_cell_multiple(self, r: int, c: int, value: object) -> None:
+        if self.headers[c].type_ == "Number":
+            value = self.convert_num(value)
+        elif self.headers[c].type_ == "Date":
+            value = self.convert_date(value, self.DATE_FORM)
+        self.changelog_append_no_unsaved(
+            "Edit cell |",
+            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
+            f"{self.sheet.MT.data[r][c]}",
+            value,
+        )
         self.sheet.MT.data[r][c] = value
         return value
 
@@ -1963,7 +1969,7 @@ class Tree_Editor(tk.Frame):
                 return None
             self.snapshot_ctrl_x_v_del_key()
             self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
-            newtext = self._edit_cell(y1, x1, newtext)
+            newtext = self.edit_cell_single(y1, x1, newtext)
             self.refresh_formatting(rows=y1, columns=x1)
             self.refresh_tree_item(ID)
             self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
@@ -2396,7 +2402,7 @@ class Tree_Editor(tk.Frame):
                     if c in idcols or (
                         self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[sheet_rn][c] != value
                     ):
-                        self._edit_cell(sheet_rn, c, value, multi=True)
+                        self.edit_cell_multiple(sheet_rn, c, value)
                         cells_changed += 1
 
         else:
@@ -2407,7 +2413,7 @@ class Tree_Editor(tk.Frame):
                     value = data[ndr][ndc]
                     if self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[sheet_rn][c] != value:
                         self.vs[-1]["cells"][(sheet_rn, c)] = f"{self.sheet.MT.data[sheet_rn][c]}"
-                        self._edit_cell(sheet_rn, c, value, multi=True)
+                        self.edit_cell_multiple(sheet_rn, c, value)
                         cells_changed += 1
 
         self.disable_paste()
@@ -2480,7 +2486,7 @@ class Tree_Editor(tk.Frame):
                 for ndc, c in enumerate(range(x1, x1 + numcols)):
                     value = data[ndr][ndc]
                     if c in idcols or (self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value):
-                        self._edit_cell(r, c, value, multi=True)
+                        self.edit_cell_multiple(r, c, value)
                         cells_changed += 1
 
         else:
@@ -2490,7 +2496,7 @@ class Tree_Editor(tk.Frame):
                     value = data[ndr][ndc]
                     if self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value:
                         self.vs[-1]["cells"][(r, c)] = f"{self.sheet.MT.data[r][c]}"
-                        self._edit_cell(r, c, value, multi=True)
+                        self.edit_cell_multiple(r, c, value)
                         cells_changed += 1
 
         self.disable_paste()
