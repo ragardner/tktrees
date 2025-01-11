@@ -1518,7 +1518,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
     def start_work(self, msg=""):
         if msg is not None:
             self.status_bar.change_text(msg)
-        self.C.stop_work(self.C.get_tree_editor_status_bar_text())
+        self.C.start_work(self.C.get_tree_editor_status_bar_text())
         self.disable_widgets()
 
     def stop_work(self, msg=""):
@@ -4186,6 +4186,7 @@ class Edit_Validation_Popup(tk.Toplevel):
             header=[f"Valid {colname} values:"],
             header_font=sheet_header_font,
             theme=theme,
+            paste_can_expand_y=True,
         )
         if validation:
             self.validation_display.data = [[v] for v in validation]
