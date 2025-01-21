@@ -64,7 +64,7 @@ class Column_Selection(tk.Frame):
         )
         self.selector.link_sheet(self.sheetdisplay)
         self.flattened_selector.link_sheet(self.sheetdisplay, self.flattened_choices)
-        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
         self.sheetdisplay.headers(newheaders=0)
         self.sheetdisplay.grid(row=0, column=1, rowspan=3, sticky="nswe")
@@ -128,7 +128,7 @@ class Column_Selection(tk.Frame):
         self.flattened_choices.enable_me()
         self.cont_.config(state="normal")
         self.sheetdisplay.basic_bindings(True)
-        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
 
     def disable_widgets(self):
@@ -301,7 +301,7 @@ class Id_Parent_Column_Selector(tk.Frame):
             default_row_index="letters",
         )
         self.id_col_selection.data_reference(newdataref=self.headers)
-        self.id_col_selection.enable_bindings(("single", "column_width_resize", "double_click_column_resize"))
+        self.id_col_selection.enable_bindings("single", "column_width_resize", "double_click_column_resize")
         self.id_col_selection.extra_bindings(
             [("cell_select", self.id_col_selection_B1), ("deselect", self.id_col_selection_B1)]
         )
@@ -334,7 +334,7 @@ class Id_Parent_Column_Selector(tk.Frame):
         self.par_col_selection.extra_bindings(
             [("cell_select", self.par_col_selection_B1), ("deselect", self.par_col_deselection_B1)]
         )
-        self.par_col_selection.enable_bindings(("toggle", "column_width_resize", "double_click_column_resize"))
+        self.par_col_selection.enable_bindings("toggle", "column_width_resize", "double_click_column_resize")
         if show_disp_2:
             self.par_col_selection.grid(row=1, column=1, sticky="nswe")
         self.par_col_display = Readonly_Entry_With_Scrollbar(self, font=EFB, theme=theme)
@@ -613,7 +613,7 @@ class Flattened_Column_Selector(tk.Frame):
         self.par_col_selection.extra_bindings(
             [("cell_select", self.par_col_selection_B1), ("deselect", self.par_col_deselection_B1)]
         )
-        self.par_col_selection.enable_bindings(("toggle", "column_width_resize", "double_click_column_resize"))
+        self.par_col_selection.enable_bindings("toggle", "column_width_resize", "double_click_column_resize")
         self.par_col_selection.grid(row=1, column=0, sticky="nswe")
 
     def link_sheet(self, sheet, choices):
@@ -734,7 +734,7 @@ class Single_Column_Selector(tk.Frame):
         )
         self.col_selection.data_reference(newdataref=self.headers)
         self.col_selection.extra_bindings([("cell_select", self.col_selection_B1), ("deselect", self.col_deselect)])
-        self.col_selection.enable_bindings(("single", "column_width_resize", "double_click_column_resize"))
+        self.col_selection.enable_bindings("single", "column_width_resize", "double_click_column_resize")
         if command:
             self.col_selection.bind("<<SheetSelect>>", command)
         self.col_selection.grid(row=1, column=0, sticky="nswe")

@@ -191,7 +191,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             header_font=sheet_header_font,
             outline_thickness=0,
         )
-        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay.extra_bindings("begin_edit_cell", self.begin_edit)
         self.sheetdisplay.extra_bindings("end_edit_cell", self.end_edit)
         self.sheetdisplay.headers(newheaders=0)
@@ -252,7 +252,7 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.enable_widgets()
 
     def enable_widgets(self):
-        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay.extra_bindings("begin_edit_cell", self.begin_edit)
         self.sheetdisplay.extra_bindings("end_edit_cell", self.end_edit)
         self.sheetdisplay.basic_bindings(True)
@@ -427,6 +427,7 @@ class Post_Import_Changes_Popup(tk.Toplevel):
             "row_select",
             "arrowkeys",
             "ctrl_select",
+            "find",
         )
         self.sheetdisplay.headers(newheaders=changelog_header)
         self.sheetdisplay.row_index(0)
@@ -458,31 +459,10 @@ class Changelog_Popup(tk.Toplevel):
         self.C = new_toplevel_chores(self, C, f"{app_title} - Changelog", resizable=True)
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
-
-        self.find_results = []
-        self.results_number = 0
         self.wb_ = None
         self.total_changes = f"Total changes: {len(self.C.changelog)} | "
-
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
-
-        self.find_frame = Frame(self, theme=theme)
-        self.find_frame.grid(row=0, column=0, columnspan=2, sticky="nswe")
-        self.search_button = Button(self.find_frame, text=" Find:", command=self.find)
-        self.search_button.pack(side="left", fill="x")
-        self.find_window = Normal_Entry(self.find_frame, font=BF, theme=theme)
-        self.find_window.bind("<Return>", self.find)
-        self.find_window.pack(side="left", fill="x", expand=True)
-        self.find_reset_button = Button(self.find_frame, text="X", command=self.find_reset)
-        self.find_reset_button.pack(side="left", fill="x")
-        self.find_results_label = Label(self.find_frame, "0/0", BF, theme=theme)
-        self.find_results_label.pack(side="left", fill="x")
-        self.find_up_button = Button(self.find_frame, text="▲", command=self.find_up)
-        self.find_up_button.pack(side="left", fill="x")
-        self.find_down_button = Button(self.find_frame, text="▼", command=self.find_down)
-        self.find_down_button.pack(side="left", fill="x")
-
         self.sheetdisplay = Sheet(
             self,
             theme=theme,
@@ -578,22 +558,15 @@ class Changelog_Popup(tk.Toplevel):
             "row_select",
             "column_select",
             "arrowkeys",
+            "find",
         )
 
     def enable_widgets(self):
         self.enable_bindings()
-        self.find_window.bind("<Return>", self.find)
-        self.find_reset_button.config(state="normal")
-        self.find_up_button.config(state="normal")
-        self.find_down_button.config(state="normal")
         self.save_text_button.config(state="normal")
 
     def disable_widgets(self):
         self.sheetdisplay.disable_bindings()
-        self.find_window.unbind("<Return>")
-        self.find_reset_button.config(state="disabled")
-        self.find_up_button.config(state="disabled")
-        self.find_down_button.config(state="disabled")
         self.save_text_button.config(state="disabled")
         self.update()
 
@@ -728,124 +701,6 @@ class Changelog_Popup(tk.Toplevel):
             return
         self.stop_work("Success! Changelog saved")
 
-    def find(self, event=None):
-        self.find_reset(True)
-        self.word = self.find_window.get()
-        if not self.word:
-            return
-        x = self.word.lower()
-        for rn, row in enumerate(self.C.changelog):
-            for colno, cell in enumerate(row):
-                if x in cell.lower():
-                    if colno == 0:
-                        self.find_results.append((rn, 6))
-                        break
-                    else:
-                        self.find_results.append((rn, colno))
-        if self.find_results:
-            for rn, colno in islice(self.find_results, 1, len(self.find_results)):
-                if colno == 6:
-                    for i in range(1, 6):
-                        self.sheetdisplay.highlight_cells(row=rn, column=i, bg="yellow", fg="black")
-                else:
-                    self.sheetdisplay.highlight_cells(row=rn, column=colno, bg="yellow", fg="black")
-            if self.find_results[self.results_number][1] == 6:
-                for i in range(1, 6):
-                    self.sheetdisplay.highlight_cells(
-                        row=self.find_results[self.results_number][0], column=i, bg="orange", fg="black"
-                    )
-            else:
-                self.sheetdisplay.highlight_cells(
-                    row=self.find_results[self.results_number][0],
-                    column=self.find_results[self.results_number][1],
-                    bg="orange",
-                    fg="black",
-                )
-            self.find_results_label.config(text=f"1/{len(self.find_results)}")
-            self.sheetdisplay.see(row=self.find_results[0][0], column=0, keep_xscroll=True)
-        self.sheetdisplay.refresh()
-
-    def find_up(self, event=None):
-        if not self.find_results or len(self.find_results) == 1:
-            return
-        if self.find_results[self.results_number][1] == 6:
-            for i in range(1, 6):
-                self.sheetdisplay.highlight_cells(
-                    row=self.find_results[self.results_number][0], column=i, bg="yellow", fg="black"
-                )
-        else:
-            self.sheetdisplay.highlight_cells(
-                row=self.find_results[self.results_number][0],
-                column=self.find_results[self.results_number][1],
-                bg="yellow",
-                fg="black",
-            )
-        if self.results_number == 0:
-            self.results_number = len(self.find_results) - 1
-        else:
-            self.results_number -= 1
-        self.find_results_label.config(text=f"{self.results_number + 1}/{len(self.find_results)}")
-        if self.find_results[self.results_number][1] == 6:
-            for i in range(1, 6):
-                self.sheetdisplay.highlight_cells(
-                    row=self.find_results[self.results_number][0], column=i, bg="orange", fg="black"
-                )
-        else:
-            self.sheetdisplay.highlight_cells(
-                row=self.find_results[self.results_number][0],
-                column=self.find_results[self.results_number][1],
-                bg="orange",
-                fg="black",
-            )
-        self.sheetdisplay.see(row=self.find_results[self.results_number][0], column=0, keep_xscroll=True)
-        self.sheetdisplay.refresh()
-
-    def find_down(self, event=None):
-        if not self.find_results or len(self.find_results) == 1:
-            return
-        if self.find_results[self.results_number][1] == 6:
-            for i in range(1, 6):
-                self.sheetdisplay.highlight_cells(
-                    row=self.find_results[self.results_number][0], column=i, bg="yellow", fg="black"
-                )
-        else:
-            self.sheetdisplay.highlight_cells(
-                row=self.find_results[self.results_number][0],
-                column=self.find_results[self.results_number][1],
-                bg="yellow",
-                fg="black",
-            )
-        if self.results_number == len(self.find_results) - 1:
-            self.results_number = 0
-        else:
-            self.results_number += 1
-        self.find_results_label.config(text=f"{self.results_number + 1}/{len(self.find_results)}")
-        if self.find_results[self.results_number][1] == 6:
-            for i in range(1, 6):
-                self.sheetdisplay.highlight_cells(
-                    row=self.find_results[self.results_number][0], column=i, bg="orange", fg="black"
-                )
-        else:
-            self.sheetdisplay.highlight_cells(
-                row=self.find_results[self.results_number][0],
-                column=self.find_results[self.results_number][1],
-                bg="orange",
-                fg="black",
-            )
-        self.sheetdisplay.see(row=self.find_results[self.results_number][0], column=0, keep_xscroll=True)
-        self.sheetdisplay.refresh()
-
-    def find_reset(self, newfind=False):
-        self.find_results = []
-        self.results_number = 0
-        self.sheetdisplay.dehighlight_cells(all_=True, redraw=False)
-        if not newfind:
-            self.find_window.delete(0, "end")
-        self.find_results_label.config(text="0/0")
-        self.sheetdisplay.highlight_columns(columns=3, bg=self.red_bg, fg=self.red_fg)
-        self.sheetdisplay.highlight_columns(columns=4, bg=self.green_bg, fg=self.green_fg)
-        self.sheetdisplay.refresh()
-
     def cancel(self, event=None):
         self.USER_HAS_CLOSED_WINDOW()
 
@@ -856,32 +711,11 @@ class Compare_Report_Popup(tk.Toplevel):
         self.C = new_toplevel_chores(self, C, f"{app_title} - Comparison Report", resizable=True)
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
-
-        self.find_results = []
-        self.results_number = 0
         self.wb_ = None
         self.sheet1name = self.C.sheetname_1
         self.sheet2name = self.C.sheetname_2
-
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
-
-        self.find_frame = Frame(self, theme=theme)
-        self.find_frame.grid(row=0, column=0, columnspan=2, sticky="nswe")
-        self.search_button = Button(self.find_frame, text=" Find:", command=self.find)
-        self.search_button.pack(side="left", fill="x")
-        self.find_window = Normal_Entry(self.find_frame, font=BF, theme=theme)
-        self.find_window.bind("<Return>", self.find)
-        self.find_window.pack(side="left", fill="x", expand=True)
-        self.find_reset_button = Button(self.find_frame, text="X", command=self.find_reset)
-        self.find_reset_button.pack(side="left", fill="x")
-        self.find_results_label = Label(self.find_frame, "0/0", BF, theme=theme)
-        self.find_results_label.pack(side="left", fill="x")
-        self.find_up_button = Button(self.find_frame, text="▲", command=self.find_up)
-        self.find_up_button.pack(side="left", fill="x")
-        self.find_down_button = Button(self.find_frame, text="▼", command=self.find_down)
-        self.find_down_button.pack(side="left", fill="x")
-
         self.sheetdisplay1 = Sheet(
             self,
             theme=theme,
@@ -891,21 +725,6 @@ class Compare_Report_Popup(tk.Toplevel):
             default_column_width=250,
             display_selected_fg_over_highlights=True,
             treeview=True,
-        )
-        self.sheetdisplay1.enable_bindings(
-            "single",
-            "copy",
-            "rc_popup_menu",
-            "select_all",
-            "drag_select",
-            "column_width_resize",
-            "double_click_column_resize",
-            "row_height_resize",
-            "double_click_row_resize",
-            "row_select",
-            "column_select",
-            "arrowkeys",
-            "ctrl_select",
         )
         self.sheetdisplay1.insert(text="", values=[self.C.report_header])
         self.sheetdisplay1.column_width(0, "text")
@@ -917,7 +736,6 @@ class Compare_Report_Popup(tk.Toplevel):
                 bg="#648748",
                 fg="white",
             )
-
             row = len(self.sheetdisplay1.data)
             self.sheetdisplay1.bulk_insert(data=rows, parent=header_row)
             if len(rows[0]) > 1:
@@ -926,9 +744,7 @@ class Compare_Report_Popup(tk.Toplevel):
                     bg="#0078d7",
                     fg="white",
                 )
-
         self.sheetdisplay1.grid(row=1, column=0, sticky="nswe")
-
         self.buttonframe = Frame(self, theme=theme)
         self.buttonframe.grid(row=3, column=0, sticky="nswe")
         self.cancel_button = Button(self.buttonframe, text="Done", style="EF.Std.TButton", command=self.cancel)
@@ -940,7 +756,7 @@ class Compare_Report_Popup(tk.Toplevel):
             command=self.save_report,
         )
         self.save_text_button.pack(side="right", padx=(50, 30), pady=20)
-
+        self.enable_widgets()
         self.bind("<Escape>", self.cancel)
         show_toplevel_chores(self, width, height)
 
@@ -960,6 +776,7 @@ class Compare_Report_Popup(tk.Toplevel):
             "copy",
             "rc_popup_menu",
             "select_all",
+            "drag_select",
             "column_width_resize",
             "double_click_column_resize",
             "row_height_resize",
@@ -968,19 +785,12 @@ class Compare_Report_Popup(tk.Toplevel):
             "column_select",
             "arrowkeys",
             "ctrl_select",
+            "find",
         )
-        self.find_window.bind("<Return>", self.find)
-        self.find_reset_button.config(state="normal")
-        self.find_up_button.config(state="normal")
-        self.find_down_button.config(state="normal")
         self.save_text_button.config(state="normal")
 
     def disable_widgets(self):
         self.sheetdisplay1.disable_bindings()
-        self.find_window.unbind("<Return>")
-        self.find_reset_button.config(state="disabled")
-        self.find_up_button.config(state="disabled")
-        self.find_down_button.config(state="disabled")
         self.save_text_button.config(state="disabled")
         self.update()
 
@@ -1058,91 +868,6 @@ class Compare_Report_Popup(tk.Toplevel):
             self.stop_work(f"Error saving file: {error_msg}")
             return
         self.stop_work("Success! Report saved")
-
-    def go_to_result(self, row: int) -> None:
-        self.sheetdisplay1.scroll_to_item(self.sheetdisplay1.rowitem(row, data_index=True))
-
-    def find(self, event=None):
-        self.find_reset(True)
-        self.word = self.find_window.get()
-        if not self.word:
-            return
-        x = self.word.lower()
-
-        for rn, row in enumerate(self.sheetdisplay1.get_sheet_data()):
-            for colno, cell in enumerate(row):
-                if x in cell.lower():
-                    self.find_results.append((rn, colno))
-        if self.find_results:
-            for rn, colno in islice(self.find_results, 1, len(self.find_results)):
-                self.sheetdisplay1.highlight_cells(row=rn, column=colno, bg="yellow", fg="black")
-            self.sheetdisplay1.highlight_cells(
-                row=self.find_results[self.results_number][0],
-                column=self.find_results[self.results_number][1],
-                bg="orange",
-                fg="black",
-            )
-            self.find_results_label.config(text=f"1/{len(self.find_results)}")
-            self.go_to_result(self.find_results[0][0])
-        self.sheetdisplay1.refresh()
-
-    def find_up(self, event=None):
-        if not self.find_results or len(self.find_results) == 1:
-            return
-        self.sheetdisplay1.highlight_cells(
-            row=self.find_results[self.results_number][0],
-            column=self.find_results[self.results_number][1],
-            bg="yellow",
-            fg="black",
-        )
-        if self.results_number == 0:
-            self.results_number = len(self.find_results) - 1
-        else:
-            self.results_number -= 1
-        self.find_results_label.config(text=f"{self.results_number + 1}/{len(self.find_results)}")
-        self.sheetdisplay1.highlight_cells(
-            row=self.find_results[self.results_number][0],
-            column=self.find_results[self.results_number][1],
-            bg="orange",
-            fg="black",
-        )
-        self.go_to_result(self.find_results[self.results_number][0])
-        self.sheetdisplay1.refresh()
-
-    def find_down(self, event=None):
-        if not self.find_results or len(self.find_results) == 1:
-            return
-        self.sheetdisplay1.highlight_cells(
-            row=self.find_results[self.results_number][0],
-            column=self.find_results[self.results_number][1],
-            bg="yellow",
-            fg="black",
-        )
-        if self.results_number == len(self.find_results) - 1:
-            self.results_number = 0
-        else:
-            self.results_number += 1
-        self.find_results_label.config(text=f"{self.results_number + 1}/{len(self.find_results)}")
-        self.sheetdisplay1.highlight_cells(
-            row=self.find_results[self.results_number][0],
-            column=self.find_results[self.results_number][1],
-            bg="orange",
-            fg="black",
-        )
-        self.go_to_result(self.find_results[self.results_number][0])
-        self.sheetdisplay1.refresh()
-
-    def find_reset(self, newfind=False):
-        try:
-            self.find_results = []
-            self.results_number = 0
-            self.sheetdisplay1.dehighlight_cells(all_=True, redraw=True)
-            self.sheetdisplay2.dehighlight_cells(all_=True, redraw=True)
-            if not newfind:
-                self.find_window.delete(0, "end")
-            self.find_results_label.config(text="0/0")
-        except Exception:
-            pass
 
     def cancel(self, event=None):
         self.USER_HAS_CLOSED_WINDOW()
@@ -1278,7 +1003,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
             data=[["", ""] for r in range(20)],
         )
         self.sheetdisplay.set_all_column_widths()
-        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay.disable_bindings("rc_delete_column", "rc_insert_column")
         self.sheetdisplay.grid(row=2, column=0, sticky="ns")
 
@@ -1343,7 +1068,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.sheet_dropdown.config(state="readonly")
         self.where2.config(state="normal")
         self.confirm_button.config(state="normal")
-        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay.disable_bindings("rc_delete_column", "rc_insert_column")
 
     def disable_widgets(self):
@@ -2365,6 +2090,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
             "column_select",
             "ctrl_select",
             "arrowkeys",
+            "find",
         )
         self.formatting_view.extra_bindings("delete", self.formatting_view_delete)
         self.formatting_view.extra_bindings("edit_cell", self.formatting_view_edit)
@@ -2868,6 +2594,7 @@ class View_Id_Popup(tk.Toplevel):
             "row_select",
             "arrowkeys",
             "ctrl_select",
+            "find",
         )
         self.sheetdisplay.extra_bindings(
             [
@@ -3053,7 +2780,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             outline_thickness=0,
         )
         self.selector.link_sheet(self.sheetdisplay)
-        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay.extra_bindings(
             [
                 ("begin_edit_cell", self.begin_edit_cell),
@@ -3338,7 +3065,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.overwrite_details_button.config(state="normal")
         self.overwrite_parents_button.config(state="normal")
         self.confirm_button.config(state="normal")
-        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay.extra_bindings(
             [
                 ("begin_edit_cell", self.begin_edit_cell),
@@ -3443,7 +3170,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         )
         self.selector.link_sheet(self.sheetdisplay)
         self.flattened_selector.link_sheet(self.sheetdisplay, self.flattened_choices)
-        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay.extra_bindings(
             [
                 ("begin_edit_cell", self.begin_edit_cell),
@@ -4192,7 +3919,7 @@ class Edit_Validation_Popup(tk.Toplevel):
             self.validation_display.data = [[v] for v in validation]
         self.validation_display.insert_rows(100, create_selections=False)
         self.validation_display.edit_validation(self.edit_validation)
-        self.validation_display.enable_bindings("all", "ctrl_select")
+        self.validation_display.enable_bindings("all", "ctrl_select", "find")
         self.validation_display.disable_bindings(
             "insert_columns",
             "delete_columns",
@@ -4467,18 +4194,17 @@ class Error_Sheet(tk.Toplevel):
         )
         self.error_display.grid(row=0, column=1, sticky="nswe", pady=(20, 5), padx=(0, 20))
         self.error_display.enable_bindings(
-            (
-                "single",
-                "copy",
-                "drag_select",
-                "column_width_resize",
-                "double_click_column_resize",
-                "row_height_resize",
-                "double_click_row_resize",
-                "row_width_resize",
-                "row_select",
-                "arrowkeys",
-            )
+            "single",
+            "copy",
+            "drag_select",
+            "column_width_resize",
+            "double_click_column_resize",
+            "row_height_resize",
+            "double_click_row_resize",
+            "row_width_resize",
+            "row_select",
+            "arrowkeys",
+            "find",
         )
         self.error_display.column_width(column=0, width="text", only_set_if_too_small=False, redraw=False)
         self.error_display.highlight_rows(rows=highlight_rows, bg="#fc8c55", fg="black")

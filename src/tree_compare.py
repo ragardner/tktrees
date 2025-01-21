@@ -141,23 +141,7 @@ class Tree_Compare(tk.Frame):
             outline_color="black",
         )
         self.selector_1.link_sheet(self.sheetdisplay1)
-        self.sheetdisplay1.enable_bindings(
-            (
-                "single",
-                "drag_select",
-                "select_all",
-                "copy",
-                "rc_popup_menu",
-                "column_width_resize",
-                "double_click_column_resize",
-                "row_height_resize",
-                "double_click_row_resize",
-                "column_select",
-                "row_select",
-                "arrowkeys",
-                "ctrl_select",
-            )
-        )
+        self.sheetdisplay1.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay1.pack(side="top", fill="both", expand=True)
 
         # __________________ R FRAME ______________________________________________________________
@@ -211,23 +195,7 @@ class Tree_Compare(tk.Frame):
             outline_color="black",
         )
         self.selector_2.link_sheet(self.sheetdisplay2)
-        self.sheetdisplay2.enable_bindings(
-            (
-                "single",
-                "drag_select",
-                "select_all",
-                "copy",
-                "rc_popup_menu",
-                "column_width_resize",
-                "double_click_column_resize",
-                "row_height_resize",
-                "double_click_row_resize",
-                "column_select",
-                "row_select",
-                "arrowkeys",
-                "ctrl_select",
-            )
-        )
+        self.sheetdisplay2.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay2.pack(side="top", fill="both", expand=True)
 
         self.sheetdisplay1.bind("<<SheetModified>>", self.sheet_modified1)
@@ -289,7 +257,7 @@ class Tree_Compare(tk.Frame):
         self.sheet_dropdown1.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
         self.load_sheet1.config(state=self.load_sheet1_STATE)
         self.selector_1.enable_me()
-        self.sheetdisplay1.enable_bindings()
+        self.sheetdisplay1.enable_bindings("all", "ctrl_select", "find")
         self.sheetdisplay1.basic_bindings(True)
         self.sheetdisplay1.bind("<<SheetModified>>", self.sheet_modified1)
 
@@ -299,7 +267,7 @@ class Tree_Compare(tk.Frame):
         self.sheet_dropdown2.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
         self.load_sheet2.config(state=self.load_sheet2_STATE)
         self.selector_2.enable_me()
-        self.sheetdisplay2.enable_bindings()
+        self.sheetdisplay2.enable_bindings("all", "ctrl_select", "find")
         self.run_compare_button.config(state="normal")
         self.sheetdisplay2.basic_bindings(True)
         self.sheetdisplay2.bind("<<SheetModified>>", self.sheet_modified2)
