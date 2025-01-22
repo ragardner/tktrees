@@ -648,15 +648,16 @@ class MainTable(tk.Canvas):
         return rst, cst, 0
 
     def find_match(self, find: str, r: int, c: int) -> bool:
-        if not find and (
-            not self.get_valid_cell_data_as_str(r, c, True).lower() or not f"{self.get_cell_data(r, c)}".lower()
-        ):
-            return True
-        elif find and (
-            find in self.get_valid_cell_data_as_str(r, c, True).lower() or find in f"{self.get_cell_data(r, c)}".lower()
-        ):
-            return True
-        return False
+        return (
+            not find
+            and (not self.get_valid_cell_data_as_str(r, c, True).lower() or not f"{self.get_cell_data(r, c)}".lower())
+        ) or (
+            find
+            and (
+                find in self.get_valid_cell_data_as_str(r, c, True).lower()
+                or find in f"{self.get_cell_data(r, c)}".lower()
+            )
+        )
 
     def find_next(self, event: tk.Misc | None = None) -> Literal["break"]:
         find = self.find_window.get().lower()
