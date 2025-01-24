@@ -39,6 +39,19 @@ from typing import Literal
 from .colors import (
     color_map,
 )
+from .constants import (
+    USER_OS,
+    bind_add_columns,
+    bind_add_rows,
+    bind_del_columns,
+    bind_del_rows,
+    ctrl_key,
+    rc_binding,
+    text_editor_close_bindings,
+    text_editor_newline_bindings,
+    text_editor_to_unbind,
+    val_modifying_options,
+)
 from .find_window import (
     FindWindow,
 )
@@ -62,6 +75,8 @@ from .functions import (
     diff_list,
     down_cell_within_box,
     event_dict,
+    event_has_char_key,
+    event_opens_dropdown_or_checkbox,
     float_to_int,
     gen_formatted,
     get_data_from_clipboard,
@@ -105,20 +120,6 @@ from .text_editor import (
 )
 from .types import (
     AnyIter,
-)
-from .vars import (
-    USER_OS,
-    bind_add_columns,
-    bind_add_rows,
-    bind_del_columns,
-    bind_del_rows,
-    ctrl_key,
-    rc_binding,
-    symbols_set,
-    text_editor_close_bindings,
-    text_editor_newline_bindings,
-    text_editor_to_unbind,
-    val_modifying_options,
 )
 
 
@@ -620,32 +621,28 @@ class MainTable(tk.Canvas):
     ) -> tuple[int, int, int]:
         selected = self.selected
         if not selected:
-            rst, cst = 0, 0
-        else:
-            rst, cst = selected.row, selected.column
-            if plus_one and within:
-                curridx = next(i for i, t in enumerate(within) if t[0] == rst and t[1] == cst) + 1
-                if curridx == len(within):
-                    curridx = 0
-                return rst, cst, curridx
-            elif plus_one:
-                if reverse:
-                    if not cst:
-                        cst = len(self.col_positions) - 2
-                        if not rst:
-                            rst = len(self.row_positions) - 2
-                        else:
-                            rst -= 1
-                    else:
-                        cst -= 1
+            return 0, 0, 0
+        max_row = len(self.row_positions) - 2
+        max_col = len(self.col_positions) - 2
+        row, col = selected.row, selected.column
+
+        if plus_one and within:
+            curridx = next((i for i, t in enumerate(within) if t[0] == row and t[1] == col), -1) + 1
+            return row, col, curridx if curridx < len(within) else 0
+
+        if plus_one:
+            if reverse:
+                if col == 0:
+                    col = max_col
+                    row = max_row if row == 0 else row - 1
                 else:
-                    cst += 1
-                    if cst == len(self.col_positions) - 1:
-                        cst = 0
-                        rst += 1
-                    if rst == len(self.row_positions) - 1:
-                        rst = 0
-        return rst, cst, 0
+                    col -= 1
+            else:
+                col = (col + 1) % (max_col + 1)
+                if col == 0:
+                    row = (row + 1) % (max_row + 1)
+
+        return row, col, 0
 
     def find_match(self, find: str, r: int, c: int) -> bool:
         return (
@@ -660,10 +657,9 @@ class MainTable(tk.Canvas):
         )
 
     def find_next(self, event: tk.Misc | None = None) -> Literal["break"]:
-        find = self.find_window.get().lower()
+        find, found_coords = self.find_window.get().lower(), None
         if not self.find_window.open:
             self.open_find_window(focus=False)
-        found_coords = None
         if self.find_window.window.find_in_selection:
             sels = self.PAR.get_selected_cells(
                 get_rows=True,
@@ -682,29 +678,14 @@ class MainTable(tk.Canvas):
                     break
         else:
             rst, cst, _ = self.find_get_start_coords(plus_one=True)
-            rst = self.datarn(rst)
-            cst = self.datacn(cst)
-            for r, c in self.find_gen_all_cells(
-                start_row=rst,
-                start_col=cst,
-                total_cols=self.total_data_cols(include_header=False),
-            ):
-                if (not self.all_rows_displayed and not bisect_in(self.displayed_rows, r)) or (
-                    not self.all_columns_displayed and not bisect_in(self.displayed_columns, c)
-                ):
-                    continue
-                if self.find_match(find, r, c):
-                    found_coords = (r, c)
-                    break
-        if found_coords:
-            self.find_see_and_set(found_coords)
+            found_coords = self.find_all_cells(self.datarn(rst), self.datacn(cst), find)
+        self.find_see_and_set(found_coords)
         return "break"
 
     def find_previous(self, event: tk.Misc | None = None) -> Literal["break"]:
-        find = self.find_window.get().lower()
+        find, found_coords = self.find_window.get().lower(), None
         if not self.find_window.open:
             self.open_find_window(focus=False)
-        found_coords = None
         if self.find_window.window.find_in_selection:
             sels = self.PAR.get_selected_cells(
                 get_rows=True,
@@ -731,24 +712,34 @@ class MainTable(tk.Canvas):
                 plus_one=True,
                 reverse=True,
             )
-            rst = self.datarn(rst)
-            cst = self.datacn(cst)
-            for r, c in self.find_gen_all_cells(
-                start_row=rst,
-                start_col=cst,
-                total_cols=self.total_data_cols(include_header=False),
-                reverse=True,
-            ):
-                if (not self.all_rows_displayed and not bisect_in(self.displayed_rows, r)) or (
-                    not self.all_columns_displayed and not bisect_in(self.displayed_columns, c)
-                ):
-                    continue
-                if self.find_match(find, r, c):
-                    found_coords = (r, c)
-                    break
-        if found_coords:
-            self.find_see_and_set(found_coords)
+            found_coords = self.find_all_cells(self.datarn(rst), self.datacn(cst), find, reverse=True)
+        self.find_see_and_set(found_coords)
         return "break"
+
+    def find_all_cells(
+        self,
+        row: int,
+        col: int,
+        find: str,
+        reverse: bool = False,
+    ) -> tuple[int, int] | None:
+        return next(
+            (
+                (r, c)
+                for r, c in self.find_gen_all_cells(
+                    start_row=row,
+                    start_col=col,
+                    total_cols=self.total_data_cols(include_header=False),
+                    reverse=reverse,
+                )
+                if (
+                    (self.all_rows_displayed or bisect_in(self.displayed_rows, r))
+                    and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
+                    and self.find_match(find, r, c)
+                )
+            ),
+            None,
+        )
 
     def close_find_window(
         self,
@@ -810,19 +801,19 @@ class MainTable(tk.Canvas):
                 self.hidd_ctrl_outline[t] = False
 
     def get_ctrl_x_c_boxes(self) -> tuple[dict[tuple[int, int, int, int], str], int]:
-        boxes = {}
         maxrows = 0
         if not self.selected:
-            return boxes, maxrows
+            return {}, maxrows
         if self.selected.type_ in ("cells", "columns"):
             curr_box = self.selection_boxes[self.selected.fill_iid].coords
             maxrows = curr_box[2] - curr_box[0]
-            for item, box in self.get_selection_items(rows=False):
-                if maxrows >= box.coords[2] - box.coords[0]:
-                    boxes[box.coords] = box.type_
+            boxes = {
+                box.coords: box.type_
+                for _, box in self.get_selection_items(rows=False)
+                if maxrows >= box.coords[2] - box.coords[0]
+            }
         else:
-            for item, box in self.get_selection_items(columns=False, cells=False):
-                boxes[box.coords] = "rows"
+            boxes = {box.coords: "rows" for _, box in self.get_selection_items(columns=False, cells=False)}
         return boxes, maxrows
 
     def io_csv_writer(self) -> tuple[io.StringIO, csv.writer]:
@@ -2097,20 +2088,12 @@ class MainTable(tk.Canvas):
         r: int | None = 0,
         c: int | None = 0,
         separate_axes: bool = False,
-    ) -> bool:
+    ) -> bool | tuple[bool, bool]:
         cx1, cy1, cx2, cy2 = self.get_canvas_visible_area()
         x1, y1, x2, y2 = self.get_cell_coords(r, c)
-        x_vis = True
-        y_vis = True
-        if cx1 > x1 or cx2 < x2:
-            x_vis = False
-        if cy1 > y1 or cy2 < y2:
-            y_vis = False
-        if separate_axes:
-            return y_vis, x_vis
-        if not y_vis or not x_vis:
-            return False
-        return True
+        x_vis = cx1 <= x1 and cx2 >= x2
+        y_vis = cy1 <= y1 and cy2 >= y2
+        return (y_vis, x_vis) if separate_axes else y_vis and x_vis
 
     def cell_visible(self, r: int = 0, c: int = 0) -> bool:
         cx1, cy1, cx2, cy2 = self.get_canvas_visible_area()
@@ -2500,9 +2483,8 @@ class MainTable(tk.Canvas):
         elif self.selected.type_ in ("cells", "columns"):
             r = self.selected.row
             c = self.selected.column
-            if not r and self.CH.col_selection_enabled:
-                if not self.cell_completely_visible(r=r, c=0):
-                    self.see(r, c, check_cell_visibility=False)
+            if not r and self.CH.col_selection_enabled and not self.cell_completely_visible(r=r, c=c):
+                self.see(r, c, check_cell_visibility=False)
             elif r and (self.single_selection_enabled or self.toggle_selection_enabled):
                 if self.cell_completely_visible(r=r - 1, c=c):
                     self.select_cell(r - 1, c, redraw=True)
@@ -2583,7 +2565,7 @@ class MainTable(tk.Canvas):
         elif self.selected.type_ == "cells":
             r = self.selected.row
             c = self.selected.column
-            if not c and not self.cell_completely_visible(r=r, c=0):
+            if not c and not self.cell_completely_visible(r=r, c=c):
                 self.see(r, c, keep_yscroll=True, check_cell_visibility=False)
             elif c and (self.single_selection_enabled or self.toggle_selection_enabled):
                 if self.cell_completely_visible(r=r, c=c - 1):
@@ -6338,56 +6320,35 @@ class MainTable(tk.Canvas):
         box: tuple[int, int, int, int] | None = None,
         run_binding: bool = True,
     ) -> None:
+        def box_created(r: int, c: int, box: SelectionBox) -> bool:
+            r1, c1, r2, c2 = box.coords
+            if r1 <= r and c1 <= c and r2 >= r and c2 >= c:
+                self.create_currently_selected_box(r, c, box.type_, box.fill_iid)
+                if run_binding:
+                    self.run_selection_binding(box.type_)
+                return True
+            return False
+
+        # set current to a particular existing selection box
         if isinstance(item, int) and item in self.selection_boxes:
             selection_box = self.selection_boxes[item]
             r1, c1, r2, c2 = selection_box.coords
-            if r is None:
-                r = r1
-            if c is None:
-                c = c1
-            if r1 <= r and c1 <= c and r2 >= r and c2 >= c:
-                self.create_currently_selected_box(
-                    r,
-                    c,
-                    selection_box.type_,
-                    selection_box.fill_iid,
-                )
-                if run_binding:
-                    self.run_selection_binding(selection_box.type_)
+            if box_created(r1 if r is None else r, c1 if c is None else c, selection_box):
                 return
-        # currently selected is pointed at any selection box with "box" coordinates
+
+        # set current to any existing selection box with coordinates: box
         if isinstance(box, tuple):
-            if r is None:
-                r = box[0]
-            if c is None:
-                c = box[1]
             for item, selection_box in self.get_selection_items(reverse=True):
-                r1, c1, r2, c2 = selection_box.coords
-                if box == (r1, c1, r2, c2) and r1 <= r and c1 <= c and r2 >= r and c2 >= c:
-                    self.create_currently_selected_box(
-                        r,
-                        c,
-                        selection_box.type_,
-                        selection_box.fill_iid,
-                    )
-                    if run_binding:
-                        self.run_selection_binding(selection_box.type_)
-                    return
-        # currently selected is just pointed at a coordinate
-        # find the top most box there, requires r and c
-        if r is not None and c is not None:
+                if box == selection_box.coords:
+                    if box_created(box[0] if r is None else r, box[1] if c is None else c, selection_box):
+                        return
+
+        # set current to a coordinate, find the top most box there
+        if isinstance(r, int) and isinstance(c, int):
             for item, selection_box in self.get_selection_items(reverse=True):
-                r1, c1, r2, c2 = selection_box.coords
-                if r1 <= r and c1 <= c and r2 >= r and c2 >= c:
-                    self.create_currently_selected_box(
-                        r,
-                        c,
-                        selection_box.type_,
-                        selection_box.fill_iid,
-                    )
-                    if run_binding:
-                        self.run_selection_binding(selection_box.type_)
+                if box_created(r, c, selection_box):
                     return
+
             # wasn't provided an item and couldn't find a box at coords so select cell
             if r < len(self.row_positions) - 1 and c < len(self.col_positions) - 1:
                 self.select_cell(r, c, redraw=True)
@@ -6758,50 +6719,30 @@ class MainTable(tk.Canvas):
     def recreate_all_selection_boxes(self) -> None:
         if not self.selected:
             return
+
         modified = False
+        row_limit = len(self.row_positions) - 1
+        col_limit = len(self.col_positions) - 1
+
         for item, box in self.get_selection_items():
             r1, c1, r2, c2 = box.coords
-            if not modified:
-                modified = (
-                    r1 >= len(self.row_positions) - 1
-                    or c1 >= len(self.col_positions) - 1
-                    or r2 > len(self.row_positions) - 1
-                    or c2 > len(self.col_positions) - 1
-                )
-            if r1 >= len(self.row_positions) - 1:
-                if len(self.row_positions) > 1:
-                    r1 = len(self.row_positions) - 2
-                else:
-                    r1 = 0
-            if c1 >= len(self.col_positions) - 1:
-                if len(self.col_positions) > 1:
-                    c1 = len(self.col_positions) - 2
-                else:
-                    c1 = 0
-            if r2 > len(self.row_positions) - 1:
-                r2 = len(self.row_positions) - 1
-            if c2 > len(self.col_positions) - 1:
-                c2 = len(self.col_positions) - 1
+            # check coordinates
+            r1 = min(r1, row_limit - (1 if row_limit > 0 else 0))
+            c1 = min(c1, col_limit - (1 if col_limit > 0 else 0))
+            r2 = min(r2, row_limit)
+            c2 = min(c2, col_limit)
+
+            modified = modified or (r1 >= row_limit or c1 >= col_limit or r2 > row_limit or c2 > col_limit)
             self.recreate_selection_box(r1, c1, r2, c2, item, run_binding=False)
 
         if self.selected:
-            r = self.selected.row
-            c = self.selected.column
-            if r < len(self.row_positions) - 1 and c < len(self.col_positions) - 1:
-                self.set_currently_selected(
-                    r,
-                    c,
-                    item=self.selected.fill_iid,
-                    run_binding=False,
-                )
+            r, c = self.selected.row, self.selected.column
+            if r < row_limit and c < col_limit:
+                self.set_currently_selected(r, c, item=self.selected.fill_iid, run_binding=False)
             else:
                 box = self.selection_boxes[self.selected.fill_iid]
-                self.set_currently_selected(
-                    box.coords.from_r,
-                    box.coords.from_c,
-                    item=box.fill_iid,
-                    run_binding=False,
-                )
+                self.set_currently_selected(box.coords[0], box.coords[1], item=box.fill_iid, run_binding=False)
+
         if modified:
             self.PAR.emit_event(
                 "<<SheetSelect>>",
@@ -6828,23 +6769,17 @@ class MainTable(tk.Canvas):
         return d
 
     def get_selected_min_max(self) -> tuple[int, int, int, int] | tuple[None, None, None, None]:
-        min_x = float("inf")
-        min_y = float("inf")
-        max_x = 0
-        max_y = 0
-        for item, box in self.get_selection_items():
+        if not self.get_selection_items():
+            return None, None, None, None
+        min_y, min_x = float("inf"), float("inf")
+        max_y, max_x = 0, 0
+
+        for _, box in self.get_selection_items():
             r1, c1, r2, c2 = box.coords
-            if r1 < min_y:
-                min_y = r1
-            if c1 < min_x:
-                min_x = c1
-            if r2 > max_y:
-                max_y = r2
-            if c2 > max_x:
-                max_x = c2
-        if min_x != float("inf") and min_y != float("inf") and max_x > 0 and max_y > 0:
-            return min_y, min_x, max_y, max_x
-        return None, None, None, None
+            min_y, min_x = min(min_y, r1), min(min_x, c1)
+            max_y, max_x = max(max_y, r2), max(max_x, c2)
+
+        return (min_y, min_x, max_y, max_x) if min_y != float("inf") else (None, None, None, None)
 
     def get_selected_rows(
         self,
@@ -6999,34 +6934,13 @@ class MainTable(tk.Canvas):
         elif self.get_cell_kwargs(datarn, datacn, key="dropdown") or self.get_cell_kwargs(
             datarn, datacn, key="checkbox"
         ):
-            if self.event_opens_dropdown_or_checkbox(event):
+            if event_opens_dropdown_or_checkbox(event):
                 if self.get_cell_kwargs(datarn, datacn, key="dropdown"):
                     self.open_dropdown_window(r, c, event=event)
                 elif self.get_cell_kwargs(datarn, datacn, key="checkbox"):
                     self.click_checkbox(r=r, c=c, datarn=datarn, datacn=datacn)
         else:
             self.open_text_editor(event=event, r=r, c=c, dropdown=False)
-
-    def event_opens_dropdown_or_checkbox(self, event=None) -> bool:
-        if event is None:
-            return False
-        elif event == "rc":
-            return True
-        elif (
-            (hasattr(event, "keysym") and event.keysym == "Return")
-            or (hasattr(event, "keysym") and event.keysym == "F2")
-            or (
-                event is not None
-                and hasattr(event, "keycode")
-                and event.keycode == "??"
-                and hasattr(event, "num")
-                and event.num == 1
-            )  # mouseclick
-            or (hasattr(event, "keysym") and event.keysym == "BackSpace")
-        ):
-            return True
-        else:
-            return False
 
     # displayed indexes
     def get_cell_align(self, r: int, c: int) -> str:
@@ -7047,27 +6961,16 @@ class MainTable(tk.Canvas):
         state: str = "normal",
         dropdown: bool = False,
     ) -> bool:
-        text = None
+        text = f"{self.get_cell_data(self.datarn(r), self.datacn(c), none_to_empty_str=True)}"
         extra_func_key = "??"
-        if event is None or self.event_opens_dropdown_or_checkbox(event):
-            if event is not None:
-                if hasattr(event, "keysym") and event.keysym == "Return":
-                    extra_func_key = "Return"
-                elif hasattr(event, "keysym") and event.keysym == "F2":
-                    extra_func_key = "F2"
-            if event is not None and (hasattr(event, "keysym") and event.keysym == "BackSpace"):
-                extra_func_key = "BackSpace"
-                text = ""
-            else:
-                text = f"{self.get_cell_data(self.datarn(r), self.datacn(c), none_to_empty_str=True)}"
-        elif event is not None and (
-            (hasattr(event, "char") and event.char.isalpha())
-            or (hasattr(event, "char") and event.char.isdigit())
-            or (hasattr(event, "char") and event.char in symbols_set)
-        ):
-            extra_func_key = event.char
-            text = event.char
-        else:
+        if event_opens_dropdown_or_checkbox(event):
+            if hasattr(event, "keysym") and event.keysym in ("Return", "F2", "BackSpace"):
+                extra_func_key = event.keysym
+                if event.keysym == "BackSpace":
+                    text = ""
+        elif event_has_char_key(event):
+            extra_func_key = text = event.char
+        elif event is not None:
             return False
         if self.extra_begin_edit_cell_func:
             try:
@@ -7090,12 +6993,11 @@ class MainTable(tk.Canvas):
                 return False
             else:
                 text = text if isinstance(text, str) else f"{text}"
-        text = "" if text is None else text
         if self.PAR.ops.cell_auto_resize_enabled:
             self.set_cell_size_to_text(r, c, only_if_too_small=True, redraw=True, run_binding=True)
         if self.text_editor.open and (r, c) == self.text_editor.coords:
             self.text_editor.window.set_text(self.text_editor.get() + "" if not isinstance(text, str) else text)
-            return
+            return False
         self.hide_text_editor()
         if not self.see(r=r, c=c, check_cell_visibility=True):
             self.refresh()
@@ -7103,8 +7005,6 @@ class MainTable(tk.Canvas):
         y = self.row_positions[r]
         w = self.col_positions[c + 1] - x + 1
         h = self.row_positions[r + 1] - y + 1
-        if text is None:
-            text = f"{self.get_cell_data(self.datarn(r), self.datacn(c), none_to_empty_str=True)}"
         kwargs = {
             "menu_kwargs": DotDict(
                 {
