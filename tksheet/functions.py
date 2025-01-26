@@ -70,6 +70,12 @@ def get_data_from_clipboard(
     return [[data]]
 
 
+def recursive_bind(widget: tk.Misc, event: str, callback: Callable) -> None:
+    widget.bind(event, callback)
+    for child in widget.winfo_children():
+        recursive_bind(child, event, callback)
+
+
 def tksheet_type_error(kwarg: str, valid_types: list[str], not_type: object) -> str:
     valid_types = ", ".join(f"{type_}" for type_ in valid_types)
     return f"Argument '{kwarg}' must be one of the following types: {valid_types}, not {type(not_type)}."
@@ -578,35 +584,23 @@ def move_elements_by_mapping(
     new_idxs: dict[int, int],
     old_idxs: dict[int, int] | None = None,
 ) -> list[object]:
-    # move elements of a list around, displacing
-    # other elements based on mapping
-    # of {old index: new index, ...}
+    # move elements of a list around
+    # displacing other elements based on mapping
+    # new_idxs = {old index: new index, ...}
+    # old_idxs = {new index: old index, ...}
     if old_idxs is None:
         old_idxs = dict(zip(new_idxs.values(), new_idxs))
 
-    # create dummy list
     res = [0] * len(seq)
 
-    # create generator of values yet to be put into res
-    remaining = (e for i, e in enumerate(seq) if i not in new_idxs)
+    remaining_values = (e for i, e in enumerate(seq) if i not in new_idxs)
+    for i in range(len(res)):
+        if i in old_idxs:
+            res[i] = seq[old_idxs[i]]
+        else:
+            res[i] = next(remaining_values)
 
-    # goes over res twice:
-    # once to put elements being moved in new spots
-    # then to fill remaining spots with remaining elements
-
-    # fill new indexes in res
-    if len(new_idxs) > int(len(seq) / 2) - 1:
-        # if moving a lot of items better to do comprehension
-        return [
-            next(remaining) if i_ not in old_idxs else e_
-            for i_, e_ in enumerate(seq[old_idxs[i]] if i in old_idxs else e for i, e in enumerate(res))
-        ]
-    else:
-        # if just moving a few items assignments are fine
-        for old, new in new_idxs.items():
-            res[new] = seq[old]
-        # fill remaining indexes
-        return [next(remaining) if i not in old_idxs else e for i, e in enumerate(res)]
+    return res
 
 
 def move_elements_to(
@@ -657,8 +651,7 @@ def data_to_displayed_idxs(
     to_convert: list[int],
     displayed: list[int],
 ) -> list[int]:
-    data_indexes = set(to_convert)
-    return [i for i, e in enumerate(displayed) if e in data_indexes]
+    return [i for i, e in enumerate(displayed) if bisect_in(to_convert, e)]
 
 
 def displayed_to_data_idxs(
