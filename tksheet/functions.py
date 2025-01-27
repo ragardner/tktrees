@@ -21,6 +21,9 @@ from itertools import islice, repeat
 from typing import Literal
 
 from .colors import color_map
+from .constants import (
+    symbols_set,
+)
 from .formatters import (
     to_bool,
 )
@@ -34,9 +37,6 @@ from .other_classes import (
 )
 from .types import (
     AnyIter,
-)
-from .constants import (
-    symbols_set,
 )
 
 unpickle_obj = pickle.loads
@@ -590,17 +590,8 @@ def move_elements_by_mapping(
     # old_idxs = {new index: old index, ...}
     if old_idxs is None:
         old_idxs = dict(zip(new_idxs.values(), new_idxs))
-
-    res = [0] * len(seq)
-
     remaining_values = (e for i, e in enumerate(seq) if i not in new_idxs)
-    for i in range(len(res)):
-        if i in old_idxs:
-            res[i] = seq[old_idxs[i]]
-        else:
-            res[i] = next(remaining_values)
-
-    return res
+    return [seq[old_idxs[i]] if i in old_idxs else next(remaining_values) for i in range(len(seq))]
 
 
 def move_elements_to(
@@ -732,6 +723,105 @@ def diff_gen(seq: list[float]) -> Generator[int]:
             islice(seq, 1, None),
         )
     )
+
+
+def gen_coords(
+    start_row: int,
+    start_col: int,
+    end_row: int,
+    end_col: int,
+    reverse: bool = False,
+) -> Generator[tuple[int, int]]:
+    if reverse:
+        for r in reversed(range(start_row, end_row)):
+            for c in reversed(range(start_col, end_col)):
+                yield (r, c)
+    else:
+        for r in range(start_row, end_row):
+            for c in range(start_col, end_col):
+                yield (r, c)
+
+
+def box_gen_coords(
+    start_row: int,
+    start_col: int,
+    total_cols: int,
+    total_rows: int,
+    reverse: bool = False,
+) -> Generator[tuple[int, int]]:
+    if reverse:
+        # yield start cell
+        yield (start_row, start_col)
+        # yield any remaining cells in the starting row before the start column
+        if start_col:
+            for col in reversed(range(start_col)):
+                yield (start_row, col)
+        # yield any cells above start row
+        for row in reversed(range(start_row)):
+            for col in reversed(range(total_cols)):
+                yield (row, col)
+        # yield cells from bottom of table upward
+        for row in range(total_rows - 1, start_row, -1):
+            for col in reversed(range(total_cols)):
+                yield (row, col)
+        # yield any remaining cells in start row
+        for col in range(total_cols - 1, start_col, -1):
+            yield (start_row, col)
+    else:
+        # Yield cells from the start position to the end of the current row
+        for col in range(start_col, total_cols):
+            yield (start_row, col)
+        # yield from the next row to the last row
+        for row in range(start_row + 1, total_rows):
+            for col in range(total_cols):
+                yield (row, col)
+        # yield from the beginning up to the start
+        for row in range(start_row):
+            for col in range(total_cols):
+                yield (row, col)
+        # yield any remaining cells in the starting row before the start column
+        for col in range(start_col):
+            yield (start_row, col)
+
+
+def next_cell(
+    start_row: int,
+    start_col: int,
+    end_row: int,
+    end_col: int,
+    row: int,
+    col: int,
+    reverse: bool = False,
+) -> tuple[int, int]:
+    if reverse:
+        col -= 1
+        if col < start_col:
+            col = end_col - 1
+            row -= 1
+            if row < start_row:
+                row = end_row - 1
+    else:
+        col += 1
+        if col == end_col:
+            col = start_col
+            row += 1
+            if row == end_row:
+                row = start_row
+    return row, col
+
+
+def is_last_cell(
+    start_row: int,
+    start_col: int,
+    end_row: int,
+    end_col: int,
+    row: int,
+    col: int,
+    reverse: bool = False,
+) -> bool:
+    if reverse:
+        return row == start_row and col == start_col
+    return row == end_row - 1 and col == end_col - 1
 
 
 def zip_fill_2nd_value(x: AnyIter[object], o: object) -> Generator[object, object]:
