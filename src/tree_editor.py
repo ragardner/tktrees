@@ -508,6 +508,7 @@ class Tree_Editor(tk.Frame):
             treeview=True,
             row_drag_and_drop_perform=False,
             alternate_color="#f6f9fb",
+            allow_cell_overflow=True,
         )
         self.tree.grid(row=0, column=0, sticky="nswe")
 
@@ -604,6 +605,7 @@ class Tree_Editor(tk.Frame):
             row_index_align="w",
             auto_resize_row_index=True,
             header_font=sheet_header_font,
+            allow_cell_overflow=True,
         )
         self.sheet.pack(side="right", fill="both", expand=True)
 
@@ -4642,45 +4644,21 @@ class Tree_Editor(tk.Frame):
         yield [h.name for h in self.headers]
         yield from self.sheet.MT.data
 
-    def check_validation_validity(self, col, validation):
-        if validation == "":
-            return []
+    def check_validation_validity(self, col: int, validation: list[str]) -> str | list[str]:
+        if not validation:
+            return validation
         if self.headers[col].type_ == "Number":
-            for c in validation:
-                if c not in validation_allowed_num_chars:
-                    return f"Error: Invalid character in validation for Number column. Error caused by: {c}"
-            if "_" in validation:
-                validation = validation.split("_")
-                if len(validation) > 3:
-                    return "Error: Too many _ characters in validation"
-                if len(validation) < 2:
-                    return "Error: Too few numbers in validation"
-                if len(validation) == 2:
-                    try:
-                        validation = [f"{num}" for num in range(int(validation[0]), int(validation[1]) + 1)]
-                    except Exception:
-                        return f"Error: Could not create range of values from: {'_'.join(validation)}"
-                elif len(validation) == 3:
-                    try:
-                        if int(validation[2]) > 0:
-                            end = int(validation[1]) + 1
-                        else:
-                            end = int(validation[1]) - 1
-                        validation = [f"{num}" for num in range(int(validation[0]), end, int(validation[2]))]
-                    except Exception:
-                        return f"Error: Could not create range of values from: {'_'.join(validation)}"
-                else:
-                    return f"Error: Could not create range of values from: {'_'.join(validation)}"
-            else:
-                validation = validation.split(",")
             for e in validation:
                 if e != "" and not isreal(e):
                     return f"Error: Only numbers are allowed in Number columns. Error caused by: {e}"
+                for c in e:
+                    if c not in validation_allowed_num_chars:
+                        return f"Error: Invalid character in validation for Number column. Error caused by: {c}"
         elif self.headers[col].type_ == "Date":
-            for c in validation:
-                if c not in validation_allowed_date_chars:
-                    return f"Error: Invalid character in validation for Date columns. Error caused by: {c}"
-            validation = validation.split(",")
+            for e in validation:
+                for c in e:
+                    if c not in validation_allowed_date_chars:
+                        return f"Error: Invalid character in validation for Date columns. Error caused by: {c}"
             for i in range(len(validation)):
                 e = validation[i]
                 if not isint(e):
@@ -4691,7 +4669,7 @@ class Tree_Editor(tk.Frame):
                         return f"Error: Only dates are allowed in Date columns. Error caused by: {e}"
                 validation[i] = e
         elif self.headers[col].type_ == "Text":
-            validation = validation.split(",")
+            pass
         else:
             return "Error: Only Detail columns can have validation"
         return validation if "" in validation else [""] + validation
@@ -5214,7 +5192,7 @@ class Tree_Editor(tk.Frame):
         self.snapshot_col_type_num_date(col, "Number")
         self.headers[col].type_ = "Number"
         self.change_coltype_number(col)
-        if isinstance(self.check_validation_validity(col, ",".join(self.headers[col].validation)), str):
+        if isinstance(self.check_validation_validity(col, self.headers[col].validation), str):
             self.headers[col].validation = []
             self.refresh_dropdowns()
         self.headers[col].formatting = [
@@ -5310,7 +5288,7 @@ class Tree_Editor(tk.Frame):
         self.snapshot_col_type_num_date(col, "Date")
         self.headers[col].type_ = "Date"
         self.change_coltype_date(col, detect_date_form=True)
-        if isinstance(self.check_validation_validity(col, ",".join(self.headers[col].validation)), str):
+        if isinstance(self.check_validation_validity(col, self.headers[col].validation), str):
             self.headers[col].validation = []
             self.refresh_dropdowns()
         self.headers[col].formatting = [
@@ -9646,7 +9624,7 @@ class Tree_Editor(tk.Frame):
                         and change[3] == ",".join(self.headers[colnum].validation)
                     ):
                         if validation:
-                            validation = self.check_validation_validity(colnum, f"{validation}")
+                            validation = self.check_validation_validity(colnum, validation.split(","))
                             if isinstance(validation, str):
                                 successful.append(False)
                                 continue
@@ -9683,9 +9661,7 @@ class Tree_Editor(tk.Frame):
                         elif newtype == "Number":
                             self.headers[colnum].type_ = "Number"
                             self.change_coltype_number(colnum)
-                            if isinstance(
-                                self.check_validation_validity(colnum, ",".join(self.headers[colnum].validation)), str
-                            ):
+                            if isinstance(self.check_validation_validity(colnum, self.headers[colnum].validation), str):
                                 self.headers[colnum].validation = []
                             self.headers[colnum].formatting = [
                                 tup
@@ -9695,9 +9671,7 @@ class Tree_Editor(tk.Frame):
                         else:
                             self.headers[colnum].type_ = "Date"
                             self.change_coltype_date(colnum, detect_date_form=True)
-                            if isinstance(
-                                self.check_validation_validity(colnum, ",".join(self.headers[colnum].validation)), str
-                            ):
+                            if isinstance(self.check_validation_validity(colnum, self.headers[colnum].validation), str):
                                 self.headers[colnum].validation = []
                             self.headers[colnum].formatting = [
                                 tup

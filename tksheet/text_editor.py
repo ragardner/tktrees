@@ -4,16 +4,9 @@ import tkinter as tk
 from collections.abc import Callable
 from typing import Literal
 
-from .functions import (
-    convert_align,
-)
-from .other_classes import (
-    DotDict,
-)
-from .constants import (
-    ctrl_key,
-    rc_binding,
-)
+from .constants import ctrl_key, rc_binding, align_helper
+from .functions import convert_align
+from .other_classes import DotDict
 
 
 class TextEditorTkText(tk.Text):
@@ -99,11 +92,7 @@ class TextEditorTkText(tk.Text):
             command=self.undo,
             **menu_kwargs,
         )
-        align = convert_align(align)
-        if align == "w":
-            self.align = "left"
-        elif align == "e":
-            self.align = "right"
+        self.align = align_helper[convert_align(align)]
         self.delete(1.0, "end")
         self.insert(1.0, text)
         self.yview_moveto(1)

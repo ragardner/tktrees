@@ -3949,7 +3949,7 @@ class Edit_Validation_Popup(tk.Toplevel):
         return event.value
 
     def confirm(self, event=None):
-        self.new_validation = ",".join(filter(None, map(lambda row: row[0], self.validation_display.data)))
+        self.new_validation = list(filter(None, map(lambda row: row[0], self.validation_display.data)))
         self.destroy()
 
     def cancel(self, event=None):
@@ -4614,6 +4614,16 @@ class Settings_Popup(tk.Toplevel):
         )
         self.show_tv_lvls_button.pack(side="top", anchor="nw", fill="x", pady=10)
 
+        self.allow_cell_text_overflow_button = X_Checkbutton(
+            self.general,
+            text="Allow cell text overflow ",
+            style="x_button.Std.TButton",
+            command=self.toggle_cell_text_overflow,
+            checked=self.C.tree.ops.allow_cell_overflow,
+            compound="right",
+        )
+        self.allow_cell_text_overflow_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
         self.layout_label = Label(self.general, text="Layout: ", font=EFB, theme=theme, anchor="nw")
         self.layout_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
 
@@ -5002,6 +5012,10 @@ class Settings_Popup(tk.Toplevel):
         self.general.tkraise()
         self.bind("<Escape>", self.cancel)
         show_toplevel_chores(self)
+
+    def toggle_cell_text_overflow(self):
+        self.C.tree.set_options(allow_cell_overflow=self.allow_cell_text_overflow_button.get_checked())
+        self.C.sheet.set_options(allow_cell_overflow=self.allow_cell_text_overflow_button.get_checked())
 
     def toggle_auto_resize_indexes(self):
         self.C.toggle_auto_resize_index(self.auto_resize_indexes_button.get_checked())

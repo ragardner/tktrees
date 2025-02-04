@@ -1,16 +1,8 @@
 from __future__ import annotations
 
-from .other_classes import (
-    DotDict,
-    FontTuple,
-)
-from .themes import (
-    theme_light_blue,
-)
-from .constants import (
-    USER_OS,
-    ctrl_key,
-)
+from .constants import USER_OS, ctrl_key
+from .other_classes import DotDict, FontTuple
+from .themes import theme_light_blue
 
 
 def new_sheet_options() -> DotDict:
@@ -215,6 +207,10 @@ def new_sheet_options() -> DotDict:
             "treeview_indent": "5",
             "rounded_boxes": True,
             "alternate_color": "",
+            "allow_cell_overflow": False,
+            "table_wrap": "c",
+            "header_wrap": "c",
+            "index_wrap": "c",
             "min_column_width": 1,
             "max_column_width": float("inf"),
             "max_header_height": float("inf"),

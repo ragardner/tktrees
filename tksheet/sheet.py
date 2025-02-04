@@ -3,28 +3,24 @@ from __future__ import annotations
 import tkinter as tk
 from bisect import bisect_left
 from collections import defaultdict, deque
-from collections.abc import (
-    Callable,
-    Generator,
-    Hashable,
-    Iterator,
-    Sequence,
-)
+from collections.abc import Callable, Generator, Hashable, Iterator, Sequence
 from functools import partial
-from itertools import (
-    accumulate,
-    chain,
-    filterfalse,
-    islice,
-    product,
-    repeat,
-)
+from itertools import accumulate, chain, filterfalse, islice, product, repeat
 from operator import attrgetter
 from timeit import default_timer
 from tkinter import ttk
 from typing import Literal
 
 from .column_headers import ColumnHeaders
+from .constants import (
+    USER_OS,
+    align_value_error,
+    backwards_compatibility_keys,
+    emitted_events,
+    named_span_types,
+    rc_binding,
+    scrollbar_options_keys,
+)
 from .functions import (
     add_highlight,
     add_to_options,
@@ -48,12 +44,12 @@ from .functions import (
     key_to_span,
     new_tk_event,
     num2alpha,
-    stored_event_dict,
     pop_positions,
     set_align,
     set_readonly,
     span_froms,
     span_ranges,
+    stored_event_dict,
     tksheet_type_error,
     unpack,
 )
@@ -70,30 +66,10 @@ from .other_classes import (
     Span,
 )
 from .row_index import RowIndex
-from .sheet_options import (
-    new_sheet_options,
-)
-from .themes import (
-    theme_black,
-    theme_dark,
-    theme_dark_blue,
-    theme_dark_green,
-    theme_light_blue,
-    theme_light_green,
-)
+from .sheet_options import new_sheet_options
+from .themes import theme_black, theme_dark, theme_dark_blue, theme_dark_green, theme_light_blue, theme_light_green
 from .top_left_rectangle import TopLeftRectangle
-from .types import (
-    AnyIter,
-    CreateSpanTypes,
-)
-from .constants import (
-    USER_OS,
-    backwards_compatibility_keys,
-    emitted_events,
-    named_span_types,
-    rc_binding,
-    scrollbar_options_keys,
-)
+from .types import AnyIter, CreateSpanTypes
 
 
 class Sheet(tk.Frame):
@@ -135,10 +111,10 @@ class Sheet(tk.Frame):
         after_redraw_time_ms: int = 20,
         set_all_heights_and_widths: bool = False,
         zoom: int = 100,
-        align: str = "w",
-        header_align: str = "center",
+        align: str = "nw",
+        header_align: str = "n",
         row_index_align: str | None = None,
-        index_align: str = "center",
+        index_align: str = "n",
         displayed_columns: list[int] = [],
         all_columns_displayed: bool = True,
         displayed_rows: list[int] = [],
@@ -200,6 +176,11 @@ class Sheet(tk.Frame):
         treeview_indent: str | int = "5",
         rounded_boxes: bool = True,
         alternate_color: str = "",
+        allow_cell_overflow: bool = False,
+        # "" no wrap, "w" word wrap, "c" char wrap
+        table_wrap: Literal["", "w", "c"] = "c",
+        index_wrap: Literal["", "w", "c"] = "c",
+        header_wrap: Literal["", "w", "c"] = "c",
         # colors
         outline_thickness: int = 0,
         theme: str = "light blue",
@@ -338,7 +319,7 @@ class Sheet(tk.Frame):
         self.name = name
         self.last_event_data = EventDataDict()
         self.bound_events = DotDict({k: [] for k in emitted_events})
-        self.dropdown_class = Dropdown
+        self._dropdown_cls = Dropdown
         self.after_redraw_id = None
         self.after_redraw_time_ms = after_redraw_time_ms
         self.named_span_id = 0
@@ -3085,15 +3066,16 @@ class Sheet(tk.Frame):
 
     # Text Font and Alignment
 
-    def font(
-        self,
-        newfont: tuple[str, int, str] | None = None,
-        reset_row_positions: bool = True,
-    ) -> tuple[str, int, str]:
-        return self.MT.set_table_font(newfont, reset_row_positions=reset_row_positions)
+    def font(self, newfont: tuple[str, int, str] | None = None, **_) -> tuple[str, int, str]:
+        return self.MT.set_table_font(newfont)
+
+    table_font = font
 
     def header_font(self, newfont: tuple[str, int, str] | None = None) -> tuple[str, int, str]:
         return self.MT.set_header_font(newfont)
+
+    def index_font(self, newfont: tuple[str, int, str] | None = None) -> tuple[str, int, str]:
+        return self.MT.set_index_font(newfont)
 
     def table_align(
         self,
@@ -3105,7 +3087,7 @@ class Sheet(tk.Frame):
         elif convert_align(align):
             self.MT.align = convert_align(align)
         else:
-            raise ValueError("Align must be one of the following values: c, center, w, west, e, east")
+            raise ValueError()
         return self.set_refresh_timer(redraw)
 
     def header_align(
@@ -3118,7 +3100,7 @@ class Sheet(tk.Frame):
         elif convert_align(align):
             self.CH.align = convert_align(align)
         else:
-            raise ValueError("Align must be one of the following values: c, center, w, west, e, east")
+            raise ValueError(align_value_error)
         return self.set_refresh_timer(redraw)
 
     def row_index_align(
@@ -3131,7 +3113,7 @@ class Sheet(tk.Frame):
         elif convert_align(align):
             self.RI.align = convert_align(align)
         else:
-            raise ValueError("Align must be one of the following values: c, center, w, west, e, east")
+            raise ValueError(align_value_error)
         return self.set_refresh_timer(redraw)
 
     index_align = row_index_align
@@ -4539,7 +4521,7 @@ class Sheet(tk.Frame):
             self.set_scrollbar_options()
         self.MT.create_rc_menus()
         if "treeview" in kwargs:
-            self.index_align("w", redraw=False)
+            self.index_align("nw", redraw=False)
         return self.set_refresh_timer(redraw)
 
     def set_scrollbar_options(self) -> Sheet:
@@ -7273,7 +7255,7 @@ class Dropdown(Sheet):
         modified_function: None | Callable = None,
         arrowkey_RIGHT: Callable | None = None,
         arrowkey_LEFT: Callable | None = None,
-        align: str = "w",
+        align: str = "nw",
         # False for using r, c
         # "r" for r
         # "c" for c

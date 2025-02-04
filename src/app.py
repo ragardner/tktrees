@@ -313,6 +313,7 @@ To get started once you have closed this popup, either:
             "Auto select sheet id": self.frames["tree_edit"].mirror_var,
             "Alternate color": self.frames["tree_edit"].tree.ops.alternate_color,
             "Auto resize row indexes": self.frames["tree_edit"].auto_resize_indexes,
+            "Allow cell text overflow": self.frames["tree_edit"].tree.ops.allow_cell_overflow,
         }
         self.check_window_size_settings()
 
@@ -350,6 +351,7 @@ To get started once you have closed this popup, either:
             "Auto select sheet id": self.frames["tree_edit"].mirror_var,
             "Alternate color": self.frames["tree_edit"].tree.ops.alternate_color,
             "Auto resize row indexes": self.frames["tree_edit"].auto_resize_indexes,
+            "Allow cell text overflow": self.frames["tree_edit"].tree.ops.allow_cell_overflow,
         }
 
     def save_cfg(self, event=None, get_settings=True):
@@ -379,6 +381,9 @@ To get started once you have closed this popup, either:
             self.frames["tree_edit"].mirror_var = self.configsettings["Auto select sheet id"]
         if "Auto resize row indexes" in self.configsettings:
             self.frames["tree_edit"].toggle_auto_resize_index(self.configsettings["Auto resize row indexes"])
+        if "Allow cell text overflow" in self.configsettings:
+            self.frames["tree_edit"].tree.ops.allow_cell_overflow = self.configsettings["Allow cell text overflow"]
+            self.frames["tree_edit"].sheet.ops.allow_cell_overflow = self.configsettings["Allow cell text overflow"]
         self.theme = self.configsettings["Theme"]
         self.frames["tree_edit"].set_display_option(self.configsettings["Editor display option"])
         self.frames["tree_edit"].change_theme(self.theme, write=False)
