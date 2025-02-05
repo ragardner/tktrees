@@ -25,16 +25,13 @@ from .functions import (
     event_has_char_key,
     event_opens_dropdown_or_checkbox,
     get_n2a,
-    get_wrapped_text,
+    wrap_text,
     int_x_tuple,
     is_contiguous,
     new_tk_event,
     rounded_box_coords,
     stored_event_dict,
     try_binding,
-    wrap_char,
-    wrap_not,
-    wrap_word,
 )
 from .other_classes import DotDict, DraggedRowColumn, DropdownStorage, TextEditorStorage
 from .text_editor import TextEditor
@@ -147,22 +144,6 @@ class ColumnHeaders(tk.Canvas):
             if USER_OS == "linux":
                 self.unbind("<Button-4>")
                 self.unbind("<Button-5>")
-
-    def get_cell_n_lines(self, dispcn: int) -> int:
-        datacn = self.MT.datacn(dispcn)
-        return max(
-            1,
-            len(
-                get_wrapped_text(
-                    text=self.get_valid_cell_data_as_str(datacn, fix=False),
-                    max_width=self.MT.col_positions[dispcn + 1] - self.MT.col_positions[dispcn],
-                    max_lines=float("inf"),
-                    char_width_fn=self.wrap_get_char_w,
-                    widths=self.MT.char_widths[self.header_font],
-                    wrap_type=self.ops.header_wrap,
-                )
-            ),
-        )
 
     def mousewheel(self, event: tk.Event) -> None:
         self.MT.mousewheel(event)
@@ -765,7 +746,7 @@ class ColumnHeaders(tk.Canvas):
         new_width = self.MT.col_positions[self.rsz_w] - self.MT.col_positions[self.rsz_w - 1]
         self.MT.allow_auto_resize_columns = False
         self.MT.recreate_all_selection_boxes()
-        self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
+        self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True, set_scrollregion=False)
         if self.column_width_resize_func is not None and old_width != new_width:
             self.column_width_resize_func(
                 event_dict(
@@ -790,8 +771,8 @@ class ColumnHeaders(tk.Canvas):
         self.MT.bind("<MouseWheel>", self.MT.mousewheel)
         if self.width_resizing_enabled and self.rsz_w is not None and self.currently_resizing_width:
             self.drag_width_resize()
-            self.currently_resizing_width = False
             self.hide_resize_and_ctrl_lines(ctrl_lines=False)
+            self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
         elif (
             self.drag_and_drop_enabled
             and self.col_selection_enabled
@@ -1370,15 +1351,19 @@ class ColumnHeaders(tk.Canvas):
                 t = self.create_polygon(points, fill=fill, outline=outline, tag=tag, smooth=True)
             self.disp_checkbox[t] = True
 
-    def configure_scrollregion(self, last_col_line_pos: float) -> None:
-        self.configure(
-            scrollregion=(
-                0,
-                0,
-                last_col_line_pos + self.ops.empty_horizontal + 2,
-                self.current_height,
+    def configure_scrollregion(self, last_col_line_pos: float) -> bool:
+        try:
+            self.configure(
+                scrollregion=(
+                    0,
+                    0,
+                    last_col_line_pos + self.ops.empty_horizontal + 2,
+                    self.current_height,
+                )
             )
-        )
+            return True
+        except Exception:
+            return False
 
     def wrap_get_char_w(self, c: str) -> int:
         self.MT.txt_measure_canvas.itemconfig(
@@ -1405,11 +1390,11 @@ class ColumnHeaders(tk.Canvas):
         text_end_col: int,
         scrollpos_right: float,
         col_pos_exists: bool,
+        set_scrollregion: bool,
     ) -> bool:
-        try:
-            self.configure_scrollregion(last_col_line_pos=last_col_line_pos)
-        except Exception:
-            return False
+        if set_scrollregion:
+            if not self.configure_scrollregion(last_col_line_pos=last_col_line_pos):
+                return False
         self.hidd_text.update(self.disp_text)
         self.disp_text = {}
         self.hidd_high.update(self.disp_high)
@@ -1521,38 +1506,18 @@ class ColumnHeaders(tk.Canvas):
                 or (align.endswith("n") and cleftgridln + 5 > scrollpos_right)
             ):
                 continue
-            if not (lines := self.get_valid_cell_data_as_str(datacn, fix=False)):
+            text = self.get_valid_cell_data_as_str(datacn, fix=False)
+            if not text:
                 continue
             max_lines = int((self.current_height - top - 2) / txt_h)
-
-            if not wrap:
-                lines = wrap_not(
-                    lines.split("\n"),
-                    max_width=max_width,
-                    start_line=0,
-                    max_lines=max_lines,
-                    char_width_fn=self.wrap_get_char_w,
-                    widths=self.MT.char_widths[font],
-                )
-            elif wrap == "w":
-                lines = wrap_word(
-                    lines.split("\n"),
-                    max_width=max_width,
-                    start_line=0,
-                    max_lines=max_lines,
-                    char_width_fn=self.wrap_get_char_w,
-                    widths=self.MT.char_widths[font],
-                )
-            elif wrap == "c":
-                lines = wrap_char(
-                    lines.split("\n"),
-                    max_width=max_width,
-                    start_line=0,
-                    max_lines=max_lines,
-                    char_width_fn=self.wrap_get_char_w,
-                    widths=self.MT.char_widths[font],
-                )
-            for text in lines:
+            for text in wrap_text(
+                text=text,
+                max_width=max_width,
+                max_lines=max_lines,
+                char_width_fn=self.wrap_get_char_w,
+                widths=self.MT.char_widths[font],
+                wrap=wrap,
+            ):
                 if self.hidd_text:
                     iid, showing = self.hidd_text.popitem()
                     self.coords(iid, draw_x, draw_y)

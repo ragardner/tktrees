@@ -18,197 +18,143 @@ from .other_classes import Box_nt, DotDict, EventDataDict, Highlight, Loc, Span
 from .types import AnyIter
 
 unpickle_obj = pickle.loads
+lines_re = re.compile(r"[^\n]+")
 
 
-def get_wrapped_text(
+def wrap_text(
     text: str,
     max_width: int,
     max_lines: int,
     char_width_fn: Callable,
     widths: dict[str, int],
-    wrap_type: Literal["", "c", "w"],
-) -> list[str]:
-    if not wrap_type:
-        return wrap_not(
-            text.split("\n"),
-            max_width=max_width,
-            start_line=0,
-            max_lines=max_lines,
-            char_width_fn=char_width_fn,
-            widths=widths,
-        )
-    elif wrap_type == "c":
-        return wrap_char(
-            text.split("\n"),
-            max_width=max_width,
-            start_line=0,
-            max_lines=max_lines,
-            char_width_fn=char_width_fn,
-            widths=widths,
-        )
-    elif wrap_type == "w":
-        return wrap_word(
-            text.split("\n"),
-            max_width=max_width,
-            start_line=0,
-            max_lines=max_lines,
-            char_width_fn=char_width_fn,
-            widths=widths,
-        )
-
-
-def wrap_not(
-    lines: list[str],
-    max_width: int,
-    start_line: int,
-    max_lines: int,
-    char_width_fn: Callable,
-    widths: dict[str, int],
-) -> list[str]:
-    result = []
-    total_lines = 0
-
-    for line in lines:
-        line_width = 0
-        new_line = []
-        for char in line:
-            char_width = widths.get(char, char_width_fn(char))
-            line_width += char_width
-            if line_width >= max_width:
-                break
-            new_line.append(char)
-
-        result.append("".join(new_line))
-
-        # Count the line whether it's empty or not
-        total_lines += 1
-        if total_lines >= max_lines:
-            return result[start_line:]
-
-    return result[start_line:]
-
-
-def wrap_char(
-    lines: list[str],
-    max_width: int,
-    start_line: int,
-    max_lines: int,
-    char_width_fn: Callable,
-    widths: dict[str, int],
-) -> list[str]:
-    result = []
+    wrap: Literal["", "c", "w"] = "",
+    start_line: int = 0,
+) -> Generator[str]:
+    lines = (match.group() for match in lines_re.finditer(text))
     current_line = []
     total_lines = 0
     line_width = 0
 
-    for line in lines:
-        for char in line:
-            char_width = widths.get(char, char_width_fn(char))
-
-            # adding char to line would result in wrap
-            if line_width + char_width >= max_width:
-                total_lines += 1
-                result.append("".join(current_line))  # Add current line to result
-                if total_lines >= max_lines:
-                    return result[start_line:]
-
-                current_line = []  # Start new line
-                line_width = 0
-                if char_width <= max_width:
-                    current_line.append(char)
-                    line_width = char_width
-            # adding char to line is okay
-            else:
-                current_line.append(char)
+    if not wrap:
+        for line in lines:
+            line_width = 0
+            current_line = []
+            for char in line:
+                char_width = widths.get(char, char_width_fn(char))
                 line_width += char_width
+                if line_width >= max_width:
+                    break
+                current_line.append(char)
 
-        # Handle the end of each input line, which isn't a '\n' in split text
-        total_lines += 1
-        result.append("".join(current_line))  # Add the current line to result
-        if total_lines >= max_lines:
-            return result[start_line:]
-        current_line = []  # Reset for next line
-        line_width = 0
+            if total_lines >= start_line:
+                yield "".join(current_line)
 
-    return result[start_line:]
+            # Count the line whether it's empty or not
+            total_lines += 1
+            if total_lines >= max_lines:
+                return
 
+    elif wrap == "c":
+        for line in lines:
+            for char in line:
+                char_width = widths.get(char, char_width_fn(char))
 
-def wrap_word(
-    lines: list[str],
-    max_width: int,
-    start_line: int,
-    max_lines: int,
-    char_width_fn: Callable,
-    widths: dict[str, int],
-) -> list[str]:
-    result = []
-    current_line = []
-    total_lines = 0
-    line_width = 0
-    space_width = widths.get(" ", char_width_fn(" "))
+                # adding char to line would result in wrap
+                if line_width + char_width >= max_width:
+                    if total_lines >= start_line:
+                        yield "".join(current_line)
 
-    for line in lines:
-        words = line.split()
-        for i, word in enumerate(words):
-            # if we're going to next word and
-            # if a space fits on the end of the current line we add one
-            if i and line_width + space_width < max_width:
-                current_line.append(" ")
-                line_width += space_width
+                    total_lines += 1
+                    if total_lines >= max_lines:
+                        return
 
-            # check if word will fit
-            word_width = 0
-            word_char_widths = []
-            for char in word:
-                word_char_widths.append((w := widths.get(char, char_width_fn(char))))
-                word_width += w
-
-            # we only wrap by character if the whole word alone wont fit max width
-            # word won't fit at all we resort to char wrapping it
-            if word_width >= max_width:
-                for char, w in zip(word, word_char_widths):
-                    # adding char to line would result in wrap
-                    if line_width + w >= max_width:
-                        total_lines += 1
-                        result.append("".join(current_line))
-                        if total_lines >= max_lines:
-                            return result[start_line:]
-
-                        current_line = []  # Start new line
-                        line_width = 0
-                        if w <= max_width:
-                            current_line.append(char)
-                            line_width = w
-                    # adding char to line is okay
-                    else:
+                    current_line = []  # Start new line
+                    line_width = 0
+                    if char_width <= max_width:
                         current_line.append(char)
-                        line_width += w
+                        line_width = char_width
+                # adding char to line is okay
+                else:
+                    current_line.append(char)
+                    line_width += char_width
 
-            # word won't fit on current line but will fit on a newline
-            elif line_width + word_width >= max_width:
-                total_lines += 1
-                result.append("".join(current_line))
-                if total_lines >= max_lines:
-                    return result[start_line:]
+            if total_lines >= start_line:
+                yield "".join(current_line)
 
-                current_line = [word]  # Start new line
-                line_width = word_width
+            total_lines += 1
+            if total_lines >= max_lines:
+                return
+            current_line = []  # Reset for next line
+            line_width = 0
 
-            # word will fit we put it on the current line
-            else:
-                current_line.append(word)
-                line_width += word_width
+    elif wrap == "w":
+        space_width = widths.get(" ", char_width_fn(" "))
 
-        # Handle the end of each input line, which isn't a '\n' in split text
-        total_lines += 1
-        result.append("".join(current_line))  # Add the current line to result
-        if total_lines >= max_lines:
-            return result[start_line:]
+        for line in lines:
+            words = line.split()
+            for i, word in enumerate(words):
+                # if we're going to next word and
+                # if a space fits on the end of the current line we add one
+                if i and line_width + space_width < max_width:
+                    current_line.append(" ")
+                    line_width += space_width
 
-        current_line = []  # Reset for next line
-        line_width = 0
+                # check if word will fit
+                word_width = 0
+                word_char_widths = []
+                for char in word:
+                    word_char_widths.append((w := widths.get(char, char_width_fn(char))))
+                    word_width += w
 
-    return result[start_line:]
+                # we only wrap by character if the whole word alone wont fit max width
+                # word won't fit at all we resort to char wrapping it
+                if word_width >= max_width:
+                    for char, w in zip(word, word_char_widths):
+                        # adding char to line would result in wrap
+                        if line_width + w >= max_width:
+                            if total_lines >= start_line:
+                                yield "".join(current_line)
+
+                            total_lines += 1
+                            if total_lines >= max_lines:
+                                return
+
+                            current_line = []  # Start new line
+                            line_width = 0
+                            if w <= max_width:
+                                current_line.append(char)
+                                line_width = w
+                        # adding char to line is okay
+                        else:
+                            current_line.append(char)
+                            line_width += w
+
+                # word won't fit on current line but will fit on a newline
+                elif line_width + word_width >= max_width:
+                    if total_lines >= start_line:
+                        yield "".join(current_line)
+
+                    total_lines += 1
+                    if total_lines >= max_lines:
+                        return
+
+                    current_line = [word]  # Start new line
+                    line_width = word_width
+
+                # word will fit we put it on the current line
+                else:
+                    current_line.append(word)
+                    line_width += word_width
+
+            if total_lines >= start_line:
+                yield "".join(current_line)
+
+            total_lines += 1
+            if total_lines >= max_lines:
+                return
+
+            current_line = []  # Reset for next line
+            line_width = 0
 
 
 def get_csv_str_dialect(s: str, delimiters: str) -> csv.Dialect:

@@ -3576,18 +3576,41 @@ class Sheet(tk.Frame):
         only_set_if_too_small: bool = False,
         redraw: bool = True,
     ) -> Sheet | int:
-        if column == "all" and width == "default":
-            self.MT.reset_col_positions()
-        elif column == "displayed" and width == "text":
-            for c in range(*self.MT.visible_text_columns):
-                self.CH.set_col_width(c)
-        elif width == "text" and isinstance(column, int):
-            self.CH.set_col_width(col=column, width=None, only_if_too_small=only_set_if_too_small)
-        elif isinstance(width, int) and isinstance(column, int):
-            self.CH.set_col_width(col=column, width=width, only_if_too_small=only_set_if_too_small)
+        if column == "all":
+            if width == "default":
+                self.MT.reset_col_positions()
+            elif width == "text":
+                self.set_all_column_widths(only_set_if_too_small=only_set_if_too_small)
+            elif isinstance(width, int):
+                self.MT.reset_col_positions(width=width)
+
+        elif column == "displayed":
+            if width == "default":
+                for c in range(*self.MT.visible_text_columns):
+                    self.CH.set_col_width(
+                        c, width=self.ops.default_column_width, only_if_too_small=only_set_if_too_small
+                    )
+            elif width == "text":
+                for c in range(*self.MT.visible_text_columns):
+                    self.CH.set_col_width(c, only_if_too_small=only_set_if_too_small)
+            elif isinstance(width, int):
+                for c in range(*self.MT.visible_text_columns):
+                    self.CH.set_col_width(c, width=width, only_if_too_small=only_set_if_too_small)
+
         elif isinstance(column, int):
-            return int(self.MT.col_positions[column + 1] - self.MT.col_positions[column])
-        return self.set_refresh_timer(redraw)
+            if width == "default":
+                self.CH.set_col_width(
+                    col=column, width=self.ops.default_column_width, only_if_too_small=only_set_if_too_small
+                )
+            elif width == "text":
+                self.CH.set_col_width(col=column, only_if_too_small=only_set_if_too_small)
+            elif isinstance(width, int):
+                self.CH.set_col_width(col=column, width=width, only_if_too_small=only_set_if_too_small)
+            elif width is None:
+                return int(self.MT.col_positions[column + 1] - self.MT.col_positions[column])
+
+        else:
+            return self.set_refresh_timer(redraw)
 
     def row_height(
         self,
@@ -3596,18 +3619,39 @@ class Sheet(tk.Frame):
         only_set_if_too_small: bool = False,
         redraw: bool = True,
     ) -> Sheet | int:
-        if row == "all" and height == "default":
-            self.MT.reset_row_positions()
-        elif row == "displayed" and height == "text":
-            for r in range(*self.MT.visible_text_rows):
-                self.RI.set_row_height(r)
-        elif height == "text" and isinstance(row, int):
-            self.RI.set_row_height(row=row, height=None, only_if_too_small=only_set_if_too_small)
-        elif isinstance(height, int) and isinstance(row, int):
-            self.RI.set_row_height(row=row, height=height, only_if_too_small=only_set_if_too_small)
+        if row == "all":
+            if height == "default":
+                self.MT.reset_row_positions()
+            elif height == "text":
+                self.set_all_row_heights()
+            elif isinstance(height, int):
+                self.MT.reset_row_positions(height=height)
+
+        elif row == "displayed":
+            if height == "default":
+                height = self.MT.get_default_row_height()
+                for r in range(*self.MT.visible_text_rows):
+                    self.RI.set_row_height(r, height=height, only_if_too_small=only_set_if_too_small)
+            elif height == "text":
+                for r in range(*self.MT.visible_text_rows):
+                    self.RI.set_row_height(r, only_if_too_small=only_set_if_too_small)
+            elif isinstance(height, int):
+                for r in range(*self.MT.visible_text_rows):
+                    self.RI.set_row_height(r, height=height, only_if_too_small=only_set_if_too_small)
+
         elif isinstance(row, int):
-            return int(self.MT.row_positions[row + 1] - self.MT.row_positions[row])
-        return self.set_refresh_timer(redraw)
+            if height == "default":
+                height = self.MT.get_default_row_height()
+                self.RI.set_row_height(row=row, height=height, only_if_too_small=only_set_if_too_small)
+            elif height == "text":
+                self.RI.set_row_height(row=row, only_if_too_small=only_set_if_too_small)
+            elif isinstance(height, int):
+                self.RI.set_row_height(row=row, height=height, only_if_too_small=only_set_if_too_small)
+            elif height is None:
+                return int(self.MT.row_positions[row + 1] - self.MT.row_positions[row])
+
+        else:
+            return self.set_refresh_timer(redraw)
 
     def get_column_widths(self, canvas_positions: bool = False) -> list[float]:
         if canvas_positions:

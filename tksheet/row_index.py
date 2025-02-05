@@ -25,7 +25,7 @@ from .functions import (
     event_has_char_key,
     event_opens_dropdown_or_checkbox,
     get_n2a,
-    get_wrapped_text,
+    wrap_text,
     int_x_tuple,
     is_contiguous,
     new_tk_event,
@@ -33,9 +33,6 @@ from .functions import (
     rounded_box_coords,
     stored_event_dict,
     try_binding,
-    wrap_char,
-    wrap_not,
-    wrap_word,
 )
 from .other_classes import DotDict, DraggedRowColumn, DropdownStorage, Node, TextEditorStorage
 from .text_editor import TextEditor
@@ -772,7 +769,7 @@ class RowIndex(tk.Canvas):
         new_height = self.MT.row_positions[self.rsz_h] - self.MT.row_positions[self.rsz_h - 1]
         self.MT.allow_auto_resize_rows = False
         self.MT.recreate_all_selection_boxes()
-        self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
+        self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True, set_scrollregion=False)
         if self.row_height_resize_func is not None and old_height != new_height:
             self.row_height_resize_func(
                 event_dict(
@@ -798,6 +795,7 @@ class RowIndex(tk.Canvas):
         if self.height_resizing_enabled and self.rsz_h is not None and self.currently_resizing_height:
             self.drag_height_resize()
             self.hide_resize_and_ctrl_lines(ctrl_lines=False)
+            self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
         elif (
             self.drag_and_drop_enabled
             and self.MT.anything_selected(exclude_cells=True, exclude_columns=True)
@@ -1038,14 +1036,15 @@ class RowIndex(tk.Canvas):
     def get_wrapped_cell_height(self, datarn: int) -> int:
         n_lines = max(
             1,
-            len(
-                get_wrapped_text(
+            sum(
+                1
+                for _ in wrap_text(
                     text=self.get_valid_cell_data_as_str(datarn, fix=False),
                     max_width=self.current_width,
                     max_lines=float("inf"),
                     char_width_fn=self.wrap_get_char_w,
                     widths=self.MT.char_widths[self.index_font],
-                    wrap_type=self.ops.index_wrap,
+                    wrap=self.ops.index_wrap,
                 )
             ),
         )
@@ -1077,18 +1076,22 @@ class RowIndex(tk.Canvas):
                 else:
                     start_col, end_col = 0, len(self.MT.displayed_columns)
                 iterable = self.MT.displayed_columns[start_col:end_col]
-            th = max(self.MT.get_wrapped_cell_height(datarn, datacn) for datacn in iterable)
-            if th > h:
-                h = th
-        if ih > h:
-            h = ih
+            h = max(
+                h,
+                max(
+                    self.MT.get_wrapped_cell_height(
+                        datarn,
+                        datacn,
+                    )
+                    for datacn in iterable
+                ),
+            )
+            self.MT.cells_cache = None
+        h = max(h, ih)
         if only_if_too_small and h < self.MT.row_positions[row + 1] - self.MT.row_positions[row]:
             return self.MT.row_positions[row + 1] - self.MT.row_positions[row]
-        if h < self.MT.min_row_height:
-            h = int(self.MT.min_row_height)
-        elif h > self.ops.max_row_height:
-            h = int(self.ops.max_row_height)
-        return h
+        else:
+            return max(int(min(h, self.ops.max_row_height)), self.MT.min_row_height)
 
     def set_row_height(
         self,
@@ -1513,15 +1516,19 @@ class RowIndex(tk.Canvas):
                 t = self.create_polygon(points, fill=fill, outline=outline, tag=tag, smooth=True)
             self.disp_checkbox[t] = True
 
-    def configure_scrollregion(self, last_row_line_pos: float) -> None:
-        self.configure(
-            scrollregion=(
-                0,
-                0,
-                self.current_width,
-                last_row_line_pos + self.ops.empty_vertical + 2,
+    def configure_scrollregion(self, last_row_line_pos: float) -> bool:
+        try:
+            self.configure(
+                scrollregion=(
+                    0,
+                    0,
+                    self.current_width,
+                    last_row_line_pos + self.ops.empty_vertical + 2,
+                )
             )
-        )
+            return True
+        except Exception:
+            return False
 
     def wrap_get_char_w(self, c: str) -> int:
         self.MT.txt_measure_canvas.itemconfig(
@@ -1548,11 +1555,11 @@ class RowIndex(tk.Canvas):
         text_end_row: int,
         scrollpos_bot: int,
         row_pos_exists: bool,
-    ) -> None:
-        try:
-            self.configure_scrollregion(last_row_line_pos=last_row_line_pos)
-        except Exception:
-            return
+        set_scrollregion: bool,
+    ) -> bool:
+        if set_scrollregion:
+            if not self.configure_scrollregion(last_row_line_pos=last_row_line_pos):
+                return False
         self.hidd_text.update(self.disp_text)
         self.disp_text = {}
         self.hidd_high.update(self.disp_high)
@@ -1685,49 +1692,30 @@ class RowIndex(tk.Canvas):
                     open_=self.MT._row_index[datarn].iid in self.tree_open_ids,
                     level=level,
                 )
-            if max_width <= 1 or not (lines := self.get_valid_cell_data_as_str(datarn, fix=False)):
+            if max_width <= 1:
+                continue
+            text = self.get_valid_cell_data_as_str(datarn, fix=False)
+            if not text:
                 continue
             start_line = max(0, int((scrollpos_top - rtopgridln) / self.MT.index_txt_height))
             draw_y = rtopgridln + 3 + (start_line * self.MT.index_txt_height)
-            max_lines = min(
-                int((scrollpos_bot - scrollpos_top) / self.MT.index_txt_height),
-                int((rbotgridln - rtopgridln - 2) / self.MT.index_txt_height),
+            gen_lines = wrap_text(
+                text=text,
+                max_width=max_width,
+                max_lines=int((rbotgridln - rtopgridln - 2) / self.MT.index_txt_height),
+                char_width_fn=self.wrap_get_char_w,
+                widths=self.MT.char_widths[font],
+                wrap=wrap,
+                start_line=start_line,
             )
-            if not wrap:
-                lines = wrap_not(
-                    lines.split("\n"),
-                    max_width=max_width,
-                    start_line=start_line,
-                    max_lines=max_lines,
-                    char_width_fn=self.wrap_get_char_w,
-                    widths=self.MT.char_widths[font],
-                )
-            elif wrap == "w":
-                lines = wrap_word(
-                    lines.split("\n"),
-                    max_width=max_width,
-                    start_line=start_line,
-                    max_lines=max_lines,
-                    char_width_fn=self.wrap_get_char_w,
-                    widths=self.MT.char_widths[font],
-                )
-            elif wrap == "c":
-                lines = wrap_char(
-                    lines.split("\n"),
-                    max_width=max_width,
-                    start_line=start_line,
-                    max_lines=max_lines,
-                    char_width_fn=self.wrap_get_char_w,
-                    widths=self.MT.char_widths[font],
-                )
-            for text in lines:
+            if align.endswith(("w", "e")):
                 if self.hidd_text:
                     iid, showing = self.hidd_text.popitem()
                     self.coords(iid, draw_x, draw_y)
                     if showing:
                         self.itemconfig(
                             iid,
-                            text=text,
+                            text="\n".join(gen_lines),
                             fill=fill,
                             font=font,
                             anchor=align,
@@ -1735,7 +1723,7 @@ class RowIndex(tk.Canvas):
                     else:
                         self.itemconfig(
                             iid,
-                            text=text,
+                            text="\n".join(gen_lines),
                             fill=fill,
                             font=font,
                             anchor=align,
@@ -1746,14 +1734,49 @@ class RowIndex(tk.Canvas):
                     iid = self.create_text(
                         draw_x,
                         draw_y,
-                        text=text,
+                        text="\n".join(gen_lines),
                         fill=fill,
                         font=font,
                         anchor=align,
                         tags="t",
                     )
                 self.disp_text[iid] = True
-                draw_y += self.MT.header_txt_height
+            else:
+                for text in gen_lines:
+                    if self.hidd_text:
+                        iid, showing = self.hidd_text.popitem()
+                        self.coords(iid, draw_x, draw_y)
+                        if showing:
+                            self.itemconfig(
+                                iid,
+                                text=text,
+                                fill=fill,
+                                font=font,
+                                anchor=align,
+                            )
+                        else:
+                            self.itemconfig(
+                                iid,
+                                text=text,
+                                fill=fill,
+                                font=font,
+                                anchor=align,
+                                state="normal",
+                            )
+                        self.tag_raise(iid)
+                    else:
+                        iid = self.create_text(
+                            draw_x,
+                            draw_y,
+                            text=text,
+                            fill=fill,
+                            font=font,
+                            anchor=align,
+                            tags="t",
+                        )
+                    self.disp_text[iid] = True
+                    draw_y += self.MT.header_txt_height
+
         xend = self.current_width - 6
         if (self.ops.show_horizontal_grid or self.height_resizing_enabled) and row_pos_exists:
             points = [

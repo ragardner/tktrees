@@ -59,7 +59,6 @@ from .functions import (
     get_data_from_clipboard,
     get_new_indexes,
     get_seq_without_gaps_at_index,
-    get_wrapped_text,
     index_exists,
     insert_items,
     int_x_iter,
@@ -78,9 +77,7 @@ from .functions import (
     stored_event_dict,
     try_binding,
     unpickle_obj,
-    wrap_char,
-    wrap_not,
-    wrap_word,
+    wrap_text,
 )
 from .other_classes import (
     Box_nt,
@@ -112,6 +109,7 @@ class MainTable(tk.Canvas):
         self.PAR = kwargs["parent"]
         self.PAR_width = 0
         self.PAR_height = 0
+        self.cells_cache = None
         self.table_txt_height, self.index_txt_height, self.header_txt_height = 0, 0, 0
         self.scrollregion = tuple()
         self.current_cursor = ""
@@ -4083,18 +4081,53 @@ class MainTable(tk.Canvas):
             else:
                 return False
 
+    def get_cell_max_width(self, datarn: int, dispcn: int) -> int:
+        datacn = self.datacn(dispcn)
+        col_width = self.col_positions[dispcn + 1] - self.col_positions[dispcn]
+        if kwargs := self.get_cell_kwargs(datarn, datacn, "dropdown"):
+            max_width = col_width - self.table_txt_height - 5
+        else:
+            max_width = col_width - 2
+            if (kwargs := self.get_cell_kwargs(datarn, datacn, "dropdown")) and max_width > self.table_txt_height + 1:
+                box_w = self.table_txt_height + 1
+                max_width -= box_w + 3
+        if self.PAR.ops.allow_cell_overflow and not kwargs:
+            if self.cells_cache is None:
+                disprn = self.disprn(datarn)
+                self.cells_cache = self._redraw_precache_cells(disprn, disprn + 1, 0, len(self.col_positions) - 1)
+            if not (align := self.get_cell_kwargs(datarn, datacn, key="align")):
+                align = self.align
+            if align.endswith("w"):
+                max_width += sum(
+                    self._overflow(
+                        self.cells_cache,
+                        range(dispcn + 1, len(self.col_positions) - 1),
+                        datarn,
+                    )
+                )
+            elif align.endswith("e"):
+                max_width += sum(
+                    self._overflow(
+                        self.cells_cache,
+                        reversed(range(0, dispcn)),
+                        datarn,
+                    )
+                )
+        return max_width
+
     def get_wrapped_cell_height(self, datarn: int, datacn: int) -> int:
         dispcn = self.dispcn(datacn)
         n_lines = max(
             1,
-            len(
-                get_wrapped_text(
+            sum(
+                1
+                for _ in wrap_text(
                     text=self.get_valid_cell_data_as_str(datarn, datacn, get_displayed=True),
-                    max_width=self.col_positions[dispcn + 1] - self.col_positions[dispcn],
+                    max_width=self.get_cell_max_width(datarn, dispcn),
                     max_lines=float("inf"),
                     char_width_fn=self.wrap_get_char_w,
                     widths=self.char_widths[self.table_font],
-                    wrap_type=self.PAR.ops.table_wrap,
+                    wrap=self.PAR.ops.table_wrap,
                 )
             ),
         )
@@ -4183,26 +4216,28 @@ class MainTable(tk.Canvas):
     def set_col_positions(self, itr: AnyIter[float]) -> None:
         self.col_positions = list(accumulate(chain([0], itr)))
 
-    def reset_col_positions(self, ncols: int | None = None):
-        colpos = self.PAR.ops.default_column_width
+    def reset_col_positions(self, ncols: int | None = None, width: int | None = None) -> None:
+        if width is None:
+            width = self.PAR.ops.default_column_width
         if isinstance(ncols, int):
-            self.set_col_positions(itr=repeat(colpos, ncols))
+            self.set_col_positions(itr=repeat(width, ncols))
         elif self.all_columns_displayed:
-            self.set_col_positions(itr=repeat(colpos, self.total_data_cols()))
+            self.set_col_positions(itr=repeat(width, self.total_data_cols()))
         else:
-            self.set_col_positions(itr=repeat(colpos, len(self.displayed_columns)))
+            self.set_col_positions(itr=repeat(width, len(self.displayed_columns)))
 
     def set_row_positions(self, itr: AnyIter[float]) -> None:
         self.row_positions = list(accumulate(chain([0], itr)))
 
-    def reset_row_positions(self, nrows: int | None = None):
-        rowpos = self.get_default_row_height()
+    def reset_row_positions(self, nrows: int | None = None, height: int | None = None) -> None:
+        if height is None:
+            height = self.get_default_row_height()
         if isinstance(nrows, int):
-            self.set_row_positions(itr=repeat(rowpos, nrows))
+            self.set_row_positions(itr=repeat(height, nrows))
         elif self.all_rows_displayed:
-            self.set_row_positions(itr=repeat(rowpos, self.total_data_rows()))
+            self.set_row_positions(itr=repeat(height, self.total_data_rows()))
         else:
-            self.set_row_positions(itr=repeat(rowpos, len(self.displayed_rows)))
+            self.set_row_positions(itr=repeat(height, len(self.displayed_rows)))
 
     def del_col_position(self, idx: int, deselect_all: bool = False):
         if deselect_all:
@@ -5879,6 +5914,7 @@ class MainTable(tk.Canvas):
         redraw_row_index: bool = False,
         redraw_table: bool = True,
         setting_views: bool = False,
+        set_scrollregion: bool = True,
     ) -> bool:
         try:
             can_width = self.winfo_width()
@@ -5900,12 +5936,17 @@ class MainTable(tk.Canvas):
             last_col_line_pos + self.PAR.ops.empty_horizontal + 2,
             last_row_line_pos + self.PAR.ops.empty_vertical + 2,
         )
-        if setting_views or scrollregion != self.scrollregion:
-            self.configure(scrollregion=scrollregion)
+        if set_scrollregion and (setting_views or scrollregion != self.scrollregion):
+            try:
+                self.configure(scrollregion=scrollregion)
+            except Exception:
+                return False
             self.scrollregion = scrollregion
-            self.CH.configure_scrollregion(last_col_line_pos)
-            self.RI.configure_scrollregion(last_row_line_pos)
-            if setting_views:
+            if (
+                not self.CH.configure_scrollregion(last_col_line_pos)
+                or not self.RI.configure_scrollregion(last_row_line_pos)
+                or setting_views
+            ):
                 return False
 
         scrollpos_top = self.canvasy(0)
@@ -6131,9 +6172,9 @@ class MainTable(tk.Canvas):
                                 outline="",
                                 draw_check=draw_check,
                             )
-                    lines = cells[(datarn, datacn)]
+                    text = cells[(datarn, datacn)]
                     if (
-                        not lines
+                        not text
                         or (align.endswith("w") and draw_x > scrollpos_right)
                         or (align.endswith("e") and cleftgridln + 5 > scrollpos_right)
                         or (align.endswith("n") and cleftgridln + 5 > scrollpos_right)
@@ -6150,45 +6191,23 @@ class MainTable(tk.Canvas):
                         continue
                     start_line = max(0, int((scrollpos_top - rtopgridln) / self.table_txt_height))
                     draw_y = rtopgridln + 3 + (start_line * self.table_txt_height)
-                    max_lines = min(
-                        int((scrollpos_bot - scrollpos_top) / self.table_txt_height),
-                        int((rbotgridln - rtopgridln - 2) / self.table_txt_height),
+                    gen_lines = wrap_text(
+                        text=text,
+                        max_width=max_width,
+                        max_lines=int((rbotgridln - rtopgridln - 2) / self.table_txt_height),
+                        char_width_fn=self.wrap_get_char_w,
+                        widths=self.char_widths[font],
+                        wrap=wrap,
+                        start_line=start_line,
                     )
-                    if not wrap:
-                        lines = wrap_not(
-                            lines.split("\n"),
-                            max_width=max_width,
-                            start_line=start_line,
-                            max_lines=max_lines,
-                            char_width_fn=self.wrap_get_char_w,
-                            widths=self.char_widths[font],
-                        )
-                    elif wrap == "w":
-                        lines = wrap_word(
-                            lines.split("\n"),
-                            max_width=max_width,
-                            start_line=start_line,
-                            max_lines=max_lines,
-                            char_width_fn=self.wrap_get_char_w,
-                            widths=self.char_widths[font],
-                        )
-                    elif wrap == "c":
-                        lines = wrap_char(
-                            lines.split("\n"),
-                            max_width=max_width,
-                            start_line=start_line,
-                            max_lines=max_lines,
-                            char_width_fn=self.wrap_get_char_w,
-                            widths=self.char_widths[font],
-                        )
-                    for text in lines:
+                    if align.endswith(("w", "e")):
                         if self.hidd_text:
                             iid, showing = self.hidd_text.popitem()
                             self.coords(iid, draw_x, draw_y)
                             if showing:
                                 self.itemconfig(
                                     iid,
-                                    text=text,
+                                    text="\n".join(gen_lines),
                                     fill=fill,
                                     font=font,
                                     anchor=align,
@@ -6196,7 +6215,7 @@ class MainTable(tk.Canvas):
                             else:
                                 self.itemconfig(
                                     iid,
-                                    text=text,
+                                    text="\n".join(gen_lines),
                                     fill=fill,
                                     font=font,
                                     anchor=align,
@@ -6207,14 +6226,49 @@ class MainTable(tk.Canvas):
                             iid = self.create_text(
                                 draw_x,
                                 draw_y,
-                                text=text,
+                                text="\n".join(gen_lines),
                                 fill=fill,
                                 font=font,
                                 anchor=align,
                                 tags="t",
                             )
                         self.disp_text[iid] = True
-                        draw_y += self.table_txt_height
+
+                    elif align.endswith("n"):
+                        for text in gen_lines:
+                            if self.hidd_text:
+                                iid, showing = self.hidd_text.popitem()
+                                self.coords(iid, draw_x, draw_y)
+                                if showing:
+                                    self.itemconfig(
+                                        iid,
+                                        text=text,
+                                        fill=fill,
+                                        font=font,
+                                        anchor=align,
+                                    )
+                                else:
+                                    self.itemconfig(
+                                        iid,
+                                        text=text,
+                                        fill=fill,
+                                        font=font,
+                                        anchor=align,
+                                        state="normal",
+                                    )
+                                self.tag_raise(iid)
+                            else:
+                                iid = self.create_text(
+                                    draw_x,
+                                    draw_y,
+                                    text=text,
+                                    fill=fill,
+                                    font=font,
+                                    anchor=align,
+                                    tags="t",
+                                )
+                            self.disp_text[iid] = True
+                            draw_y += self.table_txt_height
             for dct in (
                 self.hidd_text,
                 self.hidd_high,
@@ -6247,6 +6301,7 @@ class MainTable(tk.Canvas):
                 text_end_col=text_end_col,
                 scrollpos_right=scrollpos_right,
                 col_pos_exists=col_pos_exists,
+                set_scrollregion=set_scrollregion,
             )
         if redraw_row_index and self.show_index:
             self.RI.redraw_grid_and_text(
@@ -6259,6 +6314,7 @@ class MainTable(tk.Canvas):
                 text_end_row=text_end_row,
                 scrollpos_bot=scrollpos_bot,
                 row_pos_exists=row_pos_exists,
+                set_scrollregion=set_scrollregion,
             )
         event_data = {"sheetname": "", "header": redraw_header, "row_index": redraw_row_index, "table": redraw_table}
         self.PAR.emit_event("<<SheetRedrawn>>", data=event_data)
