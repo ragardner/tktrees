@@ -67,9 +67,9 @@ def wrap_text(
                     total_lines += 1
                     if total_lines >= max_lines:
                         return
-
-                    current_line = []  # Start new line
+                    current_line = []
                     line_width = 0
+
                     if char_width <= max_width:
                         current_line.append(char)
                         line_width = char_width
@@ -109,6 +109,17 @@ def wrap_text(
                 # we only wrap by character if the whole word alone wont fit max width
                 # word won't fit at all we resort to char wrapping it
                 if word_width >= max_width:
+                    # yield current line before char wrapping word
+                    if current_line:
+                        if total_lines >= start_line:
+                            yield "".join(current_line)
+
+                        total_lines += 1
+                        if total_lines >= max_lines:
+                            return
+                        current_line = []
+                        line_width = 0
+
                     for char, w in zip(word, word_char_widths):
                         # adding char to line would result in wrap
                         if line_width + w >= max_width:
@@ -118,9 +129,9 @@ def wrap_text(
                             total_lines += 1
                             if total_lines >= max_lines:
                                 return
-
-                            current_line = []  # Start new line
+                            current_line = []
                             line_width = 0
+
                             if w <= max_width:
                                 current_line.append(char)
                                 line_width = w
@@ -137,8 +148,7 @@ def wrap_text(
                     total_lines += 1
                     if total_lines >= max_lines:
                         return
-
-                    current_line = [word]  # Start new line
+                    current_line = [word]
                     line_width = word_width
 
                 # word will fit we put it on the current line

@@ -25,13 +25,13 @@ from .functions import (
     event_has_char_key,
     event_opens_dropdown_or_checkbox,
     get_n2a,
-    wrap_text,
     int_x_tuple,
     is_contiguous,
     new_tk_event,
     rounded_box_coords,
     stored_event_dict,
     try_binding,
+    wrap_text,
 )
 from .other_classes import DotDict, DraggedRowColumn, DropdownStorage, TextEditorStorage
 from .text_editor import TextEditor
@@ -1480,7 +1480,7 @@ class ColumnHeaders(tk.Canvas):
                         draw_x += box_w + 3
                     elif align.endswith("n"):
                         draw_x += ceil(box_w / 2) + 1
-                    max_width -= box_w + 3
+                    max_width -= box_w + 4
                     try:
                         draw_check = (
                             self.MT._headers[datacn]

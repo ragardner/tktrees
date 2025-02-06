@@ -25,7 +25,6 @@ from .functions import (
     event_has_char_key,
     event_opens_dropdown_or_checkbox,
     get_n2a,
-    wrap_text,
     int_x_tuple,
     is_contiguous,
     new_tk_event,
@@ -33,6 +32,7 @@ from .functions import (
     rounded_box_coords,
     stored_event_dict,
     try_binding,
+    wrap_text,
 )
 from .other_classes import DotDict, DraggedRowColumn, DropdownStorage, Node, TextEditorStorage
 from .text_editor import TextEditor
@@ -1650,12 +1650,9 @@ class RowIndex(tk.Canvas):
                     box_w = self.MT.index_txt_height + 1
                     if align.endswith("w"):
                         draw_x += box_w + 3
-                        max_width -= box_w + 3
                     elif align.endswith("n"):
                         draw_x += ceil(box_w / 2) + 1
-                        max_width -= box_w + 2
-                    else:
-                        max_width -= box_w + 1
+                    max_width -= box_w + 4
                     try:
                         draw_check = (
                             self.MT._row_index[datarn]
