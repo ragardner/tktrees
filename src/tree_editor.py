@@ -27,6 +27,7 @@ from openpyxl.cell import WriteOnlyCell
 from tksheet import (
     DotDict,
     Highlight,
+    Selected,
     Sheet,
     is_contiguous,
     move_elements_by_mapping,
@@ -1977,6 +1978,7 @@ class Tree_Editor(tk.Frame):
             self.tree_set_cell_size_to_text(y1, x1)
             self.disable_paste()
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+
             return newtext
 
     def tree_set_cell_size_to_text(self, sheet_r, sheet_c):
@@ -5587,7 +5589,6 @@ class Tree_Editor(tk.Frame):
             return
         self.vp -= 1
         new_vs = self.vs.pop()
-        new_vs["required_data"]["pickled"] = pickle.loads(new_vs["required_data"]["pickled"])
         if self.undo_unsaved_changes_passed_0:
             self.increment_unsaved()
         else:
@@ -5598,31 +5599,31 @@ class Tree_Editor(tk.Frame):
             else:
                 self.undo_unsaved_changes_passed_0 = True
                 self.increment_unsaved()
-        self.ic = new_vs["required_data"]["pickled"]["ic"]
-        self.pc = new_vs["required_data"]["pickled"]["pc"]
-        self.hiers = new_vs["required_data"]["pickled"]["hiers"]
+        self.ic = new_vs["required_data"]["ic"]
+        self.pc = new_vs["required_data"]["pc"]
+        self.hiers = new_vs["required_data"]["hiers"]
         self.nodes = self.nodes_json_x_dict(
-            new_vs["required_data"]["not_pickled"]["nodes"],
+            new_vs["required_data"]["nodes"],
             hiers=self.hiers,
         )
-        self.tv_label_col = new_vs["required_data"]["pickled"]["tv_label_col"]
-        self.row_len = new_vs["required_data"]["pickled"]["row_len"]
-        self.mirror_var = new_vs["required_data"]["pickled"]["mirror_bool"]
-        self.auto_sort_nodes_bool = new_vs["required_data"]["pickled"]["auto_sort_nodes_bool"]
-        self.topnodes_order = new_vs["required_data"]["pickled"]["topnodes_order"]
-        self.saved_info = new_vs["required_data"]["pickled"]["saved_info"]
-        self.tagged_ids = new_vs["required_data"]["pickled"]["tagged_ids"]
+        self.tv_label_col = new_vs["required_data"]["tv_label_col"]
+        self.row_len = new_vs["required_data"]["row_len"]
+        self.mirror_var = new_vs["required_data"]["mirror_bool"]
+        self.auto_sort_nodes_bool = new_vs["required_data"]["auto_sort_nodes_bool"]
+        self.topnodes_order = new_vs["required_data"]["topnodes_order"]
+        self.saved_info = new_vs["required_data"]["saved_info"]
+        self.tagged_ids = new_vs["required_data"]["tagged_ids"]
         self.sheet.align_columns(
-            columns=new_vs["required_data"]["pickled"]["sheet_column_alignments"],
+            columns=new_vs["required_data"]["sheet_column_alignments"],
             redraw=False,
         )
         self.tree.align_columns(
-            columns=new_vs["required_data"]["pickled"]["sheet_column_alignments"],
+            columns=new_vs["required_data"]["sheet_column_alignments"],
             redraw=False,
         )
         self.reset_tagged_ids_dropdowns()
         self.clear_copied_details()
-        self.headers = new_vs["required_data"]["pickled"]["headers"]
+        self.headers = new_vs["required_data"]["headers"]
 
         if new_vs["type"] in (
             "full sheet",
@@ -5808,8 +5809,8 @@ class Tree_Editor(tk.Frame):
             self.refresh_formatting(rows=rows, columns=cols)
             self.redo_tree_display()
         self.sheet.row_index(newindex=self.ic)
-        self.sheet.set_column_widths(new_vs["required_data"]["pickled"]["sheet_col_positions"], canvas_positions=True)
-        self.sheet.set_safe_row_heights(new_vs["required_data"]["pickled"]["sheet_row_positions"])
+        self.sheet.set_column_widths(new_vs["required_data"]["sheet_col_positions"], canvas_positions=True)
+        self.sheet.set_safe_row_heights(new_vs["required_data"]["sheet_row_positions"])
         self.set_headers()
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.rehighlight_tagged_ids()
@@ -5818,8 +5819,8 @@ class Tree_Editor(tk.Frame):
             self.edit_menu.entryconfig(0, state="disabled")
         self.mirror_sels_disabler = True
         self.move_tree_pos()
-        if new_vs["required_data"]["not_pickled"]["sheet_selections"] is not None:
-            self.reselect_sheet_sel(new_vs["required_data"]["not_pickled"]["sheet_selections"])
+        if new_vs["required_data"]["sheet_selections"] is not None:
+            self.reselect_sheet_sel(new_vs["required_data"]["sheet_selections"])
             self.sheet_select_event()
         self.refresh_dropdowns()
         self.move_sheet_pos()
@@ -5883,31 +5884,37 @@ class Tree_Editor(tk.Frame):
         )
         return self.saved_info
 
+    def copy_saved_info(self) -> dict[int, dict]:
+        info = self.save_info_get_saved_info()
+        for k in info:
+            if not info[k]:
+                continue
+            info[k] = new_info_storage(
+                scrolls=tuple(info[k]["scrolls"].values()),
+                opens=dict(info[k]["opens"]),
+                boxes=[tuple(box) for box in info[k]["boxes"]],
+                selected=Selected(*info[k]["selected"]) if info[k]["selected"] else (),
+                twidths=dict(info[k]["twidths"]),
+                theights=dict(info[k]["theights"]),
+            )
+        return info
+
     def get_required_snapshot_data(self):
         return {
-            "pickled": pickle.dumps(
-                {
-                    "saved_info": self.save_info_get_saved_info(),
-                    "sheet_col_positions": self.sheet.get_column_widths(canvas_positions=True),
-                    "sheet_row_positions": self.sheet.get_safe_row_heights(),
-                    "topnodes_order": self.topnodes_order,
-                    "tv_label_col": self.tv_label_col,
-                    "tagged_ids": self.tagged_ids,
-                    "sheet_column_alignments": self.sheet.get_column_alignments(),
-                    "headers": self.copy_headers(),
-                    "ic": self.ic,
-                    "pc": self.pc,
-                    "hiers": self.hiers,
-                    "row_len": self.row_len,
-                    "auto_sort_nodes_bool": self.auto_sort_nodes_bool,
-                    "mirror_bool": self.mirror_var,
-                }
-            ),
-            "not_pickled": self.get_unpickleable_required_snapshot_data(),
-        }
-
-    def get_unpickleable_required_snapshot_data(self):
-        return {
+            "saved_info": self.copy_saved_info(),
+            "sheet_col_positions": self.sheet.get_column_widths(canvas_positions=True),
+            "sheet_row_positions": self.sheet.get_safe_row_heights(),
+            "topnodes_order": {k: list(v) for k, v in self.topnodes_order.items()},
+            "tv_label_col": int(self.tv_label_col),
+            "tagged_ids": set(self.tagged_ids),
+            "sheet_column_alignments": dict(self.sheet.get_column_alignments()),
+            "headers": self.copy_headers(),
+            "ic": int(self.ic),
+            "pc": int(self.pc),
+            "hiers": list(self.hiers),
+            "row_len": int(self.row_len),
+            "auto_sort_nodes_bool": bool(self.auto_sort_nodes_bool),
+            "mirror_bool": bool(self.mirror_var),
             "nodes": self.jsonify_nodes(),
             "focus": self.tree.has_focus(),
             "sheet_selections": self.get_sheet_sel(),
