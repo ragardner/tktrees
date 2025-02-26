@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import tkinter as tk
 from collections import defaultdict
-from collections.abc import Generator, Hashable, Sequence
+from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from itertools import chain, cycle, islice, repeat
 from math import ceil, floor
 from operator import itemgetter
-from typing import Literal
+from typing import Any, Literal
 
 from .colors import color_map
 from .constants import (
@@ -19,38 +19,43 @@ from .constants import (
 )
 from .formatters import is_bool_like, try_to_bool
 from .functions import (
-    consecutive_chunks,
     consecutive_ranges,
+    del_placeholder_dict_key,
     event_dict,
     event_has_char_key,
     event_opens_dropdown_or_checkbox,
     get_n2a,
+    get_new_indexes,
     int_x_tuple,
     is_contiguous,
+    mod_event_val,
     new_tk_event,
     num2alpha,
     rounded_box_coords,
     stored_event_dict,
+    try_b_index,
     try_binding,
     wrap_text,
 )
-from .other_classes import DotDict, DraggedRowColumn, DropdownStorage, Node, TextEditorStorage
+from .other_classes import DotDict, DraggedRowColumn, DropdownStorage, EventDataDict, Node, TextEditorStorage
+from .sorting import sort_columns_by_row, sort_row
 from .text_editor import TextEditor
-from .types import AnyIter
+from .tksheet_types import AnyIter
 
 
 class RowIndex(tk.Canvas):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, parent, **kwargs):
         super().__init__(
-            kwargs["parent"],
-            background=kwargs["parent"].ops.index_bg,
+            parent,
+            background=parent.ops.index_bg,
             highlightthickness=0,
         )
-        self.PAR = kwargs["parent"]
+        self.PAR = parent
         self.ops = self.PAR.ops
         self.MT = None  # is set from within MainTable() __init__
         self.CH = None  # is set from within MainTable() __init__
         self.TL = None  # is set from within TopLeftRectangle() __init__
+        self.new_iid_ctr = -1
         self.current_width = None
         self.popup_menu_loc = None
         self.extra_begin_edit_cell_func = None
@@ -71,6 +76,8 @@ class RowIndex(tk.Canvas):
         self.drag_selection_binding_func = None
         self.ri_extra_begin_drag_drop_func = None
         self.ri_extra_end_drag_drop_func = None
+        self.ri_extra_begin_sort_cols_func = None
+        self.ri_extra_end_sort_cols_func = None
         self.extra_double_b1_func = None
         self.row_height_resize_func = None
         self.cell_options = {}
@@ -84,7 +91,7 @@ class RowIndex(tk.Canvas):
         self.rc_delete_row_enabled = False
         self.edit_cell_enabled = False
         self.visible_row_dividers = {}
-        self.row_width_resize_bbox = tuple()
+        self.row_width_resize_bbox = ()
         self.rsz_w = None
         self.rsz_h = None
         self.currently_resizing_width = False
@@ -142,18 +149,6 @@ class RowIndex(tk.Canvas):
             self.unbind("<Double-Button-1>")
             self.unbind(rc_binding)
 
-    def tree_reset(self) -> None:
-        # treeview mode
-        self.tree = {}
-        self.tree_open_ids = set()
-        self.tree_rns = {}
-        if self.MT:
-            self.MT.displayed_rows = []
-            self.MT._row_index = []
-            self.MT.data = []
-            self.MT.row_positions = [0]
-            self.MT.saved_row_heights = {}
-
     def set_width(self, new_width: int, set_TL: bool = False, recreate_selection_boxes: bool = True) -> None:
         try:
             self.config(width=new_width)
@@ -165,7 +160,7 @@ class RowIndex(tk.Canvas):
             self.MT.recreate_all_selection_boxes()
         self.current_width = new_width
 
-    def rc(self, event: object) -> None:
+    def rc(self, event: Any) -> None:
         self.mouseclick_outside_editor_or_dropdown_all_canvases(inside=True)
         self.focus_set()
         popup_menu = None
@@ -192,7 +187,7 @@ class RowIndex(tk.Canvas):
             self.popup_menu_loc = r
             popup_menu.tk_popup(event.x_root, event.y_root)
 
-    def ctrl_b1_press(self, event: object) -> None:
+    def ctrl_b1_press(self, event: Any) -> None:
         self.mouseclick_outside_editor_or_dropdown_all_canvases(inside=True)
         if (
             (self.drag_and_drop_enabled or self.row_selection_enabled)
@@ -215,7 +210,7 @@ class RowIndex(tk.Canvas):
         elif not self.MT.ctrl_select_enabled:
             self.b1_press(event)
 
-    def ctrl_shift_b1_press(self, event: object) -> None:
+    def ctrl_shift_b1_press(self, event: Any) -> None:
         self.mouseclick_outside_editor_or_dropdown_all_canvases(inside=True)
         y = event.y
         r = self.MT.identify_row(y=y)
@@ -251,31 +246,35 @@ class RowIndex(tk.Canvas):
         elif not self.MT.ctrl_select_enabled:
             self.shift_b1_press(event)
 
-    def shift_b1_press(self, event: object) -> None:
+    def shift_b1_press(self, event: Any) -> None:
         self.mouseclick_outside_editor_or_dropdown_all_canvases(inside=True)
         r = self.MT.identify_row(y=event.y)
-        if (self.drag_and_drop_enabled or self.row_selection_enabled) and self.rsz_h is None and self.rsz_w is None:
-            if r < len(self.MT.row_positions) - 1:
-                r_selected = self.MT.row_selected(r)
-                if not r_selected and self.row_selection_enabled:
-                    if self.MT.selected and self.MT.selected.type_ == "rows":
-                        r_to_sel, c_to_sel = self.MT.selected.row, self.MT.selected.column
-                        self.MT.deselect("all", redraw=False)
-                        self.being_drawn_item = self.MT.create_selection_box(
-                            *self.get_shift_select_box(r, r_to_sel), "rows"
-                        )
-                        self.MT.set_currently_selected(r_to_sel, c_to_sel, self.being_drawn_item)
-                    else:
-                        self.being_drawn_item = self.select_row(r, run_binding_func=False)
-                    self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
-                    sel_event = self.MT.get_select_event(being_drawn_item=self.being_drawn_item)
-                    try_binding(self.shift_selection_binding_func, sel_event)
-                    self.PAR.emit_event("<<SheetSelect>>", data=sel_event)
-                elif r_selected:
-                    self.dragged_row = DraggedRowColumn(
-                        dragged=r,
-                        to_move=sorted(self.MT.get_selected_rows()),
+        if (
+            (self.drag_and_drop_enabled or self.row_selection_enabled)
+            and self.rsz_h is None
+            and self.rsz_w is None
+            and r < len(self.MT.row_positions) - 1
+        ):
+            r_selected = self.MT.row_selected(r)
+            if not r_selected and self.row_selection_enabled:
+                if self.MT.selected and self.MT.selected.type_ == "rows":
+                    r_to_sel, c_to_sel = self.MT.selected.row, self.MT.selected.column
+                    self.MT.deselect("all", redraw=False)
+                    self.being_drawn_item = self.MT.create_selection_box(
+                        *self.get_shift_select_box(r, r_to_sel), "rows"
                     )
+                    self.MT.set_currently_selected(r_to_sel, c_to_sel, self.being_drawn_item)
+                else:
+                    self.being_drawn_item = self.select_row(r, run_binding_func=False)
+                self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
+                sel_event = self.MT.get_select_event(being_drawn_item=self.being_drawn_item)
+                try_binding(self.shift_selection_binding_func, sel_event)
+                self.PAR.emit_event("<<SheetSelect>>", data=sel_event)
+            elif r_selected:
+                self.dragged_row = DraggedRowColumn(
+                    dragged=r,
+                    to_move=sorted(self.MT.get_selected_rows()),
+                )
 
     def get_shift_select_box(self, r: int, min_r: int) -> tuple[int, int, int, int, str]:
         if r >= min_r:
@@ -318,7 +317,7 @@ class RowIndex(tk.Canvas):
             if x >= x1 and y >= y1 and x <= x2 and y <= y2:
                 return r
 
-    def mouse_motion(self, event: object) -> None:
+    def mouse_motion(self, event: Any) -> None:
         if not self.currently_resizing_height and not self.currently_resizing_width:
             x = self.canvasx(event.x)
             y = self.canvasy(event.y)
@@ -359,17 +358,16 @@ class RowIndex(tk.Canvas):
                         self.rsz_w = None
                 except Exception:
                     self.rsz_w = None
-            if not mouse_over_resize:
-                if self.MT.row_selected(self.MT.identify_row(event, allow_end=False)):
-                    mouse_over_selected = True
-                    if self.MT.current_cursor != "hand2":
-                        self.config(cursor="hand2")
-                        self.MT.current_cursor = "hand2"
+            if not mouse_over_resize and self.MT.row_selected(self.MT.identify_row(event, allow_end=False)):
+                mouse_over_selected = True
+                if self.MT.current_cursor != "hand2":
+                    self.config(cursor="hand2")
+                    self.MT.current_cursor = "hand2"
             if not mouse_over_resize and not mouse_over_selected:
                 self.MT.reset_mouse_motion_creations()
         try_binding(self.extra_motion_func, event)
 
-    def double_b1(self, event: object):
+    def double_b1(self, event: Any):
         self.mouseclick_outside_editor_or_dropdown_all_canvases(inside=True)
         self.focus_set()
         if (
@@ -415,7 +413,7 @@ class RowIndex(tk.Canvas):
         self.mouse_motion(event)
         try_binding(self.extra_double_b1_func, event)
 
-    def b1_press(self, event: object):
+    def b1_press(self, event: Any):
         self.MT.unbind("<MouseWheel>")
         self.focus_set()
         self.closed_dropdown = self.mouseclick_outside_editor_or_dropdown_all_canvases(inside=True)
@@ -484,7 +482,7 @@ class RowIndex(tk.Canvas):
                         self.toggle_select_row(r, redraw=True)
         try_binding(self.extra_b1_press_func, event)
 
-    def b1_motion(self, event: object):
+    def b1_motion(self, event: Any):
         x1, y1, x2, y2 = self.MT.get_canvas_visible_area()
         if self.height_resizing_enabled and self.rsz_h is not None and self.currently_resizing_height:
             y = self.canvasy(event.y)
@@ -583,7 +581,7 @@ class RowIndex(tk.Canvas):
         elif end_row < start_row:
             return end_row, 0, start_row + 1, len(self.MT.col_positions) - 1, "rows"
 
-    def ctrl_b1_motion(self, event: object) -> None:
+    def ctrl_b1_motion(self, event: Any) -> None:
         x1, y1, x2, y2 = self.MT.get_canvas_visible_area()
         if (
             self.drag_and_drop_enabled
@@ -637,7 +635,7 @@ class RowIndex(tk.Canvas):
         elif not self.MT.ctrl_select_enabled:
             self.b1_motion(event)
 
-    def drag_and_drop_motion(self, event: object) -> float:
+    def drag_and_drop_motion(self, event: Any) -> float:
         y = event.y
         hend = self.winfo_height()
         ycheck = self.yview()
@@ -690,10 +688,10 @@ class RowIndex(tk.Canvas):
             tag="move_rows",
         )
         self.MT.create_resize_line(x1, ypos, x2, ypos, width=3, fill=self.ops.drag_and_drop_bg, tag="move_rows")
-        for chunk in consecutive_chunks(rows):
+        for boxst, boxend in consecutive_ranges(rows):
             self.MT.show_ctrl_outline(
-                start_cell=(0, chunk[0]),
-                end_cell=(len(self.MT.col_positions) - 1, chunk[-1] + 1),
+                start_cell=(0, boxst),
+                end_cell=(len(self.MT.col_positions) - 1, boxend),
                 dash=(),
                 outline=self.ops.drag_and_drop_bg,
                 delete_on_timer=False,
@@ -705,7 +703,7 @@ class RowIndex(tk.Canvas):
         if ctrl_lines:
             self.MT.delete_ctrl_outlines()
 
-    def scroll_if_event_offscreen(self, event: object) -> bool:
+    def scroll_if_event_offscreen(self, event: Any) -> bool:
         ycheck = self.yview()
         need_redraw = False
         if event.y > self.winfo_height() and len(ycheck) > 1 and ycheck[1] < 1:
@@ -735,14 +733,14 @@ class RowIndex(tk.Canvas):
         if len(ycheck) > 1 and ycheck[1] > 1:
             self.MT.set_yviews("moveto", 1)
 
-    def event_over_dropdown(self, r: int, datarn: int, event: object, canvasy: float) -> bool:
+    def event_over_dropdown(self, r: int, datarn: int, event: Any, canvasy: float) -> bool:
         return (
             canvasy < self.MT.row_positions[r] + self.MT.index_txt_height
             and self.get_cell_kwargs(datarn, key="dropdown")
             and event.x > self.current_width - self.MT.index_txt_height - 4
         )
 
-    def event_over_checkbox(self, r: int, datarn: int, event: object, canvasy: float) -> bool:
+    def event_over_checkbox(self, r: int, datarn: int, event: Any, canvasy: float) -> bool:
         return (
             canvasy < self.MT.row_positions[r] + self.MT.index_txt_height
             and self.get_cell_kwargs(datarn, key="checkbox")
@@ -779,7 +777,7 @@ class RowIndex(tk.Canvas):
                 )
             )
 
-    def b1_release(self, event: object) -> None:
+    def b1_release(self, event: Any) -> None:
         to_hide = self.being_drawn_item
         if self.being_drawn_item is not None and (to_sel := self.MT.coords_and_type(self.being_drawn_item)):
             r_to_sel, c_to_sel = self.MT.selected.row, self.MT.selected.column
@@ -821,14 +819,8 @@ class RowIndex(tk.Canvas):
                     r += 1
                 if r > len(self.MT.row_positions) - 1:
                     r = len(self.MT.row_positions) - 1
-                event_data = event_dict(
-                    name="move_rows",
-                    sheet=self.PAR.name,
-                    widget=self,
-                    boxes=self.MT.get_boxes(),
-                    selected=self.MT.selected,
-                    value=r,
-                )
+                event_data = self.MT.new_event_dict("move_rows", state=True)
+                event_data["value"] = r
                 if try_binding(self.ri_extra_begin_drag_drop_func, event_data, "begin_move_rows"):
                     data_new_idxs, disp_new_idxs, event_data = self.MT.move_rows_adjust_options_dict(
                         *self.MT.get_args_for_move_rows(
@@ -839,15 +831,16 @@ class RowIndex(tk.Canvas):
                         move_heights=self.ops.row_drag_and_drop_perform,
                         event_data=event_data,
                     )
-                    event_data["moved"]["rows"] = {
-                        "data": data_new_idxs,
-                        "displayed": disp_new_idxs,
-                    }
-                    if self.MT.undo_enabled:
-                        self.MT.undo_stack.append(stored_event_dict(event_data))
-                    self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
-                    try_binding(self.ri_extra_end_drag_drop_func, event_data, "end_move_rows")
-                    self.MT.sheet_modified(event_data)
+                    if data_new_idxs and disp_new_idxs:
+                        event_data["moved"]["rows"] = {
+                            "data": data_new_idxs,
+                            "displayed": disp_new_idxs,
+                        }
+                        if self.MT.undo_enabled:
+                            self.MT.undo_stack.append(stored_event_dict(event_data))
+                        self.MT.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
+                        try_binding(self.ri_extra_end_drag_drop_func, event_data, "end_move_rows")
+                        self.MT.sheet_modified(event_data)
         elif self.b1_pressed_loc is not None and self.rsz_w is None and self.rsz_h is None:
             r = self.MT.identify_row(y=event.y)
             if (
@@ -894,6 +887,100 @@ class RowIndex(tk.Canvas):
         ):
             return iid
         return None
+
+    def _sort_rows(
+        self,
+        event: tk.Event | None = None,
+        rows: AnyIter[int] | None = None,
+        reverse: bool = False,
+        validation: bool = True,
+        key: Callable | None = None,
+        undo: bool = True,
+    ) -> EventDataDict:
+        if rows is None:
+            rows = self.MT.get_selected_rows()
+        if not rows:
+            rows = list(range(0, len(self.MT.row_positions) - 1))
+        event_data = self.MT.new_event_dict("edit_table")
+        try_binding(self.MT.extra_begin_sort_cells_func, event_data)
+        if key is None:
+            key = self.PAR.ops.sort_key
+        for r in rows:
+            datarn = self.MT.datarn(r)
+            for c, val in enumerate(sort_row(self.MT.data[datarn], reverse=reverse, key=key)):
+                if (
+                    not self.MT.edit_validation_func
+                    or not validation
+                    or (
+                        self.MT.edit_validation_func
+                        and (val := self.MT.edit_validation_func(mod_event_val(event_data, val, (datarn, c))))
+                        is not None
+                    )
+                ):
+                    event_data = self.MT.event_data_set_cell(
+                        datarn=datarn,
+                        datacn=c,
+                        value=val,
+                        event_data=event_data,
+                    )
+        if event_data["cells"]["table"]:
+            if undo and self.MT.undo_enabled:
+                self.MT.undo_stack.append(stored_event_dict(event_data))
+            try_binding(self.MT.extra_end_sort_cells_func, event_data, "end_edit_table")
+            self.MT.sheet_modified(event_data)
+            self.PAR.emit_event("<<SheetModified>>", event_data)
+            self.MT.refresh()
+        return event_data
+
+    def _sort_columns_by_row(
+        self,
+        event: tk.Event | None = None,
+        row: int | None = None,
+        reverse: bool = False,
+        key: Callable | None = None,
+        undo: bool = True,
+    ) -> EventDataDict:
+        event_data = self.MT.new_event_dict("move_columns", state=True)
+        if not self.MT.data:
+            return event_data
+        if row is None:
+            if not self.MT.selected:
+                return event_data
+            row = self.MT.selected.row
+        if try_binding(self.ri_extra_begin_sort_cols_func, event_data, "begin_move_columns"):
+            if key is None:
+                key = self.PAR.ops.sort_key
+            sorted_indices, data_new_idxs = sort_columns_by_row(self.MT.data, row=row, reverse=reverse, key=key)
+            disp_new_idxs = {}
+            if self.MT.all_columns_displayed:
+                disp_new_idxs = data_new_idxs
+            else:
+                col_ctr = 0
+                # idx is the displayed index, can just do range
+                for old_idx in sorted_indices:
+                    if (idx := try_b_index(self.MT.displayed_columns, old_idx)) is not None:
+                        disp_new_idxs[idx] = col_ctr
+                        col_ctr += 1
+            data_new_idxs, disp_new_idxs, _ = self.PAR.mapping_move_columns(
+                data_new_idxs=data_new_idxs,
+                disp_new_idxs=disp_new_idxs,
+                move_data=True,
+                create_selections=False,
+                undo=False,
+                emit_event=False,
+                redraw=True,
+            )
+            event_data["moved"]["columns"] = {
+                "data": data_new_idxs,
+                "displayed": disp_new_idxs,
+            }
+            if undo and self.MT.undo_enabled:
+                self.MT.undo_stack.append(stored_event_dict(event_data))
+            try_binding(self.ri_extra_end_sort_cols_func, event_data, "end_move_columns")
+            self.MT.sheet_modified(event_data)
+            self.PAR.emit_event("<<SheetModified>>", event_data)
+            self.MT.refresh()
+        return event_data
 
     def toggle_select_row(
         self,
@@ -1147,7 +1234,7 @@ class RowIndex(tk.Canvas):
     def set_width_of_index_to_text(
         self,
         text: None | str = None,
-        only_rows: list = [],
+        only_rows: list[int] | None = None,
     ) -> int:
         self.fix_index()
         w = self.ops.default_row_index_width
@@ -1161,7 +1248,7 @@ class RowIndex(tk.Canvas):
             if (tw := b[2] - b[0] + 10) > w:
                 w = tw
         elif text is None:
-            w = self.get_index_text_width(only_rows=only_rows)
+            w = self.get_index_text_width(only_rows=[] if only_rows is None else only_rows)
         if w > self.ops.max_index_width:
             w = int(self.ops.max_index_width)
         self.set_width(w, set_TL=True)
@@ -1557,9 +1644,8 @@ class RowIndex(tk.Canvas):
         row_pos_exists: bool,
         set_scrollregion: bool,
     ) -> bool:
-        if set_scrollregion:
-            if not self.configure_scrollregion(last_row_line_pos=last_row_line_pos):
-                return False
+        if set_scrollregion and not self.configure_scrollregion(last_row_line_pos=last_row_line_pos):
+            return False
         self.hidd_text.update(self.disp_text)
         self.disp_text = {}
         self.hidd_high.update(self.disp_high)
@@ -1826,7 +1912,7 @@ class RowIndex(tk.Canvas):
                     d[box.type_ if box.type_ != "columns" else "cells"].add(r)
         return d
 
-    def open_cell(self, event: object = None, ignore_existing_editor: bool = False) -> None:
+    def open_cell(self, event: Any = None, ignore_existing_editor: bool = False) -> None:
         if not self.MT.anything_selected() or (not ignore_existing_editor and self.text_editor.open):
             return
         if not self.MT.selected:
@@ -1856,7 +1942,7 @@ class RowIndex(tk.Canvas):
     # r is displayed row
     def open_text_editor(
         self,
-        event: object = None,
+        event: Any = None,
         r: int = 0,
         text: None | str = None,
         state: str = "normal",
@@ -1899,8 +1985,8 @@ class RowIndex(tk.Canvas):
             self.text_editor.set_text(self.text_editor.get() + "" if not isinstance(text, str) else text)
             return False
         self.hide_text_editor()
-        if not self.MT.see(r=r, c=0, keep_yscroll=True, check_cell_visibility=True):
-            self.MT.refresh()
+        if not self.MT.see(r, 0, keep_yscroll=True):
+            self.MT.main_table_redraw_grid_and_text(True, True)
         x = 0
         y = self.MT.row_positions[r]
         w = self.current_width + 1
@@ -1949,7 +2035,7 @@ class RowIndex(tk.Canvas):
             self.text_editor.tktext.bind(key, func)
         return True
 
-    def text_editor_newline_binding(self, event: object = None, check_lines: bool = True) -> None:
+    def text_editor_newline_binding(self, event: Any = None, check_lines: bool = True) -> None:
         if not self.height_resizing_enabled:
             return
         curr_height = self.text_editor.window.winfo_height()
@@ -1970,7 +2056,7 @@ class RowIndex(tk.Canvas):
                 new_height = space_bot
             if new_height != curr_height:
                 self.set_row_height(r, new_height)
-                self.MT.refresh()
+                self.MT.main_table_redraw_grid_and_text(True, True)
                 self.text_editor.window.config(height=new_height)
                 self.coords(self.text_editor.canvas_id, 0, self.MT.row_positions[r] + 1)
                 if self.dropdown.open and self.dropdown.get_coords() == r:
@@ -2146,7 +2232,7 @@ class RowIndex(tk.Canvas):
         self.text_editor.autocomplete(self.dropdown.window.search_and_see(event_data))
         return "break"
 
-    def open_dropdown_window(self, r: int, event: object = None) -> None:
+    def open_dropdown_window(self, r: int, event: Any = None) -> None:
         self.hide_text_editor()
         kwargs = self.get_cell_kwargs(self.MT.datarn(r), key="dropdown")
         if kwargs["state"] == "disabled":
@@ -2224,7 +2310,7 @@ class RowIndex(tk.Canvas):
     def close_dropdown_window(
         self,
         r: int | None = None,
-        selection: object = None,
+        selection: Any = None,
         redraw: bool = True,
     ) -> None:
         if r is not None and selection is not None:
@@ -2331,7 +2417,7 @@ class RowIndex(tk.Canvas):
             self.MT.sheet_modified(event_data)
         return edited
 
-    def set_cell_data(self, datarn: int | None = None, value: object = "") -> None:
+    def set_cell_data(self, datarn: int | None = None, value: Any = "") -> None:
         if isinstance(self.MT._row_index, int):
             self.MT.set_cell_data(datarn=datarn, datacn=self.MT._row_index, value=value)
         else:
@@ -2343,19 +2429,21 @@ class RowIndex(tk.Canvas):
             else:
                 self.MT._row_index[datarn] = value
 
-    def input_valid_for_cell(self, datarn: int, value: object, check_readonly: bool = True) -> bool:
-        if check_readonly and self.get_cell_kwargs(datarn, key="readonly"):
+    def input_valid_for_cell(self, datarn: int, value: Any, check_readonly: bool = True) -> bool:
+        kwargs = self.get_cell_kwargs(datarn, key=None)
+        if check_readonly and "readonly" in kwargs:
             return False
-        if self.get_cell_kwargs(datarn, key="checkbox"):
+        elif "checkbox" in kwargs:
             return is_bool_like(value)
-        if self.cell_equal_to(datarn, value):
-            return False
-        kwargs = self.get_cell_kwargs(datarn, key="dropdown")
-        if kwargs and kwargs["validate_input"] and value not in kwargs["values"]:
-            return False
-        return True
+        else:
+            return not (
+                self.cell_equal_to(datarn, value)
+                or (kwargs := kwargs.get("dropdown", {}))
+                and kwargs["validate_input"]
+                and value not in kwargs["values"]
+            )
 
-    def cell_equal_to(self, datarn: int, value: object) -> bool:
+    def cell_equal_to(self, datarn: int, value: Any) -> bool:
         self.fix_index(datarn)
         if isinstance(self.MT._row_index, list):
             return self.MT._row_index[datarn] == value
@@ -2368,7 +2456,7 @@ class RowIndex(tk.Canvas):
         get_displayed: bool = False,
         none_to_empty_str: bool = False,
         redirect_int: bool = False,
-    ) -> object:
+    ) -> Any:
         if get_displayed:
             return self.get_valid_cell_data_as_str(datarn, fix=False)
         if redirect_int and isinstance(self.MT._row_index, int):  # internal use
@@ -2398,22 +2486,32 @@ class RowIndex(tk.Canvas):
         if fix:
             self.fix_index(datarn)
         try:
-            value = "" if self.MT._row_index[datarn] is None else f"{self.MT._row_index[datarn]}"
+            value = self.MT._row_index[datarn]
+            if value is None:
+                value = ""
+            elif isinstance(value, Node):
+                value = value.text
+            elif not isinstance(value, str):
+                value = f"{value}"
         except Exception:
             value = ""
         if not value and self.ops.show_default_index_for_empty:
             value = get_n2a(datarn, self.ops.default_row_index)
         return value
 
-    def get_value_for_empty_cell(self, datarn: int, r_ops: bool = True) -> object:
-        if self.get_cell_kwargs(datarn, key="checkbox", cell=r_ops):
+    def get_value_for_empty_cell(self, datarn: int, r_ops: bool = True) -> Any:
+        if self.ops.treeview:
+            iid = self.new_iid()
+            return Node(text=iid, iid=iid, parent=self.get_row_parent(datarn))
+        kwargs = self.get_cell_kwargs(datarn, key=None, cell=r_ops)
+        if "checkbox" in kwargs:
             return False
-        kwargs = self.get_cell_kwargs(datarn, key="dropdown", cell=r_ops)
-        if kwargs and kwargs["validate_input"] and kwargs["values"]:
+        elif (kwargs := kwargs.get("dropdown", {})) and kwargs["validate_input"] and kwargs["values"]:
             return kwargs["values"][0]
-        return ""
+        else:
+            return ""
 
-    def get_empty_index_seq(self, end: int, start: int = 0, r_ops: bool = True) -> list[object]:
+    def get_empty_index_seq(self, end: int, start: int = 0, r_ops: bool = True) -> list[Any]:
         return [self.get_value_for_empty_cell(datarn, r_ops=r_ops) for datarn in range(start, end)]
 
     def fix_index(self, datarn: int | None = None) -> None:
@@ -2478,45 +2576,386 @@ class RowIndex(tk.Canvas):
         if redraw:
             self.MT.refresh()
 
-    def get_cell_kwargs(self, datarn: int, key: Hashable = "dropdown", cell: bool = True) -> dict:
-        if cell and datarn in self.cell_options and key in self.cell_options[datarn]:
-            return self.cell_options[datarn][key]
-        return {}
+    def get_cell_kwargs(self, datarn: int, key: Hashable | None = "dropdown", cell: bool = True) -> dict:
+        if cell and datarn in self.cell_options:
+            return self.cell_options[datarn] if key is None else self.cell_options[datarn].get(key, {})
+        else:
+            return {}
 
     # Treeview Mode
+
+    def tree_reset(self) -> None:
+        self.tree: dict[str, Node] = {}
+        self.tree_open_ids = set()
+        self.tree_rns = {}
+        if self.MT:
+            self.MT.displayed_rows = []
+            self.MT._row_index = []
+            self.MT.data = []
+            self.MT.row_positions = [0]
+            self.MT.saved_row_heights = {}
+
+    def new_iid(self) -> str:
+        self.new_iid_ctr += 1
+        while (iid := f"{num2alpha(self.new_iid_ctr)}") in self.tree:
+            self.new_iid_ctr += 1
+        return iid
+
+    def get_row_parent(self, r: int) -> str:
+        if r >= len(self.MT._row_index):
+            return ""
+        else:
+            return self.MT._row_index[r].parent
+
+    def tree_del_rows(self, event_data: EventDataDict) -> EventDataDict:
+        event_data["treeview"]["nodes"] = {}
+        for node in reversed(event_data["deleted"]["index"].values()):
+            iid = node.iid
+            if parent_node := self.parent_node(iid):
+                if parent_node.iid not in event_data["treeview"]["nodes"]:
+                    event_data["treeview"]["nodes"][parent_node.iid] = Node(
+                        text=parent_node.text,
+                        iid=parent_node.iid,
+                        parent=parent_node.parent,
+                        children=parent_node.children.copy(),
+                    )
+                self.remove_iid_from_parents_children(iid)
+        for node in reversed(event_data["deleted"]["index"].values()):
+            iid = node.iid
+            for did in self.get_iid_descendants(iid):
+                self.tree_open_ids.discard(did)
+                del self.tree[did]
+            self.tree_open_ids.discard(iid)
+            del self.tree[iid]
+        return event_data
+
+    def tree_add_rows(self, event_data: EventDataDict) -> EventDataDict:
+        for rn, node in event_data["added"]["rows"]["index"].items():
+            self.tree[node.iid] = node
+            self.tree_rns[node.iid] = rn
+        if event_data["treeview"]["nodes"]:
+            self.restore_nodes(event_data=event_data)
+        else:
+            row, a_node = next(reversed(event_data["added"]["rows"]["index"].items()))
+            if parent := a_node.parent:
+                if self.tree[parent].children:
+                    index = next(
+                        (i for i, cid in enumerate(self.tree[parent].children) if self.tree_rns[cid] >= row),
+                        len(self.tree[parent].children),
+                    )
+                    self.tree[parent].children[index:index] = [
+                        n.iid for n in reversed(event_data["added"]["rows"]["index"].values())
+                    ]
+                else:
+                    self.tree[parent].children.extend(
+                        n.iid for n in reversed(event_data["added"]["rows"]["index"].values())
+                    )
+                if not self.PAR.item_displayed(parent) or parent not in self.tree_open_ids:
+                    self.PAR.hide_rows(event_data["added"]["rows"]["index"], data_indexes=True)
+        return event_data
+
+    def move_rows_mod_nodes(
+        self,
+        data_new_idxs: dict[int, int],
+        data_old_idxs: dict[int, int],
+        disp_new_idxs: dict[int, int],
+        maxidx: int,
+        event_data: EventDataDict,
+        undo_modification: EventDataDict | None = None,
+        node_change: tuple[str, str, int] | None = None,
+    ) -> Generator[tuple[dict[int, int], dict[int, int], dict[str, int], EventDataDict]] | None:
+        # data_new_idxs is {old: new, old: new}
+        # data_old_idxs is {new: old, new: old}
+        if not event_data["treeview"]["nodes"]:
+            if undo_modification:
+                """
+                Used by undo/redo
+                """
+                event_data = self.copy_nodes(undo_modification["treeview"]["nodes"], event_data)
+                self.restore_nodes(undo_modification)
+
+            elif event_data["moved"]["rows"]:
+                if node_change:
+                    item = node_change[0]
+                    moved_rows = [self.tree_rns[item]]
+                    new_parent = node_change[1]
+                    move_to_index = node_change[2]
+                    if new_parent:
+                        if isinstance(move_to_index, int):
+                            move_to_index = min(move_to_index, len(self.tree[new_parent].children))
+                        else:
+                            move_to_index = len(self.tree[new_parent].children)
+                        move_to_row = self.tree_rns[new_parent]
+                        _find = move_to_index + 1 if new_parent == self.tree[item].parent else move_to_index
+                        move_to_row += _find + sum(
+                            self.num_descendants(cid) for cid in islice(self.tree[new_parent].children, _find)
+                        )
+                        insert_row = move_to_row + 1
+                    else:
+                        num_top_nodes = sum(1 for _ in self.gen_top_nodes())
+                        if move_to_index is None:
+                            move_to_row = self.PAR.top_index_row(num_top_nodes - 1)
+                            move_to_index = num_top_nodes
+                            insert_row = move_to_row
+                        else:
+                            move_to_row = self.PAR.top_index_row(move_to_index)
+                            insert_row = move_to_row
+                            if move_to_row is None:
+                                move_to_row = self.PAR.top_index_row(num_top_nodes - 1)
+                                move_to_index = num_top_nodes
+                                insert_row = move_to_row + 1
+
+                    move_to_iid = self.MT._row_index[move_to_row].iid
+                    disp_insert_row = None
+
+                else:
+                    iids = {self.MT._row_index[r].iid for r in event_data["moved"]["rows"]["data"]}
+                    iids_descendants = {iid: set(self.get_iid_descendants(iid)) for iid in iids}
+
+                    # remove descendants in iids to move
+                    iids -= set.union(*iids_descendants.values()) & iids
+                    moved_rows = sorted(map(self.tree_rns.__getitem__, iids))
+                    item = self.MT._row_index[moved_rows[0]].iid
+
+                    if isinstance(event_data.value, int):
+                        disp_insert_row = event_data.value
+                        if disp_insert_row >= len(self.MT.displayed_rows):
+                            insert_row = len(self.MT._row_index)
+                        else:
+                            insert_row = self.MT.datarn(disp_insert_row)
+                        move_to_iid = self.MT._row_index[min(insert_row, len(self.MT._row_index) - 1)].iid
+
+                    else:
+                        disp_insert_row = None
+                        min_from = min(event_data["moved"]["rows"]["data"])
+                        # max_from = max(event_data.moved.rows)
+                        min_to = min(event_data["moved"]["rows"]["data"].values())
+                        max_to = max(event_data["moved"]["rows"]["data"].values())
+                        insert_row = max_to if min_from <= min_to else min_to
+                        move_to_iid = self.MT._row_index[insert_row].iid
+
+                    move_to_index = self.PAR.index(move_to_iid)
+                    new_parent = self.items_parent(move_to_iid)
+
+                event_data["moved"]["rows"]["data"] = {moved_rows[0]: insert_row}
+
+                new_loc_is_displayed = not new_parent or (
+                    new_parent and new_parent in self.tree_open_ids and self.PAR.item_displayed(new_parent)
+                )
+                # deal with displayed mapping
+                event_data["moved"]["rows"]["displayed"] = {}
+                if new_loc_is_displayed:
+                    if disp_insert_row is None:
+                        if new_parent or insert_row > move_to_row:
+                            disp_insert_row = self.MT.disprn(self.tree_rns[move_to_iid]) + 1
+                        else:
+                            disp_insert_row = self.MT.disprn(self.tree_rns[move_to_iid])
+                    if (disp_from_row := self.MT.try_disprn(self.tree_rns[item])) is not None:
+                        event_data["moved"]["rows"]["displayed"] = {disp_from_row: disp_insert_row}
+                    else:
+                        event_data["moved"]["rows"]["displayed"] = {(): disp_insert_row}
+
+                if any(self.move_pid_causes_recursive_loop(self.MT._row_index[r].iid, new_parent) for r in moved_rows):
+                    event_data["moved"]["rows"] = {}
+                    data_new_idxs, data_old_idxs, disp_new_idxs = {}, {}, {}
+
+                else:
+                    for r in moved_rows:
+                        iid = self.MT._row_index[r].iid
+                        event_data = self.move_node(
+                            event_data=event_data,
+                            item=iid,
+                            parent=new_parent,
+                            index=move_to_index,
+                        )
+                        move_to_index += 1
+                    event_data["moved"]["rows"]["data"] = get_new_indexes(
+                        insert_row,
+                        event_data["moved"]["rows"]["data"],
+                    )
+                    data_new_idxs = event_data["moved"]["rows"]["data"]
+                    data_old_idxs = dict(zip(data_new_idxs.values(), data_new_idxs))
+
+                    if () in event_data["moved"]["rows"]["displayed"]:
+                        del event_data["moved"]["rows"]["displayed"][()]
+
+                    if event_data["moved"]["rows"]["displayed"]:
+                        event_data["moved"]["rows"]["displayed"] = get_new_indexes(
+                            disp_insert_row,
+                            event_data["moved"]["rows"]["displayed"],
+                        )
+                    disp_new_idxs = event_data["moved"]["rows"]["displayed"]
+
+        if data_new_idxs:
+            self.MT.move_rows_data(data_new_idxs, data_old_idxs, maxidx)
+
+        yield data_new_idxs, data_old_idxs, disp_new_idxs, event_data
+
+        if not undo_modification and data_new_idxs:
+            if new_parent and (not self.PAR.item_displayed(new_parent) or new_parent not in self.tree_open_ids):
+                self.PAR.hide_rows(set(data_new_idxs.values()), data_indexes=True)
+            if new_loc_is_displayed:
+                self.PAR.show_rows(
+                    (r for r in data_new_idxs.values() if self.ancestors_all_open(self.MT._row_index[r].iid))
+                )
+
+        yield None
+
+    def move_node(
+        self,
+        event_data: EventDataDict,
+        item: str,
+        parent: str | None = None,
+        index: int = 0,
+    ) -> EventDataDict:
+        # also backs up nodes
+        if parent is None:
+            parent = self.items_parent(item)
+
+        item_node = self.tree[item]
+
+        # new parent is an item
+        if parent:
+            parent_node = self.tree[parent]
+            # its the same parent, we're just moving index
+            if parent == item_node.parent:
+                event_data = self.copy_nodes((item, parent), event_data)
+                pop_index = parent_node.children.index(item)
+                parent_node.children.insert(index, parent_node.children.pop(pop_index))
+
+            else:
+                if item_node.parent:
+                    event_data = self.copy_nodes((item, item_node.parent, parent), event_data)
+                else:
+                    event_data = self.copy_nodes((item, parent), event_data)
+                self.remove_iid_from_parents_children(item)
+                item_node.parent = parent_node.iid
+                parent_node.children.insert(index, item)
+
+        # no new parent
+        else:
+            if item_node.parent:
+                event_data = self.copy_nodes((item, item_node.parent), event_data)
+            else:
+                event_data = self.copy_nodes((item,), event_data)
+            self.remove_iid_from_parents_children(item)
+            self.tree[item].parent = ""
+
+        # last row in mapping is where to start from +1
+        mapping = event_data["moved"]["rows"]["data"]
+        row_ctr = next(reversed(mapping.values())) + 1
+
+        if disp_mapping := event_data["moved"]["rows"]["displayed"]:
+            if () in disp_mapping:
+                disp_row_ctr = next(reversed(disp_mapping.values()))
+            else:
+                disp_row_ctr = next(reversed(disp_mapping.values())) + 1
+
+        rn = self.tree_rns[item]
+        if rn not in mapping:
+            mapping[rn] = row_ctr
+            row_ctr += 1
+            if disp_mapping and (disp_from := self.MT.try_disprn(rn)) is not None:
+                disp_mapping = del_placeholder_dict_key(disp_mapping, disp_from, disp_row_ctr)
+                disp_row_ctr += 1
+
+        for did in self.get_iid_descendants(item):
+            mapping[self.tree_rns[did]] = row_ctr
+            row_ctr += 1
+            if disp_mapping and (disp_from := self.MT.try_disprn(self.tree_rns[did])) is not None:
+                disp_mapping = del_placeholder_dict_key(disp_mapping, disp_from, disp_row_ctr)
+                disp_row_ctr += 1
+
+        event_data["moved"]["rows"]["data"] = mapping
+        event_data["moved"]["rows"]["displayed"] = disp_mapping
+
+        return event_data
+
+    def restore_nodes(self, event_data: EventDataDict) -> None:
+        for iid, node in event_data["treeview"]["nodes"].items():
+            self.MT._row_index[self.tree_rns[iid]] = node
+            self.tree[iid] = node
+
+    def copy_node(self, item: str) -> Node:
+        n = self.tree[item]
+        return Node(
+            text=n.text,
+            iid=n.iid,
+            parent=n.parent,
+            children=n.children.copy(),
+        )
+
+    def copy_nodes(self, items: AnyIter[str], event_data: EventDataDict) -> EventDataDict:
+        nodes = event_data["treeview"]["nodes"]
+        for iid in items:
+            if iid not in nodes:
+                n = self.tree[iid]
+                nodes[iid] = Node(
+                    text=n.text,
+                    iid=n.iid,
+                    parent=n.parent,
+                    children=n.children.copy(),
+                )
+        return event_data
 
     def get_node_level(self, node: Node, level: int = 0) -> Generator[int]:
         yield level
         if node.parent:
-            yield from self.get_node_level(node.parent, level + 1)
+            yield from self.get_node_level(self.tree[node.parent], level + 1)
 
-    def ancestors_all_open(self, iid: str, stop_at: str | Node = "") -> bool:
+    def ancestors_all_open(self, iid: str, stop_at: str = "") -> bool:
         if stop_at:
-            stop_at = stop_at.iid
-            for iid in self.get_iid_ancestors(iid):
-                if iid == stop_at:
+            for i in self.get_iid_ancestors(iid):
+                if i == stop_at:
                     return True
-                if iid not in self.tree_open_ids:
+                elif i not in self.tree_open_ids:
                     return False
             return True
         return all(map(self.tree_open_ids.__contains__, self.get_iid_ancestors(iid)))
 
     def get_iid_ancestors(self, iid: str) -> Generator[str]:
-        if self.tree[iid].parent:
-            yield self.tree[iid].parent.iid
-            yield from self.get_iid_ancestors(self.tree[iid].parent.iid)
+        current_iid = iid
+        while self.tree[current_iid].parent:
+            parent_iid = self.tree[current_iid].parent
+            yield parent_iid
+            current_iid = parent_iid
 
     def get_iid_descendants(self, iid: str, check_open: bool = False) -> Generator[str]:
-        for cnode in self.tree[iid].children:
-            yield cnode.iid
-            if (check_open and cnode.children and cnode.iid in self.tree_open_ids) or (
-                not check_open and cnode.children
-            ):
-                yield from self.get_iid_descendants(cnode.iid, check_open)
+        tree = self.tree
+        stack = [iter(tree[iid].children)]
+        while stack:
+            top_iterator = stack[-1]
+            try:
+                ciid = next(top_iterator)
+                yield ciid
+                if tree[ciid].children and (not check_open or ciid in self.tree_open_ids):
+                    stack.append(iter(tree[ciid].children))
+            except StopIteration:
+                stack.pop()
+
+    def num_descendants(self, iid: str) -> int:
+        tree = self.tree
+        stack = [iter(tree[iid].children)]
+        num = 0
+        while stack:
+            top_iterator = stack[-1]
+            try:
+                ciid = next(top_iterator)
+                num += 1
+                if tree[ciid].children:
+                    stack.append(iter(tree[ciid].children))
+            except StopIteration:
+                stack.pop()
+        return num
 
     def items_parent(self, iid: str) -> str:
         if self.tree[iid].parent:
-            return self.tree[iid].parent.iid
+            return self.tree[iid].parent
+        return ""
+
+    def parent_node(self, iid: str) -> Node:
+        if self.tree[iid].parent:
+            return self.tree[self.tree[iid].parent]
         return ""
 
     def gen_top_nodes(self) -> Generator[Node]:
@@ -2537,11 +2976,11 @@ class RowIndex(tk.Canvas):
         level = max(self.get_node_level(self.tree[iid]))
         return level, indent * level
 
-    def remove_node_from_parents_children(self, node: Node) -> None:
-        if node.parent:
-            node.parent.children.remove(node)
-            if not node.parent.children:
-                self.tree_open_ids.discard(node.parent)
+    def remove_iid_from_parents_children(self, iid: str) -> None:
+        if parent_node := self.parent_node(iid):
+            parent_node.children.remove(iid)
+            if not parent_node.children:
+                self.tree_open_ids.discard(parent_node.iid)
 
     def build_pid_causes_recursive_loop(self, iid: str, pid: str) -> bool:
         return any(
@@ -2556,3 +2995,118 @@ class RowIndex(tk.Canvas):
         # if the parent the item is being moved under is one of the item's descendants
         # then it is a recursive loop
         return any(move_to_parent == diid for diid in self.get_iid_descendants(to_move_iid))
+
+    def tree_build(
+        self,
+        data: list[list[Any]],
+        iid_column: int,
+        parent_column: int,
+        text_column: None | int | list[str] = None,
+        push_ops: bool = False,
+        row_heights: Sequence[int] | None | False = None,
+        open_ids: AnyIter[str] | None = None,
+        safety: bool = True,
+        ncols: int | None = None,
+        lower: bool = False,
+        include_iid_column: bool = True,
+        include_parent_column: bool = True,
+        include_text_column: bool = True,
+    ) -> None:
+        self.PAR.reset(cell_options=False, column_widths=False, header=False, redraw=False)
+        if text_column is None:
+            text_column = iid_column
+        tally_of_ids = defaultdict(lambda: -1)
+        if not isinstance(ncols, int):
+            ncols = max(map(len, data), default=0)
+        for rn, row in enumerate(data):
+            if safety and ncols > (lnr := len(row)):
+                row += self.MT.get_empty_row_seq(rn, end=ncols, start=lnr)
+            if lower:
+                iid = row[iid_column].lower()
+                pid = row[parent_column].lower()
+            else:
+                iid = row[iid_column]
+                pid = row[parent_column]
+            if safety:
+                if not iid:
+                    continue
+                tally_of_ids[iid] += 1
+                if tally_of_ids[iid]:
+                    x = 1
+                    while iid in tally_of_ids:
+                        new = f"{row[iid_column]}_DUPLICATED_{x}"
+                        iid = new.lower() if lower else new
+                        x += 1
+                    tally_of_ids[iid] += 1
+                    row[iid_column] = new
+            if iid in self.tree:
+                self.tree[iid].text = row[text_column] if isinstance(text_column, int) else text_column[rn]
+            else:
+                self.tree[iid] = Node(row[text_column] if isinstance(text_column, int) else text_column[rn], iid, "")
+            if safety and (iid == pid or self.build_pid_causes_recursive_loop(iid, pid)):
+                row[parent_column] = ""
+                pid = ""
+            if pid:
+                if pid in self.tree:
+                    self.tree[pid].children.append(iid)
+                else:
+                    self.tree[pid] = Node(
+                        text=row[text_column] if isinstance(text_column, int) else text_column[rn],
+                        iid=pid,
+                        children=[iid],
+                    )
+                self.tree[iid].parent = pid
+            else:
+                self.tree[iid].parent = ""
+            self.tree_rns[iid] = rn
+        if safety:
+            for n in self.tree.values():
+                if n.parent is None:
+                    n.parent = ""
+                    newrow = self.MT.get_empty_row_seq(len(data), ncols)
+                    newrow[iid_column] = n.iid
+                    self.tree_rns[n.iid] = len(data)
+                    data.append(newrow)
+        insert_rows = partial(
+            self.PAR.insert_rows,
+            idx=0,
+            heights={} if row_heights is False else row_heights,
+            row_index=True,
+            create_selections=False,
+            fill=False,
+            undo=False,
+            push_ops=push_ops,
+            redraw=False,
+        )
+        exclude = set()
+        if not include_iid_column:
+            exclude.add(iid_column)
+        if not include_parent_column:
+            exclude.add(parent_column)
+        if isinstance(text_column, int) and not include_text_column:
+            exclude.add(text_column)
+        if exclude:
+            insert_rows(
+                rows=[
+                    [self.tree[iid]] + [e for i, e in enumerate(data[self.tree_rns[iid]]) if i not in exclude]
+                    for iid in self.PAR.get_iids()
+                ],
+                tree=False,
+            )
+        else:
+            insert_rows(
+                rows=[[self.tree[iid]] + data[self.tree_rns[iid]] for iid in self.PAR.get_iids()],
+                tree=False,
+            )
+        self.MT.all_rows_displayed = False
+        self.MT.displayed_rows = list(range(len(self.MT._row_index)))
+        self.tree_rns = {n.iid: i for i, n in enumerate(self.MT._row_index)}
+        if open_ids:
+            self.PAR.tree_set_open(open_ids=open_ids)
+        else:
+            self.PAR.hide_rows(
+                {self.tree_rns[iid] for iid in self.PAR.get_children() if self.tree[iid].parent},
+                deselect_all=False,
+                data_indexes=True,
+                row_heights=row_heights is not False,
+            )

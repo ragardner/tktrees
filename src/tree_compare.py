@@ -5,6 +5,7 @@ import os
 import re
 import tkinter as tk
 from collections import defaultdict
+from contextlib import suppress
 from itertools import repeat
 from tkinter import filedialog, ttk
 
@@ -312,18 +313,14 @@ class Tree_Compare(tk.Frame):
         self.C.show_frame("tree_compare")
 
     def reset(self):
-        try:
+        with suppress(Exception):
             self.C.wb.close()
-        except Exception:
-            pass
         self.reset_1(staying_on_compare=False)
         self.reset_2(staying_on_compare=False)
 
     def reset_1(self, staying_on_compare=True):
-        try:
+        with suppress(Exception):
             self.C.wb.close()
-        except Exception:
-            pass
         self.C.wb = None
         self.heads1 = []
         self.data1 = []
@@ -351,10 +348,8 @@ class Tree_Compare(tk.Frame):
         self.sheetdisplay1.data_reference(newdataref=[], redraw=True)
 
     def reset_2(self, staying_on_compare=True):
-        try:
+        with suppress(Exception):
             self.C.wb.close()
-        except Exception:
-            pass
         self.C.wb = None
         self.heads2 = []
         self.data2 = []
@@ -499,7 +494,7 @@ class Tree_Compare(tk.Frame):
     def load_display1(self, idcol=None, parcols=None):
         self.row_len1 = max(map(len, self.data1), default=0)
         self.sheetdisplay1.data_reference(newdataref=self.data1, redraw=True)
-        self.selector_1.set_columns([h for h in self.data1[0]])
+        self.selector_1.set_columns(list(self.data1[0]))
         if idcol is None and parcols is None:
             self.selector_1.detect_id_col()
             self.selector_1.detect_par_cols()
@@ -625,7 +620,7 @@ class Tree_Compare(tk.Frame):
     def load_display2(self, idcol=None, parcols=None):
         self.row_len2 = max(map(len, self.data2), default=0)
         self.sheetdisplay2.data_reference(newdataref=self.data2, redraw=True)
-        self.selector_2.set_columns([h for h in self.data2[0]])
+        self.selector_2.set_columns(list(self.data2[0]))
         if idcol is None and parcols is None:
             self.selector_2.detect_id_col()
             self.selector_2.detect_par_cols()
@@ -862,14 +857,8 @@ class Tree_Compare(tk.Frame):
                             for nx in matching_hrs_names:
                                 h1 = pcold[nx][0]
                                 h2 = pcold[nx][1]
-                                if self.nodes1[ik].ps[h1]:
-                                    p1 = self.nodes1[ik].ps[h1].k
-                                else:
-                                    p1 = self.nodes1[ik].ps[h1]
-                                if self.nodes2[ik].ps[h2]:
-                                    p2 = self.nodes2[ik].ps[h2].k
-                                else:
-                                    p2 = self.nodes2[ik].ps[h2]
+                                p1 = self.nodes1[ik].ps[h1].k if self.nodes1[ik].ps[h1] else self.nodes1[ik].ps[h1]
+                                p2 = self.nodes2[ik].ps[h2].k if self.nodes2[ik].ps[h2] else self.nodes2[ik].ps[h2]
                                 if p1 != p2 and p1 is None:
                                     if p2 == "":
                                         self.report["Differences in Parents/Details of Matched IDs"].append(
@@ -949,14 +938,8 @@ class Tree_Compare(tk.Frame):
                             for nx in matching_hrs_names:
                                 h1 = pcold[nx][0]
                                 h2 = pcold[nx][1]
-                                if self.nodes1[ik].ps[h1]:
-                                    p1 = self.nodes1[ik].ps[h1].k
-                                else:
-                                    p1 = self.nodes1[ik].ps[h1]
-                                if self.nodes2[ik].ps[h2]:
-                                    p2 = self.nodes2[ik].ps[h2].k
-                                else:
-                                    p2 = self.nodes2[ik].ps[h2]
+                                p1 = self.nodes1[ik].ps[h1].k if self.nodes1[ik].ps[h1] else self.nodes1[ik].ps[h1]
+                                p2 = self.nodes2[ik].ps[h2].k if self.nodes2[ik].ps[h2] else self.nodes2[ik].ps[h2]
                                 if p1 != p2 and p1 is None:
                                     if p2 == "":
                                         self.report["Differences in Parents/Details of Matched IDs"].append(
@@ -1069,4 +1052,4 @@ class Tree_Compare(tk.Frame):
         Compare_Report_Popup(self, theme=self.C.theme)
 
     def srtkey(self, e):
-        return [int(c) if c.isdigit() else c.lower() for c in re.split("([0-9]+)", e)]
+        return tuple(int(c) if c.isdigit() else c.lower() for c in re.split("([0-9]+)", e))

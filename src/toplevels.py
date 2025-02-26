@@ -8,6 +8,7 @@ import os
 import re
 import tkinter as tk
 import webbrowser
+from contextlib import suppress
 from itertools import chain, islice, repeat
 from operator import itemgetter
 from tkinter import filedialog, ttk
@@ -277,21 +278,15 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.update()
 
     def try_to_close_wb(self):
-        try:
+        with suppress(Exception):
             self.wb_.close()
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.wb_ = None
-        except Exception:
-            pass
 
     def USER_HAS_CLOSED_WINDOW(self, callback=None):
         self.USER_HAS_QUIT = True
-        try:
+        with suppress(Exception):
             self.try_to_close_wb()
-        except Exception:
-            pass
         self.destroy()
 
     def clipboard_json(self):
@@ -571,21 +566,14 @@ class Changelog_Popup(tk.Toplevel):
         self.update()
 
     def try_to_close_wb(self):
-        try:
+        with suppress(Exception):
             self.wb_.close()
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.wb_ = None
-        except Exception:
-            pass
 
     def USER_HAS_CLOSED_WINDOW(self, callback=None):
         self.USER_HAS_QUIT = True
-        try:
-            self.try_to_close_wb()
-        except Exception:
-            pass
+        self.try_to_close_wb()
         self.destroy()
 
     def save_as(self):
@@ -795,21 +783,14 @@ class Compare_Report_Popup(tk.Toplevel):
         self.update()
 
     def try_to_close_wb(self):
-        try:
+        with suppress(Exception):
             self.wb_.close()
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.wb_ = None
-        except Exception:
-            pass
 
     def USER_HAS_CLOSED_WINDOW(self, callback=None):
         self.USER_HAS_QUIT = True
-        try:
-            self.try_to_close_wb()
-        except Exception:
-            pass
+        self.try_to_close_wb()
         self.destroy()
 
     def save_report(self):
@@ -834,7 +815,7 @@ class Compare_Report_Popup(tk.Toplevel):
                 self.wb_ = Workbook(write_only=True)
                 ws = self.wb_.create_sheet(title="Report")
                 row_ctr = 3
-                for header_row, rows in self.C.report.items():
+                for rows in self.C.report.values():
                     ws.row_dimensions.group(
                         row_ctr,
                         row_ctr + len(rows) - 1,
@@ -1121,22 +1102,15 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.stop_work("Data successfully loaded from clipboard")
 
     def try_to_close_wb(self):
-        try:
+        with suppress(Exception):
             self.wb_.close()
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.wb_ = None
-        except Exception:
-            pass
 
     def USER_HAS_CLOSED_WINDOW(self, callback=None):
         self.C.new_sheet = []
         self.USER_HAS_QUIT = True
-        try:
-            self.try_to_close_wb()
-        except Exception:
-            pass
+        self.try_to_close_wb()
         self.destroy()
         self.C.find_popup = None
 
@@ -1363,7 +1337,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         where = self.where.get_checked()
         data = self.C.sheet.MT.data
 
-        found_coords = tuple()
+        found_coords = ()
         if where:
             sels = self.C.sheet.get_selected_cells(
                 get_rows=True,
@@ -1403,7 +1377,9 @@ class Find_And_Replace_Popup(tk.Toplevel):
         if set_status_bar:
             if found_coords:
                 self.status_bar.change_text(
-                    f"Found {self.find_display.get_my_value()} for {data[found_coords[0]][self.C.ic]} in {self.C.headers[found_coords[1]].name}"
+                    f"Found {self.find_display.get_my_value()} for "
+                    f"{data[found_coords[0]][self.C.ic]} in "
+                    f"{self.C.headers[found_coords[1]].name}"
                 )
             else:
                 self.status_bar.change_text(f"Could not find {self.find_display.get_my_value()}")
@@ -1424,7 +1400,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         data = self.C.tree.MT.data
         datarn = self.C.tree.data_r
 
-        found_coords = tuple()
+        found_coords = ()
         if where:
             sels = self.C.tree.get_selected_cells(
                 get_rows=True, get_columns=True, sort_by_row=True, sort_by_column=True
@@ -1463,7 +1439,9 @@ class Find_And_Replace_Popup(tk.Toplevel):
         if set_status_bar:
             if found_coords:
                 self.status_bar.change_text(
-                    f"Found {self.find_display.get_my_value()} for {data[found_coords[0]][self.C.ic]} in {self.C.headers[found_coords[1]].name}"
+                    f"Found {self.find_display.get_my_value()} for "
+                    f"{data[found_coords[0]][self.C.ic]} in "
+                    f"{self.C.headers[found_coords[1]].name}"
                 )
             else:
                 self.status_bar.change_text(f"Could not find {self.find_display.get_my_value()}")
@@ -1490,17 +1468,14 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.start_work("Replacing...")
 
         allow_spaces = self.C.allow_spaces_ids_var
-        if allow_spaces:
-            id_par_newtext = newtext
-        else:
-            id_par_newtext = re.sub(r"[\n\t\s]*", "", newtext)
+        id_par_newtext = newtext if allow_spaces else re.sub(r"[\n\t\s]*", "", newtext)
         match = self.match_button.get_checked()
         where = self.where.get_checked()
         ind = set(self.C.hiers) | {self.C.ic}
         data = self.C.sheet.MT.data
 
         rst, cst, _ = self.get_start_coords(self.C.sheet, plus_one=False)
-        found_coords = tuple()
+        found_coords = ()
 
         cell = data[rst][cst]
         cell_k = cell.lower()
@@ -1571,7 +1546,8 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         if not found_coords:
             self.stop_work(
-                f"Could not find a cell containing {self.find_display.get_my_value()} to replace with {self.rep_display.get_my_value()}"
+                f"Could not find a cell containing {self.find_display.get_my_value()} "
+                f"to replace with {self.rep_display.get_my_value()}"
             )
             return
 
@@ -1605,10 +1581,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
         self.start_work("Replacing...")
 
         allow_spaces = self.C.allow_spaces_ids_var
-        if allow_spaces:
-            id_par_newtext = newtext
-        else:
-            id_par_newtext = re.sub(r"[\n\t\s]*", "", newtext)
+        id_par_newtext = newtext if allow_spaces else re.sub(r"[\n\t\s]*", "", newtext)
         match = self.match_button.get_checked()
         where = self.where.get_checked()
         ind = set(self.C.hiers) | {self.C.ic}
@@ -1617,7 +1590,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         rst, cst, _ = self.get_start_coords(self.C.tree, plus_one=False)
         rst = datarn(rst)
-        found_coords = tuple()
+        found_coords = ()
 
         cell = data[rst][cst]
         cell_k = cell.lower()
@@ -1691,7 +1664,8 @@ class Find_And_Replace_Popup(tk.Toplevel):
 
         if not found_coords:
             self.stop_work(
-                f"Could not find a cell containing {self.find_display.get_my_value()} to replace with {self.rep_display.get_my_value()}"
+                f"Could not find a cell containing {self.find_display.get_my_value()} "
+                f"to replace with {self.rep_display.get_my_value()}"
             )
             return
 
@@ -1824,7 +1798,8 @@ class Find_And_Replace_Popup(tk.Toplevel):
                         old_id = f"{sheet_data[r][self.C.ic]}"
                         self.C.changelog_append_no_unsaved(
                             "Edit cell |",
-                            f"ID: {old_id} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
+                            f"ID: {old_id} column #{c + 1} named: {self.C.headers[c].name} "
+                            f"with type: {self.C.headers[c].type_}",
                             f"{cell}",
                             newtext2,
                         )
@@ -1852,7 +1827,8 @@ class Find_And_Replace_Popup(tk.Toplevel):
                     old_id = f"{sheet_data[r][self.C.ic]}"
                     self.C.changelog_append_no_unsaved(
                         "Edit cell |",
-                        f"ID: {old_id} column #{c + 1} named: {self.C.headers[c].name} with type: {self.C.headers[c].type_}",
+                        f"ID: {old_id} column #{c + 1} named: {self.C.headers[c].name} "
+                        f"with type: {self.C.headers[c].type_}",
                         f"{cell}",
                         newtext2,
                     )
@@ -1916,7 +1892,8 @@ class Find_And_Replace_Popup(tk.Toplevel):
                 Error(self, "There were no successful replacements", theme=self.theme)
             else:
                 self.stop_work(
-                    f"Could not find a cell containing {self.find_display.get_my_value()} to replace with {self.rep_display.get_my_value()}"
+                    f"Could not find a cell containing {self.find_display.get_my_value()} "
+                    f"to replace with {self.rep_display.get_my_value()}"
                 )
             return
 
@@ -2199,14 +2176,8 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                 self.enable_formatting_view()
                 return
             try:
-                if not min_v:
-                    min_v = 0
-                else:
-                    min_v = float(min_v)
-                if not max_v:
-                    max_v = 0
-                else:
-                    max_v = float(max_v)
+                min_v = 0 if not min_v else float(min_v)
+                max_v = 0 if not max_v else float(max_v)
             except Exception:
                 self.enable_formatting_view()
                 return
@@ -2365,10 +2336,8 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
 
     def USER_HAS_CLOSED_WINDOW(self, event=None):
         self.window_destroyed = True
-        try:
+        with suppress(Exception):
             self.destroy()
-        except Exception:
-            pass
 
 
 class View_Id_Popup(tk.Toplevel):
@@ -2485,10 +2454,7 @@ class View_Id_Popup(tk.Toplevel):
         if self.C.headers[x1].type_ == "ID":
             id_ = ID
             ik = id_.lower()
-            if self.C.tree.selection():
-                tree_sel = self.C.tree.selection()
-            else:
-                tree_sel = False
+            tree_sel = self.C.tree.selection() if self.C.tree.selection() else False
             if not self.C.change_ID_name(id_, newtext):
                 self.bind("<Escape>", self.cancel)
                 return
@@ -2890,22 +2856,15 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.sheet_opened = "n/a"
 
     def try_to_close_wb(self):
-        try:
+        with suppress(Exception):
             self.wb_.close()
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.wb_ = None
-        except Exception:
-            pass
 
     def USER_HAS_CLOSED_WINDOW(self, callback=None):
         self.C.new_sheet = []
         self.USER_HAS_QUIT = True
-        try:
-            self.try_to_close_wb()
-        except Exception:
-            pass
+        self.try_to_close_wb()
         self.destroy()
 
     def open_file(self):
@@ -3527,9 +3486,11 @@ class Sort_Sheet_Popup(tk.Toplevel):
 
 
 class Edit_Detail_Date_Popup(tk.Toplevel):
-    def __init__(self, C, ID, column, current_detail, DATE_FORM, validation_values=[], set_value=None, theme="dark"):
+    def __init__(self, C, ID, column, current_detail, DATE_FORM, validation_values=None, set_value=None, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Change date detail")
+        if validation_values is None:
+            validation_values = []
         self.grid_columnconfigure(1, weight=1)
         self.id_label = Label(self, text="ID:", font=EF, theme=theme)
         self.id_label.grid(row=0, column=0, sticky="nswe", padx=20)
@@ -3621,9 +3582,11 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
 
 
 class Edit_Detail_Number_Popup(tk.Toplevel):
-    def __init__(self, C, ID, column, current_detail, validation_values=[], set_value=None, theme="dark"):
+    def __init__(self, C, ID, column, current_detail, validation_values=None, set_value=None, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Change number detail")
+        if validation_values is None:
+            validation_values = []
         self.grid_columnconfigure(1, weight=1)
         self.id_label = Label(self, text="ID:", font=EF, theme=theme)
         self.id_label.grid(row=0, column=0, sticky="nswe", padx=20)
@@ -3688,9 +3651,11 @@ class Edit_Detail_Number_Popup(tk.Toplevel):
 
 
 class Edit_Detail_Text_Popup(tk.Toplevel):
-    def __init__(self, C, ID, column, current_detail, validation_values=[], set_value=None, theme="dark"):
+    def __init__(self, C, ID, column, current_detail, validation_values=None, set_value=None, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Edit cell")
+        if validation_values is None:
+            validation_values = []
         self.grid_columnconfigure(1, weight=1)
         self.id_label = Label(self, text="ID:", font=EF, theme=theme)
         self.id_label.grid(row=0, column=0, sticky="nswe", padx=20)
@@ -3949,7 +3914,7 @@ class Edit_Validation_Popup(tk.Toplevel):
         return event.value
 
     def confirm(self, event=None):
-        self.new_validation = list(filter(None, map(lambda row: row[0], self.validation_display.data)))
+        self.new_validation = list(filter(None, (row[0] for row in self.validation_display.data)))
         self.destroy()
 
     def cancel(self, event=None):
@@ -5140,19 +5105,16 @@ class Settings_Popup(tk.Toplevel):
     def set_alternate_color(self, event=None):
         color = self.alternate_color_dropdown.get_my_value()
         self.C.tree.set_options(alternate_color=color)
-        self.C.tree.set_options(show_horizontal_grid=False if color else True)
+        self.C.tree.set_options(show_horizontal_grid=not color)
 
     def toggle_alternate_color(self, event=None):
         on = self.alternate_color_button.get_checked()
         if on:
-            if self.theme_dropdown.get_my_value().lower().startswith("light"):
-                color = "#f6f9fb"
-            else:
-                color = "#14141b"
+            color = "#f6f9fb" if self.theme_dropdown.get_my_value().lower().startswith("light") else "#14141b"
         else:
             color = ""
         self.C.tree.set_options(alternate_color=color)
-        self.C.tree.set_options(show_horizontal_grid=False if color else True)
+        self.C.tree.set_options(show_horizontal_grid=not color)
 
     def set_date_format(self, event=None):
         fmt = self.date_format_dropdown.get_my_value()

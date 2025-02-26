@@ -13,6 +13,7 @@ import tkinter as tk
 from base64 import b32decode as b32d
 from base64 import b32encode as b32e
 from collections import defaultdict
+from contextlib import suppress
 from itertools import islice, repeat
 from math import ceil
 from typing import Literal
@@ -98,7 +99,7 @@ def write_cfg(d: dict) -> bool:
 
 
 def sort_key(s: str):
-    return [int(e) if e.isdigit() else e for e in re.split("([0-9]+)", s)]
+    return tuple(int(e) if e.isdigit() else e for e in re.split("([0-9]+)", s))
 
 
 def case_insensitive_replace(find_, repl, text):
@@ -314,25 +315,17 @@ def is_json_one(data):
 def is_json_two(data):
     if not isinstance(data, list):
         return False
-    for dct in data:
-        if not isinstance(dct, dict):
-            return False
-    return True
+    return all(isinstance(dct, dict) for dct in data)
 
 
 def is_json_three(data):
     if not isinstance(data, list):
         return False
-    for lst in data:
-        if not isinstance(lst, list):
-            return False
-    return True
+    return all(isinstance(lst, list) for lst in data)
 
 
 def is_json_four(data):
-    if not isinstance(data, str):
-        return False
-    return True
+    return isinstance(data, str)
 
 
 def get_json_format(j):
@@ -410,7 +403,7 @@ def json_to_sheet(
             new_sheet = [list(headers)]
             for dct in j[key]:
                 row = []
-                for k, v in dct.items():
+                for v in dct.values():
                     if isinstance(v, str):
                         row.append(v)
                     else:
@@ -448,15 +441,14 @@ def json_to_sheet(
 
 
 def json_get_header_strings(obj):
-    if isinstance(obj, list):
-        if obj:
-            if all(isinstance(e, dict) for e in obj):
-                try:
-                    return [f"{h['name']}" for h in obj]
-                except Exception:
-                    pass
-            elif all(isinstance(e, str) for e in obj):
-                return [h for h in obj]
+    if isinstance(obj, list) and obj:
+        if all(isinstance(e, dict) for e in obj):
+            try:
+                return [f"{h['name']}" for h in obj]
+            except Exception:
+                pass
+        elif all(isinstance(e, str) for e in obj):
+            return list(obj)
 
 
 def full_sheet_to_dict(
@@ -577,10 +569,8 @@ def convert_old_xl_to_xlsx(path_):
 
 
 def try_remove(remove_from, remove):
-    try:
+    with suppress(Exception):
         remove_from.remove(remove)
-    except Exception:
-        pass
 
 
 def type_int(o):
@@ -601,14 +591,13 @@ def isreal(inp, str_only=False, num_only=False, allow_nan=False, allow_inf=False
     except TypeError:
         return isinstance(inp, (int, float))
     else:
-        if x:
-            return True
-        elif allow_inf and inp.lower().strip().lstrip("-+") in ("inf", "infinity"):
-            return True
-        elif allow_nan and inp.lower().strip().lstrip("-+") == "nan":
-            return True
-        else:
-            return False
+        return bool(
+            x
+            or allow_inf
+            and inp.lower().strip().lstrip("-+") in ("inf", "infinity")
+            or allow_nan
+            and inp.lower().strip().lstrip("-+") == "nan"
+        )
 
 
 def isfloat(inp, str_only=False, num_only=False, allow_nan=False, allow_inf=False):
@@ -621,14 +610,13 @@ def isfloat(inp, str_only=False, num_only=False, allow_nan=False, allow_inf=Fals
     except TypeError:
         return isinstance(inp, float)
     else:
-        if x:
-            return True
-        elif allow_inf and inp.lower().strip().lstrip("-+") in ("inf", "infinity"):
-            return True
-        elif allow_nan and inp.lower().strip().lstrip("-+") == "nan":
-            return True
-        else:
-            return False
+        return bool(
+            x
+            or allow_inf
+            and inp.lower().strip().lstrip("-+") in ("inf", "infinity")
+            or allow_nan
+            and inp.lower().strip().lstrip("-+") == "nan"
+        )
 
 
 def isint(inp, str_only=False, num_only=False):
@@ -657,10 +645,7 @@ def isintlike(inp, str_only=False, num_only=False):
     except TypeError:
         if isinstance(inp, float):
             return inp.is_integer()
-        elif type_int(inp):
-            return True
-        else:
-            return False
+        return bool(type_int(inp))
 
 
 def equalize_sublist_lens(seq: list[list[object]], len_: int | None = None) -> list[list[object]]:
@@ -730,8 +715,8 @@ def new_info_storage(
     return DotDict(
         scrolls=new_scrolls(scrolls=scrolls),
         opens={} if opens is None else opens,
-        boxes=tuple() if boxes is None else boxes,
-        selected=tuple() if selected is None else selected,
+        boxes=() if boxes is None else boxes,
+        selected=() if selected is None else selected,
         twidths={} if twidths is None else twidths,
         theights={} if theights is None else theights,
     )

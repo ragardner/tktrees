@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "tk-trees"
 description = "Tkinter hierarchy management tool"
 readme = "README.md"
-version = "1.12.7"
+version = "1.12.8"
 authors = [{ name = "ragardner", email = "github@ragardner.simplelogin.com" }]
 requires-python = ">=3.9"
 license = {file = "LICENSE.txt"}
@@ -29,3 +29,6 @@ classifiers = [
 
 [tool.ruff]
 line-length = 120
+extend-select = ["I", "F", "C4", "E", "B", "SIM"]
+fix = true
+ignore = ["E501"]

@@ -5,6 +5,7 @@ import datetime
 import os
 import re
 import tkinter as tk
+from contextlib import suppress
 from itertools import islice
 from tkinter import filedialog, ttk
 from typing import Literal
@@ -254,7 +255,7 @@ class Workbook_Sheet_Selection(tk.Frame):
 
 
 class Id_Parent_Column_Selector(tk.Frame):
-    def __init__(self, parent, headers=[[]], show_disp_1=True, show_disp_2=True, theme="dark", expand=False):
+    def __init__(self, parent, headers=None, show_disp_1=True, show_disp_2=True, theme="dark", expand=False):
         tk.Frame.__init__(
             self,
             parent,
@@ -262,6 +263,8 @@ class Id_Parent_Column_Selector(tk.Frame):
             highlightbackground=themes[theme].table_fg,
             highlightthickness=0,
         )
+        if headers is None:
+            headers = [[]]
         self.grid_propagate(False)
         self.grid_rowconfigure(1, weight=1)
         if show_disp_1:
@@ -443,12 +446,12 @@ class Id_Parent_Column_Selector(tk.Frame):
 
     def par_col_selection_B1(self, event=None):
         if event:
-            self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
+            self.par_cols = {tup[0] for tup in self.par_col_selection.get_selected_cells()}
             self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def par_col_deselection_B1(self, event=None):
         if event:
-            self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
+            self.par_cols = {tup[0] for tup in self.par_col_selection.get_selected_cells()}
             self.par_col_display.set_my_value(f"Parents: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def clear_displays(self):
@@ -574,8 +577,10 @@ class FlattenedToggleAndOrder(tk.Frame):
 
 
 class Flattened_Column_Selector(tk.Frame):
-    def __init__(self, parent, headers=[[]], theme="dark"):
+    def __init__(self, parent, headers=None, theme="dark"):
         tk.Frame.__init__(self, parent, bg=themes[theme].top_left_bg)
+        if headers is None:
+            headers = [[]]
         self.grid_propagate(False)
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -649,12 +654,12 @@ class Flattened_Column_Selector(tk.Frame):
 
     def par_col_selection_B1(self, event=None):
         if event:
-            self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
+            self.par_cols = {tup[0] for tup in self.par_col_selection.get_selected_cells()}
             self.par_col_display.set_my_value(f"Hierarchy columns: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def par_col_deselection_B1(self, event=None):
         if event:
-            self.par_cols = set(tup[0] for tup in self.par_col_selection.get_selected_cells())
+            self.par_cols = {tup[0] for tup in self.par_col_selection.get_selected_cells()}
             self.par_col_display.set_my_value(f"Hierarchy columns: {', '.join(map(num2alpha, sorted(self.par_cols)))}")
 
     def clear_displays(self):
@@ -701,8 +706,10 @@ class Flattened_Column_Selector(tk.Frame):
 
 
 class Single_Column_Selector(tk.Frame):
-    def __init__(self, parent, command=None, headers=[[]], width=250, height=350, theme="dark"):
+    def __init__(self, parent, command=None, headers=None, width=250, height=350, theme="dark"):
         tk.Frame.__init__(self, parent, width=width, height=height, bg=themes[theme].top_left_bg)
+        if headers is None:
+            headers = [[]]
         self.grid_propagate(False)
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -874,17 +881,13 @@ class Auto_Add_Condition_Num_Frame(tk.Frame):
 
     def get_col_min_val(self, event=None):
         c = self.col_sel
-        try:
+        with suppress(Exception):
             self.min_entry.set_my_value(str(min(float(r[c]) for r in self.sheet_ref if isreal(r[c]))))
-        except Exception:
-            pass
 
     def get_col_max_val(self, event=None):
         c = self.col_sel
-        try:
+        with suppress(Exception):
             self.max_entry.set_my_value(str(max(float(r[c]) for r in self.sheet_ref if isreal(r[c]))))
-        except Exception:
-            pass
 
     def confirm(self, event=None):
         self.result = True
@@ -966,7 +969,7 @@ class Auto_Add_Condition_Date_Frame(tk.Frame):
 
     def get_col_min_val(self, event=None):
         c = self.col_sel
-        try:
+        with suppress(Exception):
             self.min_entry.set_my_value(
                 datetime.datetime.strftime(
                     min(
@@ -977,12 +980,10 @@ class Auto_Add_Condition_Date_Frame(tk.Frame):
                     self.DATE_FORM,
                 )
             )
-        except Exception:
-            pass
 
     def get_col_max_val(self, event=None):
         c = self.col_sel
-        try:
+        with suppress(Exception):
             self.max_entry.set_my_value(
                 datetime.datetime.strftime(
                     max(
@@ -993,8 +994,6 @@ class Auto_Add_Condition_Date_Frame(tk.Frame):
                     self.DATE_FORM,
                 )
             )
-        except Exception:
-            pass
 
     def confirm(self, event=None):
         self.result = True
@@ -1681,9 +1680,8 @@ class Number_Normal_Entry(tk.Entry):
     def validate_(self, sv):
         x = self.sv.get()
         dotidx = [i for i, c in enumerate(x) if c == "."]
-        if dotidx:
-            if len(dotidx) > 1:
-                x = x[: dotidx[1]]
+        if dotidx and len(dotidx) > 1:
+            x = x[: dotidx[1]]
         if x.startswith("."):
             x = x[1:]
         if x.startswith("-"):
@@ -1801,26 +1799,17 @@ class Date_Entry(tk.Frame):
                 self.entry_2.icursor(2)
                 self.entry_2.focus_set()
                 return "break"
-            if len(x) == 1:
-                x = ""
-            else:
-                x = x[:-1]
+            x = "" if len(x) == 1 else x[:-1]
             self.sv_1.set(x)
         elif self.DATE_FORM in ("%Y/%m/%d", "%Y-%m-%d"):
-            if len(x) == 1:
-                x = ""
-            else:
-                x = x[:-1]
+            x = "" if len(x) == 1 else x[:-1]
             self.sv_1.set(x)
         elif self.DATE_FORM in ("%m/%d/%Y", "%m-%d-%Y"):
             if not x:
                 self.entry_3.icursor(2)
                 self.entry_3.focus_set()
                 return "break"
-            if len(x) == 1:
-                x = ""
-            else:
-                x = x[:-1]
+            x = "" if len(x) == 1 else x[:-1]
             self.sv_1.set(x)
         return "break"
 
@@ -1847,40 +1836,21 @@ class Date_Entry(tk.Frame):
                 x = x[:-1]
             self.sv_2.set(x)
         elif self.DATE_FORM in ("%m/%d/%Y", "%m-%d-%Y"):
-            if len(x) == 1:
-                x = ""
-            else:
-                x = x[:-1]
+            x = "" if len(x) == 1 else x[:-1]
             self.sv_2.set(x)
         return "break"
 
     def e3_back(self, event):
         x = self.sv_3.get()
         if self.DATE_FORM in ("%d/%m/%Y", "%d-%m-%Y"):
-            if len(x) == 1:
-                x = ""
-            else:
-                x = x[:-1]
+            x = "" if len(x) == 1 else x[:-1]
             self.sv_3.set(x)
-        elif self.DATE_FORM in ("%Y/%m/%d", "%Y-%m-%d"):
+        elif self.DATE_FORM in ("%Y/%m/%d", "%Y-%m-%d") or self.DATE_FORM in ("%m/%d/%Y", "%m-%d-%Y"):
             if not x:
                 self.entry_2.icursor(2)
                 self.entry_2.focus_set()
                 return "break"
-            if len(x) == 1:
-                x = ""
-            else:
-                x = x[:-1]
-            self.sv_3.set(x)
-        elif self.DATE_FORM in ("%m/%d/%Y", "%m-%d-%Y"):
-            if not x:
-                self.entry_2.icursor(2)
-                self.entry_2.focus_set()
-                return "break"
-            if len(x) == 1:
-                x = ""
-            else:
-                x = x[:-1]
+            x = "" if len(x) == 1 else x[:-1]
             self.sv_3.set(x)
         return "break"
 
@@ -1935,9 +1905,7 @@ class Date_Entry(tk.Frame):
         if len(month) == 2:
             if self.DATE_FORM in ("%d/%m/%Y", "%d-%m-%Y"):
                 self.entry_1.focus_set()
-            if self.DATE_FORM in ("%Y/%m/%d", "%Y-%m-%d"):
-                self.entry_3.focus_set()
-            elif self.DATE_FORM in ("%m/%d/%Y", "%m-%d-%Y"):
+            if self.DATE_FORM in ("%Y/%m/%d", "%Y-%m-%d") or self.DATE_FORM in ("%m/%d/%Y", "%m-%d-%Y"):
                 self.entry_3.focus_set()
 
     def validate_3(self, sv):
@@ -1983,44 +1951,26 @@ class Date_Entry(tk.Frame):
     def set_my_value(self, date):
         date = re.split("|".join(map(re.escape, ("/", "-"))), date)
         if self.DATE_FORM in ("%d/%m/%Y", "%d-%m-%Y"):
-            try:
+            with suppress(Exception):
                 self.sv_1.set(date[2])
-            except Exception:
-                pass
-            try:
+            with suppress(Exception):
                 self.sv_2.set(date[1])
-            except Exception:
-                pass
-            try:
+            with suppress(Exception):
                 self.sv_3.set(date[0])
-            except Exception:
-                pass
         elif self.DATE_FORM in ("%Y/%m/%d", "%Y-%m-%d"):
-            try:
+            with suppress(Exception):
                 self.sv_1.set(date[0])
-            except Exception:
-                pass
-            try:
+            with suppress(Exception):
                 self.sv_2.set(date[1])
-            except Exception:
-                pass
-            try:
+            with suppress(Exception):
                 self.sv_3.set(date[2])
-            except Exception:
-                pass
         elif self.DATE_FORM in ("%m/%d/%Y", "%m-%d-%Y"):
-            try:
+            with suppress(Exception):
                 self.sv_1.set(date[2])
-            except Exception:
-                pass
-            try:
+            with suppress(Exception):
                 self.sv_2.set(date[0])
-            except Exception:
-                pass
-            try:
+            with suppress(Exception):
                 self.sv_3.set(date[1])
-            except Exception:
-                pass
 
     def place_cursor(self, index=0):
         self.entries[index].focus()

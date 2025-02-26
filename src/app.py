@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tkinter as tk
+from contextlib import suppress
 from sys import argv
 from tkinter import filedialog, ttk
 
@@ -27,10 +28,10 @@ from .constants import (
     USER_OS,
     about_system,
     app_copyright,
-    default_app_window_size,
     app_title,
     contact_email,
     ctrl_button,
+    default_app_window_size,
     dropdown_font,
     menu_kwargs,
     std_font_size,
@@ -75,8 +76,10 @@ allow_api_use = True
 
 
 class AppGUI(tk.Tk):
-    def __init__(self, start_arg=[]):
+    def __init__(self, start_arg=None):
         tk.Tk.__init__(self)
+        if start_arg is None:
+            start_arg = []
         self.withdraw()
         # DEBUGGING
         # start_arg = ("","40k wo.xlsx")
@@ -139,7 +142,10 @@ class AppGUI(tk.Tk):
         except Exception as errormsg:
             Error(
                 self,
-                f"Error locating LICENSE file: '{errormsg}'.\n\nLICENSE file must be in the same folder as '{app_title}.pyw'.",
+                (
+                    f"Error locating LICENSE file: '{errormsg}'.\n\n"
+                    "LICENSE file must be in the same folder as '{app_title}.pyw'."
+                ),
                 theme=self.theme,
             )
             self.try_to_close_everything()
@@ -151,7 +157,10 @@ class AppGUI(tk.Tk):
         except Exception as errormsg:
             Error(
                 self,
-                f"Error locating DOCUMENTATION.md file: '{errormsg}'.\n\nDOCUMENTATION.md file must be in the same folder as '{app_title}.pyw'.",
+                (
+                    f"Error locating DOCUMENTATION.md file: '{errormsg}'.\n\n"
+                    "DOCUMENTATION.md file must be in the same folder as '{app_title}.pyw'."
+                ),
                 theme=self.theme,
             )
             self.DOCUMENTATION = "Could not locate documentation file."
@@ -270,24 +279,16 @@ To get started once you have closed this popup, either:
     def try_to_close_everything(self):
         self.USER_HAS_QUIT = True
         self.try_to_close_workbook()
-        try:
+        with suppress(Exception):
             self.quit()
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.destroy()
-        except Exception:
-            pass
 
     def try_to_close_workbook(self):
-        try:
+        with suppress(Exception):
             self.wb.close()
-        except Exception:
-            pass
-        try:
+        with suppress(Exception):
             self.wb = None
-        except Exception:
-            pass
 
     def default_configsettings(self, event=None):
         self.configsettings = {
@@ -396,10 +397,8 @@ To get started once you have closed this popup, either:
         )
         if self.configsettings["Window state"] not in ("zoomed", "normal"):
             self.configsettings["Window state"] = "zoomed"
-        try:
+        with suppress(Exception):
             self.state(self.configsettings["Window state"])
-        except Exception:
-            pass
 
     def menubar_state(self, state="normal", start=False):
         if state == "disabled":
@@ -415,10 +414,7 @@ To get started once you have closed this popup, either:
             self.bind(f"<{ctrl_button}-N>", self.create_new_at_start)
             self.bind(f"<{ctrl_button}-n>", self.create_new_at_start)
             self.menubar.entryconfig("File", state="normal")
-            if start:
-                x = "disabled"
-            else:
-                x = "normal"
+            x = "disabled" if start else "normal"
             for label in ("Edit", "View", "Import", "Export"):
                 self.menubar.entryconfig(label, state=x)
             self.menubar.entryconfig("Help", state="normal")
@@ -639,10 +635,9 @@ To get started once you have closed this popup, either:
         self.frames[self.current_frame].enable_widgets()
 
     def open_file_at_start(self, event=None):
-        if event is not None:
-            if self.current_frame == "tree_edit":
-                self.frames["tree_edit"].open_from_within_treeframe()
-                return
+        if event is not None and self.current_frame == "tree_edit":
+            self.frames["tree_edit"].open_from_within_treeframe()
+            return
         fp = filedialog.askopenfilename(parent=self, title="Select a file")
         if not fp:
             return

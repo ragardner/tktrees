@@ -48,8 +48,8 @@ class TreeBuilder:
         ic: int,
         hiers: list[int],
         nodes: dict[str, Node],
-        warnings: list[object] = [],
-        rns: dict[str, int] = {},
+        warnings: list[object] | None = None,
+        rns: dict[str, int] | None = None,
         add_warnings: bool = True,
         skip_1st: bool = False,
         compare: bool = False,
@@ -60,6 +60,10 @@ class TreeBuilder:
         | tuple[list[list[str]], dict[str, Node], list[object]]
         | tuple[list[list[str]], dict[str, Node]]
     ):
+        if warnings is None:
+            warnings = []
+        if rns is None:
+            rns = {}
         tally_of_ids = defaultdict(lambda: -1)
         qhsic = sorted(hiers.copy() + [ic])
         qhs = hiers
@@ -113,7 +117,10 @@ class TreeBuilder:
                             if pk == ck:
                                 if add_warnings:
                                     warnings.append(
-                                        f" - Infinite loop of children avoided by setting IDs ({ID}) parent ({parent}) to none at row #{rn}"
+                                        (
+                                            f" - Infinite loop of children avoided by setting "
+                                            f"IDs ({ID}) parent ({parent}) to none at row #{rn}"
+                                        )
                                     )
                                 r[h] = ""
                                 parent = ""
@@ -160,7 +167,7 @@ class TreeBuilder:
                 return output_sheet, nodes, warnings
             return output_sheet, nodes
 
-    def build_flattened_recur(
+    def build_flattened_iter(
         self,
         node: Node,
         pc: int,
@@ -171,37 +178,36 @@ class TreeBuilder:
         detail_cols_idxs_names: dict[int, str],
         justify_left: bool,
         reverse: bool,
-    ) -> None:
-        if justify_left and not reverse:
-            if detail_columns:
-                row.extendleft(input_sheet[rns[node.k]][i] for i in reversed(detail_cols_idxs_names))
-            row.appendleft(node.name)
-        elif (justify_left and reverse) or (not justify_left and not reverse):
-            row.append(node.name)
-            if detail_columns:
-                row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
-        elif not justify_left and reverse:
-            if detail_columns:
-                row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
-            row.append(node.name)
-        if node.ps[pc]:
-            self.build_flattened_recur(
-                node=node.ps[pc],
-                pc=pc,
-                row=row,
-                rns=rns,
-                input_sheet=input_sheet,
-                detail_columns=detail_columns,
-                detail_cols_idxs_names=detail_cols_idxs_names,
-                justify_left=justify_left,
-                reverse=reverse,
-            )
+    ) -> list:
+        current_node = node
+        while current_node:
+            if justify_left and not reverse:
+                if detail_columns:
+                    row.extendleft(input_sheet[rns[current_node.k]][i] for i in reversed(detail_cols_idxs_names))
+                row.appendleft(current_node.name)
+            elif (justify_left and reverse) or (not justify_left and not reverse):
+                row.append(current_node.name)
+                if detail_columns:
+                    row.extend(input_sheet[rns[current_node.k]][i] for i in detail_cols_idxs_names)
+            elif not justify_left and reverse:
+                if detail_columns:
+                    row.extend(input_sheet[rns[current_node.k]][i] for i in detail_cols_idxs_names)
+                row.append(current_node.name)
+
+            if current_node.ps[pc]:
+                current_node = current_node.ps[pc]
+            else:
+                break
+        return row
 
     def get_par_lvls(self, h: int, n: Node, lvl: int = 1):
-        if lvl > self.n_lvls:
-            self.n_lvls = lvl
-        if n.ps[h]:
-            self.get_par_lvls(h, n.ps[h], lvl + 1)
+        while n:
+            if lvl > self.n_lvls:
+                self.n_lvls = lvl
+            if not n.ps[h]:
+                break
+            n = n.ps[h]
+            lvl += 1
 
     def gen_pc_base_ids(
         self,
@@ -255,7 +261,7 @@ class TreeBuilder:
                     row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
                 row.append(node.name)
             if node.ps[pc]:
-                self.build_flattened_recur(
+                row = self.build_flattened_iter(
                     node=node.ps[pc],
                     pc=pc,
                     row=row,
@@ -287,7 +293,7 @@ class TreeBuilder:
                     output_headers.extend(f"{detail_name}_{i}" for detail_name in detail_cols_idxs_names.values())
 
         elif not justify_left and not reverse:
-            output_sheet = list(map(lambda r: r[::-1], output_sheet))
+            output_sheet = [r[::-1] for r in output_sheet]
             for i in reversed(range(self.n_lvls)):
                 output_headers.append(f"{pc_name}_{i}")
                 if detail_columns:
@@ -314,14 +320,20 @@ class TreeBuilder:
 
     def convert_flattened_to_normal(
         self,
-        data: list[list[str]] = [],
-        hier_cols: list[int] = [],
+        data: list[list[str]] | None = None,
+        hier_cols: list[int] | None = None,
         rowlen: None | int = None,
         order: Literal[
             "Flattened - Left → Right is Top → Base", "Flattened - Left → Right is Base → Top"
         ] = "Flattened - Left → Right is Top → Base",
-        warnings: list[object] = [],
+        warnings: list[object] | None = None,
     ) -> tuple[list[list[str]], int, int, list[int]]:
+        if data is None:
+            data = []
+        if hier_cols is None:
+            hier_cols = []
+        if warnings is None:
+            warnings = []
         rowlen = max(map(len, data), default=0) if rowlen is None else rowlen
         added_ids, to_add, ids_parents_tally, rns = set(), {}, {}, {}
         detail_cols = sorted(set(range(rowlen)).difference(hier_cols))
@@ -356,7 +368,7 @@ class TreeBuilder:
             num_detail_cols_to_be_added = len(detail_col_names)
             not_detail_cols_or_hier_cols = sorted(
                 set(range(rowlen))
-                - (set(idx for detail_cols in hier_cols_detail_cols.values() for idx in detail_cols) | set(hier_cols))
+                - ({idx for detail_cols in hier_cols_detail_cols.values() for idx in detail_cols} | set(hier_cols))
             )
             ids_details_tally = {}
 
@@ -439,7 +451,9 @@ class TreeBuilder:
                     if len(detail_dct) > 1:
                         tallies = "\n\t".join(f"{det}: {tally}" for det, tally in detail_dct.items())
                         warnings.append(
-                            f" - {to_add[ik][0]} has multiple details in column '{detail_col_names[det_col_enum]}', using detail with highest tally '{max(detail_dct.items(), key=itemgetter(1))[0]}':\n\t{tallies}"
+                            f" - {to_add[ik][0]} has multiple details in column '{detail_col_names[det_col_enum]}', "
+                            f"using detail with highest tally '{max(detail_dct.items(), key=itemgetter(1))[0]}':\n\t"
+                            f"{tallies}"
                         )
             for ik, dct in ids_parents_tally.items():
                 if len(dct) > 1:
@@ -448,7 +462,9 @@ class TreeBuilder:
                     chosen_par = to_add[chosen_pk][0] if chosen_pk else ""
                     to_add[ik] = (to_add[ik][0], chosen_par)
                     warnings.append(
-                        f" - {to_add[ik][0]} has multiple parents, using parent with highest tally '{chosen_par}':\n\t{tallies}"
+                        f" - {to_add[ik][0]} has multiple parents, "
+                        f"using parent with highest tally '{chosen_par}':\n\t"
+                        f"{tallies}"
                     )
             output = []
             added_ids = set()
@@ -546,7 +562,9 @@ class TreeBuilder:
                     chosen_par = to_add[chosen_pk][0] if chosen_pk else ""
                     to_add[ik] = (to_add[ik][0], chosen_par)
                     warnings.append(
-                        f" - {to_add[ik][0]} has multiple different parents, using parent with highest tally ({chosen_par}):\n\t{lp}"
+                        f" - {to_add[ik][0]} has multiple different parents, "
+                        f"using parent with highest tally ({chosen_par}):\n\t"
+                        f"{lp}"
                     )
             output = []
             added_ids = set()
@@ -661,10 +679,7 @@ def tk_trees_api(
     flatten_parent_column: int = 1,
 ) -> None:
     try:
-        if csv_delimiter == "tab":
-            dialect = csv.excel_tab
-        else:
-            dialect = csv.excel
+        dialect = csv.excel_tab if csv_delimiter == "tab" else csv.excel
 
         overwrite_file = "w" if overwrite_file else "x"
 
@@ -754,10 +769,7 @@ def tk_trees_api(
             )
         elif output_filepath.endswith(".xlsx"):
             if output_sheet is None:
-                if isinstance(input_sheet, str):
-                    output_sheet = input_sheet
-                else:
-                    output_sheet = "Sheet1"
+                output_sheet = input_sheet if isinstance(input_sheet, str) else "Sheet1"
             to_xlsx(
                 filepath=output_filepath,
                 sheetname=output_sheet,
