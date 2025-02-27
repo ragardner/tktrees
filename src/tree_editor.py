@@ -4635,7 +4635,7 @@ class Tree_Editor(tk.Frame):
 
     def gen_sheet_w_headers(self):
         yield [h.name for h in self.headers]
-        yield from self.sheet.MT.data
+        yield from ([e if e else None for e in r] for r in self.sheet.MT.data)
 
     def check_validation_validity(self, col: int, validation: list[str]) -> str | list[str]:
         if not validation:
