@@ -857,8 +857,8 @@ class Tree_Compare(tk.Frame):
                             for nx in matching_hrs_names:
                                 h1 = pcold[nx][0]
                                 h2 = pcold[nx][1]
-                                p1 = self.nodes1[ik].ps[h1].k if self.nodes1[ik].ps[h1] else self.nodes1[ik].ps[h1]
-                                p2 = self.nodes2[ik].ps[h2].k if self.nodes2[ik].ps[h2] else self.nodes2[ik].ps[h2]
+                                p1 = self.nodes1[ik].ps[h1]
+                                p2 = self.nodes2[ik].ps[h2]
                                 if p1 != p2 and p1 is None:
                                     if p2 == "":
                                         self.report["Differences in Parents/Details of Matched IDs"].append(
@@ -875,7 +875,7 @@ class Tree_Compare(tk.Frame):
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_2} and not {self.sheetname_1}",
                                                 "Not present",
-                                                f"{self.nodes2[ik].ps[h2].name}",
+                                                f"{self.nodes2[self.nodes2[ik].ps[h2]].name}",
                                             ]
                                         )
                                 elif p1 != p2 and p2 is None:
@@ -893,7 +893,7 @@ class Tree_Compare(tk.Frame):
                                             [
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_1} and not {self.sheetname_2}",
-                                                f"{self.nodes1[ik].ps[h1].name}",
+                                                f"{self.nodes1[self.nodes1[ik].ps[h1]].name}",
                                                 "Not present",
                                             ]
                                         )
@@ -903,7 +903,7 @@ class Tree_Compare(tk.Frame):
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
                                             "Appears as top ID",
-                                            f"{self.nodes2[ik].ps[h2].name}",
+                                            f"{self.nodes2[self.nodes2[ik].ps[h2]].name}",
                                         ]
                                     )
                                 elif p1 != p2 and p2 == "":
@@ -911,7 +911,7 @@ class Tree_Compare(tk.Frame):
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
-                                            f"{self.nodes1[ik].ps[h1].name}",
+                                            f"{self.nodes1[self.nodes1[ik].ps[h1]].name}",
                                             "Appears as top ID",
                                         ]
                                     )
@@ -920,8 +920,8 @@ class Tree_Compare(tk.Frame):
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
-                                            f"{self.nodes1[ik].ps[h1].name}",
-                                            f"{self.nodes2[ik].ps[h2].name}",
+                                            f"{self.nodes1[self.nodes1[ik].ps[h1]].name}",
+                                            f"{self.nodes2[self.nodes2[ik].ps[h2]].name}",
                                         ]
                                     )
                             for nx in matching_details_names:
@@ -938,8 +938,8 @@ class Tree_Compare(tk.Frame):
                             for nx in matching_hrs_names:
                                 h1 = pcold[nx][0]
                                 h2 = pcold[nx][1]
-                                p1 = self.nodes1[ik].ps[h1].k if self.nodes1[ik].ps[h1] else self.nodes1[ik].ps[h1]
-                                p2 = self.nodes2[ik].ps[h2].k if self.nodes2[ik].ps[h2] else self.nodes2[ik].ps[h2]
+                                p1 = self.nodes1[ik].ps[h1]
+                                p2 = self.nodes2[ik].ps[h2]
                                 if p1 != p2 and p1 is None:
                                     if p2 == "":
                                         self.report["Differences in Parents/Details of Matched IDs"].append(
@@ -956,7 +956,7 @@ class Tree_Compare(tk.Frame):
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_2} and not {self.sheetname_1}",
                                                 "Not present",
-                                                f"{self.nodes2[ik].ps[h2].name}",
+                                                f"{self.nodes2[self.nodes2[ik].ps[h2]].name}",
                                             ]
                                         )
                                 elif p1 != p2 and p2 is None:
@@ -974,7 +974,7 @@ class Tree_Compare(tk.Frame):
                                             [
                                                 f"{ID}",
                                                 f"Present in hierarchy: {nx} in {self.sheetname_1} and not {self.sheetname_2}",
-                                                f"{self.nodes1[ik].ps[h1].name}",
+                                                f"{self.nodes1[self.nodes1[ik].ps[h1]].name}",
                                                 "Not present",
                                             ]
                                         )
@@ -984,7 +984,7 @@ class Tree_Compare(tk.Frame):
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
                                             "Appears as top ID",
-                                            f"{self.nodes2[ik].ps[h2].name}",
+                                            f"{self.nodes2[self.nodes2[ik].ps[h2]].name}",
                                         ]
                                     )
                                 elif p1 != p2 and p2 == "":
@@ -992,7 +992,7 @@ class Tree_Compare(tk.Frame):
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
-                                            f"{self.nodes1[ik].ps[h1].name}",
+                                            f"{self.nodes1[self.nodes1[ik].ps[h1]].name}",
                                             "Appears as top ID",
                                         ]
                                     )
@@ -1001,8 +1001,8 @@ class Tree_Compare(tk.Frame):
                                         [
                                             f"{ID}",
                                             f"Parents in hierarchy: {nx}",
-                                            f"{self.nodes1[ik].ps[h1].name}",
-                                            f"{self.nodes2[ik].ps[h2].name}",
+                                            f"{self.nodes1[self.nodes1[ik].ps[h1]].name}",
+                                            f"{self.nodes2[self.nodes2[ik].ps[h2]].name}",
                                         ]
                                     )
                             for nx in matching_details_names:

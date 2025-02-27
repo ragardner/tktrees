@@ -30,15 +30,20 @@ from .functions import (
 
 
 class TreeBuilder:
-    def check_cn(self, n: Node, h: int) -> Generator[str]:
-        yield n.k
-        for c in n.cn[h]:
-            yield from self.check_cn(c, h)
+    def check_cn(self, iid: str, h: int, nodes: dict[str, Node]) -> Generator[str]:
+        stack = [iid]
+        while stack:
+            current = stack.pop()
+            yield current
+            stack.extend(reversed(nodes[current].cn[h]))
 
-    def check_ps(self, n: Node, h: int) -> Generator[str]:
-        yield n.k
-        if n.ps[h]:
-            yield from self.check_ps(n.ps[h], h)
+    def check_ps(self, iid: str, h: int, nodes: dict[str, Node]) -> Generator[str]:
+        current = iid
+        while True:
+            yield current
+            if not nodes[current].ps[h]:
+                break
+            current = nodes[current].ps[h]
 
     def build(
         self,
@@ -113,7 +118,7 @@ class TreeBuilder:
                         parent = ""
                         pk = ""
                     elif pk:
-                        for ck in chain(self.check_cn(nodes[ik], h), self.check_ps(nodes[ik], h)):
+                        for ck in chain(self.check_cn(ik, h, nodes), self.check_ps(ik, h, nodes)):
                             if pk == ck:
                                 if add_warnings:
                                     warnings.append(
@@ -129,8 +134,8 @@ class TreeBuilder:
                     if pk:
                         if pk not in nodes:
                             nodes[pk] = Node(parent, pk, hiers)
-                        nodes[ik].ps[h] = nodes[pk]
-                        nodes[pk].cn[h].append(nodes[ik])
+                        nodes[ik].ps[h] = pk
+                        nodes[pk].cn[h].append(ik)
                     else:
                         nodes[ik].ps[h] = ""
                 output_sheet.append(r)
@@ -166,48 +171,6 @@ class TreeBuilder:
             if add_warnings:
                 return output_sheet, nodes, warnings
             return output_sheet, nodes
-
-    def build_flattened_iter(
-        self,
-        node: Node,
-        pc: int,
-        row: deque[str] | list[str],
-        rns: dict[str, int],
-        input_sheet: list[list[str]],
-        detail_columns: bool,
-        detail_cols_idxs_names: dict[int, str],
-        justify_left: bool,
-        reverse: bool,
-    ) -> list:
-        current_node = node
-        while current_node:
-            if justify_left and not reverse:
-                if detail_columns:
-                    row.extendleft(input_sheet[rns[current_node.k]][i] for i in reversed(detail_cols_idxs_names))
-                row.appendleft(current_node.name)
-            elif (justify_left and reverse) or (not justify_left and not reverse):
-                row.append(current_node.name)
-                if detail_columns:
-                    row.extend(input_sheet[rns[current_node.k]][i] for i in detail_cols_idxs_names)
-            elif not justify_left and reverse:
-                if detail_columns:
-                    row.extend(input_sheet[rns[current_node.k]][i] for i in detail_cols_idxs_names)
-                row.append(current_node.name)
-
-            if current_node.ps[pc]:
-                current_node = current_node.ps[pc]
-            else:
-                break
-        return row
-
-    def get_par_lvls(self, h: int, n: Node, lvl: int = 1):
-        while n:
-            if lvl > self.n_lvls:
-                self.n_lvls = lvl
-            if not n.ps[h]:
-                break
-            n = n.ps[h]
-            lvl += 1
 
     def gen_pc_base_ids(
         self,
@@ -245,7 +208,6 @@ class TreeBuilder:
         self.n_lvls = 1
         rns = {r[ic].lower(): rn for rn, r in enumerate(input_sheet) if r[ic]}
         for node in self.gen_pc_base_ids(sheet=input_sheet, nodes=nodes, ic=ic, pc=pc):
-            self.get_par_lvls(pc, node)
             if justify_left and not reverse:
                 row = deque()
                 if detail_columns:
@@ -261,17 +223,32 @@ class TreeBuilder:
                     row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
                 row.append(node.name)
             if node.ps[pc]:
-                row = self.build_flattened_iter(
-                    node=node.ps[pc],
-                    pc=pc,
-                    row=row,
-                    rns=rns,
-                    input_sheet=input_sheet,
-                    detail_columns=detail_columns,
-                    detail_cols_idxs_names=detail_cols_idxs_names,
-                    justify_left=justify_left,
-                    reverse=reverse,
-                )
+                current_node = node
+                lvl = 2
+                while current_node:
+                    if justify_left and not reverse:
+                        if detail_columns:
+                            row.extendleft(
+                                input_sheet[rns[current_node.k]][i] for i in reversed(detail_cols_idxs_names)
+                            )
+                        row.appendleft(current_node.name)
+                    elif (justify_left and reverse) or (not justify_left and not reverse):
+                        row.append(current_node.name)
+                        if detail_columns:
+                            row.extend(input_sheet[rns[current_node.k]][i] for i in detail_cols_idxs_names)
+                    elif not justify_left and reverse:
+                        if detail_columns:
+                            row.extend(input_sheet[rns[current_node.k]][i] for i in detail_cols_idxs_names)
+                        row.append(current_node.name)
+
+                    if current_node.ps[pc]:
+                        lvl += 1
+                        if lvl > self.n_lvls:
+                            self.n_lvls = lvl
+                        current_node = nodes[current_node.ps[pc]]
+                    else:
+                        break
+
             if justify_left and not reverse:
                 output_sheet.append(list(row))
             else:
@@ -606,11 +583,11 @@ class SearchResult:
 class Node:
     __slots__ = ("name", "k", "cn", "ps")
 
-    def __init__(self, name, k, hrs):
-        self.name = name
-        self.k = k
-        self.cn = {v: [] for v in hrs}
-        self.ps = {v: None for v in hrs}
+    def __init__(self, name: str, k: str, hrs: list[int]) -> None:
+        self.name: str = name
+        self.k: str = k
+        self.cn: dict[int, list[str]] = {v: [] for v in hrs}
+        self.ps: dict[int, None | str] = {v: None for v in hrs}
 
 
 class Header:
