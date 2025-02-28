@@ -1736,7 +1736,7 @@ class Find_And_Replace_Popup(tk.Toplevel):
             ids = True
             dets = True
             exact_match = True
-            mapping = {r[0].lower(): r[1] for r in self.sheetdisplay.get_sheet_data() if r[1]}
+            mapping = {r[0].lower(): r[1] for r in self.sheetdisplay.get_sheet_data() if r[0] or r[1]}
             newtext = ""
 
         else:
