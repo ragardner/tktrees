@@ -3428,7 +3428,7 @@ class Tree_Editor(tk.Frame):
         ik = ID.lower()
         pk = oldparent.lower()
         npk = newparent.lower()
-        parent_of_ik = self.nodes[ik].ps[hier]
+        parent_of_ik: str = self.nodes[ik].ps[hier]
         if ik == npk:
             if errors:
                 Error(self, "New parent is ID   ", theme=self.C.theme)
@@ -3467,7 +3467,7 @@ class Tree_Editor(tk.Frame):
                     )
                 )
                 self.refresh_rows.add(int(crow))
-            self.sheet.MT.data[crow][hier] = "" if not parent_of_ik else self.nodes[parent_of_ik].name
+            self.sheet.MT.data[crow][hier] = self.nodes[parent_of_ik].name if parent_of_ik else ""
             if not parent_of_ik and not auto_sort_quick:
                 self.topnodes_order[hier].append(ciid)
             elif parent_of_ik and not auto_sort_quick or parent_of_ik and auto_sort_quick:
@@ -3517,13 +3517,14 @@ class Tree_Editor(tk.Frame):
             self.refresh_rows.add(int(idrow))
         self.sheet.MT.data[idrow][hier] = ""
         self.sheet.MT.data[idrow][self.pc] = newparent
-        if auto_sort_quick and parent_of_ik and parent_of_ik.ps[hier]:
+        if auto_sort_quick and parent_of_ik and self.nodes[parent_of_ik].ps[hier]:
+            parent_parent_iid = self.nodes[parent_of_ik].ps[hier]
             if sort_later:
-                self.sort_later_dct["old_parents_of_parents"].add(parent_of_ik.ps[hier])
+                self.sort_later_dct["old_parents_of_parents"].add(parent_parent_iid)
                 if self.sort_later_dct["old_hier"] is None:
                     self.sort_later_dct["old_hier"] = hier
             elif not sort_later:
-                parent_parent_node = self.nodes[self.nodes[parent_of_ik].ps[hier]]
+                parent_parent_node = self.nodes[parent_parent_iid]
                 parent_parent_node.cn[hier] = self.sort_node_cn(parent_parent_node.cn[hier], hier)
         self.sort_later_dct["filled"] = True
         return True
