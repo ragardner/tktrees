@@ -4629,8 +4629,8 @@ class Tree_Editor(tk.Frame):
             self.topnodes_order[h] = sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
 
     def gen_sheet_w_headers(self):
-        yield [h.name for h in self.headers]
-        yield from ([e if e else None for e in r] for r in self.sheet.MT.data)
+        yield (h.name for h in self.headers)
+        yield from ((e if e else None for e in r) for r in self.sheet.MT.data)
 
     def check_validation_validity(self, col: int, validation: list[str]) -> str | list[str]:
         if not validation:
@@ -10752,24 +10752,22 @@ class Tree_Editor(tk.Frame):
     def jsonify_nodes(self):
         return {
             n.name: {
-                "cn": {h: cnl[:] for h, cnl in n.cn.items()},
-                "ps": n.ps.copy(),
+                "cn": n.cn,
+                "ps": n.ps,
             }
             for n in self.nodes.values()
         }
 
     def nodes_json_x_dict(self, njson: dict, hiers: Sequence[int]) -> dict:
-        nodes = {
-            name.lower(): Node(
+        nodes = {}
+        for name, nodedict in njson.items():
+            node = Node(
                 name=name,
                 hrs=hiers,
             )
-            for name in njson
-        }
-        for name, nodedict in njson.items():
-            ik = name.lower()
-            nodes[ik].ps = {int(h): pk for h, pk in nodedict["ps"].items()}
-            nodes[ik].cn = {int(h): cnl for h, cnl in nodedict["cn"].items()}
+            node.ps = {int(h): pk for h, pk in nodedict["ps"].items()}
+            node.cn = {int(h): cnl for h, cnl in nodedict["cn"].items()}
+            nodes[name.lower()] = node
         return nodes
 
     def xlsx_chunker(self, seq):
