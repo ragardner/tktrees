@@ -1002,7 +1002,7 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_cut.add_command(
-            label="Cut IDs children",
+            label="Detach children",
             command=self.cut_children,
             **menu_kwargs,
         )
@@ -1045,7 +1045,7 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_single_row_paste.add_command(label="Paste IDs and children as sibling", **menu_kwargs)
         self.tree_rc_menu_single_row_paste.add_command(label="Paste IDs and children as child", **menu_kwargs)
         self.tree_rc_menu_single_row_paste.add_separator()
-        self.tree_rc_menu_single_row_paste.add_command(label="Paste children", **menu_kwargs)
+        self.tree_rc_menu_single_row_paste.add_command(label="Attach children", **menu_kwargs)
         self.tree_rc_menu_single_row_paste.add_command(
             label="Paste details",
             state="disabled",
@@ -1109,7 +1109,7 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_empty = tk.Menu(self.treeframe, tearoff=0, **menu_kwargs)
         self.tree_rc_menu_empty.add_command(label="Paste IDs", state="disabled", **menu_kwargs)
         self.tree_rc_menu_empty.add_command(label="Paste IDs and children", state="disabled", **menu_kwargs)
-        self.tree_rc_menu_empty.add_command(label="Paste children", state="disabled", **menu_kwargs)
+        self.tree_rc_menu_empty.add_command(label="Attach children", state="disabled", **menu_kwargs)
         self.tree_rc_menu_empty.add_separator()
         self.tree_rc_menu_empty.add_command(label="Add top ID", command=self.add_top_node, **menu_kwargs)
         self.tree_rc_menu_empty.add_command(label="Add rows", command=self.add_rows_rc, **menu_kwargs)
@@ -6799,12 +6799,12 @@ class Tree_Editor(tk.Frame):
 
     def enable_cut_paste_children(self):
         self.tree_rc_menu_single_row_paste.entryconfig(
-            "Paste children",
+            "Attach children",
             state="normal",
             command=self.paste_cut_children,
         )
         self.tree_rc_menu_empty.entryconfig(
-            "Paste children",
+            "Attach children",
             state="normal",
             command=self.paste_cut_children_empty,
         )
@@ -6814,10 +6814,10 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_single_row_paste.entryconfig("Paste IDs as sibling", state="disabled")
         self.tree_rc_menu_single_row_paste.entryconfig("Paste IDs and children as sibling", state="disabled")
         self.tree_rc_menu_single_row_paste.entryconfig("Paste IDs and children as child", state="disabled")
-        self.tree_rc_menu_single_row_paste.entryconfig("Paste children", state="disabled")
+        self.tree_rc_menu_single_row_paste.entryconfig("Attach children", state="disabled")
         self.tree_rc_menu_empty.entryconfig("Paste IDs", state="disabled")
         self.tree_rc_menu_empty.entryconfig("Paste IDs and children", state="disabled")
-        self.tree_rc_menu_empty.entryconfig("Paste children", state="disabled")
+        self.tree_rc_menu_empty.entryconfig("Attach children", state="disabled")
         self.cut_columns = None
         self.cut = []
         self.copied = []
