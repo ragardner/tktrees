@@ -10,6 +10,7 @@ import lzma
 import os
 import re
 import tkinter as tk
+import zlib
 from base64 import b32decode as b32d
 from base64 import b32encode as b32e
 from collections import defaultdict
@@ -673,11 +674,23 @@ def filter_empty_rows(data: list[list[object]]) -> list[list[object]]:
 
 
 def dict_x_b32(d: dict):
-    return b32e(lzma.compress(json.dumps(d).encode())).decode()
+    return b32e(zlib.compress(json.dumps(d).encode())).decode()
 
 
 def b32_x_dict(s: str) -> dict:
-    return DotDict(json.loads(lzma.decompress(b32d(s.encode())).decode()))
+    b = b32d(s.encode())
+    if comp_method(b) == "zlib":
+        return DotDict(json.loads(zlib.decompress(b).decode()))
+    # backwards compatible, old versions used lzma
+    else:
+        return DotDict(json.loads(lzma.decompress(b).decode()))
+
+
+def comp_method(b: bytes):
+    if b[0] == 0x78:
+        return "zlib"
+    else:
+        return "lzma"
 
 
 def get_json_from_file(fp):

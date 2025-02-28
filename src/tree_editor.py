@@ -4561,7 +4561,7 @@ class Tree_Editor(tk.Frame):
             wc = []
             woc = []
             for iid, node in self.nodes.items():
-                if node.ps[self.hiers[0]] == "" and iid not in current_nodes:
+                if iid not in current_nodes and node.ps[self.hiers[0]] == "":
                     if node.cn[self.hiers[0]]:
                         wc.append(iid)
                     else:
@@ -9013,7 +9013,7 @@ class Tree_Editor(tk.Frame):
             if self.tv_lvls_bool:
                 self.tree.item(
                     iid,
-                    text=f"{max(self.get_node_level(self.nodes[iid]))}. {r[self.tv_label_col]}",
+                    text=f"{self.get_node_level(self.nodes[iid])}. {r[self.tv_label_col]}",
                     values=r,
                 )
             else:
@@ -9041,11 +9041,11 @@ class Tree_Editor(tk.Frame):
         current_node = node
         current_level = level
         while True:
-            yield current_level
             if not current_node.ps[self.pc]:
                 break
             current_node = self.nodes[current_node.ps[self.pc]]
             current_level += 1
+        return current_level
 
     def redo_tree_display(self, selections=True):
         if self.saved_info[self.pc].twidths:
@@ -9063,7 +9063,7 @@ class Tree_Editor(tk.Frame):
                 for iid in self.pc_iids():
                     data.append(self.sheet.data[self.rns[iid]])
                     labels.append(
-                        f"{max(self.get_node_level(self.nodes[iid]))}. {self.sheet.data[self.rns[iid]][self.tv_label_col]}"
+                        f"{self.get_node_level(self.nodes[iid])}. {self.sheet.data[self.rns[iid]][self.tv_label_col]}"
                     )
                 self.tree.tree_build(
                     data=data,
@@ -10897,7 +10897,6 @@ class Tree_Editor(tk.Frame):
                     self.C.open_dict["sheet"] if new_sheet_name is None else new_sheet_name,
                 ),
             )
-            self.C.update()
         if self.save_xlsx_with_changelog:
             self.C.status_bar.change_text("Saving changelog...")
             self.write_changelog_to_workbook(
@@ -10907,7 +10906,6 @@ class Tree_Editor(tk.Frame):
                     self.C.open_dict["sheet"] if new_sheet_name is None else new_sheet_name,
                 ),
             )
-            self.C.update()
         if self.save_xlsx_with_treeview:
             self.C.status_bar.change_text("Saving treeview...")
             self.write_treeview_to_workbook(
@@ -10917,7 +10915,6 @@ class Tree_Editor(tk.Frame):
                     self.C.open_dict["sheet"] if new_sheet_name is None else new_sheet_name,
                 ),
             )
-            self.C.update()
         if self.save_xlsx_with_program_data:
             self.C.status_bar.change_text("Saving program data...")
             self.write_program_data_to_workbook(
@@ -10928,7 +10925,6 @@ class Tree_Editor(tk.Frame):
                 ),
             )
         self.C.status_bar.change_text("Writing file...")
-        self.C.update()
 
     def save_workbook(self, filepath, sheetname):
         self.C.wb = Workbook(write_only=True)
