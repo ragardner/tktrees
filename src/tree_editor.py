@@ -11,7 +11,7 @@ import pickle
 import re
 import tkinter as tk
 import zlib
-from bisect import bisect_left, bisect_right
+from bisect import bisect_left
 from collections import defaultdict, deque
 from collections.abc import Generator, Iterator, Sequence
 from contextlib import suppress
@@ -30,7 +30,7 @@ from tksheet import (
     Sheet,
     is_contiguous,
     move_elements_by_mapping,
-    num2alpha,
+    push_n,
 )
 from tksheet import (
     num2alpha as _n2a,
@@ -3019,14 +3019,12 @@ class Tree_Editor(tk.Frame):
             if box.type_ == "rows":
                 tree_addition = f"|   Tree {len(sels)} IDs selected   "
             elif box.type_ == "columns":
-                tree_addition = (
-                    f"|   Tree Columns: {num2alpha(box.coords.from_c)}:{num2alpha(box.coords.upto_c - 1)}   "
-                )
+                tree_addition = f"|   Tree Columns: {_n2a(box.coords.from_c)}:{_n2a(box.coords.upto_c - 1)}   "
             else:
                 if box.coords.upto_r - box.coords.from_r == 1 and box.coords.upto_c - box.coords.from_c == 1:
-                    tree_addition = f"|   Tree Cells: {num2alpha(box.coords.from_c)}{box.coords.from_r + 2}   "
+                    tree_addition = f"|   Tree Cells: {_n2a(box.coords.from_c)}{box.coords.from_r + 2}   "
                 else:
-                    tree_addition = f"|   Tree Cells: {num2alpha(box.coords.from_c)}{box.coords.from_r + 2}:{num2alpha(box.coords.upto_c - 1)}{box.coords.upto_r + 1}   "
+                    tree_addition = f"|   Tree Cells: {_n2a(box.coords.from_c)}{box.coords.from_r + 2}:{_n2a(box.coords.upto_c - 1)}{box.coords.upto_r + 1}   "
         else:
             tree_addition = ""
         if self.sheet.selected:
@@ -3034,14 +3032,12 @@ class Tree_Editor(tk.Frame):
             if box.type_ == "rows":
                 sheet_addition = f"|   Sheet Rows: {box.coords.from_r + 2}:{box.coords.upto_r + 1}   "
             elif box.type_ == "columns":
-                sheet_addition = (
-                    f"|   Sheet Columns: {num2alpha(box.coords.from_c)}:{num2alpha(box.coords.upto_c - 1)}   "
-                )
+                sheet_addition = f"|   Sheet Columns: {_n2a(box.coords.from_c)}:{_n2a(box.coords.upto_c - 1)}   "
             else:
                 if box.coords.upto_r - box.coords.from_r == 1 and box.coords.upto_c - box.coords.from_c == 1:
-                    sheet_addition = f"|   Sheet Cells: {num2alpha(box.coords.from_c)}{box.coords.from_r + 2}   "
+                    sheet_addition = f"|   Sheet Cells: {_n2a(box.coords.from_c)}{box.coords.from_r + 2}   "
                 else:
-                    sheet_addition = f"|   Sheet Cells: {num2alpha(box.coords.from_c)}{box.coords.from_r + 2}:{num2alpha(box.coords.upto_c - 1)}{box.coords.upto_r + 1}   "
+                    sheet_addition = f"|   Sheet Cells: {_n2a(box.coords.from_c)}{box.coords.from_r + 2}:{_n2a(box.coords.upto_c - 1)}{box.coords.upto_r + 1}   "
         else:
             sheet_addition = ""
         if self.copied:
@@ -5371,11 +5367,9 @@ class Tree_Editor(tk.Frame):
     def add_hier_col(self, col, name, snapshot=True):
         if snapshot:
             self.snapshot_add_col(col)
-        self.ic = self.ic if not (num := bisect_right([col], self.ic)) else self.ic + num
-        self.pc = self.pc if not (num := bisect_right([col], self.pc)) else self.pc + num
-        self.tv_label_col = (
-            self.tv_label_col if not (num := bisect_right([col], self.tv_label_col)) else self.tv_label_col + num
-        )
+        self.ic = push_n(self.ic, [col])
+        self.pc = push_n(self.pc, [col])
+        self.tv_label_col = push_n(self.tv_label_col, [col])
         self.row_len += 1
         self.adjust_hiers_add_cols(cols=[col])
         self.hiers = sorted([col] + self.hiers)
@@ -5432,11 +5426,9 @@ class Tree_Editor(tk.Frame):
     def add_col(self, col, name, type_, snapshot=True):
         if snapshot:
             self.snapshot_add_col(col)
-        self.ic = self.ic if not (num := bisect_right([col], self.ic)) else self.ic + num
-        self.pc = self.pc if not (num := bisect_right([col], self.pc)) else self.pc + num
-        self.tv_label_col = (
-            self.tv_label_col if not (num := bisect_right([col], self.tv_label_col)) else self.tv_label_col + num
-        )
+        self.ic = push_n(self.ic, [col])
+        self.pc = push_n(self.pc, [col])
+        self.tv_label_col = push_n(self.tv_label_col, [col])
         self.row_len += 1
         self.headers.insert(col, Header(name, type_))
         self.tree.insert_columns(idx=col, add_row_heights=False)
@@ -5545,15 +5537,13 @@ class Tree_Editor(tk.Frame):
 
     def adjust_hiers_add_cols(self, cols):
         auto_sort_nodes_bool = self.auto_sort_nodes_bool
-        self.hiers = [k if not (num := bisect_right(cols, k)) else k + num for k in self.hiers]
+        self.hiers = [push_n(k, cols) for k in self.hiers]
         for node in self.nodes.values():
-            node.ps = {k if not (num := bisect_right(cols, k)) else k + num: v for k, v in node.ps.items()}
-            node.cn = {k if not (num := bisect_right(cols, k)) else k + num: v for k, v in node.cn.items()}
-        self.saved_info = {k if not (num := bisect_right(cols, k)) else k + num: v for k, v in self.saved_info.items()}
+            node.ps = {push_n(k, cols): v for k, v in node.ps.items()}
+            node.cn = {push_n(k, cols): v for k, v in node.cn.items()}
+        self.saved_info = {push_n(k, cols): v for k, v in self.saved_info.items()}
         if not auto_sort_nodes_bool:
-            self.topnodes_order = {
-                k if not (num := bisect_right(cols, k)) else k + num: v for k, v in self.topnodes_order.items()
-            }
+            self.topnodes_order = {push_n(k, cols): v for k, v in self.topnodes_order.items()}
 
     def refresh_hier_dropdown(self, idx):
         switch_values = [f"{self.headers[h].name}" for h in self.hiers]
@@ -6239,7 +6229,7 @@ class Tree_Editor(tk.Frame):
 
     def set_headers(self, tree: bool = True, sheet: bool = True):
         headers = [
-            "\n".join((f"{h.name}", f"{i + 1}/{num2alpha(i)} {h.name}", f"{h.type_} {h.name}"))
+            "\n".join((f"{h.name}", f"{i + 1}/{_n2a(i)} {h.name}", f"{h.type_} {h.name}"))
             for i, h in enumerate(self.headers)
         ]
         if sheet:
@@ -8451,11 +8441,11 @@ class Tree_Editor(tk.Frame):
         for box in boxes:
             if box.type_ == "columns":
                 self.sheet.align(
-                    f"{num2alpha(box.coords.from_c)}:{num2alpha(box.coords.upto_c - 1)}",
+                    f"{_n2a(box.coords.from_c)}:{_n2a(box.coords.upto_c - 1)}",
                     align=align,
                 )
                 self.tree.align(
-                    f"{num2alpha(box.coords.from_c)}:{num2alpha(box.coords.upto_c - 1)}",
+                    f"{_n2a(box.coords.from_c)}:{_n2a(box.coords.upto_c - 1)}",
                     align=align,
                 )
 
