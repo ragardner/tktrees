@@ -105,7 +105,7 @@ class TreeBuilder:
                     tally_of_ids[ik] += 1
                     r[ic] = ID
                 if ik not in nodes:
-                    nodes[ik] = Node(ID, ik, hiers)
+                    nodes[ik] = Node(ID, hiers)
                 for h in qhs:
                     parent = r[h]
                     pk = parent.lower()
@@ -133,7 +133,7 @@ class TreeBuilder:
                                 break
                     if pk:
                         if pk not in nodes:
-                            nodes[pk] = Node(parent, pk, hiers)
+                            nodes[pk] = Node(parent, hiers)
                         nodes[ik].ps[h] = pk
                         nodes[pk].cn[h].append(ik)
                     else:
@@ -147,24 +147,24 @@ class TreeBuilder:
             quick_hiers = hiers[1:]
             lh = len(hiers)
             rns = {r[ic].lower(): i for i, r in enumerate(output_sheet)}
-            for n in nodes.values():
-                if all(p is None for p in n.ps.values()):
-                    n.ps = {h: "" if n.cn[h] else None for h in hiers}
-                    newrow = ["" for i in range(row_len)]
-                    newrow[ic] = n.name
+            for iid, node in nodes.items():
+                if all(p is None for p in node.ps.values()):
+                    node.ps = {h: "" if node.cn[h] else None for h in hiers}
+                    newrow = ["" for _ in range(row_len)]
+                    newrow[ic] = node.name
                     output_sheet.append(newrow)
-                    rns[n.k] = len(output_sheet) - 1
+                    rns[iid] = len(output_sheet) - 1
                     if compare:
-                        warnings.append(f" - ID ({n.name}) missing from ID column, new row added")
+                        warnings.append(f" - ID ({node.name}) missing from ID column, new row added")
                 tlly = 0
-                for k, v in n.cn.items():
-                    if not v and not n.ps[k]:
-                        n.ps[k] = None
+                for k, v in node.cn.items():
+                    if not v and not node.ps[k]:
+                        node.ps[k] = None
                         tlly += 1
                 if tlly == lh:
-                    n.ps[hiers[0]] = ""
+                    node.ps[hiers[0]] = ""
                     for h in quick_hiers:
-                        n.ps[h] = None
+                        node.ps[h] = None
 
             return output_sheet, nodes, warnings, rns
         elif not fix_associate:
@@ -178,12 +178,13 @@ class TreeBuilder:
         nodes: dict[str, Node],
         ic: int,
         pc: int,
-    ) -> Generator[Node]:
+    ) -> Generator[str]:
         for row in sheet:
             if row[ic]:
-                node = nodes[row[ic].lower()]
+                iid = row[ic].lower()
+                node = nodes[iid]
                 if node.ps[pc] is not None and not node.cn[pc]:
-                    yield node
+                    yield iid
 
     def build_flattened(
         self,
@@ -207,45 +208,46 @@ class TreeBuilder:
         pc_name = headers[pc]
         self.n_lvls = 1
         rns = {r[ic].lower(): rn for rn, r in enumerate(input_sheet) if r[ic]}
-        for node in self.gen_pc_base_ids(sheet=input_sheet, nodes=nodes, ic=ic, pc=pc):
+        for iid in self.gen_pc_base_ids(sheet=input_sheet, nodes=nodes, ic=ic, pc=pc):
+            node = nodes[iid]
             if justify_left and not reverse:
                 row = deque()
                 if detail_columns:
-                    row = deque(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names) + row
+                    row = deque(input_sheet[rns[iid]][i] for i in detail_cols_idxs_names) + row
                 row.appendleft(node.name)
             elif (justify_left and reverse) or (not justify_left and not reverse):
                 row = [node.name]
                 if detail_columns:
-                    row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
+                    row.extend(input_sheet[rns[iid]][i] for i in detail_cols_idxs_names)
             elif not justify_left and reverse:
                 row = []
                 if detail_columns:
-                    row.extend(input_sheet[rns[node.k]][i] for i in detail_cols_idxs_names)
+                    row.extend(input_sheet[rns[iid]][i] for i in detail_cols_idxs_names)
                 row.append(node.name)
             if node.ps[pc]:
-                current_node = node
+                iid = node.ps[pc]
+                node = nodes[iid]
                 lvl = 2
-                while current_node:
+                while iid:
                     if justify_left and not reverse:
                         if detail_columns:
-                            row.extendleft(
-                                input_sheet[rns[current_node.k]][i] for i in reversed(detail_cols_idxs_names)
-                            )
-                        row.appendleft(current_node.name)
+                            row.extendleft(input_sheet[rns[iid]][i] for i in reversed(detail_cols_idxs_names))
+                        row.appendleft(node.name)
                     elif (justify_left and reverse) or (not justify_left and not reverse):
-                        row.append(current_node.name)
+                        row.append(node.name)
                         if detail_columns:
-                            row.extend(input_sheet[rns[current_node.k]][i] for i in detail_cols_idxs_names)
+                            row.extend(input_sheet[rns[iid]][i] for i in detail_cols_idxs_names)
                     elif not justify_left and reverse:
                         if detail_columns:
-                            row.extend(input_sheet[rns[current_node.k]][i] for i in detail_cols_idxs_names)
-                        row.append(current_node.name)
+                            row.extend(input_sheet[rns[iid]][i] for i in detail_cols_idxs_names)
+                        row.append(node.name)
 
-                    if current_node.ps[pc]:
+                    if node.ps[pc]:
                         lvl += 1
                         if lvl > self.n_lvls:
                             self.n_lvls = lvl
-                        current_node = nodes[current_node.ps[pc]]
+                        iid = node.ps[pc]
+                        node = nodes[iid]
                     else:
                         break
 
@@ -581,11 +583,10 @@ class SearchResult:
 
 
 class Node:
-    __slots__ = ("name", "k", "cn", "ps")
+    __slots__ = ("name", "cn", "ps")
 
-    def __init__(self, name: str, k: str, hrs: list[int]) -> None:
+    def __init__(self, name: str, hrs: list[int]) -> None:
         self.name: str = name
-        self.k: str = k
         self.cn: dict[int, list[str]] = {v: [] for v in hrs}
         self.ps: dict[int, None | str] = {v: None for v in hrs}
 

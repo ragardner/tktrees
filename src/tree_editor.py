@@ -2148,8 +2148,6 @@ class Tree_Editor(tk.Frame):
                 ik = id_.lower()
                 self.untag_id(ik)
                 pk = self.nodes[ik].ps[self.pc]
-                if pk:
-                    pk = pk.k
                 if not self.auto_sort_nodes_bool:
                     for h, p in self.nodes[ik].ps.items():
                         if p == "":
@@ -3319,7 +3317,7 @@ class Tree_Editor(tk.Frame):
         if snapshot:
             self.snapshot_add_id()
         if ik not in self.nodes:
-            self.nodes[ik] = Node(ID, ik, self.hiers)
+            self.nodes[ik] = Node(ID, self.hiers)
             newrow = list(repeat("", self.row_len))
             newrow[self.ic] = ID
             newrow[self.pc] = parent
@@ -3389,7 +3387,6 @@ class Tree_Editor(tk.Frame):
         if snapshot:
             self.vs[-1]["ikrow"] = (ik_rn, ik, self.nodes[ik].name, new_name)
         self.nodes[ik].name = new_name
-        self.nodes[ik].k = nnk
         if self.auto_sort_nodes_bool:
             for h, p in self.nodes[ik].ps.items():
                 if p:
@@ -3451,10 +3448,10 @@ class Tree_Editor(tk.Frame):
                     Error(self, f"ID: {ID} already has this parent   ", theme=self.C.theme)
                 return False
         auto_sort_quick = self.auto_sort_nodes_bool
-        for iid in self.nodes[ik].cn[hier]:
-            child = self.nodes[iid]
+        for ciid in self.nodes[ik].cn[hier]:
+            child = self.nodes[ciid]
             child.ps[hier] = parent_of_ik
-            crow = self.rns[child.k]
+            crow = self.rns[ciid]
             if snapshot:
                 self.vs[-1]["rows"].append(
                     zlib.compress(
@@ -3472,9 +3469,9 @@ class Tree_Editor(tk.Frame):
                 self.refresh_rows.add(int(crow))
             self.sheet.MT.data[crow][hier] = "" if not parent_of_ik else self.nodes[parent_of_ik].name
             if not parent_of_ik and not auto_sort_quick:
-                self.topnodes_order[hier].append(child.k)
+                self.topnodes_order[hier].append(ciid)
             elif parent_of_ik and not auto_sort_quick or parent_of_ik and auto_sort_quick:
-                self.nodes[parent_of_ik].cn[hier].append(iid)
+                self.nodes[parent_of_ik].cn[hier].append(ciid)
         self.nodes[ik].cn[hier] = []
         self.nodes[ik].ps[hier] = None
         if pk != "":
@@ -3638,7 +3635,7 @@ class Tree_Editor(tk.Frame):
                     child.cn[self.pc] = list(child.cn[hier])
                     child.cn[hier] = []
                     # Update sheet data and snapshot for the child
-                    crow = self.rns[child.k]
+                    crow = self.rns[ciid]
                     if snapshot:
                         self.vs[-1]["rows"].append(
                             zlib.compress(
@@ -4159,8 +4156,6 @@ class Tree_Editor(tk.Frame):
         ik = ID.lower()
         pk = self.nodes[ik].ps[self.pc]
         self.untag_id(ik)
-        if pk:
-            pk = pk.k
         if not self.auto_sort_nodes_bool:
             for h, p in self.nodes[ik].ps.items():
                 if p == "":
@@ -4220,7 +4215,7 @@ class Tree_Editor(tk.Frame):
                         self.nodes[pk].cn[h].append(ciid)
                         child = self.nodes[ciid]
                         child.ps[h] = self.nodes[pk]
-                        rn = self.rns[child.k]
+                        rn = self.rns[ciid]
                         if snapshot:
                             self.vs[-1]["rows"].append(
                                 Del_stre(
@@ -4238,7 +4233,7 @@ class Tree_Editor(tk.Frame):
                         self.nodes[pk].cn[h].append(ciid)
                         child = self.nodes[ciid]
                         child.ps[h] = self.nodes[pk]
-                        rn = self.rns[child.k]
+                        rn = self.rns[ciid]
                         if snapshot:
                             self.vs[-1]["rows"].append(
                                 Del_stre(
@@ -4436,71 +4431,71 @@ class Tree_Editor(tk.Frame):
         quick_hiers = self.hiers[1:]
         lh = len(self.hiers)
         if startup and self.auto_sort_nodes_bool:
-            for n in self.nodes.values():
-                if all(p is None for p in n.ps.values()):
-                    n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
+            for node in self.nodes.values():
+                if all(p is None for p in node.ps.values()):
+                    node.ps = {h: "" if node.cn[h] else None for h in self.hiers}
                     newrow = list(repeat("", self.row_len))
-                    newrow[self.ic] = n.name
+                    newrow[self.ic] = node.name
                     self.sheet.MT.data.append(newrow)
-                    self.warnings.append(f" - ID ({n.name}) missing from ID column, new row added")
+                    self.warnings.append(f" - ID ({node.name}) missing from ID column, new row added")
                 tlly = 0
-                for k, v in n.cn.items():
+                for k, v in node.cn.items():
                     if v:
-                        n.cn[k] = self.sort_node_cn(v, k)
-                    elif not n.ps[k]:
-                        n.ps[k] = None
+                        node.cn[k] = self.sort_node_cn(v, k)
+                    elif not node.ps[k]:
+                        node.ps[k] = None
                         tlly += 1
                 if tlly == lh:
-                    n.ps[first_hier] = ""
+                    node.ps[first_hier] = ""
                     for h in quick_hiers:
-                        n.ps[h] = None
+                        node.ps[h] = None
 
         elif not startup and self.auto_sort_nodes_bool:
             to_insert = []
-            for n in self.nodes.values():
-                if all(p is None for p in n.ps.values()):
-                    n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
+            for node in self.nodes.values():
+                if all(p is None for p in node.ps.values()):
+                    node.ps = {h: "" if node.cn[h] else None for h in self.hiers}
                     newrow = list(repeat("", self.row_len))
-                    newrow[self.ic] = n.name
+                    newrow[self.ic] = node.name
                     to_insert.append(newrow)
                 tlly = 0
-                for k, v in n.cn.items():
+                for k, v in node.cn.items():
                     if v:
-                        n.cn[k] = self.sort_node_cn(v, k)
-                    elif not n.ps[k]:
-                        n.ps[k] = None
+                        node.cn[k] = self.sort_node_cn(v, k)
+                    elif not node.ps[k]:
+                        node.ps[k] = None
                         tlly += 1
                 if tlly == lh:
-                    n.ps[first_hier] = ""
+                    node.ps[first_hier] = ""
                     for h in quick_hiers:
-                        n.ps[h] = None
+                        node.ps[h] = None
             if to_insert:
                 self.sheet.insert_rows(rows=to_insert)
 
         elif not startup and not self.auto_sort_nodes_bool:
             st_check_topnodes_order = {k: set(v) for k, v in self.topnodes_order.items()}
             to_insert = []
-            for n in self.nodes.values():
-                if all(p is None for p in n.ps.values()):
-                    n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
+            for iid, node in self.nodes.items():
+                if all(p is None for p in node.ps.values()):
+                    node.ps = {h: "" if node.cn[h] else None for h in self.hiers}
                     newrow = list(repeat("", self.row_len))
-                    newrow[self.ic] = n.name
+                    newrow[self.ic] = node.name
                     to_insert.append(newrow)
                 tlly = 0
-                for k, v in n.cn.items():
-                    if not v and not n.ps[k]:
-                        n.ps[k] = None
+                for k, v in node.cn.items():
+                    if not v and not node.ps[k]:
+                        node.ps[k] = None
                         tlly += 1
                 if tlly == lh:
-                    if all(n.k not in h for h in st_check_topnodes_order.values()):
-                        n.ps[first_hier] = ""
+                    if all(iid not in h for h in st_check_topnodes_order.values()):
+                        node.ps[first_hier] = ""
                         for h in quick_hiers:
-                            n.ps[h] = None
-                        self.topnodes_order[first_hier].append(n.k)
+                            node.ps[h] = None
+                        self.topnodes_order[first_hier].append(iid)
                     else:
                         for h, v in st_check_topnodes_order.items():
-                            if n.k in v:
-                                n.ps[h] = ""
+                            if iid in v:
+                                node.ps[h] = ""
             if to_insert:
                 self.sheet.insert_rows(rows=to_insert)
 
@@ -4551,26 +4546,26 @@ class Tree_Editor(tk.Frame):
         first_hier = self.hiers[0]
         quick_hiers = self.hiers[1:]
         lh = len(self.hiers)
-        for n in self.nodes.values():
+        for node in self.nodes.values():
             tlly = 0
-            for k, v in n.cn.items():
-                if not (v or n.ps[k]):
-                    n.ps[k] = None
+            for k, v in node.cn.items():
+                if not (v or node.ps[k]):
+                    node.ps[k] = None
                     tlly += 1
             if tlly == lh:
-                n.ps[first_hier] = ""
+                node.ps[first_hier] = ""
                 for h in quick_hiers:
-                    n.ps[h] = None
+                    node.ps[h] = None
         if not self.auto_sort_nodes_bool:
             current_nodes = {n: None for n in self.topnodes_order[self.hiers[0]]}
             wc = []
             woc = []
-            for n in self.nodes.values():
-                if n.ps[self.hiers[0]] == "" and n.k not in current_nodes:
-                    if n.cn[self.hiers[0]]:
-                        wc.append(n.k)
+            for iid, node in self.nodes.items():
+                if node.ps[self.hiers[0]] == "" and iid not in current_nodes:
+                    if node.cn[self.hiers[0]]:
+                        wc.append(iid)
                     else:
-                        woc.append(n.k)
+                        woc.append(iid)
             self.topnodes_order[self.hiers[0]] = (
                 list(current_nodes) + sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
             )
@@ -4593,12 +4588,12 @@ class Tree_Editor(tk.Frame):
         if self.auto_sort_nodes_bool:
             wc = []
             woc = []
-            for n in self.nodes.values():
-                if n.ps[pc] == "":
-                    if n.cn[pc]:
-                        wc.append(n.k)
+            for iid, node in self.nodes.items():
+                if node.ps[pc] == "":
+                    if node.cn[pc]:
+                        wc.append(iid)
                     else:
-                        woc.append(n.k)
+                        woc.append(iid)
             yield from sorted(wc, key=self.sort_node_key)
             yield from sorted(woc, key=self.sort_node_key)
         else:
@@ -4625,12 +4620,12 @@ class Tree_Editor(tk.Frame):
         for h in self.hiers:
             wc = []
             woc = []
-            for n in self.nodes.values():
-                if n.ps[h] == "":
-                    if n.cn[h]:
-                        wc.append(n.k)
+            for iid, node in self.nodes.items():
+                if node.ps[h] == "":
+                    if node.cn[h]:
+                        wc.append(iid)
                     else:
-                        woc.append(n.k)
+                        woc.append(iid)
             self.topnodes_order[h] = sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
 
     def gen_sheet_w_headers(self):
@@ -6850,7 +6845,7 @@ class Tree_Editor(tk.Frame):
         self.snapshot_paste_id()
         if self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]]:
             see_iid = self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]][0]
-            select_iids = tuple(n.k for n in self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]])
+            select_iids = tuple(self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]])
         else:
             see_iid = ""
             select_iids = ()
@@ -6886,7 +6881,7 @@ class Tree_Editor(tk.Frame):
         self.snapshot_paste_id()
         if self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]]:
             see_iid = self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]][0]
-            select_iids = tuple(n.k for n in self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]])
+            select_iids = tuple(self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]])
         else:
             see_iid = ""
             select_iids = ()
@@ -6956,7 +6951,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7011,7 +7006,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7058,7 +7053,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7105,7 +7100,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7160,7 +7155,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7207,7 +7202,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7260,7 +7255,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7321,7 +7316,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7374,7 +7369,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7427,7 +7422,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7490,7 +7485,7 @@ class Tree_Editor(tk.Frame):
             self.redo_tree_display()
             self.redraw_sheets()
             self.tree.scroll_to_item(iid.lower())
-            self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+            self.tree.selection_set(tuple(dct["id"] for dct in successful))
             self.disable_paste()
             self.stop_work(self.get_tree_editor_status_bar_text())
         return successful
@@ -7544,7 +7539,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.tree.scroll_to_item(iid.lower())
-        self.tree.selection_set(tuple(self.nodes[dct["id"]].k for dct in successful))
+        self.tree.selection_set(tuple(dct["id"] for dct in successful))
         self.disable_paste()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7668,8 +7663,8 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
-        self.tree.scroll_to_item(self.nodes[new_ik].k)
-        self.tree.selection_set(self.nodes[new_ik].k)
+        self.tree.scroll_to_item(new_ik)
+        self.tree.selection_set(new_ik)
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
@@ -7722,8 +7717,8 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
-        self.tree.scroll_to_item(self.nodes[new_ik].k)
-        self.tree.selection_set(self.nodes[new_ik].k)
+        self.tree.scroll_to_item(new_ik)
+        self.tree.selection_set(new_ik)
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
@@ -7760,9 +7755,9 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
-        if self.tree.exists(self.nodes[new_ik].k):
-            self.tree.scroll_to_item(self.nodes[new_ik].k)
-            self.tree.selection_set(self.nodes[new_ik].k)
+        if self.tree.exists(new_ik):
+            self.tree.scroll_to_item(new_ik)
+            self.tree.selection_set(new_ik)
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
@@ -7799,8 +7794,8 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
-        self.tree.scroll_to_item(self.nodes[new_ik].k)
-        self.tree.selection_set(self.nodes[new_ik].k)
+        self.tree.scroll_to_item(new_ik)
+        self.tree.selection_set(new_ik)
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
@@ -8531,8 +8526,8 @@ class Tree_Editor(tk.Frame):
             selected = hs[0]
         self.switch_displayed.set(f"{selected}")
         self.switch_hier()
-        self.tree.scroll_to_item(self.nodes[ik].k)
-        self.tree.selection_set(self.nodes[ik].k)
+        self.tree.scroll_to_item(ik)
+        self.tree.selection_set(ik)
 
     def tree_go_to_tagged_id(self, event=None):
         if not (ik := self.tree_tagged_ids_dropdown.get_my_value().lower()):
@@ -8560,9 +8555,9 @@ class Tree_Editor(tk.Frame):
         if ik in self.rns:
             self.sheet.select_row(self.rns[ik])
             self.sheet.see(row=self.rns[ik], keep_xscroll=True)
-            if self.tree.exists(self.nodes[ik].k):
-                self.tree.scroll_to_item(self.nodes[ik].k)
-                self.tree.selection_set(self.nodes[ik].k)
+            if self.tree.exists(ik):
+                self.tree.scroll_to_item(ik)
+                self.tree.selection_set(ik)
         else:
             self.discard_tagged_id(ik)
 
@@ -10767,7 +10762,6 @@ class Tree_Editor(tk.Frame):
         nodes = {
             name.lower(): Node(
                 name=name,
-                k=name.lower(),
                 hrs=hiers,
             )
             for name in njson
@@ -10844,9 +10838,9 @@ class Tree_Editor(tk.Frame):
         oldpc = int(self.pc)
         self.levels = defaultdict(list)
         for h in self.hiers:
-            for node in self.nodes.values():
+            for iid, node in self.nodes.items():
                 if node.ps[h] and not node.cn[h]:
-                    self.get_par_lvls(h, node.k)
+                    self.get_par_lvls(h, iid)
         maxlvls = max(self.levels, default=0) + 1
         self.xl_tv_detail_cols = tuple(i for i, h in enumerate(self.headers) if h.type_ not in ("ID", "Parent"))
         self.level_colors = tuple(tv_lvls_colors[level_to_color(i)] for i in range(maxlvls + 1))
