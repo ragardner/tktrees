@@ -3374,12 +3374,16 @@ class Tree_Editor(tk.Frame):
         ik_rn = self.rns[ik]
         self.sheet.MT.data[ik_rn][self.ic] = new_name
         for h, cn in self.nodes[ik].cn.items():
-            for iid in cn:
-                chld_rn = self.rns[iid]
+            for ciid in cn:
+                chld_rn = self.rns[ciid]
                 self.refresh_rows.add(chld_rn)
                 if snapshot:
                     qvsrwsapp(zlib.compress(pickle.dumps((chld_rn, h, self.sheet.MT.data[chld_rn][h]))))
                 self.sheet.MT.data[chld_rn][h] = f"{new_name}"
+                self.nodes[ciid].ps[h] = nnk
+        for h, p in self.nodes[ik].ps.items():
+            if p:
+                self.nodes[p].cn[h][self.nodes[p].cn[h].index(ik)] = nnk
         if snapshot:
             self.vs[-1]["ikrow"] = (ik_rn, ik, self.nodes[ik].name, new_name)
         self.nodes[ik].name = new_name
