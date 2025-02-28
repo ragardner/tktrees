@@ -2,7 +2,6 @@
 # Copyright 2019 R. A. Gardner
 
 import os
-import re
 import tkinter as tk
 from collections import defaultdict
 from contextlib import suppress
@@ -27,6 +26,7 @@ from .functions import (
     get_json_format,
     get_json_from_file,
     json_to_sheet,
+    sort_key,
     ws_x_data,
     ws_x_program_data_str,
 )
@@ -747,8 +747,8 @@ class Tree_Compare(tk.Frame):
         for i, h in enumerate(self.heads2):
             if i not in ic_parcolset2:
                 detcold[h].append(i)
-        matching_hrs_names = sorted((k for k, v in pcold.items() if len(v) > 1), key=self.srtkey)
-        matching_details_names = sorted((k for k, v in detcold.items() if len(v) > 1), key=self.srtkey)
+        matching_hrs_names = sorted((k for k, v in pcold.items() if len(v) > 1), key=sort_key)
+        matching_details_names = sorted((k for k, v in detcold.items() if len(v) > 1), key=sort_key)
 
         # id column index
         if self.ic1 != self.ic2:
@@ -1050,6 +1050,3 @@ class Tree_Compare(tk.Frame):
             self.report_header += " - Sheets are identical"
         self.stop_work("Program ready")
         Compare_Report_Popup(self, theme=self.C.theme)
-
-    def srtkey(self, e):
-        return tuple(int(c) if c.isdigit() else c.lower() for c in re.split("([0-9]+)", e))

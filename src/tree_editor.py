@@ -4570,9 +4570,6 @@ class Tree_Editor(tk.Frame):
                 list(current_nodes) + sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
             )
 
-    def sort_node_key(self, iid: str) -> tuple[int | str]:
-        return tuple(int(e) if e.isdigit() else e for e in re.split("([0-9]+)", iid))
-
     def sort_node_cn(self, cn: list[str], h: int):
         wc = []
         woc = []
@@ -4581,7 +4578,7 @@ class Tree_Editor(tk.Frame):
                 wc.append(ciid)
             else:
                 woc.append(ciid)
-        return sorted(wc, key=self.sort_node_key) + sorted(woc, key=self.sort_node_key)
+        return sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
 
     def top_iids(self):
         pc = self.pc
@@ -4594,8 +4591,8 @@ class Tree_Editor(tk.Frame):
                         wc.append(iid)
                     else:
                         woc.append(iid)
-            yield from sorted(wc, key=self.sort_node_key)
-            yield from sorted(woc, key=self.sort_node_key)
+            yield from sorted(wc, key=sort_key)
+            yield from sorted(woc, key=sort_key)
         else:
             yield from self.topnodes_order[pc]
 
