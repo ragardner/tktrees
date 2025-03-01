@@ -110,6 +110,7 @@ tree_bindings = (
     "edit_cell",
     "column_drag_and_drop",
     "row_drag_and_drop",
+    "find",
 )
 sheet_bindings = tree_bindings
 

@@ -10,6 +10,7 @@ from functools import partial
 from itertools import accumulate, chain, cycle, filterfalse, islice, repeat
 from math import ceil, floor
 from operator import itemgetter
+from re import IGNORECASE, escape, sub
 from tkinter import TclError
 from typing import Any, Literal
 
@@ -30,7 +31,7 @@ from .constants import (
     text_editor_to_unbind,
     val_modifying_options,
 )
-from .find_window import FindWindow
+from .find_window import FindWindow, replacer
 from .formatters import (
     data_to_str,
     format_data,
@@ -480,8 +481,20 @@ class MainTable(tk.Canvas):
 
     def get_find_window_dimensions_coords(self, w_width: int) -> tuple[int, int, int, int]:
         width = min(self.get_txt_w("X" * 23), w_width - 7)
-        # w, h, x, y
-        return width, self.min_row_height, self.canvasx(max(0, w_width - width - 7)), self.canvasy(7)
+        height = self.min_row_height
+        if self.find_window.window and self.find_window.window.replace_visible:
+            height *= 2
+        return width, height, self.canvasx(max(0, w_width - width - 7)), self.canvasy(7)
+
+    def reposition_find_window(self) -> None:
+        w, h, x, y = self.get_find_window_dimensions_coords(w_width=self.winfo_width())
+        self.coords(self.find_window.canvas_id, x, y)
+        self.itemconfig(
+            self.find_window.canvas_id,
+            width=w,
+            height=h,
+            state="normal",
+        )
 
     def open_find_window(
         self,
@@ -498,6 +511,9 @@ class MainTable(tk.Canvas):
                 find_prev_func=self.find_previous,
                 find_next_func=self.find_next,
                 close_func=self.close_find_window,
+                replace_func=self.replace_next,
+                replace_all_func=self.replace_all,
+                toggle_replace_func=self.reposition_find_window,
             )
             self.find_window.canvas_id = self.create_window((x, y), window=self.find_window.window, anchor="nw")
             for b in chain(self.PAR.ops.escape_bindings, self.PAR.ops.find_bindings):
@@ -535,6 +551,51 @@ class MainTable(tk.Canvas):
             self.find_window.tktext.focus_set()
         return "break"
 
+    def replace_next(self, event: tk.Misc | None = None) -> None:
+        find = self.find_window.get().lower()
+        replace = self.find_window.window.get_replace()
+        sel = self.selected
+        if sel:
+            datarn, datacn = self.datarn(sel.row), self.datacn(sel.column)
+            m = self.find_match(find, datarn, datacn)
+            if m:
+                current = f"{self.get_cell_data(datarn, datacn, True)}"
+                new = sub(escape(find), replacer(find, replace, current), current, flags=IGNORECASE)
+                event_data = event_dict(
+                    name="end_edit_table",
+                    sheet=self.PAR.name,
+                    widget=self,
+                    cells_table={(datarn, datacn): self.get_cell_data(datarn, datacn)},
+                    key="replace_next",
+                    value=new,
+                    loc=Loc(sel.row, sel.column),
+                    row=sel.row,
+                    column=sel.column,
+                    boxes=self.get_boxes(),
+                    selected=self.selected,
+                    data={(datarn, datacn): new},
+                )
+                value, event_data = self.single_edit_run_validation(datarn, datacn, event_data)
+                if value is not None and (
+                    self.set_cell_data_undo(
+                        r=datarn,
+                        c=datacn,
+                        datarn=datarn,
+                        datacn=datacn,
+                        value=value,
+                        redraw=False,
+                    )
+                ):
+                    try_binding(self.extra_end_edit_cell_func, event_data)
+        if self.find_window.window.find_in_selection:
+            found_next = self.find_see_and_set(self.find_within(find))
+        else:
+            found_next = self.find_see_and_set(self.find_all_cells(find))
+        if not found_next:
+            self.deselect()
+
+    def replace_all(self, event: tk.Misc | None = None) -> None: ...
+
     def find_see_and_set(
         self,
         coords: tuple[int, int, int | None] | None,
@@ -560,25 +621,14 @@ class MainTable(tk.Canvas):
             value = self.data[r][c]
         except Exception:
             value = ""
-        kwargs = self.get_cell_kwargs(r, c, key=None)
+        kwargs = self.get_cell_kwargs(r, c, key="format")
         if kwargs:
-            if "dropdown" in kwargs:
-                kwargs = kwargs["dropdown"]
-                if kwargs["text"] is not None and find in str(kwargs["text"]).lower():
-                    return True
-            elif "checkbox" in kwargs:
-                kwargs = kwargs["checkbox"]
-                if find in str(kwargs["text"]).lower() or (not find and find in "False"):
-                    return True
-            elif "format" in kwargs:
-                if kwargs["formatter"] is None:
-                    if find in data_to_str(value, **kwargs).lower():
-                        return True
-                # assumed given formatter class has __str__() or value attribute
-                elif find in str(value).lower() or find in str(value.value).lower():
-                    return True
+            # assumed given formatter class has __str__() or value attribute
+            value = data_to_str(value, **kwargs) if kwargs["formatter"] is None else str(value)
         if value is None:
             return find == ""
+        elif not find:
+            return str(value) == ""
         else:
             return find in str(value).lower()
 
@@ -6175,14 +6225,7 @@ class MainTable(tk.Canvas):
         y_stop = min(last_row_line_pos, scrollpos_bot)
         # manage find window
         if self.find_window.open:
-            w, h, x, y = self.get_find_window_dimensions_coords(w_width=self.winfo_width())
-            self.coords(self.find_window.canvas_id, x, y)
-            self.itemconfig(
-                self.find_window.canvas_id,
-                width=w,
-                height=h,
-                state="normal",
-            )
+            self.reposition_find_window()
         # redraw table
         if redraw_table:
             # reset canvas item storage
@@ -7461,6 +7504,7 @@ class MainTable(tk.Canvas):
     def single_edit_run_validation(
         self, datarn: int, datacn: int, event_data: EventDataDict
     ) -> tuple[Any, EventDataDict]:
+        value = event_data.value
         if self.edit_validation_func and (new_value := self.edit_validation_func(event_data)) is not None:
             value = new_value
             event_data["data"][(datarn, datacn)] = value

@@ -116,7 +116,6 @@ from .toplevels import (
     Enter_Sheet_Name_Popup,
     Error,
     Export_Flattened_Popup,
-    Find_And_Replace_Popup,
     Get_Clipboard_Data_Popup,
     Merge_Sheets_Popup,
     Post_Import_Changes_Popup,
@@ -282,19 +281,6 @@ class Tree_Editor(tk.Frame):
             label="Tag/Untag IDs",
             command=self.tag_ids,
             accelerator="Ctrl+T",
-            **menu_kwargs,
-        )
-        self.edit_menu.add_separator()
-        self.edit_menu.add_command(
-            label="Find & Replace",
-            accelerator="Ctrl+F",
-            command=self.find_and_replace,
-            **menu_kwargs,
-        )
-        self.edit_menu.add_command(
-            label="Find next",
-            accelerator="Ctrl+G",
-            command=self.find_next_main,
             **menu_kwargs,
         )
         self.edit_menu.add_separator()
@@ -702,12 +688,6 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_multi_cell.add_command(
-            label="Find & Replace",
-            accelerator="Ctrl+F",
-            command=lambda: self.find_and_replace(within=True),
-            **menu_kwargs,
-        )
-        self.tree_sheet_rc_menu_multi_cell.add_command(
             label="Cut",
             accelerator="Ctrl+X",
             command=self.cut_key,
@@ -747,12 +727,6 @@ class Tree_Editor(tk.Frame):
         self.tree_sheet_rc_menu_single_col.add_cascade(
             label="Alignment",
             menu=self.tree_sheet_rc_menu_single_col_align,
-            **menu_kwargs,
-        )
-        self.tree_sheet_rc_menu_single_col.add_command(
-            label="Find & Replace",
-            accelerator="Ctrl+F",
-            command=lambda: self.find_and_replace(within=True),
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
@@ -877,12 +851,6 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_multi_col.add_command(
-            label="Find & Replace",
-            accelerator="Ctrl+F",
-            command=lambda: self.find_and_replace(within=True),
-            **menu_kwargs,
-        )
-        self.tree_sheet_rc_menu_multi_col.add_command(
             label="Cut",
             accelerator="Ctrl+X",
             command=self.cut_key,
@@ -914,12 +882,6 @@ class Tree_Editor(tk.Frame):
 
         # MULTI ROW MENU - TREE
         self.tree_rc_menu_multi_row = tk.Menu(self.treeframe, tearoff=0, **menu_kwargs)
-        self.tree_rc_menu_multi_row.add_command(
-            label="Find & Replace",
-            accelerator="Ctrl+F",
-            command=lambda: self.find_and_replace(within=True),
-            **menu_kwargs,
-        )
         self.tree_rc_menu_multi_row.add_command(
             label="Cut",
             accelerator="Ctrl+X",
@@ -981,12 +943,6 @@ class Tree_Editor(tk.Frame):
 
         # SINGLE ROW MENU - TREE
         self.tree_rc_menu_single_row = tk.Menu(self.treeframe, tearoff=0, **menu_kwargs)
-        self.tree_rc_menu_single_row.add_command(
-            label="Find & Replace",
-            accelerator="Ctrl+F",
-            command=lambda: self.find_and_replace(within=True),
-            **menu_kwargs,
-        )
         self.tree_rc_menu_single_row_add = tk.Menu(self.tree_rc_menu_single_row, tearoff=0, **menu_kwargs)
         self.tree_rc_menu_single_row.add_cascade(label="Add", menu=self.tree_rc_menu_single_row_add, **menu_kwargs)
         self.tree_rc_menu_single_row_add.add_command(label="Add child", command=self.add_child_node, **menu_kwargs)
@@ -1119,12 +1075,6 @@ class Tree_Editor(tk.Frame):
         # SINGLE ROW MENU - SHEET
         self.sheet_rc_menu_single_row = tk.Menu(self.sheet, tearoff=0, **menu_kwargs)
         self.sheet_rc_menu_single_row.add_command(
-            label="Find & Replace",
-            accelerator="Ctrl+F",
-            command=lambda: self.find_and_replace(within=True),
-            **menu_kwargs,
-        )
-        self.sheet_rc_menu_single_row.add_command(
             label="Tag/Untag ID",
             accelerator="Ctrl+T",
             command=self.tag_ids,
@@ -1197,12 +1147,6 @@ class Tree_Editor(tk.Frame):
         self.sheet_rc_menu_multi_row = tk.Menu(
             self.sheet,
             tearoff=0,
-            **menu_kwargs,
-        )
-        self.sheet_rc_menu_multi_row.add_command(
-            label="Find & Replace",
-            accelerator="Ctrl+F",
-            command=lambda: self.find_and_replace(within=True),
             **menu_kwargs,
         )
         self.sheet_rc_menu_multi_row.add_command(
@@ -1586,10 +1530,6 @@ class Tree_Editor(tk.Frame):
             widget.bind(f"<{ctrl_button}-R>", self.collapse_id)
             widget.bind(f"<{ctrl_button}-z>", self.ctrl_z)
             widget.bind(f"<{ctrl_button}-Z>", self.ctrl_z)
-            widget.bind(f"<{ctrl_button}-f>", self.find_and_replace)
-            widget.bind(f"<{ctrl_button}-F>", self.find_and_replace)
-            widget.bind(f"<{ctrl_button}-h>", self.find_and_replace)
-            widget.bind(f"<{ctrl_button}-H>", self.find_and_replace)
             widget.bind(f"<{ctrl_button}-l>", self.show_changelog)
             widget.bind(f"<{ctrl_button}-L>", self.show_changelog)
             widget.bind(f"<{ctrl_button}-v>", self.paste_key)
@@ -1674,10 +1614,6 @@ class Tree_Editor(tk.Frame):
             x.unbind(f"<{ctrl_button}-G>")
             x.unbind(f"<{ctrl_button}-z>")
             x.unbind(f"<{ctrl_button}-Z>")
-            x.unbind(f"<{ctrl_button}-f>")
-            x.unbind(f"<{ctrl_button}-F>")
-            x.unbind(f"<{ctrl_button}-h>")
-            x.unbind(f"<{ctrl_button}-H>")
             x.unbind(f"<{ctrl_button}-l>")
             x.unbind(f"<{ctrl_button}-L>")
             x.unbind(f"<{ctrl_button}-t>")
@@ -3072,21 +3008,21 @@ class Tree_Editor(tk.Frame):
         if snapshot:
             self.vs[-1]["ikrow"] = (ik_rn, ik, self.nodes[ik].name, new_name)
         self.nodes[ik].name = new_name
+        self.nodes[nnk] = self.nodes.pop(ik)
+        self.rns[nnk] = self.rns.pop(ik)
         if self.auto_sort_nodes_bool:
-            for h, p in self.nodes[ik].ps.items():
+            for h, p in self.nodes[nnk].ps.items():
                 if p:
-                    parent_node = self.nodes[self.nodes[ik].ps[h]]
+                    parent_node = self.nodes[self.nodes[nnk].ps[h]]
                     parent_node.cn[h] = self.sort_node_cn(parent_node.cn[h], h)
 
         else:
             for h in self.hiers:
-                if self.nodes[ik].ps[h] == "":
+                if self.nodes[nnk].ps[h] == "":
                     try:
                         self.topnodes_order[h][self.topnodes_order[h].index(ik)] = nnk
                     except Exception:
                         continue
-        self.nodes[nnk] = self.nodes.pop(ik)
-        self.rns[nnk] = self.rns.pop(ik)
         if ik in self.saved_info[self.pc].opens:
             self.saved_info[self.pc].opens[nnk] = self.saved_info[self.pc].opens.pop(ik)
         return True
@@ -6407,17 +6343,6 @@ class Tree_Editor(tk.Frame):
             self.sheet_search_dropdown["values"] = [result.text for result in self.sheet_search_results]
             self.sheet_search_displayed.set(self.sheet_search_results[0].text)
             self.sheet_show_search_result()
-
-    def find_and_replace(self, event=None, within=False):
-        if self.find_popup is not None:
-            self.destroy_find_popup()
-        widget = self.sheet if self.sheet_has_focus else self.tree
-        pars = any(
-            self.headers[c].type_ in ("ID", "Parent") for c in widget.get_selected_columns(get_cells_as_columns=True)
-        )
-        if not pars:
-            pars = any(box.type_ == "rows" for box in widget.boxes)
-        self.find_popup = Find_And_Replace_Popup(self, theme=self.C.theme, within=within, pars=pars)
 
     def enable_copy_paste(self):
         self.tree_rc_menu_single_row_paste.entryconfig(
