@@ -1923,7 +1923,6 @@ class Tree_Editor(tk.Frame):
                 self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
                 self.tree_set_cell_size_to_text(y1, x1)
                 self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-                return newtext
 
             elif self.headers[x1].type_ == "Parent":
                 self.snapshot_paste_id()
@@ -1945,37 +1944,28 @@ class Tree_Editor(tk.Frame):
                         self.tree.selection_set(tree_sel)
                     self.disable_paste()
                     self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-                    return newtext
-
                 else:
                     self.vs.pop()
                     self.vp -= 1
                     self.set_undo_label()
                     self.edit_cell_rebuild(y1, x1, newtext)
-                    event.data = {}
-                    return None
-
             else:
-                if not self.detail_is_valid_for_col(x1, newtext):
+                if self.detail_is_valid_for_col(x1, newtext):
+                    self.snapshot_ctrl_x_v_del_key()
+                    self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
+                    newtext = self.edit_cell_single(y1, x1, newtext)
+                    self.refresh_formatting(rows=y1, columns=x1)
+                    self.refresh_tree_item(ID)
+                    self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
+                    self.tree_set_cell_size_to_text(y1, x1)
+                    self.disable_paste()
+                    self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+                else:
                     Error(
                         self,
                         f"Entered text invalid for column type - {self.why_isnt_detail_valid(x1, newtext)}   ",
                         theme=self.C.theme,
                     )
-                    event.data = {}
-                    return None
-                self.snapshot_ctrl_x_v_del_key()
-                self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
-                newtext = self.edit_cell_single(y1, x1, newtext)
-                self.refresh_formatting(rows=y1, columns=x1)
-                self.refresh_tree_item(ID)
-                self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
-                self.tree_set_cell_size_to_text(y1, x1)
-                self.disable_paste()
-                self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-
-                return newtext
-
         else:
             self.start_work("Editing table...")
             idcols = set(self.hiers) | {self.ic}
@@ -2000,36 +1990,32 @@ class Tree_Editor(tk.Frame):
                     self.edit_cell_multiple(r, c, value)
                     refresh_rows.add(r)
                     refresh_cols.add(c)
-                else:
-                    del event["data"][k]
-                # the problem:
-                # undo is not restoring the right value
-                #
             self.disable_paste()
-            if not refresh_rows:
+            if refresh_rows:
+                if need_rebuild:
+                    self.rebuild_tree()
+                else:
+                    self.refresh_formatting(rows=refresh_rows, columns=refresh_cols)
+                    for rn in refresh_rows:
+                        self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
+                if len(refresh_rows) > 1 and len(refresh_cols) > 1:
+                    self.changelog_append(
+                        f"Edit {len(refresh_rows) * len(refresh_cols)} cells",
+                        "",
+                        "",
+                        "",
+                    )
+                else:
+                    self.changelog_singular("Edit cell")
+                self.redraw_sheets()
+                self.stop_work(self.get_tree_editor_status_bar_text())
+            else:
                 self.vp -= 1
                 self.set_undo_label()
                 self.vs.pop()
                 self.redraw_sheets()
                 self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-            if need_rebuild:
-                self.rebuild_tree()
-            else:
-                self.refresh_formatting(rows=refresh_rows, columns=refresh_cols)
-                for rn in refresh_rows:
-                    self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
-            if len(refresh_rows) > 1 and len(refresh_cols) > 1:
-                self.changelog_append(
-                    f"Edit {len(refresh_rows) * len(refresh_cols)} cells",
-                    "",
-                    "",
-                    "",
-                )
-            else:
-                self.changelog_singular("Edit cell")
-            self.redraw_sheets()
-            self.stop_work(self.get_tree_editor_status_bar_text())
+        event.data = {}
 
     def tree_set_cell_size_to_text(self, sheet_r, sheet_c):
         if self.tree.exists(self.sheet.data[sheet_r][self.ic].lower()) and self.tree.item_displayed(
