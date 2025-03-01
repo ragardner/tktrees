@@ -1977,9 +1977,8 @@ class Tree_Editor(tk.Frame):
                 self.snapshot_ctrl_x_v_del_key_id_par()
             else:
                 self.snapshot_ctrl_x_v_del_key()
-            for k in tuple(event["data"]):
+            for k, value in event["data"].items():
                 r, c = k
-                value = event["data"][k]
                 if tree:
                     r = self.rns[self.tree.rowitem(row=r, data_index=True)]
                 if (need_rebuild and c in idcols) or (
