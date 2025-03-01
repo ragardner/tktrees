@@ -1871,17 +1871,16 @@ class Tree_Editor(tk.Frame):
         if not event:
             return None
         if len(event.data) == 1:
+            y1, x1 = next(iter(event.data))
+            newtext = event.data[(y1, x1)]
             if event.sheetname == "tree":
-                y1, x1 = self.rns[self.tree.rowitem(event.row)], event.column
-            elif event.sheetname == "sheet":
-                y1, x1 = event.loc
-
-            newtext = event.value
+                y1 = self.rns[self.tree.rowitem(y1, data_index=True)]
 
             if self.headers[x1].type_ in ("ID", "Parent") and not self.allow_spaces_ids_var:
                 newtext = re.sub(r"[\n\t\s]*", "", newtext)
 
             if newtext == self.sheet.data[y1][x1]:
+                event.data = {}
                 return None
 
             ID = self.sheet.data[y1][self.ic]
@@ -1893,6 +1892,7 @@ class Tree_Editor(tk.Frame):
                 tree_sel = self.tree.selection()
                 if not self.change_ID_name(id_, newtext, errors=False):
                     self.edit_cell_rebuild(y1, x1, newtext)
+                    event.data = {}
                     return None
 
                 self.changelog_append(
@@ -1952,6 +1952,7 @@ class Tree_Editor(tk.Frame):
                     self.vp -= 1
                     self.set_undo_label()
                     self.edit_cell_rebuild(y1, x1, newtext)
+                    event.data = {}
                     return None
 
             else:
@@ -1961,6 +1962,7 @@ class Tree_Editor(tk.Frame):
                         f"Entered text invalid for column type - {self.why_isnt_detail_valid(x1, newtext)}   ",
                         theme=self.C.theme,
                     )
+                    event.data = {}
                     return None
                 self.snapshot_ctrl_x_v_del_key()
                 self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
@@ -1985,18 +1987,24 @@ class Tree_Editor(tk.Frame):
                 self.snapshot_ctrl_x_v_del_key_id_par()
             else:
                 self.snapshot_ctrl_x_v_del_key()
-
-            for (r, c), value in event["data"].items():
+            for k in tuple(event["data"]):
+                r, c = k
+                value = event["data"][k]
                 if tree:
                     r = self.rns[self.tree.rowitem(row=r, data_index=True)]
                 if (need_rebuild and c in idcols) or (
                     self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value
                 ):
                     if not need_rebuild:
-                        self.vs[-1]["cells"][(r, c)] = self.sheet.MT.data[r][c]
+                        self.vs[-1]["cells"][k] = f"{self.sheet.MT.data[r][c]}"
                     self.edit_cell_multiple(r, c, value)
                     refresh_rows.add(r)
                     refresh_cols.add(c)
+                else:
+                    del event["data"][k]
+                # the problem:
+                # undo is not restoring the right value
+                #
             self.disable_paste()
             if not refresh_rows:
                 self.vp -= 1
@@ -4705,8 +4713,13 @@ class Tree_Editor(tk.Frame):
             cd = datetime.timedelta(days=0)  # noqa: F841
 
         all_conditions = {}
-        number_cols = {col for col, hdr in enumerate(self.headers) if hdr.type_ == "Number"}
-        date_cols = {col for col, hdr in enumerate(self.headers) if hdr.type_ == "Date"}
+        number_cols = set()
+        date_cols = set()
+        for col, hdr in enumerate(self.headers):
+            if hdr.type_ == "Number":
+                number_cols.add(col)
+            elif hdr.type_ == "Date":
+                date_cols.add(col)
 
         for col in columns:
             if not self.headers[col].formatting:
@@ -4752,13 +4765,9 @@ class Tree_Editor(tk.Frame):
                 all_conditions[col] = modified_conditions
 
         quick_data = self.sheet.MT.data
-        for rn in rows:
-            for col in columns:
+        for col in filter(all_conditions.__contains__, columns):
+            for rn in rows:
                 self.sheet.dehighlight_cells(row=rn, column=col, redraw=False)
-
-                if col not in all_conditions:
-                    continue
-
                 cell = quick_data[rn][col]
 
                 # convert cell to number/date

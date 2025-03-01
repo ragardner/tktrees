@@ -7397,7 +7397,17 @@ class MainTable(tk.Canvas):
             data={(datarn, datacn): value},
         )
         value, event_data = self.single_edit_run_validation(datarn, datacn, event_data)
-        if edited := self.set_cell_data_undo(r=r, c=c, datarn=datarn, datacn=datacn, value=value, redraw=False):
+        edited = False
+        if value is not None and (
+            edited := self.set_cell_data_undo(
+                r=r,
+                c=c,
+                datarn=datarn,
+                datacn=datacn,
+                value=value,
+                redraw=False,
+            )
+        ):
             try_binding(self.extra_end_edit_cell_func, event_data)
         if (
             r is not None
@@ -7457,7 +7467,11 @@ class MainTable(tk.Canvas):
             event_data["value"] = value
         if self.bulk_table_edit_validation_func:
             self.bulk_table_edit_validation_func(event_data)
-            value = event_data["data"][(datarn, datacn)]
+            if (datarn, datacn) in event_data["data"]:
+                if event_data["data"][(datarn, datacn)] is not None:
+                    value = event_data["data"][(datarn, datacn)]
+            else:
+                value = None
         return value, event_data
 
     def select_right(self, r: int, c: int) -> None:
@@ -7674,8 +7688,14 @@ class MainTable(tk.Canvas):
             )
             try_binding(kwargs["select_function"], event_data)
             selection, event_data = self.single_edit_run_validation(datarn, datacn, event_data)
-            edited = self.set_cell_data_undo(r, c, datarn=datarn, datacn=datacn, value=selection, redraw=not redraw)
-            if edited:
+            if selection is not None and self.set_cell_data_undo(
+                r,
+                c,
+                datarn=datarn,
+                datacn=datacn,
+                value=selection,
+                redraw=not redraw,
+            ):
                 try_binding(self.extra_end_edit_cell_func, event_data)
             self.recreate_all_selection_boxes()
         self.focus_set()
