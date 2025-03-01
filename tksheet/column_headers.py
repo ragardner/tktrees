@@ -899,6 +899,7 @@ class ColumnHeaders(tk.Canvas):
                         value=val,
                         event_data=event_data,
                     )
+        event_data = self.MT.bulk_edit_validation(event_data)
         if event_data["cells"]["table"]:
             if undo and self.MT.undo_enabled:
                 self.MT.undo_stack.append(stored_event_dict(event_data))

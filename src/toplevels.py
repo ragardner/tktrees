@@ -1561,8 +1561,9 @@ class Find_And_Replace_Popup(tk.Toplevel):
         event.row = r
         event.column = c
         event.loc = (r, c)
+        event.data = {(r, c): newtext}
         old_value = f"{self.C.sheet.MT.data[r][c]}"
-        if self.C.tree_sheet_edit_cell(event=event) is None:
+        if self.C.tree_sheet_edit_table(event=event) is None:
             self.stop_work("Replace either failed or required tree rebuild")
         else:
             self.stop_work(f"Replaced {old_value} with {newtext}")
@@ -1680,8 +1681,9 @@ class Find_And_Replace_Popup(tk.Toplevel):
         event.row = r
         event.column = c
         event.loc = (r, c)
+        event.data = {(r, c): newtext}
         old_value = f"{self.C.sheet.MT.data[r][c]}"
-        if self.C.tree_sheet_edit_cell(event=event) is None:
+        if self.C.tree_sheet_edit_table(event=event) is None:
             self.stop_work("Replace either failed or required tree rebuild")
         else:
             self.stop_work(f"Replaced {old_value} with {newtext}")

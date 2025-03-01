@@ -191,6 +191,7 @@ class MainTable(tk.Canvas):
         self.extra_rc_func = None
 
         self.edit_validation_func = None
+        self.bulk_table_edit_validation_func = None
 
         self.extra_begin_sort_cells_func = None
         self.extra_end_sort_cells_func = None
@@ -925,10 +926,11 @@ class MainTable(tk.Canvas):
         else:
             self.clipboard_append(s.getvalue())
         self.update_idletasks()
-        self.refresh()
-        for r1, c1, r2, c2 in boxes:
-            self.show_ctrl_outline(canvas="table", start_cell=(c1, r1), end_cell=(c2, r2))
+        event_data = self.bulk_edit_validation(event_data)
         if event_data["cells"]["table"]:
+            self.refresh()
+            for r1, c1, r2, c2 in boxes:
+                self.show_ctrl_outline(canvas="table", start_cell=(c1, r1), end_cell=(c2, r2))
             self.undo_stack.append(stored_event_dict(event_data))
             try_binding(self.extra_end_ctrl_x_func, event_data, "end_ctrl_x")
             self.sheet_modified(event_data)
@@ -980,6 +982,7 @@ class MainTable(tk.Canvas):
                             value=val,
                             event_data=event_data,
                         )
+        event_data = self.bulk_edit_validation(event_data)
         if event_data["cells"]["table"]:
             if undo and self.undo_enabled:
                 self.undo_stack.append(stored_event_dict(event_data))
@@ -1045,7 +1048,6 @@ class MainTable(tk.Canvas):
                     for _ in range(int(lastbox_numcols / new_data_numcols)):
                         data[rn].extend(r.copy())
                 new_data_numcols *= int(lastbox_numcols / new_data_numcols)
-        event_data["data"] = data
         added_rows = 0
         added_cols = 0
         total_data_cols = None
@@ -1084,6 +1086,11 @@ class MainTable(tk.Canvas):
             ): "cells"
         }
         event_data["selection_boxes"] = boxes
+        for ndr, r in enumerate(range(selected_r, selected_r_adjusted_new_data_numrows)):
+            datarn = self.datarn(r)
+            for ndc, c in enumerate(range(selected_c, selected_c_adjusted_new_data_numcols)):
+                event_data["data"][(datarn, self.datacn(c))] = data[ndr][ndc]
+
         if not try_binding(self.extra_begin_ctrl_v_func, event_data, "begin_ctrl_v"):
             return
         # the order of actions here is important:
@@ -1225,6 +1232,7 @@ class MainTable(tk.Canvas):
         event_data["selected"] = self.selected
         self.see(selected_r, selected_c, redraw=False)
         self.refresh()
+        event_data = self.bulk_edit_validation(event_data)
         if event_data["cells"]["table"] or event_data["added"]["rows"] or event_data["added"]["columns"]:
             self.undo_stack.append(stored_event_dict(event_data))
             try_binding(self.extra_end_ctrl_v_func, event_data, "end_ctrl_v")
@@ -1258,6 +1266,7 @@ class MainTable(tk.Canvas):
                         val,
                         event_data,
                     )
+        event_data = self.bulk_edit_validation(event_data)
         if event_data["cells"]["table"]:
             self.refresh()
             self.undo_stack.append(stored_event_dict(event_data))
@@ -1266,10 +1275,23 @@ class MainTable(tk.Canvas):
             self.PAR.emit_event("<<Delete>>", event_data)
         return event_data
 
-    def event_data_set_cell(self, datarn: int, datacn: int, value: Any, event_data: dict) -> EventDataDict:
+    def event_data_set_cell(self, datarn: int, datacn: int, value: Any, event_data: EventDataDict) -> EventDataDict:
+        """If bulk_table_edit_validation_func -> only updates event_data.data"""
         if self.input_valid_for_cell(datarn, datacn, value):
-            event_data["cells"]["table"][(datarn, datacn)] = self.get_cell_data(datarn, datacn)
-            self.set_cell_data(datarn, datacn, value)
+            if self.bulk_table_edit_validation_func:
+                event_data["data"][(datarn, datacn)] = value
+            else:
+                event_data["cells"]["table"][(datarn, datacn)] = self.get_cell_data(datarn, datacn)
+                self.set_cell_data(datarn, datacn, value)
+        return event_data
+
+    def bulk_edit_validation(self, event_data: EventDataDict) -> EventDataDict:
+        if self.bulk_table_edit_validation_func:
+            self.bulk_table_edit_validation_func(event_data)
+            for (datarn, datacn), value in event_data["data"].items():
+                if self.input_valid_for_cell(datarn, datacn, value):
+                    event_data["cells"]["table"][(datarn, datacn)] = self.get_cell_data(datarn, datacn)
+                    self.set_cell_data(datarn, datacn, value)
         return event_data
 
     def get_args_for_move_columns(
@@ -1829,38 +1851,28 @@ class MainTable(tk.Canvas):
             self.purge_redo_stack()
 
     def edit_cells_using_modification(self, modification: dict, event_data: dict) -> EventDataDict:
-        # row index
-        if self.PAR.ops.treeview:
-            for datarn, v in modification["cells"]["index"].items():
-                if not self.edit_validation_func or (
-                    self.edit_validation_func
-                    and (v := self.edit_validation_func(mod_event_val(event_data, v, row=datarn))) is not None
-                ):
+        treeview = self.PAR.ops.treeview
+        for datarn, v in modification["cells"]["index"].items():
+            if not self.edit_validation_func or (
+                self.edit_validation_func
+                and (v := self.edit_validation_func(mod_event_val(event_data, v, row=datarn))) is not None
+            ):
+                if treeview:
                     self._row_index[datarn].text = v
-        else:
-            for datarn, v in modification["cells"]["index"].items():
-                if not self.edit_validation_func or (
-                    self.edit_validation_func
-                    and (v := self.edit_validation_func(mod_event_val(event_data, v, row=datarn))) is not None
-                ):
+                else:
                     self._row_index[datarn] = v
-
-        # header
         for datacn, v in modification["cells"]["header"].items():
             if not self.edit_validation_func or (
                 self.edit_validation_func
                 and (v := self.edit_validation_func(mod_event_val(event_data, v, column=datacn))) is not None
             ):
                 self._headers[datacn] = v
-
-        # table
         for k, v in modification["cells"]["table"].items():
             if not self.edit_validation_func or (
                 self.edit_validation_func
                 and (v := self.edit_validation_func(mod_event_val(event_data, v, loc=k))) is not None
             ):
-                self.set_cell_data(k[0], k[1], v)
-
+                event_data = self.event_data_set_cell(k[0], k[1], v, event_data)
         return event_data
 
     def save_cells_using_modification(self, modification: EventDataDict, event_data: EventDataDict) -> EventDataDict:
@@ -2019,6 +2031,7 @@ class MainTable(tk.Canvas):
             if not saved_cells:
                 event_data = self.save_cells_using_modification(modification, event_data)
             event_data = self.edit_cells_using_modification(modification, event_data)
+            event_data = self.bulk_edit_validation(event_data)
 
         elif modification["eventname"].startswith("add"):
             event_data["eventname"] = modification["eventname"].replace("add", "delete")
@@ -7366,7 +7379,7 @@ class MainTable(tk.Canvas):
             self.focus_set()
             return
         # setting cell data with text editor value
-        text_editor_value = self.text_editor.get()
+        value = self.text_editor.get()
         r, c = self.text_editor.coords
         datarn, datacn = self.datarn(r), self.datacn(c)
         event_data = event_dict(
@@ -7375,30 +7388,16 @@ class MainTable(tk.Canvas):
             widget=self,
             cells_table={(datarn, datacn): self.get_cell_data(datarn, datacn)},
             key=event.keysym,
-            value=text_editor_value,
+            value=value,
             loc=Loc(r, c),
             row=r,
             column=c,
             boxes=self.get_boxes(),
             selected=self.selected,
+            data={(datarn, datacn): value},
         )
-        edited = False
-        set_data = partial(
-            self.set_cell_data_undo,
-            r=r,
-            c=c,
-            datarn=datarn,
-            datacn=datacn,
-            redraw=False,
-            check_input_valid=False,
-        )
-        if self.edit_validation_func:
-            text_editor_value = self.edit_validation_func(event_data)
-            if text_editor_value is not None and self.input_valid_for_cell(datarn, datacn, text_editor_value):
-                edited = set_data(value=text_editor_value)
-        elif self.input_valid_for_cell(datarn, datacn, text_editor_value):
-            edited = set_data(value=text_editor_value)
-        if edited:
+        value, event_data = self.single_edit_run_validation(datarn, datacn, event_data)
+        if edited := self.set_cell_data_undo(r=r, c=c, datarn=datarn, datacn=datacn, value=value, redraw=False):
             try_binding(self.extra_end_edit_cell_func, event_data)
         if (
             r is not None
@@ -7407,7 +7406,7 @@ class MainTable(tk.Canvas):
             and r == self.selected.row
             and c == self.selected.column
             and (self.single_selection_enabled or self.toggle_selection_enabled)
-            and (edited or self.cell_equal_to(datarn, datacn, text_editor_value))
+            and (edited or self.cell_equal_to(datarn, datacn, value))
         ):
             r1, c1, r2, c2 = self.selection_boxes[self.selected.fill_iid].coords
             numcols = c2 - c1
@@ -7448,6 +7447,18 @@ class MainTable(tk.Canvas):
         if event.keysym != "FocusOut":
             self.focus_set()
         return "break"
+
+    def single_edit_run_validation(
+        self, datarn: int, datacn: int, event_data: EventDataDict
+    ) -> tuple[Any, EventDataDict]:
+        if self.edit_validation_func and (new_value := self.edit_validation_func(event_data)) is not None:
+            value = new_value
+            event_data["data"][(datarn, datacn)] = value
+            event_data["value"] = value
+        if self.bulk_table_edit_validation_func:
+            self.bulk_table_edit_validation_func(event_data)
+            value = event_data["data"][(datarn, datacn)]
+        return value, event_data
 
     def select_right(self, r: int, c: int) -> None:
         self.select_cell(r, c + 1 if c < len(self.col_positions) - 2 else c)
@@ -7659,13 +7670,13 @@ class MainTable(tk.Canvas):
                 column=c,
                 boxes=self.get_boxes(),
                 selected=self.selected,
+                data={(datarn, datacn): selection},
             )
             try_binding(kwargs["select_function"], event_data)
-            selection = selection if not self.edit_validation_func else self.edit_validation_func(event_data)
-            if selection is not None:
-                edited = self.set_cell_data_undo(r, c, datarn=datarn, datacn=datacn, value=selection, redraw=not redraw)
-                if edited:
-                    try_binding(self.extra_end_edit_cell_func, event_data)
+            selection, event_data = self.single_edit_run_validation(datarn, datacn, event_data)
+            edited = self.set_cell_data_undo(r, c, datarn=datarn, datacn=datacn, value=selection, redraw=not redraw)
+            if edited:
+                try_binding(self.extra_end_edit_cell_func, event_data)
             self.recreate_all_selection_boxes()
         self.focus_set()
         self.hide_text_editor_and_dropdown(redraw=redraw)
@@ -7737,6 +7748,7 @@ class MainTable(tk.Canvas):
                 column=c,
                 boxes=self.get_boxes(),
                 selected=self.selected,
+                data={(datarn, datacn): value},
             )
             if kwargs["check_function"] is not None:
                 kwargs["check_function"](event_data)
@@ -7931,7 +7943,10 @@ class MainTable(tk.Canvas):
                 kwargs = self.get_cell_kwargs(datarn, datacn, key="checkbox")
                 if kwargs:
                     return f"{kwargs['text']}"
-        value = self.data[datarn][datacn] if len(self.data) > datarn and len(self.data[datarn]) > datacn else ""
+        try:
+            value = self.data[datarn][datacn]
+        except Exception:
+            value = ""
         kwargs = self.get_cell_kwargs(datarn, datacn, key="format")
         if kwargs:
             if kwargs["formatter"] is None:
@@ -7946,28 +7961,24 @@ class MainTable(tk.Canvas):
                 else:
                     # assumed given formatter class has get_data_with_valid_check()
                     return f"{value.get_data_with_valid_check()}"
-        return "" if value is None else value if isinstance(value, str) else f"{value}"
+        else:
+            return "" if value is None else value if isinstance(value, str) else f"{value}"
 
     def get_cell_data(
         self,
         datarn: int,
         datacn: int,
-        get_displayed: bool = False,
         none_to_empty_str: bool = False,
         fmt_kw: dict | None = None,
-        **kwargs,
     ) -> Any:
-        if get_displayed:
-            return self.get_valid_cell_data_as_str(datarn, datacn, get_displayed=True)
-        value = (
-            self.data[datarn][datacn]
-            if len(self.data) > datarn and len(self.data[datarn]) > datacn
-            else self.get_value_for_empty_cell(datarn, datacn)
-        )
+        try:  # when successful try is more than twice as fast as len check
+            value = self.data[datarn][datacn]
+        except Exception:
+            value = self.get_value_for_empty_cell(datarn, datacn)
         kwargs = self.get_cell_kwargs(datarn, datacn, key="format")
         if kwargs and kwargs["formatter"] is not None:
             value = value.value  # assumed given formatter class has value attribute
-        if isinstance(fmt_kw, dict):
+        if fmt_kw:
             value = format_data(value=value, **fmt_kw)
         return "" if (value is None and none_to_empty_str) else value
 
@@ -7984,7 +7995,7 @@ class MainTable(tk.Canvas):
             return False
         elif "format" in kwargs:
             return True
-        elif self.cell_equal_to(datarn, datacn, value, ignore_empty=ignore_empty) or (
+        elif self.cell_equal_to(datarn, datacn, value, ignore_empty=ignore_empty, check_fmt=False) or (
             (dropdown := kwargs.get("dropdown", {})) and dropdown["validate_input"] and value not in dropdown["values"]
         ):
             return False
@@ -7993,22 +8004,20 @@ class MainTable(tk.Canvas):
         else:
             return True
 
-    def cell_equal_to(self, datarn: int, datacn: int, value: Any, ignore_empty: bool = False, **kwargs) -> bool:
-        v = self.get_cell_data(datarn, datacn)
-        kwargs = self.get_cell_kwargs(datarn, datacn, key="format")
-        if kwargs and kwargs["formatter"] is None:
-            if ignore_empty:
-                if not (x := format_data(value=value, **kwargs)) and not v:
-                    return False
-                return v == x
-            return v == format_data(value=value, **kwargs)
-        # assumed if there is a formatter class in cell then it has a
-        # __eq__() function anyway
-        # else if there is not a formatter class in cell and cell is not formatted
-        # then compare value as is
-        if ignore_empty and not v and not value:
-            return False
-        return v == value
+    def cell_equal_to(
+        self,
+        datarn: int,
+        datacn: int,
+        new: Any,
+        ignore_empty: bool = False,
+        check_fmt: bool = True,
+    ) -> bool:
+        current = self.get_cell_data(datarn, datacn)
+        if check_fmt:
+            kws = self.get_cell_kwargs(datarn, datacn, key="format")
+            if kws and kws["formatter"] is None:
+                new = format_data(value=new, **kws)
+        return current == new and not (ignore_empty and not current and not new)
 
     def get_cell_clipboard(self, datarn: int, datacn: int) -> str | int | float | bool:
         value = self.data[datarn][datacn] if len(self.data) > datarn and len(self.data[datarn]) > datacn else ""

@@ -334,7 +334,7 @@ def event_dict(
         selection_boxes={} if boxes is None else boxes,
         selected=() if selected is None else selected,
         being_selected=() if being_selected is None else being_selected,
-        data=[] if data is None else data,
+        data={} if data is None else data,
         key="" if key is None else key,
         value=None if value is None else value,
         loc=() if loc is None else loc,

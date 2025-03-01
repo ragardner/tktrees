@@ -5,6 +5,7 @@ from bisect import bisect_left
 from collections import deque
 from collections.abc import Callable, Generator, Hashable, Iterator, Sequence
 from contextlib import suppress
+from functools import partial
 from itertools import accumulate, chain, filterfalse, islice, product, repeat
 from operator import attrgetter
 from timeit import default_timer
@@ -1214,7 +1215,15 @@ class Sheet(tk.Frame):
         return self
 
     def edit_validation(self, func: Callable | None = None) -> Sheet:
+        if not isinstance(func, (Callable, None)):
+            raise ValueError("Argument must be either Callable or None.")
         self.MT.edit_validation_func = func
+        return self
+
+    def bulk_table_edit_validation(self, func: Callable | None = None) -> Sheet:
+        if not isinstance(func, (Callable, None)):
+            raise ValueError("Argument must be either Callable or None.")
+        self.MT.bulk_table_edit_validation_func = func
         return self
 
     def popup_menu_add_command(
@@ -5656,7 +5665,10 @@ class Sheet(tk.Frame):
     # ##########       OLD FUNCTIONS       ##########
 
     def get_cell_data(self, r: int, c: int, get_displayed: bool = False) -> Any:
-        return self.MT.get_cell_data(r, c, get_displayed)
+        if get_displayed:
+            return self.MT.get_valid_cell_data_as_str(r, c, get_displayed=True)
+        else:
+            return self.MT.get_cell_data(r, c)
 
     def get_row_data(
         self,
@@ -5677,12 +5689,11 @@ class Sheet(tk.Frame):
             total_data_cols = self.MT.total_data_cols()
             self.MT.fix_data_len(r, total_data_cols - 1)
         iterable = only_columns if only_columns is not None else range(len(self.MT.data[r]))
+        f = partial(self.MT.get_valid_cell_data_as_str, get_displayed=True) if get_displayed else self.MT.get_cell_data
         if get_index:
-            return [self.get_index_data(r, get_displayed=get_index_displayed)] + [
-                self.MT.get_cell_data(r, c, get_displayed=get_displayed) for c in iterable
-            ]
+            return [self.get_index_data(r, get_displayed=get_index_displayed)] + [f(r, c) for c in iterable]
         else:
-            return [self.MT.get_cell_data(r, c, get_displayed=get_displayed) for c in iterable]
+            return [f(r, c) for c in iterable]
 
     def get_column_data(
         self,
@@ -5698,8 +5709,9 @@ class Sheet(tk.Frame):
             elif not is_iterable(only_rows):
                 raise ValueError(tksheet_type_error("only_rows", ["int", "iterable", "None"], only_rows))
         iterable = only_rows if only_rows is not None else range(len(self.MT.data))
+        f = partial(self.MT.get_valid_cell_data_as_str, get_displayed=True) if get_displayed else self.MT.get_cell_data
         return ([self.get_header_data(c, get_displayed=get_header_displayed)] if get_header else []) + [
-            self.MT.get_cell_data(r, c, get_displayed=get_displayed) for r in iterable
+            f(r, c) for r in iterable
         ]
 
     def get_sheet_data(

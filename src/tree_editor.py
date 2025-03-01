@@ -1623,7 +1623,7 @@ class Tree_Editor(tk.Frame):
             ]
         )
         self.sheet.enable_bindings(sheet_bindings).basic_bindings(True)
-        self.tree.basic_bindings(True).enable_bindings(tree_bindings)
+        self.tree.enable_bindings(tree_bindings).basic_bindings(True)
         self.sheet.bind(rc_release, self.sheet_rc_release)
         self.sheet.bind("<<SheetSelect>>", self.sheet_select_event)
         self.tree.bind("<<SheetSelect>>", self.tree_select_event)
@@ -1632,8 +1632,8 @@ class Tree_Editor(tk.Frame):
         self.tree.bind(rc_release, self.tree_rc_release)
         self.tree.bind("<FocusIn>", self.tree_focus_enter).bind("<FocusOut>", self.tree_focus_leave)
         self.sheet.bind("<FocusIn>", self.sheet_focus_enter).bind("<FocusOut>", self.sheet_focus_leave)
-        self.sheet.edit_validation(self.tree_sheet_edit_cell)
-        self.tree.edit_validation(self.tree_sheet_edit_cell)
+        self.sheet.bulk_table_edit_validation(self.tree_sheet_edit_table)
+        self.tree.bulk_table_edit_validation(self.tree_sheet_edit_table)
         self.sheet_tag_id_button.config(state="normal")
         self.sheet_tagged_ids_dropdown.config(state="readonly")
         self.sheet_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.sheet_go_to_tagged_id)
@@ -1867,111 +1867,161 @@ class Tree_Editor(tk.Frame):
         self.sheet.MT.data[r][c] = value
         return value
 
-    def tree_sheet_edit_cell(self, event=None):
-        if not event or event.value is None:
+    def tree_sheet_edit_table(self, event=None):
+        if not event:
             return None
-        if event.sheetname == "tree":
-            y1, x1 = self.rns[self.tree.rowitem(event.row)], event.column
-        elif event.sheetname == "sheet":
-            y1, x1 = event.loc
+        if len(event.data) == 1:
+            if event.sheetname == "tree":
+                y1, x1 = self.rns[self.tree.rowitem(event.row)], event.column
+            elif event.sheetname == "sheet":
+                y1, x1 = event.loc
 
-        newtext = event.value
+            newtext = event.value
 
-        if self.headers[x1].type_ in ("ID", "Parent") and not self.allow_spaces_ids_var:
-            newtext = re.sub(r"[\n\t\s]*", "", newtext)
+            if self.headers[x1].type_ in ("ID", "Parent") and not self.allow_spaces_ids_var:
+                newtext = re.sub(r"[\n\t\s]*", "", newtext)
 
-        if newtext == self.sheet.data[y1][x1]:
-            return None
-
-        ID = self.sheet.data[y1][self.ic]
-        ik = ID.lower()
-
-        if self.headers[x1].type_ == "ID":
-            id_ = ID
-            ik = id_.lower()
-            tree_sel = self.tree.selection()
-            if not self.change_ID_name(id_, newtext, errors=False):
-                self.edit_cell_rebuild(y1, x1, newtext)
+            if newtext == self.sheet.data[y1][x1]:
                 return None
 
-            self.changelog_append(
-                "Rename ID",
-                id_,
-                id_,
-                f"{newtext}",
-            )
-            new_ik = newtext.lower()
-            if ik in self.tagged_ids:
-                self.tagged_ids.discard(ik)
-                self.tagged_ids.add(new_ik)
-                self.reset_tagged_ids_dropdowns()
-            self.disable_paste()
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(rows=self.refresh_rows)
-            self.redo_tree_display()
-            self.refresh_rows = set()
-            if tree_sel:
-                if self.tree.exists(tree_sel[0]):
-                    self.tree.scroll_to_item(tree_sel[0])
-                    self.tree.selection_set(tree_sel[0])
-                else:
-                    self.tree.scroll_to_item(newtext.lower())
-                    self.tree.selection_set(newtext.lower())
-            else:
-                self.move_tree_pos()
-            self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
-            self.tree_set_cell_size_to_text(y1, x1)
-            self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-            return newtext
+            ID = self.sheet.data[y1][self.ic]
+            ik = ID.lower()
 
-        elif self.headers[x1].type_ == "Parent":
-            self.snapshot_paste_id()
-            oldparent = f"{self.sheet.data[y1][x1]}"
-            tree_sel = self.tree.selection()
-            if self.cut_paste_edit_cell(ID, oldparent, x1, newtext):
+            if self.headers[x1].type_ == "ID":
+                id_ = ID
+                ik = id_.lower()
+                tree_sel = self.tree.selection()
+                if not self.change_ID_name(id_, newtext, errors=False):
+                    self.edit_cell_rebuild(y1, x1, newtext)
+                    return None
+
                 self.changelog_append(
-                    "Cut and paste ID + children" if self.nodes[ik].cn[x1] else "Cut and paste ID",
-                    ID,
-                    f"Old parent: {oldparent if oldparent else 'n/a - Top ID'} old column #{x1 + 1} named: {self.headers[x1].name}",
-                    f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.headers[x1].name}",
+                    "Rename ID",
+                    id_,
+                    id_,
+                    f"{newtext}",
                 )
-                self.refresh_formatting(rows=y1, columns=x1)
+                new_ik = newtext.lower()
+                if ik in self.tagged_ids:
+                    self.tagged_ids.discard(ik)
+                    self.tagged_ids.add(new_ik)
+                    self.reset_tagged_ids_dropdowns()
+                self.disable_paste()
+                self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+                self.refresh_formatting(rows=self.refresh_rows)
                 self.redo_tree_display()
+                self.refresh_rows = set()
+                if tree_sel:
+                    if self.tree.exists(tree_sel[0]):
+                        self.tree.scroll_to_item(tree_sel[0])
+                        self.tree.selection_set(tree_sel[0])
+                    else:
+                        self.tree.scroll_to_item(newtext.lower())
+                        self.tree.selection_set(newtext.lower())
+                else:
+                    self.move_tree_pos()
                 self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
                 self.tree_set_cell_size_to_text(y1, x1)
-                if tree_sel:
-                    self.tree.scroll_to_item(tree_sel[0])
-                    self.tree.selection_set(tree_sel)
-                self.disable_paste()
                 self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
                 return newtext
 
+            elif self.headers[x1].type_ == "Parent":
+                self.snapshot_paste_id()
+                oldparent = f"{self.sheet.data[y1][x1]}"
+                tree_sel = self.tree.selection()
+                if self.cut_paste_edit_cell(ID, oldparent, x1, newtext):
+                    self.changelog_append(
+                        "Cut and paste ID + children" if self.nodes[ik].cn[x1] else "Cut and paste ID",
+                        ID,
+                        f"Old parent: {oldparent if oldparent else 'n/a - Top ID'} old column #{x1 + 1} named: {self.headers[x1].name}",
+                        f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.headers[x1].name}",
+                    )
+                    self.refresh_formatting(rows=y1, columns=x1)
+                    self.redo_tree_display()
+                    self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
+                    self.tree_set_cell_size_to_text(y1, x1)
+                    if tree_sel:
+                        self.tree.scroll_to_item(tree_sel[0])
+                        self.tree.selection_set(tree_sel)
+                    self.disable_paste()
+                    self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+                    return newtext
+
+                else:
+                    self.vs.pop()
+                    self.vp -= 1
+                    self.set_undo_label()
+                    self.edit_cell_rebuild(y1, x1, newtext)
+                    return None
+
             else:
-                self.vs.pop()
-                self.vp -= 1
-                self.set_undo_label()
-                self.edit_cell_rebuild(y1, x1, newtext)
-                return None
+                if not self.detail_is_valid_for_col(x1, newtext):
+                    Error(
+                        self,
+                        f"Entered text invalid for column type - {self.why_isnt_detail_valid(x1, newtext)}   ",
+                        theme=self.C.theme,
+                    )
+                    return None
+                self.snapshot_ctrl_x_v_del_key()
+                self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
+                newtext = self.edit_cell_single(y1, x1, newtext)
+                self.refresh_formatting(rows=y1, columns=x1)
+                self.refresh_tree_item(ID)
+                self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
+                self.tree_set_cell_size_to_text(y1, x1)
+                self.disable_paste()
+                self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+
+                return newtext
 
         else:
-            if not self.detail_is_valid_for_col(x1, newtext):
-                Error(
-                    self,
-                    f"Entered text invalid for column type - {self.why_isnt_detail_valid(x1, newtext)}   ",
-                    theme=self.C.theme,
-                )
-                return None
-            self.snapshot_ctrl_x_v_del_key()
-            self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
-            newtext = self.edit_cell_single(y1, x1, newtext)
-            self.refresh_formatting(rows=y1, columns=x1)
-            self.refresh_tree_item(ID)
-            self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
-            self.tree_set_cell_size_to_text(y1, x1)
-            self.disable_paste()
-            self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+            self.start_work("Editing table...")
+            idcols = set(self.hiers) | {self.ic}
+            need_rebuild = any(k[1] in idcols for k in event["data"])
+            refresh_rows = set()
+            refresh_cols = set()
+            tree = event.sheetname == "tree"
+            if need_rebuild:
+                self.snapshot_ctrl_x_v_del_key_id_par()
+            else:
+                self.snapshot_ctrl_x_v_del_key()
 
-            return newtext
+            for (r, c), value in event["data"].items():
+                if tree:
+                    r = self.rns[self.tree.rowitem(row=r, data_index=True)]
+                if (need_rebuild and c in idcols) or (
+                    self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value
+                ):
+                    if not need_rebuild:
+                        self.vs[-1]["cells"][(r, c)] = self.sheet.MT.data[r][c]
+                    self.edit_cell_multiple(r, c, value)
+                    refresh_rows.add(r)
+                    refresh_cols.add(c)
+            self.disable_paste()
+            if not refresh_rows:
+                self.vp -= 1
+                self.set_undo_label()
+                self.vs.pop()
+                self.redraw_sheets()
+                self.stop_work(self.get_tree_editor_status_bar_text())
+                return
+            if need_rebuild:
+                self.rebuild_tree()
+            else:
+                self.refresh_formatting(rows=refresh_rows, columns=refresh_cols)
+                for rn in refresh_rows:
+                    self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
+            if len(refresh_rows) > 1 and len(refresh_cols) > 1:
+                self.changelog_append(
+                    f"Edit {len(refresh_rows) * len(refresh_cols)} cells",
+                    "",
+                    "",
+                    "",
+                )
+            else:
+                self.changelog_singular("Edit cell")
+            self.redraw_sheets()
+            self.stop_work(self.get_tree_editor_status_bar_text())
 
     def tree_set_cell_size_to_text(self, sheet_r, sheet_c):
         if self.tree.exists(self.sheet.data[sheet_r][self.ic].lower()) and self.tree.item_displayed(
@@ -2007,41 +2057,17 @@ class Tree_Editor(tk.Frame):
                 if box[1] == "rows"
             ):
                 self.delete_selected(iids=iids)
-            elif boxes := self.tree.boxes:
-                iids_cols = defaultdict(set)
-                for box in boxes:
-                    for row in range(box[0].from_r, box[0].upto_r):
-                        iids_cols[self.tree.rowitem(row)].update(
-                            (self.tree.data_c(c) for c in range(box.coords.from_c, box.coords.upto_c))
-                        )
-                self.clear_cells(
-                    rows_and_cols=sorted(
-                        ((self.rns[iid], sorted(cols)) for iid, cols in iids_cols.items()),
-                        key=itemgetter(0),
-                        reverse=True,
-                    )
-                )
+            elif self.tree.boxes:
+                self.tree.delete()
         elif self.sheet.has_focus():
             if rows := sorted(self.sheet.get_selected_rows(), reverse=True):
-                self.clear_cells(rows=rows)
-            elif boxes := self.sheet.boxes:
-                iids_cols = defaultdict(set)
-                for box in boxes:
-                    for row in range(box[0].from_r, box[0].upto_r):
-                        iids_cols[self.sheet.data[self.sheet.data_r(row)][self.ic].lower()].update(
-                            (self.sheet.data_c(c) for c in range(box.coords.from_c, box.coords.upto_c))
-                        )
-                self.clear_cells(
-                    rows_and_cols=sorted(
-                        ((self.rns[iid], sorted(cols)) for iid, cols in iids_cols.items()),
-                        key=itemgetter(0),
-                        reverse=True,
-                    )
-                )
+                self.del_rows_ids(rows=rows)
+            elif self.sheet.boxes:
+                self.sheet.delete()
 
     def tree_del_selected_all_hiers(self):
         if iids := self.tree.selection():
-            self.clear_cells(rows=sorted(map(self.rns.get, iids), reverse=True))
+            self.del_rows_ids(rows=sorted(map(self.rns.get, iids), reverse=True))
 
     def rebuild_tree(self, deselect=True, redraw=False):
         if deselect:
@@ -2092,433 +2118,99 @@ class Tree_Editor(tk.Frame):
                 if box[1] == "rows"
             ):
                 self.cut_ids(iids=iids)
-            elif boxes := self.tree.ctrl_boxes:
-                iids_cols = defaultdict(set)
-                for box in boxes:
-                    for row in range(box.from_r, box.upto_r):
-                        iids_cols[self.tree.rowitem(row)].update(
-                            (self.tree.data_c(c) for c in range(box.from_c, box.upto_c))
-                        )
-                self.clear_cells(
-                    rows_and_cols=[(self.rns[iid], sorted(cols)) for iid, cols in iids_cols.items()], clipboard=True
-                )
-        elif self.sheet.has_focus() and (boxes := self.sheet.ctrl_boxes):
-            iids_cols = defaultdict(set)
-            for box in boxes:
-                for row in range(box.from_r, box.upto_r):
-                    iids_cols[self.sheet.data[self.sheet.data_r(row)][self.ic].lower()].update(
-                        (self.sheet.data_c(c) for c in range(box.from_c, box.upto_c))
-                    )
-            self.clear_cells(
-                rows_and_cols=sorted(
-                    ((self.rns[iid], sorted(cols)) for iid, cols in iids_cols.items()),
-                    key=itemgetter(0),
-                ),
-                clipboard=True,
-            )
+            elif self.tree.ctrl_boxes:
+                self.tree.cut()
+        elif self.sheet.has_focus() and self.sheet.ctrl_boxes:
+            self.sheet.cut()
 
-    def clear_cells(
-        self,
-        rows: Sequence[int] | None = None,
-        rows_and_cols: tuple[int, tuple[int]] | None = None,
-        clipboard: bool = False,
-    ) -> None:
-        if rows:
-            newline = "\n"
-            confirm = Ask_Confirm(
-                self,
-                f"Delete every occurrence of the following IDs:\n{newline.join(self.sheet.MT.data[row][self.ic] for row in rows)}",
-                theme=self.C.theme,
-            )
-            if not confirm.boolean:
-                return
-            self.snapshot_delete_ids()
-            self.start_work("Deleting IDs... ")
-            treeselection = self.tree.selection()
-            self.disable_paste()
-            self.sheet.deselect("all", redraw=False)
-            for row in rows:
-                id_ = self.sheet.MT.data[row][self.ic]
-                self.changelog_append_no_unsaved(
-                    "Delete ID from all hierarchies |",
-                    f"{id_}",
-                    "",
-                    "",
-                )
-                ik = id_.lower()
-                self.untag_id(ik)
-                pk = self.nodes[ik].ps[self.pc]
-                if not self.auto_sort_nodes_bool:
-                    for h, p in self.nodes[ik].ps.items():
-                        if p == "":
-                            self.topnodes_order[h].remove(ik)
-                        self.topnodes_order[h].extend(self.nodes[ik].cn[h])
-                for k, v in self.nodes[ik].ps.items():
-                    if v:
-                        v.cn[k].remove(ik)
-                for k, v in self.nodes[ik].cn.items():
-                    for iid in v:
-                        self.nodes[iid].ps[k] = ""
-                        rn = self.rns[iid]
-                        self.vs[-1]["rows"].append(
-                            Del_stre(
-                                0,
-                                rn,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                            )
-                        )
-                        self.sheet.MT.data[rn][k] = ""
-                del self.nodes[ik]
-                self.vs[-1]["rows"].append(Del_stre(1, row, self.sheet.MT.data[row]))
-                if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
-                    parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
-                    parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-            if len(rows) > 1:
-                self.changelog_append(
-                    f"Deleted {len(rows)} IDs from all hierarchies",
-                    "",
-                    "",
-                    "",
-                )
-            else:
-                self.changelog_singular("Delete ID from all hierarchies")
-            self.sheet.del_rows(rows, redraw=False)
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.reset_tagged_ids_dropdowns()
-            self.rehighlight_tagged_ids()
-            self.disable_paste()
-            self.redo_tree_display()
-            self.tree.selection_set([i for i in treeselection if self.tree.exists(i)])
-            self.move_tree_pos()
-            self.redraw_sheets()
-            self.stop_work(self.get_tree_editor_status_bar_text())
+    def del_rows_ids(self, rows: Sequence[int] | None = None) -> None:
+        if not rows:
             return
-
-        if not rows_and_cols:
+        newline = "\n"
+        confirm = Ask_Confirm(
+            self,
+            f"Delete every occurrence of the following IDs:\n{newline.join(self.sheet.MT.data[row][self.ic] for row in rows)}",
+            theme=self.C.theme,
+        )
+        if not confirm.boolean:
             return
-
-        s, writer = str_io_csv_writer(dialect=csv.excel_tab)
-        # editing a single cell
-        if len(rows_and_cols) == 1 and len(rows_and_cols[0][1]) == 1:
-            y1 = rows_and_cols[0][0]
-            x1 = rows_and_cols[0][1][0]
-            if clipboard:
-                to_clipboard(self.C, self.sheet.MT.data[y1][x1])
-            self.tree_sheet_edit_cell(
-                event=DotDict(
-                    sheetname="sheet",
-                    value="",
-                    loc=(rows_and_cols[0][0], rows_and_cols[0][1][0]),
-                )
-            )
-            return
-
-        self.start_work("Working... ")
-        cells_changed = 0
-        need_rebuild = any(c == self.ic or self.headers[c].type_ == "Parent" for _, cols in rows_and_cols for c in cols)
-        if need_rebuild:
-            clipboarded = []
-            self.snapshot_ctrl_x_v_del_key_id_par()
-            for r, cols in rows_and_cols:
-                _row = []
-                for c in cols:
-                    _row.append(f"{self.sheet.MT.data[r][c]}")
-                    if self.sheet.MT.data[r][c] != "":
-                        self.changelog_append_no_unsaved(
-                            "Edit cell |",
-                            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                            f"{self.sheet.MT.data[r][c]}",
-                            "",
-                        )
-                        self.sheet.MT.data[r][c] = ""
-                        cells_changed += 1
-                clipboarded.append(_row)
-                writer.writerow(_row)
-            if clipboard:
-                if len(clipboarded) == 1 and len(clipboarded[0]) == 1 and "\n" not in clipboarded[0][0]:
-                    to_clipboard(self.C, clipboarded[0][0])
-                else:
-                    to_clipboard(self.C, s.getvalue())
-        else:
-            self.snapshot_ctrl_x_v_del_key()
-            for r, cols in rows_and_cols:
-                _row = []
-                for c in cols:
-                    _row.append(f"{self.sheet.MT.data[r][c]}")
-                    if self.sheet.MT.data[r][c] != "":
-                        self.vs[-1]["cells"][(r, c)] = f"{self.sheet.MT.data[r][c]}"
-                        self.changelog_append_no_unsaved(
-                            "Edit cell |",
-                            f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                            f"{self.sheet.MT.data[r][c]}",
-                            "",
-                        )
-                        self.sheet.MT.data[r][c] = ""
-                        cells_changed += 1
-                writer.writerow(_row)
-            if clipboard:
-                if len(self.vs[-1]["cells"]) == 1 and "\n" not in next(iter(self.vs[-1]["cells"].values())):
-                    to_clipboard(self.C, next(iter(self.vs[-1]["cells"].values())))
-                else:
-                    to_clipboard(self.C, s.getvalue())
+        self.snapshot_delete_ids()
+        self.start_work("Deleting IDs... ")
+        treeselection = self.tree.selection()
         self.disable_paste()
-        if not cells_changed:
-            self.vs.pop()
-            self.vp -= 1
-            self.set_undo_label()
-            self.redraw_sheets()
-            self.stop_work(self.get_tree_editor_status_bar_text())
-            return
-        if need_rebuild:
-            self.rebuild_tree()
-        else:
-            self.refresh_formatting(
-                rows=(row for row, _ in rows_and_cols),
-                columns={col for _, cols in rows_and_cols for col in cols},
+        self.sheet.deselect("all", redraw=False)
+        for row in rows:
+            id_ = self.sheet.MT.data[row][self.ic]
+            self.changelog_append_no_unsaved(
+                "Delete ID from all hierarchies |",
+                f"{id_}",
+                "",
+                "",
             )
-            for r, _ in rows_and_cols:
-                self.refresh_tree_item(self.sheet.MT.data[r][self.ic])
-        if cells_changed > 1:
+            ik = id_.lower()
+            self.untag_id(ik)
+            pk = self.nodes[ik].ps[self.pc]
+            if not self.auto_sort_nodes_bool:
+                for h, p in self.nodes[ik].ps.items():
+                    if p == "":
+                        self.topnodes_order[h].remove(ik)
+                    self.topnodes_order[h].extend(self.nodes[ik].cn[h])
+            for k, v in self.nodes[ik].ps.items():
+                if v:
+                    v.cn[k].remove(ik)
+            for k, v in self.nodes[ik].cn.items():
+                for iid in v:
+                    self.nodes[iid].ps[k] = ""
+                    rn = self.rns[iid]
+                    self.vs[-1]["rows"].append(
+                        Del_stre(
+                            0,
+                            rn,
+                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
+                        )
+                    )
+                    self.sheet.MT.data[rn][k] = ""
+            del self.nodes[ik]
+            self.vs[-1]["rows"].append(Del_stre(1, row, self.sheet.MT.data[row]))
+            if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
+                parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
+                parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
+        if len(rows) > 1:
             self.changelog_append(
-                f"Edit {cells_changed} cells",
+                f"Deleted {len(rows)} IDs from all hierarchies",
                 "",
                 "",
                 "",
             )
         else:
-            self.changelog_singular("Edit cell")
+            self.changelog_singular("Delete ID from all hierarchies")
+        self.sheet.del_rows(rows, redraw=False)
+        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        self.reset_tagged_ids_dropdowns()
+        self.rehighlight_tagged_ids()
+        self.disable_paste()
+        self.redo_tree_display()
+        self.tree.selection_set([i for i in treeselection if self.tree.exists(i)])
+        self.move_tree_pos()
         self.redraw_sheets()
         self.stop_work(self.get_tree_editor_status_bar_text())
+        return
 
     def paste_key(self, event: object = None) -> None:
         if self.tree.has_focus():
             if event:
-                if selected := self.tree.selected:
+                if self.tree.selected:
                     rows = sorted(self.tree.get_selected_rows())
                     if rows and len(rows) == 1 and self.winfo_containing(event.x_root, event.y_root) is not None:
                         self.tree_rc_menu_single_row_paste.tk_popup(self.C.winfo_pointerx(), self.C.winfo_pointery())
                     else:
-                        self.tree_paste(
-                            selected=selected,
-                            id_col=(self.tree.rowitem(selected.box.from_r), selected.box.from_c),
-                        )
+                        self.tree.paste()
                 elif self.winfo_containing(event.x_root, event.y_root) is not None:
                     self.tree_rc_menu_empty.tk_popup(self.C.winfo_pointerx(), self.C.winfo_pointery())
-            elif selected := self.tree.selected:
-                self.tree_paste(
-                    selected=selected,
-                    id_col=(self.tree.rowitem(selected.box.from_r), selected.box.from_c),
-                )
-        elif self.sheet.has_focus() and (selected := self.sheet.selected):
-            self.sheet_paste(
-                selected=selected,
-                id_col=(
-                    self.sheet.data[selected.box.from_r][self.ic].lower(),
-                    selected.box.from_c,
-                ),
-            )
-
-    def extend_data(self, data, numrows, numcols, selected) -> tuple[int, int, list[list[str]]]:
-        lastbox_r1, lastbox_c1, lastbox_r2, lastbox_c2 = selected.box
-        lastbox_numrows = lastbox_r2 - lastbox_r1
-        lastbox_numcols = lastbox_c2 - lastbox_c1
-        if lastbox_numrows > numrows and not lastbox_numrows % numrows:
-            nd = []
-            for _ in range(int(lastbox_numrows / numrows)):
-                nd.extend(r.copy() for r in data)
-            data.extend(nd)
-            numrows *= int(lastbox_numrows / numrows)
-        if lastbox_numcols > numcols and not lastbox_numcols % numcols:
-            for rn, r in enumerate(data):
-                for _ in range(int(lastbox_numcols / numcols)):
-                    data[rn].extend(r.copy())
-            numcols *= int(lastbox_numcols / numcols)
-        return numrows, numcols, data
-
-    def paste_get_clipboard_data(self, selected):
-        try:
-            if not (
-                data := csv_str_x_data(
-                    self.clipboard_get(),
-                    discard_empty_rows=False,
-                    paste=True,
-                )
-            ):
-                return
-        except Exception:
-            return
-        numcols = equalize_sublist_lens(data)
-        return self.extend_data(data, len(data), numcols, selected)
-
-    def tree_paste(
-        self,
-        selected: tuple | None = None,
-        id_col: tuple[str, int] = None,
-    ):
-        """
-        Handles
-        - tree paste events which don't involve selected rows or empty space
-        """
-        if not (res := self.paste_get_clipboard_data(selected=selected)):
-            return
-        numrows, numcols, data = res
-        tree_disprn, x1 = selected.box.from_r, id_col[1]
-        tree_datarn = self.tree.itemrow(id_col[0])
-        if x1 + numcols > self.row_len:
-            numcols = self.row_len - x1
-        if tree_disprn + numrows > len(self.tree.displayed_rows):
-            numrows = len(self.tree.displayed_rows) - tree_disprn
-        if (x1 + numcols) - x1 == 1 and (tree_disprn + numrows) - tree_disprn == 1:
-            self.tree_sheet_edit_cell(
-                event=DotDict(
-                    sheetname="sheet",
-                    value=data[0][0],
-                    loc=(self.rns[self.tree.MT.data[tree_datarn][self.ic].lower()], x1),
-                )
-            )
-            return
-
-        self.start_work("Pasting cells... ")
-        cells_changed = 0
-        need_rebuild = any(c == self.ic or self.headers[c].type_ == "Parent" for c in range(x1, x1 + numcols))
-        if need_rebuild:
-            self.snapshot_ctrl_x_v_del_key_id_par()
-            idcols = set(self.hiers) | {self.ic}
-            for ndr, r in enumerate(range(tree_disprn, tree_disprn + numrows)):
-                ik = self.tree.rowitem(r)
-                sheet_rn = self.rns[ik]
-                for ndc, c in enumerate(range(x1, x1 + numcols)):
-                    value = data[ndr][ndc]
-                    if c in idcols or (
-                        self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[sheet_rn][c] != value
-                    ):
-                        self.edit_cell_multiple(sheet_rn, c, value)
-                        cells_changed += 1
-
-        else:
-            self.snapshot_ctrl_x_v_del_key()
-            for ndr, r in enumerate(range(tree_disprn, tree_disprn + numrows)):
-                sheet_rn = self.rns[self.tree.rowitem(r)]
-                for ndc, c in enumerate(range(x1, x1 + numcols)):
-                    value = data[ndr][ndc]
-                    if self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[sheet_rn][c] != value:
-                        self.vs[-1]["cells"][(sheet_rn, c)] = f"{self.sheet.MT.data[sheet_rn][c]}"
-                        self.edit_cell_multiple(sheet_rn, c, value)
-                        cells_changed += 1
-
-        self.disable_paste()
-        if not cells_changed:
-            self.vp -= 1
-            self.set_undo_label()
-            self.vs.pop()
-            self.redraw_sheets()
-            self.stop_work(self.get_tree_editor_status_bar_text())
-            return
-        self.tree.show_ctrl_outline(
-            canvas="table",
-            start_cell=(x1, tree_disprn),
-            end_cell=(x1 + numcols, tree_disprn + numrows),
-        )
-        if need_rebuild:
-            self.rebuild_tree()
-        else:
-            self.refresh_formatting(
-                rows=(self.rns[self.tree.rowitem(rn)] for rn in range(tree_disprn, tree_disprn + numrows))
-            )
-            for rn in range(tree_disprn, tree_disprn + numrows):
-                self.refresh_tree_item(self.tree.rowitem(rn))
-        if cells_changed > 1:
-            self.changelog_append(
-                f"Edit {cells_changed} cells",
-                "",
-                "",
-                "",
-            )
-        else:
-            self.changelog_singular("Edit cell")
-        self.redraw_sheets()
-        self.stop_work(self.get_tree_editor_status_bar_text())
-
-    def sheet_paste(
-        self,
-        selected: tuple | None = None,
-        id_col: tuple[str, int] = None,
-    ):
-        """
-        Handles
-        - all paste events in sheet
-        """
-        if not (res := self.paste_get_clipboard_data(selected=selected)):
-            return
-        numrows, numcols, data = res
-        y1, x1 = self.rns[id_col[0]], id_col[1]
-        if x1 + numcols > self.row_len:
-            numcols = self.row_len - x1
-        if y1 + numrows > len(self.sheet.MT.data):
-            numrows = len(self.sheet.MT.data) - y1
-        if (x1 + numcols) - x1 == 1 and (y1 + numrows) - y1 == 1:
-            self.tree_sheet_edit_cell(
-                event=DotDict(
-                    sheetname="sheet",
-                    value=data[0][0],
-                    loc=(y1, x1),
-                )
-            )
-            return
-
-        self.start_work("Pasting cells... ")
-        cells_changed = 0
-        need_rebuild = any(c == self.ic or self.headers[c].type_ == "Parent" for c in range(x1, x1 + numcols))
-        if need_rebuild:
-            self.snapshot_ctrl_x_v_del_key_id_par()
-            idcols = set(self.hiers) | {self.ic}
-            for ndr, r in enumerate(range(y1, y1 + numrows)):
-                for ndc, c in enumerate(range(x1, x1 + numcols)):
-                    value = data[ndr][ndc]
-                    if c in idcols or (self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value):
-                        self.edit_cell_multiple(r, c, value)
-                        cells_changed += 1
-
-        else:
-            self.snapshot_ctrl_x_v_del_key()
-            for ndr, r in enumerate(range(y1, y1 + numrows)):
-                for ndc, c in enumerate(range(x1, x1 + numcols)):
-                    value = data[ndr][ndc]
-                    if self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value:
-                        self.vs[-1]["cells"][(r, c)] = f"{self.sheet.MT.data[r][c]}"
-                        self.edit_cell_multiple(r, c, value)
-                        cells_changed += 1
-
-        self.disable_paste()
-        if not cells_changed:
-            self.vp -= 1
-            self.set_undo_label()
-            self.vs.pop()
-            self.redraw_sheets()
-            self.stop_work(self.get_tree_editor_status_bar_text())
-            return
-        self.sheet.show_ctrl_outline(
-            canvas="table",
-            start_cell=(x1, y1),
-            end_cell=(x1 + numcols, y1 + numrows),
-        )
-        if need_rebuild:
-            self.rebuild_tree()
-        else:
-            self.refresh_formatting(rows=range(y1, y1 + numrows))
-            for rn in range(y1, y1 + numrows):
-                self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
-        if cells_changed > 1:
-            self.changelog_append(
-                f"Edit {cells_changed} cells",
-                "",
-                "",
-                "",
-            )
-        else:
-            self.changelog_singular("Edit cell")
-        self.redraw_sheets()
-        self.stop_work(self.get_tree_editor_status_bar_text())
+            elif self.tree.selected:
+                self.tree.paste()
+        elif self.sheet.has_focus() and self.sheet.selected:
+            self.sheet.paste()
 
     def select_id_in_treeview_from_sheet(self, event=None):
         ik = self.sheet.MT.data[self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)[0]][
@@ -8174,11 +7866,9 @@ class Tree_Editor(tk.Frame):
                         theme=self.C.theme,
                     )
         if popup.result:
-            self.tree_sheet_edit_cell(
+            self.tree_sheet_edit_table(
                 event=DotDict(
-                    sheetname="sheet",
-                    value=popup.saved_string,
-                    loc=(rn, col),
+                    sheetname="sheet", value=popup.saved_string, loc=(rn, col), data={(rn, col): popup.saved_string}
                 )
             )
 
