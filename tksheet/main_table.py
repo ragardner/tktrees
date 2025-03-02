@@ -46,12 +46,12 @@ from .functions import (
     bisect_in,
     box_gen_coords,
     box_is_single_cell,
+    cell_down_within_box,
     cell_right_within_box,
     color_tup,
     consecutive_ranges,
     data_to_displayed_idxs,
     diff_gen,
-    down_cell_within_box,
     event_dict,
     event_has_char_key,
     event_opens_dropdown_or_checkbox,
@@ -190,6 +190,8 @@ class MainTable(tk.Canvas):
         self.extra_b1_release_func = None
         self.extra_double_b1_func = None
         self.extra_rc_func = None
+
+        self.extra_end_replace_all_func = None
 
         self.edit_validation_func = None
         self.bulk_table_edit_validation_func = None
@@ -594,7 +596,65 @@ class MainTable(tk.Canvas):
         if not found_next:
             self.deselect()
 
-    def replace_all(self, event: tk.Misc | None = None) -> None: ...
+    def replace_all(self, event: tk.Misc | None = None) -> None:
+        find = self.find_window.get().lower()
+        replace = self.find_window.window.get_replace()
+        tree = self.PAR.ops.treeview
+        event_data = self.new_event_dict("edit_table")
+        boxes = self.get_boxes()
+        event_data["selection_boxes"] = boxes
+        if self.find_window.window.find_in_selection:
+            iterable = chain.from_iterable(
+                (
+                    box_gen_coords(
+                        *box.coords,
+                        start_r=box.coords.from_r,
+                        start_c=box.coords.from_c,
+                        reverse=False,
+                        all_rows_displayed=self.all_rows_displayed,
+                        all_cols_displayed=self.all_columns_displayed,
+                        displayed_rows=self.displayed_rows,
+                        displayed_cols=self.displayed_columns,
+                    )
+                    for box in self.selection_boxes.values()
+                )
+            )
+        else:
+            iterable = box_gen_coords(
+                from_r=0,
+                from_c=0,
+                upto_r=self.total_data_rows(include_index=False),
+                upto_c=self.total_data_cols(include_header=False),
+                start_r=0,
+                start_c=0,
+                reverse=False,
+            )
+        for r, c in iterable:
+            m = self.find_match(find, r, c)
+            if m and (
+                (tree or self.all_rows_displayed or bisect_in(self.displayed_rows, r))
+                and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
+            ):
+                current = f"{self.get_cell_data(r, c, True)}"
+                new = sub(escape(find), replacer(find, replace, current), current, flags=IGNORECASE)
+                if not self.edit_validation_func or (
+                    self.edit_validation_func
+                    and (new := self.edit_validation_func(mod_event_val(event_data, new, (r, c)))) is not None
+                ):
+                    event_data = self.event_data_set_cell(
+                        r,
+                        c,
+                        new,
+                        event_data,
+                    )
+        event_data = self.bulk_edit_validation(event_data)
+        if event_data["cells"]["table"]:
+            self.refresh()
+            if self.undo_enabled:
+                self.undo_stack.append(stored_event_dict(event_data))
+            try_binding(self.extra_end_replace_all_func, event_data)
+            self.sheet_modified(event_data)
+            self.PAR.emit_event("<<SheetModified>>", event_data)
 
     def find_see_and_set(
         self,
@@ -603,16 +663,16 @@ class MainTable(tk.Canvas):
     ) -> tuple[int, int]:
         if coords:
             row, column, item = coords
-            if not self.all_rows_displayed:
-                row = self.disprn(row)
-            if not self.all_columns_displayed:
-                column = self.dispcn(column)
+            if self.PAR.ops.treeview:
+                self.PAR.scroll_to_item(self.PAR.rowitem(row, data_index=True))
+            disp_row = self.disprn(row) if not self.all_rows_displayed else row
+            disp_col = self.dispcn(column) if not self.all_columns_displayed else column
             if not just_see:
                 if self.find_window.window.find_in_selection:
-                    self.set_currently_selected(row, column, item=item)
+                    self.set_currently_selected(disp_row, disp_col, item=item)
                 else:
-                    self.select_cell(row, column, redraw=False)
-            if not self.see(row, column):
+                    self.select_cell(disp_row, disp_col, redraw=False)
+            if not self.see(disp_row, disp_col):
                 self.refresh()
         return coords
 
@@ -632,13 +692,6 @@ class MainTable(tk.Canvas):
         else:
             return find in str(value).lower()
 
-    def find_within_match(self, find: str, r: int, c: int) -> bool:
-        if not self.all_rows_displayed:
-            r = self.datarn(r)
-        if not self.all_columns_displayed:
-            c = self.datacn(c)
-        return self.find_match(find, r, c)
-
     def find_within_current_box(
         self,
         current_box: SelectionBox,
@@ -651,9 +704,22 @@ class MainTable(tk.Canvas):
             self.selected.column,
             reverse=reverse,
         )
-        _, _, r2, c2 = current_box.coords
-        for r, c in box_gen_coords(start_row, start_col, c2, r2, reverse=reverse):
-            if self.find_within_match(find, r, c):
+        tree = self.PAR.ops.treeview
+        for r, c in box_gen_coords(
+            *current_box.coords,
+            start_row,
+            start_col,
+            reverse=reverse,
+            all_rows_displayed=self.all_rows_displayed,
+            all_cols_displayed=self.all_columns_displayed,
+            displayed_rows=self.displayed_rows,
+            displayed_cols=self.displayed_columns,
+        ):
+            if (
+                self.find_match(find, r, c)
+                and (tree or self.all_rows_displayed or bisect_in(self.displayed_rows, r))
+                and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
+            ):
                 return (r, c, current_box.fill_iid)
         return None
 
@@ -663,6 +729,15 @@ class MainTable(tk.Canvas):
         find: str,
         reverse: bool,
     ) -> None | tuple[int, int]:
+        fn = partial(
+            box_gen_coords,
+            reverse=reverse,
+            all_rows_displayed=self.all_rows_displayed,
+            all_cols_displayed=self.all_columns_displayed,
+            displayed_rows=self.displayed_rows,
+            displayed_cols=self.displayed_columns,
+        )
+        tree = self.PAR.ops.treeview
         if reverse:
             # iterate backwards through selection boxes from the box before current
             idx = next(i for i, k in enumerate(reversed(self.selection_boxes)) if k == current_id)
@@ -670,8 +745,12 @@ class MainTable(tk.Canvas):
                 islice(reversed(self.selection_boxes.items()), idx + 1, None),
                 islice(reversed(self.selection_boxes.items()), 0, idx),
             ):
-                for r, c in gen_coords(*box.coords, reverse=reverse):
-                    if self.find_within_match(find, r, c):
+                for r, c in fn(*box.coords, box.coords.upto_r - 1, box.coords.upto_c - 1):
+                    if (
+                        self.find_match(find, r, c)
+                        and (tree or self.all_rows_displayed or bisect_in(self.displayed_rows, r))
+                        and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
+                    ):
                         return (r, c, item)
         else:
             # iterate forwards through selection boxes from the box after current
@@ -680,8 +759,12 @@ class MainTable(tk.Canvas):
                 islice(self.selection_boxes.items(), idx + 1, None),
                 islice(self.selection_boxes.items(), 0, idx),
             ):
-                for r, c in gen_coords(*box.coords, reverse=reverse):
-                    if self.find_within_match(find, r, c):
+                for r, c in fn(*box.coords, box.coords.from_r, box.coords.from_c):
+                    if (
+                        self.find_match(find, r, c)
+                        and (tree or self.all_rows_displayed or bisect_in(self.displayed_rows, r))
+                        and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
+                    ):
                         return (r, c, item)
         return None
 
@@ -706,11 +789,30 @@ class MainTable(tk.Canvas):
                 return coord
         return None
 
+    def find_within_iterable(self, find: str, reverse: bool) -> Generator[tuple[int, int]]:
+        if not self.selected:
+            return None
+        current_box = self.selection_boxes[self.selected.fill_iid]
+        current_id = self.selected.fill_iid
+        if is_last_cell(*current_box.coords, self.selected.row, self.selected.column, reverse=reverse):
+            return chain()
+            if coord := self.find_within_non_current_boxes(current_id=current_id, find=find, reverse=reverse):
+                return coord
+            if coord := self.find_within_current_box(current_box=current_box, find=find, reverse=reverse):
+                return coord
+        else:
+            if coord := self.find_within_current_box(current_box=current_box, find=find, reverse=reverse):
+                return coord
+            if coord := self.find_within_non_current_boxes(current_id=current_id, find=find, reverse=reverse):
+                return coord
+        return None
+
     def find_all_cells(
         self,
         find: str,
         reverse: bool = False,
     ) -> tuple[int, int, None] | None:
+        tree = self.PAR.ops.treeview
         if self.selected:
             row, col = next_cell(
                 0,
@@ -728,15 +830,17 @@ class MainTable(tk.Canvas):
             (
                 (r, c)
                 for r, c in box_gen_coords(
-                    start_row=row,
-                    start_col=col,
-                    total_cols=self.total_data_cols(include_header=False),
-                    total_rows=self.total_data_rows(include_index=False),
+                    from_r=0,
+                    from_c=0,
+                    upto_r=self.total_data_rows(include_index=False),
+                    upto_c=self.total_data_cols(include_header=False),
+                    start_r=row,
+                    start_c=col,
                     reverse=reverse,
                 )
                 if (
                     self.find_match(find, r, c)
-                    and (self.all_rows_displayed or bisect_in(self.displayed_rows, r))
+                    and (tree or self.all_rows_displayed or bisect_in(self.displayed_rows, r))
                     and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
                 )
             ),
@@ -981,7 +1085,8 @@ class MainTable(tk.Canvas):
             self.refresh()
             for r1, c1, r2, c2 in boxes:
                 self.show_ctrl_outline(canvas="table", start_cell=(c1, r1), end_cell=(c2, r2))
-            self.undo_stack.append(stored_event_dict(event_data))
+            if self.undo_enabled:
+                self.undo_stack.append(stored_event_dict(event_data))
             try_binding(self.extra_end_ctrl_x_func, event_data, "end_ctrl_x")
             self.sheet_modified(event_data)
             self.PAR.emit_event("<<Cut>>", event_data)
@@ -1284,7 +1389,8 @@ class MainTable(tk.Canvas):
         self.refresh()
         event_data = self.bulk_edit_validation(event_data)
         if event_data["cells"]["table"] or event_data["added"]["rows"] or event_data["added"]["columns"]:
-            self.undo_stack.append(stored_event_dict(event_data))
+            if self.undo_enabled:
+                self.undo_stack.append(stored_event_dict(event_data))
             try_binding(self.extra_end_ctrl_v_func, event_data, "end_ctrl_v")
             self.sheet_modified(event_data)
             self.PAR.emit_event("<<Paste>>", event_data)
@@ -1319,7 +1425,8 @@ class MainTable(tk.Canvas):
         event_data = self.bulk_edit_validation(event_data)
         if event_data["cells"]["table"]:
             self.refresh()
-            self.undo_stack.append(stored_event_dict(event_data))
+            if self.undo_enabled:
+                self.undo_stack.append(stored_event_dict(event_data))
             try_binding(self.extra_end_delete_key_func, event_data, "end_delete")
             self.sheet_modified(event_data)
             self.PAR.emit_event("<<Delete>>", event_data)
@@ -2209,6 +2316,8 @@ class MainTable(tk.Canvas):
                     c_pc=c_pc,
                     index=False,
                 )
+        if (need_y_redraw or need_x_redraw) and self.find_window.open:
+            self.reposition_find_window()  # prevent it from appearing to move around
         if redraw and (need_y_redraw or need_x_redraw):
             self.main_table_redraw_grid_and_text(redraw_header=True, redraw_row_index=True)
             return True
@@ -6206,7 +6315,9 @@ class MainTable(tk.Canvas):
         text_end_row = grid_end_row - 1 if grid_end_row == len(self.row_positions) else grid_end_row
         text_start_col = grid_start_col - 1 if grid_start_col else grid_start_col
         text_end_col = grid_end_col - 1 if grid_end_col == len(self.col_positions) else grid_end_col
-
+        # manage find window
+        if self.find_window.open:
+            self.reposition_find_window()
         # check if auto resizing row index
         changed_w = False
         if self.PAR.ops.auto_resize_row_index and self.show_index:
@@ -6223,9 +6334,6 @@ class MainTable(tk.Canvas):
         # important vars
         x_stop = min(last_col_line_pos, scrollpos_right)
         y_stop = min(last_row_line_pos, scrollpos_bot)
-        # manage find window
-        if self.find_window.open:
-            self.reposition_find_window()
         # redraw table
         if redraw_table:
             # reset canvas item storage
@@ -7461,45 +7569,35 @@ class MainTable(tk.Canvas):
             and (self.single_selection_enabled or self.toggle_selection_enabled)
             and (edited or self.cell_equal_to(datarn, datacn, value))
         ):
-            r1, c1, r2, c2 = self.selection_boxes[self.selected.fill_iid].coords
-            numcols = c2 - c1
-            numrows = r2 - r1
-            if numcols == 1 and numrows == 1:
-                if event.keysym == "Return":
-                    if self.PAR.ops.edit_cell_return == "right":
-                        self.select_right(r, c)
-                    if self.PAR.ops.edit_cell_return == "down":
-                        self.select_down(r, c)
-                elif event.keysym == "Tab":
-                    if self.PAR.ops.edit_cell_tab == "right":
-                        self.select_right(r, c)
-                    if self.PAR.ops.edit_cell_tab == "down":
-                        self.select_down(r, c)
-            else:
-                if event.keysym == "Return":
-                    if self.PAR.ops.edit_cell_return == "right":
-                        new_r, new_c = cell_right_within_box(r, c, r1, c1, r2, c2, numrows, numcols)
-                    elif self.PAR.ops.edit_cell_return == "down":
-                        new_r, new_c = down_cell_within_box(r, c, r1, c1, r2, c2, numrows, numcols)
-                    else:
-                        new_r, new_c = None, None
-                elif event.keysym == "Tab":
-                    if self.PAR.ops.edit_cell_tab == "right":
-                        new_r, new_c = cell_right_within_box(r, c, r1, c1, r2, c2, numrows, numcols)
-                    elif self.PAR.ops.edit_cell_tab == "down":
-                        new_r, new_c = down_cell_within_box(r, c, r1, c1, r2, c2, numrows, numcols)
-                    else:
-                        new_r, new_c = None, None
-                else:
-                    new_r, new_c = None, None
-                if isinstance(new_r, int):
-                    self.set_currently_selected(new_r, new_c, item=self.selected.fill_iid)
-                    self.see(new_r, new_c)
+            self.next_cell(r, c, event.keysym)
         self.recreate_all_selection_boxes()
         self.hide_text_editor_and_dropdown()
         if event.keysym != "FocusOut":
             self.focus_set()
         return "break"
+
+    def next_cell(self, r: int, c: int, key: Any = "Return") -> None:
+        r1, c1, r2, c2 = self.selection_boxes[self.selected.fill_iid].coords
+        numrows, numcols = r2 - r1, c2 - c1
+        if key == "Return":
+            direction = self.PAR.ops.edit_cell_return
+        elif key == "Tab":
+            direction = self.PAR.ops.edit_cell_tab
+        else:
+            return
+        if numcols == 1 and numrows == 1:
+            if direction == "right":
+                self.select_right(r, c)
+            elif direction == "down":
+                self.select_down(r, c)
+        else:
+            if direction == "right":
+                new_r, new_c = cell_right_within_box(r, c, r1, c1, r2, c2, numrows, numcols)
+            elif direction == "down":
+                new_r, new_c = cell_down_within_box(r, c, r1, c1, r2, c2, numrows, numcols)
+            if direction in ("right", "down"):
+                self.set_currently_selected(new_r, new_c, item=self.selected.fill_iid)
+                self.see(new_r, new_c)
 
     def single_edit_run_validation(
         self, datarn: int, datacn: int, event_data: EventDataDict

@@ -1902,40 +1902,46 @@ class Tree_Editor(tk.Frame):
                         f"Entered text invalid for column type - {self.why_isnt_detail_valid(x1, newtext)}   ",
                         theme=self.C.theme,
                     )
+            if event.sheetname == "tree" and event.loc:
+                self.tree.next_cell(*event.loc, event.key)
+            elif event.sheetname == "sheet" and event.loc:
+                self.sheet.next_cell(*event.loc, event.key)
+
         else:
             self.start_work("Editing table...")
             idcols = set(self.hiers) | {self.ic}
             need_rebuild = any(k[1] in idcols for k in event["data"])
             refresh_rows = set()
             refresh_cols = set()
+            edit_ctr = 0
             tree = event.sheetname == "tree"
             if need_rebuild:
                 self.snapshot_ctrl_x_v_del_key_id_par()
             else:
                 self.snapshot_ctrl_x_v_del_key()
-            for k, value in event["data"].items():
-                r, c = k
+            for (r, c), value in event["data"].items():
                 if tree:
                     r = self.rns[self.tree.rowitem(row=r, data_index=True)]
                 if (need_rebuild and c in idcols) or (
                     self.detail_is_valid_for_col(c, value) and self.sheet.MT.data[r][c] != value
                 ):
                     if not need_rebuild:
-                        self.vs[-1]["cells"][k] = f"{self.sheet.MT.data[r][c]}"
+                        self.vs[-1]["cells"][(r, c)] = f"{self.sheet.MT.data[r][c]}"
                     self.edit_cell_multiple(r, c, value)
                     refresh_rows.add(r)
                     refresh_cols.add(c)
+                    edit_ctr += 1
             self.disable_paste()
-            if refresh_rows:
+            if edit_ctr:
                 if need_rebuild:
                     self.rebuild_tree()
                 else:
                     self.refresh_formatting(rows=refresh_rows, columns=refresh_cols)
                     for rn in refresh_rows:
                         self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
-                if len(refresh_rows) > 1 and len(refresh_cols) > 1:
+                if edit_ctr > 1:
                     self.changelog_append(
-                        f"Edit {len(refresh_rows) * len(refresh_cols)} cells",
+                        f"Edit {edit_ctr} cells",
                         "",
                         "",
                         "",
@@ -5204,7 +5210,7 @@ class Tree_Editor(tk.Frame):
                 )
         self.redraw_sheets()
 
-    def undo(self, event=None, col_manager=False):
+    def undo(self, event=None):
         if not self.vs:
             return
         self.vp -= 1
@@ -5282,7 +5288,6 @@ class Tree_Editor(tk.Frame):
             elif new_vs["row"]["added_or_changed"] == "added":
                 del self.sheet.MT.data[rn]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.redo_tree_display()
 
         elif new_vs["type"] == "rename id":
             rows = set()
@@ -5296,7 +5301,6 @@ class Tree_Editor(tk.Frame):
             self.sheet.MT.data[new_vs["ikrow"][0]][self.ic] = new_vs["ikrow"][2]
             self.refresh_formatting(rows=new_vs["ikrow"][0], columns=self.ic)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.redo_tree_display()
 
         elif new_vs["type"] == "paste id":
             rows = set()
@@ -5310,7 +5314,6 @@ class Tree_Editor(tk.Frame):
                 cols.add(tocol)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(rows=rows, columns=cols)
-            self.redo_tree_display()
 
         elif new_vs["type"] == "delete id" or new_vs["type"] == "delete ids":
             for obj in reversed(new_vs["rows"]):
@@ -5321,7 +5324,6 @@ class Tree_Editor(tk.Frame):
                         self.sheet.MT.data[obj.rn][h] = par
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
-            self.redo_tree_display()
 
         elif new_vs["type"] == "add col":
             c = new_vs["treecolsel"]
@@ -5329,7 +5331,6 @@ class Tree_Editor(tk.Frame):
                 del self.sheet.MT.data[r][c]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
-            self.redo_tree_display()
 
         elif new_vs["type"] == "del cols":
             for cn, rowdict in reversed(new_vs["cols"].items()):
@@ -5337,26 +5338,22 @@ class Tree_Editor(tk.Frame):
                     self.sheet.MT.data[rn].insert(cn, v)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
-            self.redo_tree_display()
 
         elif new_vs["type"] == "edit validation":
             for rn, c in enumerate(pickle.loads(zlib.decompress(new_vs["col"]))):
                 self.sheet.MT.data[rn][new_vs["col_num"]] = c
             self.refresh_formatting(dehighlight=True)
-            self.redo_tree_display()
 
         elif new_vs["type"] == "rename col":
-            self.redo_tree_display()
+            ...
 
         elif new_vs["type"] == "col type text":
             self.refresh_formatting(columns=new_vs["col_num"])
-            self.redo_tree_display()
 
         elif new_vs["type"] == "col type num date":
             for rn, c in enumerate(pickle.loads(zlib.decompress(new_vs["col"]))):
                 self.sheet.MT.data[rn][new_vs["col_num"]] = c
             self.refresh_formatting(columns=new_vs["col_num"])
-            self.redo_tree_display()
 
         elif new_vs["type"] == "sort":
             self.sheet.MT.data = [
@@ -5364,25 +5361,21 @@ class Tree_Editor(tk.Frame):
             ]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
-            self.redo_tree_display()
 
         elif new_vs["type"] == "prune changelog":
             self.changelog = new_vs["rows"] + self.changelog
-            self.redo_tree_display()
 
         elif new_vs["type"] == "drag rows":
             self.sheet.mapping_move_rows(dict(zip(new_vs["row_mapping"].values(), new_vs["row_mapping"])))
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.redo_tree_display()
 
         elif new_vs["type"] == "drag cols":
             new_vs["column_mapping"] = dict(zip(new_vs["column_mapping"].values(), new_vs["column_mapping"]))
             self.sheet.mapping_move_columns(new_vs["column_mapping"])
             self.tree.mapping_move_columns(new_vs["column_mapping"])
-            self.redo_tree_display()
 
         elif new_vs["type"] == "node sort":
-            self.redo_tree_display()
+            ...
 
         elif new_vs["type"] == "date form":
             self.DATE_FORM = new_vs["old_form"]
@@ -5399,7 +5392,6 @@ class Tree_Editor(tk.Frame):
                             pass
                     self.sheet.MT.data[rn][col] = cell
             self.refresh_formatting(columns=date_cols)
-            self.redo_tree_display()
 
         elif new_vs["type"].startswith("full"):
             self.warnings_filepath = new_vs["og_file"]
@@ -5408,13 +5400,11 @@ class Tree_Editor(tk.Frame):
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
-            self.redo_tree_display()
 
         elif new_vs["type"] == "ctrl x, v, del key id par":
             self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
-            self.redo_tree_display()
 
         elif new_vs["type"] == "ctrl x, v, del key":
             rows = set()
@@ -5424,10 +5414,11 @@ class Tree_Editor(tk.Frame):
                 rows.add(k[0])
                 cols.add(k[1])
             self.refresh_formatting(rows=rows, columns=cols)
-            self.redo_tree_display()
+
         self.sheet.row_index(newindex=self.ic)
         self.sheet.set_column_widths(new_vs["required_data"]["sheet_col_positions"], canvas_positions=True)
         self.sheet.set_safe_row_heights(new_vs["required_data"]["sheet_row_positions"])
+        self.redo_tree_display()
         self.set_headers()
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.rehighlight_tagged_ids()

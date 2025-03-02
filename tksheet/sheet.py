@@ -14,6 +14,10 @@ from typing import Any, Literal
 
 from .column_headers import ColumnHeaders
 from .constants import (
+    ALL_BINDINGS,
+    BINDING_TO_ATTR,
+    MODIFIED_BINDINGS,
+    SELECT_BINDINGS,
     USER_OS,
     align_value_error,
     backwards_compatibility_keys,
@@ -605,97 +609,10 @@ class Sheet(tk.Frame):
     # Bindings and Functionality
 
     def enable_bindings(self, *bindings: Binding) -> Sheet:
-        """
-        List of available bindings:
-        - "all"
-        - "single_select"
-        - "toggle_select"
-        - "drag_select"
-        - "select_all"
-        - "column_drag_and_drop" / "move_columns"
-        - "row_drag_and_drop" / "move_rows"
-        - "column_select"
-        - "row_select"
-        - "column_width_resize"
-        - "double_click_column_resize"
-        - "row_width_resize"
-        - "column_height_resize"
-        - "arrowkeys" # all arrowkeys including page up and down
-        - "up"
-        - "down"
-        - "left"
-        - "right"
-        - "prior" # page up
-        - "next" # page down
-        - "row_height_resize"
-        - "double_click_row_resize"
-        - "right_click_popup_menu" / "rc_popup_menu" / "rc_menu"
-        - "rc_select"
-        - "rc_insert_column"
-        - "rc_delete_column"
-        - "rc_insert_row"
-        - "rc_delete_row"
-        - "sort_cells"
-        - "sort_row"
-        - "sort_column" / "sort_col"
-        - "sort_rows"
-        - "sort_columns" / "sort_cols"
-        - "ctrl_click_select" / "ctrl_select"
-        - "copy"
-        - "cut"
-        - "paste"
-        - "delete"
-        - "undo"
-        - "find"
-        - "edit_cell"
-        - "edit_header"
-        - "edit_index"
-        """
         self.MT.enable_bindings(bindings)
         return self
 
     def disable_bindings(self, *bindings: Binding) -> Sheet:
-        """
-        List of available bindings:
-        - "all"
-        - "single_select"
-        - "toggle_select"
-        - "drag_select"
-        - "select_all"
-        - "column_drag_and_drop" / "move_columns"
-        - "row_drag_and_drop" / "move_rows"
-        - "column_select"
-        - "row_select"
-        - "column_width_resize"
-        - "double_click_column_resize"
-        - "row_width_resize"
-        - "column_height_resize"
-        - "arrowkeys" # all arrowkeys including page up and down
-        - "up"
-        - "down"
-        - "left"
-        - "right"
-        - "prior" # page up
-        - "next" # page down
-        - "row_height_resize"
-        - "double_click_row_resize"
-        - "right_click_popup_menu" / "rc_popup_menu" / "rc_menu"
-        - "rc_select"
-        - "rc_insert_column"
-        - "rc_delete_column"
-        - "rc_insert_row"
-        - "rc_delete_row"
-        - "ctrl_click_select" / "ctrl_select"
-        - "copy"
-        - "cut"
-        - "paste"
-        - "delete"
-        - "undo"
-        - "find"
-        - "edit_cell"
-        - "edit_header"
-        - "edit_index"
-        """
         self.MT.disable_bindings(bindings)
         return self
 
@@ -704,67 +621,6 @@ class Sheet(tk.Frame):
         bindings: ExtraBinding | Sequence[ExtraBinding] | None = None,
         func: Callable | None = None,
     ) -> Sheet:
-        """
-        List of available bindings:
-        - "begin_sort_cells"
-        - "sort_cells", "end_sort_cells"
-        - "begin_sort_rows"
-        - "sort_rows", "end_sort_rows"
-        - "begin_sort_columns"
-        - "sort_columns", "end_sort_columns"
-        - "begin_copy", "begin_ctrl_c"
-        - "ctrl_c", "end_copy", "end_ctrl_c", "copy"
-        - "begin_cut", "begin_ctrl_x"
-        - "ctrl_x", "end_cut", "end_ctrl_x", "cut"
-        - "begin_paste", "begin_ctrl_v"
-        - "ctrl_v", "end_paste", "end_ctrl_v", "paste"
-        - "begin_undo", "begin_ctrl_z"
-        - "ctrl_z", "end_undo", "end_ctrl_z", "undo"
-        - "begin_delete_key", "begin_delete"
-        - "delete_key", "end_delete", "end_delete_key", "delete"
-        - "begin_edit_cell", "begin_edit_table"
-        - "end_edit_cell", "edit_cell", "edit_table"
-        - "begin_edit_header"
-        - "end_edit_header", "edit_header"
-        - "begin_edit_index"
-        - "end_edit_index", "edit_index"
-        - "begin_row_index_drag_drop", "begin_move_rows"
-        - "row_index_drag_drop", "move_rows", "end_move_rows", "end_row_index_drag_drop"
-        - "begin_column_header_drag_drop", "begin_move_columns"
-        - "column_header_drag_drop", "move_columns", "end_move_columns", "end_column_header_drag_drop"
-        - "begin_rc_delete_row", "begin_delete_rows"
-        - "rc_delete_row", "end_rc_delete_row", "end_delete_rows", "delete_rows"
-        - "begin_rc_delete_column", "begin_delete_columns"
-        - "rc_delete_column", "end_rc_delete_column","end_delete_columns", "delete_columns"
-        - "begin_rc_insert_column", "begin_insert_column", "begin_insert_columns", "begin_add_column",
-          "begin_rc_add_column", "begin_add_columns"
-        - "rc_insert_column", "end_rc_insert_column", "end_insert_column", "end_insert_columns", "rc_add_column",
-          "end_rc_add_column", "end_add_column", "end_add_columns", "add_columns"
-        - "begin_rc_insert_row", "begin_insert_row", "begin_insert_rows", "begin_rc_add_row", "begin_add_row",
-          "begin_add_rows"
-        - "rc_insert_row", "end_rc_insert_row", "end_insert_row", "end_insert_rows", "rc_add_row", "end_rc_add_row",
-          "end_add_row", "end_add_rows", "add_rows"
-        - "row_height_resize"
-        - "column_width_resize"
-        - "cell_select"
-        - "select_all"
-        - "row_select"
-        - "column_select"
-        - "drag_select_cells"
-        - "drag_select_rows"
-        - "drag_select_columns"
-        - "shift_cell_select"
-        - "shift_row_select"
-        - "shift_column_select"
-        - "ctrl_cell_select"
-        - "ctrl_row_select"
-        - "ctrl_column_select"
-        - "deselect"
-        - "all_select_events", "select", "selectevents", "select_events"
-        - "all_modified_events", "sheetmodified", "sheet_modified", "modified_events", "modified"
-        - "bind_all"
-        - "unbind_all"
-        """
         # bindings is None, unbind all
         if bindings is None:
             bindings = "all"
@@ -782,333 +638,22 @@ class Sheet(tk.Frame):
 
         for b, f in iterable:
             b = b.lower()
-
             if f is not None and b in emitted_events:
                 self.bind(b, f)
-
-            if b in (
-                "all",
-                "bind_all",
-                "unbind_all",
-            ):
-                self.MT.extra_begin_sort_cells_func = f
-                self.CH.ch_extra_begin_sort_rows_func = f
-                self.RI.ri_extra_begin_sort_cols_func = f
-                self.MT.extra_begin_ctrl_c_func = f
-                self.MT.extra_begin_ctrl_x_func = f
-                self.MT.extra_begin_ctrl_v_func = f
-                self.MT.extra_begin_ctrl_z_func = f
-                self.MT.extra_begin_delete_key_func = f
-                self.RI.ri_extra_begin_drag_drop_func = f
-                self.CH.ch_extra_begin_drag_drop_func = f
-                self.MT.extra_begin_del_rows_rc_func = f
-                self.MT.extra_begin_del_cols_rc_func = f
-                self.MT.extra_begin_insert_cols_rc_func = f
-                self.MT.extra_begin_insert_rows_rc_func = f
-                self.MT.extra_begin_edit_cell_func = f
-                self.CH.extra_begin_edit_cell_func = f
-                self.RI.extra_begin_edit_cell_func = f
-                self.CH.column_width_resize_func = f
-                self.RI.row_height_resize_func = f
-
-            if b in (
-                "all",
-                "bind_all",
-                "unbind_all",
-                "all_select_events",
-                "select",
-                "selectevents",
-                "select_events",
-            ):
-                self.MT.selection_binding_func = f
-                self.MT.select_all_binding_func = f
-                self.RI.selection_binding_func = f
-                self.CH.selection_binding_func = f
-                self.MT.drag_selection_binding_func = f
-                self.RI.drag_selection_binding_func = f
-                self.CH.drag_selection_binding_func = f
-                self.MT.shift_selection_binding_func = f
-                self.RI.shift_selection_binding_func = f
-                self.CH.shift_selection_binding_func = f
-                self.MT.ctrl_selection_binding_func = f
-                self.RI.ctrl_selection_binding_func = f
-                self.CH.ctrl_selection_binding_func = f
-                self.MT.deselection_binding_func = f
-
-            if b in (
-                "all",
-                "bind_all",
-                "unbind_all",
-                "all_modified_events",
-                "sheetmodified",
-                "sheet_modified",
-                "modified_events",
-                "modified",
-            ):
-                self.MT.extra_end_sort_cells_func = f
-                self.CH.ch_extra_end_sort_rows_func = f
-                self.RI.ri_extra_end_sort_cols_func = f
-                self.MT.extra_end_ctrl_c_func = f
-                self.MT.extra_end_ctrl_x_func = f
-                self.MT.extra_end_ctrl_v_func = f
-                self.MT.extra_end_ctrl_z_func = f
-                self.MT.extra_end_delete_key_func = f
-                self.RI.ri_extra_end_drag_drop_func = f
-                self.CH.ch_extra_end_drag_drop_func = f
-                self.MT.extra_end_del_rows_rc_func = f
-                self.MT.extra_end_del_cols_rc_func = f
-                self.MT.extra_end_insert_cols_rc_func = f
-                self.MT.extra_end_insert_rows_rc_func = f
-                self.MT.extra_end_edit_cell_func = f
-                self.CH.extra_end_edit_cell_func = f
-                self.RI.extra_end_edit_cell_func = f
-
-            if b in ("begin_sort_cells",):
-                self.MT.extra_begin_sort_cells_func = f
-
-            if b in ("sort_cells", "end_sort_cells"):
-                self.MT.extra_end_sort_cells_func = f
-
-            if b in ("begin_sort_rows",):
-                self.CH.ch_extra_begin_sort_rows_func = f
-
-            if b in ("sort_rows", "end_sort_rows"):
-                self.CH.ch_extra_end_sort_rows_func = f
-
-            if b in ("begin_sort_columns",):
-                self.RI.ri_extra_begin_sort_cols_func = f
-
-            if b in ("sort_columns", "end_sort_columns"):
-                self.RI.ri_extra_end_sort_cols_func = f
-
-            if b in (
-                "begin_copy",
-                "begin_ctrl_c",
-            ):
-                self.MT.extra_begin_ctrl_c_func = f
-            if b in (
-                "ctrl_c",
-                "end_copy",
-                "end_ctrl_c",
-                "copy",
-            ):
-                self.MT.extra_end_ctrl_c_func = f
-
-            if b in (
-                "begin_cut",
-                "begin_ctrl_x",
-            ):
-                self.MT.extra_begin_ctrl_x_func = f
-            if b in (
-                "ctrl_x",
-                "end_cut",
-                "end_ctrl_x",
-                "cut",
-            ):
-                self.MT.extra_end_ctrl_x_func = f
-
-            if b in (
-                "begin_paste",
-                "begin_ctrl_v",
-            ):
-                self.MT.extra_begin_ctrl_v_func = f
-            if b in (
-                "ctrl_v",
-                "end_paste",
-                "end_ctrl_v",
-                "paste",
-            ):
-                self.MT.extra_end_ctrl_v_func = f
-
-            if b in (
-                "begin_undo",
-                "begin_ctrl_z",
-            ):
-                self.MT.extra_begin_ctrl_z_func = f
-            if b in (
-                "ctrl_z",
-                "end_undo",
-                "end_ctrl_z",
-                "undo",
-            ):
-                self.MT.extra_end_ctrl_z_func = f
-
-            if b in (
-                "begin_delete_key",
-                "begin_delete",
-            ):
-                self.MT.extra_begin_delete_key_func = f
-            if b in (
-                "delete_key",
-                "end_delete",
-                "end_delete_key",
-                "delete",
-            ):
-                self.MT.extra_end_delete_key_func = f
-
-            if b in (
-                "begin_edit_cell",
-                "begin_edit_table",
-            ):
-                self.MT.extra_begin_edit_cell_func = f
-            if b in (
-                "end_edit_cell",
-                "edit_cell",
-                "edit_table",
-            ):
-                self.MT.extra_end_edit_cell_func = f
-
-            if b == "begin_edit_header":
-                self.CH.extra_begin_edit_cell_func = f
-            if b in (
-                "end_edit_header",
-                "edit_header",
-            ):
-                self.CH.extra_end_edit_cell_func = f
-
-            if b == "begin_edit_index":
-                self.RI.extra_begin_edit_cell_func = f
-            if b in (
-                "end_edit_index",
-                "edit_index",
-            ):
-                self.RI.extra_end_edit_cell_func = f
-
-            if b in (
-                "begin_row_index_drag_drop",
-                "begin_move_rows",
-            ):
-                self.RI.ri_extra_begin_drag_drop_func = f
-            if b in (
-                "row_index_drag_drop",
-                "move_rows",
-                "end_move_rows",
-                "end_row_index_drag_drop",
-            ):
-                self.RI.ri_extra_end_drag_drop_func = f
-
-            if b in (
-                "begin_column_header_drag_drop",
-                "begin_move_columns",
-            ):
-                self.CH.ch_extra_begin_drag_drop_func = f
-            if b in (
-                "column_header_drag_drop",
-                "move_columns",
-                "end_move_columns",
-                "end_column_header_drag_drop",
-            ):
-                self.CH.ch_extra_end_drag_drop_func = f
-
-            if b in (
-                "begin_rc_delete_row",
-                "begin_delete_rows",
-            ):
-                self.MT.extra_begin_del_rows_rc_func = f
-            if b in (
-                "rc_delete_row",
-                "end_rc_delete_row",
-                "end_delete_rows",
-                "delete_rows",
-            ):
-                self.MT.extra_end_del_rows_rc_func = f
-
-            if b in (
-                "begin_rc_delete_column",
-                "begin_delete_columns",
-            ):
-                self.MT.extra_begin_del_cols_rc_func = f
-            if b in (
-                "rc_delete_column",
-                "end_rc_delete_column",
-                "end_delete_columns",
-                "delete_columns",
-            ):
-                self.MT.extra_end_del_cols_rc_func = f
-
-            if b in (
-                "begin_rc_insert_column",
-                "begin_insert_column",
-                "begin_insert_columns",
-                "begin_add_column",
-                "begin_rc_add_column",
-                "begin_add_columns",
-            ):
-                self.MT.extra_begin_insert_cols_rc_func = f
-            if b in (
-                "rc_insert_column",
-                "end_rc_insert_column",
-                "end_insert_column",
-                "end_insert_columns",
-                "rc_add_column",
-                "end_rc_add_column",
-                "end_add_column",
-                "end_add_columns",
-                "add_columns",
-            ):
-                self.MT.extra_end_insert_cols_rc_func = f
-
-            if b in (
-                "begin_rc_insert_row",
-                "begin_insert_row",
-                "begin_insert_rows",
-                "begin_rc_add_row",
-                "begin_add_row",
-                "begin_add_rows",
-            ):
-                self.MT.extra_begin_insert_rows_rc_func = f
-            if b in (
-                "rc_insert_row",
-                "end_rc_insert_row",
-                "end_insert_row",
-                "end_insert_rows",
-                "rc_add_row",
-                "end_rc_add_row",
-                "end_add_row",
-                "end_add_rows",
-                "add_rows",
-            ):
-                self.MT.extra_end_insert_rows_rc_func = f
-
-            if b == "column_width_resize":
-                self.CH.column_width_resize_func = f
-            if b == "row_height_resize":
-                self.RI.row_height_resize_func = f
-
-            if b == "cell_select":
-                self.MT.selection_binding_func = f
-            if b in (
-                "select_all",
-                "ctrl_a",
-            ):
-                self.MT.select_all_binding_func = f
-            if b == "row_select":
-                self.RI.selection_binding_func = f
-            if b in (
-                "col_select",
-                "column_select",
-            ):
-                self.CH.selection_binding_func = f
-            if b == "drag_select_cells":
-                self.MT.drag_selection_binding_func = f
-            if b == "drag_select_rows":
-                self.RI.drag_selection_binding_func = f
-            if b == "drag_select_columns":
-                self.CH.drag_selection_binding_func = f
-            if b == "shift_cell_select":
-                self.MT.shift_selection_binding_func = f
-            if b == "shift_row_select":
-                self.RI.shift_selection_binding_func = f
-            if b == "shift_column_select":
-                self.CH.shift_selection_binding_func = f
-            if b == "ctrl_cell_select":
-                self.MT.ctrl_selection_binding_func = f
-            if b == "ctrl_row_select":
-                self.RI.ctrl_selection_binding_func = f
-            if b == "ctrl_column_select":
-                self.CH.ctrl_selection_binding_func = f
-            if b == "deselect":
-                self.MT.deselection_binding_func = f
+            # Handle group bindings
+            if b in ("all", "bind_all", "unbind_all"):
+                for component, attr in ALL_BINDINGS:
+                    setattr(getattr(self, component), attr, f)
+            elif b in ("all_select_events", "select", "selectevents", "select_events"):
+                for component, attr in SELECT_BINDINGS:
+                    setattr(getattr(self, component), attr, f)
+            elif b in ("all_modified_events", "sheetmodified", "sheet_modified", "modified_events", "modified"):
+                for component, attr in MODIFIED_BINDINGS:
+                    setattr(getattr(self, component), attr, f)
+            # Handle individual bindings
+            elif b in BINDING_TO_ATTR:
+                component, attr = BINDING_TO_ATTR[b]
+                setattr(getattr(self, component), attr, f)
         return self
 
     def bind(
@@ -4460,6 +4005,10 @@ class Sheet(tk.Frame):
 
     # Cell Text Editor
 
+    def next_cell(self, r: int, c: int, key: Literal["Return", "Tab", "??"]) -> Sheet:
+        self.MT.next_cell(r, c, key)
+        return self
+
     # works on currently selected box
     def open_cell(self, ignore_existing_editor: bool = True) -> Sheet:
         self.MT.open_cell(event=GeneratedMouseEvent(), ignore_existing_editor=ignore_existing_editor)
@@ -5429,9 +4978,7 @@ class Sheet(tk.Frame):
         - Unlike the ttk treeview 'see' function
           this function does **NOT** scroll to the item
         """
-        if item not in self.RI.tree:
-            raise ValueError(f"Item '{item}' does not exist.")
-        if self.RI.tree[item].parent:
+        if not self.item_displayed(item) and self.RI.tree[item].parent:
             self.show_rows(
                 rows=self._tree_open(list(self.RI.get_iid_ancestors(item))),
                 redraw=False,
@@ -5443,8 +4990,6 @@ class Sheet(tk.Frame):
         """
         Scrolls to an item and ensures that it is displayed
         """
-        if item not in self.RI.tree:
-            raise ValueError(f"Item '{item}' does not exist.")
         self.display_item(item, redraw=False)
         self.see(
             row=bisect_left(self.MT.displayed_rows, self.RI.tree_rns[item]),

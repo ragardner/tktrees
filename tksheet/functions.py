@@ -645,7 +645,7 @@ def color_tup(color: str) -> tuple[int, int, int]:
     return int(res[1:3], 16), int(res[3:5], 16), int(res[5:], 16)
 
 
-def down_cell_within_box(
+def cell_down_within_box(
     r: int,
     c: int,
     r1: int,
@@ -909,45 +909,60 @@ def gen_coords(
 
 
 def box_gen_coords(
-    start_row: int,
-    start_col: int,
-    total_cols: int,
-    total_rows: int,
-    reverse: bool = False,
+    from_r: int,
+    from_c: int,
+    upto_r: int,
+    upto_c: int,
+    start_r: int,
+    start_c: int,
+    reverse: bool,
+    all_rows_displayed: bool = True,
+    all_cols_displayed: bool = True,
+    displayed_cols: list[int] | None = None,
+    displayed_rows: list[int] | None = None,
 ) -> Generator[tuple[int, int]]:
-    if reverse:
-        # yield start cell
-        yield (start_row, start_col)
-        # yield any remaining cells in the starting row before the start column
-        if start_col:
-            for col in reversed(range(start_col)):
-                yield (start_row, col)
-        # yield any cells above start row
-        for row in reversed(range(start_row)):
-            for col in reversed(range(total_cols)):
-                yield (row, col)
-        # yield cells from bottom of table upward
-        for row in range(total_rows - 1, start_row, -1):
-            for col in reversed(range(total_cols)):
-                yield (row, col)
-        # yield any remaining cells in start row
-        for col in range(total_cols - 1, start_col, -1):
-            yield (start_row, col)
+    if displayed_rows is None:
+        displayed_rows = []
+    if displayed_cols is None:
+        displayed_cols = []
+    if not all_rows_displayed:
+        from_r = displayed_rows[from_r]
+        upto_r = displayed_rows[upto_r - 1] + 1
+        start_r = displayed_rows[start_r]
+    if not all_cols_displayed:
+        from_c = displayed_rows[from_c]
+        upto_c = displayed_rows[upto_c - 1] + 1
+        start_c = displayed_rows[start_c]
+    if not reverse:
+        # Forward: Start from (start_r, start_c) to end of the row
+        for c in range(start_c, upto_c):
+            yield (start_r, c)
+        # Subsequent rows from start_r + 1 to upto_r - 1
+        for r in range(start_r + 1, upto_r):
+            for c in range(from_c, upto_c):
+                yield (r, c)
+        # Rows from from_r to start_r - 1 (before start_r)
+        for r in range(from_r, start_r):
+            for c in range(from_c, upto_c):
+                yield (r, c)
+        # In start_r, from from_c to start_c - 1 (after wrap-around)
+        for c in range(from_c, start_c):
+            yield (start_r, c)
     else:
-        # Yield cells from the start position to the end of the current row
-        for col in range(start_col, total_cols):
-            yield (start_row, col)
-        # yield from the next row to the last row
-        for row in range(start_row + 1, total_rows):
-            for col in range(total_cols):
-                yield (row, col)
-        # yield from the beginning up to the start
-        for row in range(start_row):
-            for col in range(total_cols):
-                yield (row, col)
-        # yield any remaining cells in the starting row before the start column
-        for col in range(start_col):
-            yield (start_row, col)
+        # Reverse: Start from (start_r, start_c) to start of the row
+        for c in range(start_c, from_c - 1, -1):
+            yield (start_r, c)
+        # Previous rows from start_r - 1 down to from_r in reverse
+        for r in range(start_r - 1, from_r - 1, -1):
+            for c in range(upto_c - 1, from_c - 1, -1):
+                yield (r, c)
+        # Rows from upto_r - 1 down to start_r + 1 in reverse (after wrap-around)
+        for r in range(upto_r - 1, start_r, -1):
+            for c in range(upto_c - 1, from_c - 1, -1):
+                yield (r, c)
+        # In start_r, from upto_c - 1 to start_c + 1 in reverse
+        for c in range(upto_c - 1, start_c, -1):
+            yield (start_r, c)
 
 
 def next_cell(

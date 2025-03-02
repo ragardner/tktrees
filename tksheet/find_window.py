@@ -157,6 +157,8 @@ class FindWindow(tk.Frame):
         )
         # Configure grid: column 1 for text widgets, both rows expandable
         self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(4, uniform="group1")
+        self.grid_columnconfigure(5, uniform="group2")
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
         self.grid_propagate(False)
@@ -168,7 +170,7 @@ class FindWindow(tk.Frame):
 
         # Toggle label to show/hide replace window
         self.toggle_replace = tk.Label(self, text="↓", cursor="hand2", highlightthickness=1)
-        self.toggle_replace.grid(row=0, column=0)
+        self.toggle_replace.grid(row=0, column=0, sticky="ns")
         self.toggle_replace.bind("<Button-1>", self.toggle_replace_window)
         self.toggle_replace.bind("<Enter>", lambda e: self.enter_label(widget=self.toggle_replace))
         self.toggle_replace.bind("<Leave>", lambda e: self.leave_label(widget=self.toggle_replace))
@@ -194,22 +196,22 @@ class FindWindow(tk.Frame):
 
         self.close = tk.Label(self, text="✕", cursor="hand2", highlightthickness=1)
         self.close.bind("<Button-1>", close_func)
-        self.close.grid(row=0, column=5)
+        self.close.grid(row=0, column=5, sticky="nswe")
 
         # Replace text widget, initially hidden
         self.replace_tktext = FindWindowTkText(self)
-        self.replace_tktext.grid(row=1, column=0, columnspan=4, sticky="nswe")
+        self.replace_tktext.grid(row=1, column=1, columnspan=4, sticky="nswe")
         self.replace_tktext.grid_remove()
 
         # Replace action labels, initially hidden
         self.replace_next = tk.Label(self, text="→", cursor="hand2", highlightthickness=1)
         self.replace_next.bind("<Button-1>", replace_func)
-        self.replace_next.grid(row=1, column=4)
+        self.replace_next.grid(row=1, column=4, sticky="nswe")
         self.replace_next.grid_remove()
 
-        self.replace_all = tk.Label(self, text="*", cursor="hand2", highlightthickness=1)
+        self.replace_all = tk.Label(self, text="→*", cursor="hand2", highlightthickness=1)
         self.replace_all.bind("<Button-1>", replace_all_func)
-        self.replace_all.grid(row=1, column=5)
+        self.replace_all.grid(row=1, column=5, sticky="nswe")
         self.replace_all.grid_remove()
 
         # Bind Tab for focus switching
@@ -268,12 +270,14 @@ class FindWindow(tk.Frame):
             self.replace_next.grid_remove()
             self.replace_all.grid_remove()
             self.toggle_replace.config(text="↓")
+            self.toggle_replace.grid(row=0, column=0, rowspan=1, sticky="ns")
             self.replace_visible = False
         else:
-            self.replace_tktext.grid(row=1, column=0, columnspan=4, sticky="nswe")
-            self.replace_next.grid(row=1, column=4)
-            self.replace_all.grid(row=1, column=5)
+            self.replace_tktext.grid(row=1, column=1, columnspan=4, sticky="nswe")
+            self.replace_next.grid(row=1, column=4, sticky="nswe")
+            self.replace_all.grid(row=1, column=5, sticky="nswe")
             self.toggle_replace.config(text="↑")
+            self.toggle_replace.grid(row=0, column=0, rowspan=2, sticky="ns")
             self.replace_visible = True
         self.toggle_replace_func()
 
