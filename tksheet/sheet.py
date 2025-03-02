@@ -8,6 +8,7 @@ from contextlib import suppress
 from functools import partial
 from itertools import accumulate, chain, filterfalse, islice, product, repeat
 from operator import attrgetter
+from re import IGNORECASE, escape, sub
 from timeit import default_timer
 from tkinter import ttk
 from typing import Any, Literal
@@ -26,11 +27,13 @@ from .constants import (
     rc_binding,
     scrollbar_options_keys,
 )
+from .find_window import replacer
 from .functions import (
     add_highlight,
     add_to_options,
     alpha2idx,
     bisect_in,
+    box_gen_coords,
     consecutive_ranges,
     convert_align,
     del_from_options,
@@ -47,6 +50,7 @@ from .functions import (
     idx_param_to_int,
     is_iterable,
     key_to_span,
+    mod_event_val,
     new_tk_event,
     num2alpha,
     pop_positions,
@@ -56,6 +60,7 @@ from .functions import (
     span_ranges,
     stored_event_dict,
     tksheet_type_error,
+    try_binding,
     unpack,
 )
 from .main_table import MainTable
@@ -2225,7 +2230,7 @@ class Sheet(tk.Frame):
     ) -> EventDataDict:
         return self.RI._sort_columns_by_row(row=row, reverse=reverse, key=key, undo=undo)
 
-    # Find
+    # Find and Replace
 
     @property
     def find_open(self) -> bool:
@@ -2234,6 +2239,66 @@ class Sheet(tk.Frame):
     def open_find(self, focus: bool = False) -> Sheet:
         self.MT.open_find_window(focus=focus)
         return self
+
+    def replace_all(self, mapping: dict[str, str], within: bool = False) -> EventDataDict:
+        tree = self.ops.treeview
+        event_data = self.MT.new_event_dict("edit_table")
+        boxes = self.MT.get_boxes()
+        event_data["selection_boxes"] = boxes
+        if within:
+            iterable = chain.from_iterable(
+                (
+                    box_gen_coords(
+                        *box.coords,
+                        start_r=box.coords.from_r,
+                        start_c=box.coords.from_c,
+                        reverse=False,
+                        all_rows_displayed=self.MT.all_rows_displayed,
+                        all_cols_displayed=self.MT.all_columns_displayed,
+                        displayed_rows=self.MT.displayed_rows,
+                        displayed_cols=self.MT.displayed_columns,
+                    )
+                    for box in self.MT.selection_boxes.values()
+                )
+            )
+        else:
+            iterable = box_gen_coords(
+                from_r=0,
+                from_c=0,
+                upto_r=self.MT.total_data_rows(include_index=False),
+                upto_c=self.MT.total_data_cols(include_header=False),
+                start_r=0,
+                start_c=0,
+                reverse=False,
+            )
+        for r, c in iterable:
+            for find, replace in mapping.items():
+                m = self.MT.find_match(find, r, c)
+                if m and (
+                    (tree or self.MT.all_rows_displayed or bisect_in(self.MT.displayed_rows, r))
+                    and (self.MT.all_columns_displayed or bisect_in(self.MT.displayed_columns, c))
+                ):
+                    current = f"{self.MT.get_cell_data(r, c, True)}"
+                    new = sub(escape(find), replacer(find, replace, current), current, flags=IGNORECASE)
+                    if not self.MT.edit_validation_func or (
+                        self.MT.edit_validation_func
+                        and (new := self.MT.edit_validation_func(mod_event_val(event_data, new, (r, c)))) is not None
+                    ):
+                        event_data = self.MT.event_data_set_cell(
+                            r,
+                            c,
+                            new,
+                            event_data,
+                        )
+        event_data = self.MT.bulk_edit_validation(event_data)
+        if event_data["cells"]["table"]:
+            self.MT.refresh()
+            if self.MT.undo_enabled:
+                self.MT.undo_stack.append(stored_event_dict(event_data))
+            try_binding(self.MT.extra_end_replace_all_func, event_data)
+            self.MT.sheet_modified(event_data)
+            self.emit_event("<<SheetModified>>", event_data)
+        return event_data
 
     # Highlighting Cells
 

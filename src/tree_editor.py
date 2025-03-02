@@ -121,6 +121,7 @@ from .toplevels import (
     Post_Import_Changes_Popup,
     Rename_Column_Popup,
     Rename_Id_Popup,
+    Replace_Popup,
     Save_New_Version_Error_Popup,
     Save_New_Version_Postsave_Popup,
     Save_New_Version_Presave_Popup,
@@ -281,6 +282,12 @@ class Tree_Editor(tk.Frame):
             label="Tag/Untag IDs",
             command=self.tag_ids,
             accelerator="Ctrl+T",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_separator()
+        self.edit_menu.add_command(
+            label="Replace using mapping",
+            command=self.replace_using_mapping,
             **menu_kwargs,
         )
         self.edit_menu.add_separator()
@@ -1967,6 +1974,9 @@ class Tree_Editor(tk.Frame):
                 sheet_c,
                 only_set_if_too_small=True,
             )
+
+    def replace_using_mapping(self, event=None) -> None:
+        Replace_Popup(self, theme=self.C.theme)
 
     def copy_key(self, event: object = None) -> None:
         if self.tree.has_focus():
