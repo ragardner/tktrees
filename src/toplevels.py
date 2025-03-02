@@ -1259,7 +1259,7 @@ class Replace_Popup(tk.Toplevel):
         self.grid_rowconfigure(2, weight=1)
 
         self.status_bar = Readonly_Entry_With_Scrollbar(self, theme=theme, use_status_fg=True)
-        self.status_bar.change_text(text="Search in current hierarchy or sheet, case insenitive")
+        self.status_bar.change_text(text="Find & replace all in whole sheet, case insenitive")
         self.status_bar.my_entry.config(relief="flat", font=("Calibri", std_font_size))
         self.status_bar.grid(row=4, column=0, columnspan=2, sticky="we")
 
@@ -1488,8 +1488,16 @@ class Replace_Popup(tk.Toplevel):
         self.confirm_button.grid_remove()
         self.update()
         mapping = {r[0].lower(): r[1] for r in self.sheetdisplay.get_sheet_data() if r[0] or r[1]}
-        event = self.C.sheet.replace_all(mapping, within=False)
-        self.status_bar.change_text(f"Replaced {len(event.data)} cells.")
+        old_len = len(self.C.changelog)
+        self.C.sheet.replace_all(mapping, within=False)
+        new_len = len(self.C.changelog)
+        if new_len > old_len:
+            if self.C.changelog[-1][1].endswith("cells"):
+                self.status_bar.change_text(f"Replaced {new_len - old_len - 1} cells.")
+            else:
+                self.status_bar.change_text("Replaced 1 cell.")
+        else:
+            self.status_bar.change_text("Could not find anything to replace.")
         self.confirm_button.grid()
 
     def cancel(self, event=None):

@@ -631,10 +631,10 @@ class Sheet(tk.Frame):
             bindings = "all"
         # bindings is str, func arg is None or Callable
         if isinstance(bindings, str):
-            iterable = [(bindings, func)]
+            iterable = ((bindings, func),)
         # bindings is list or tuple of strings, func arg is None or Callable
         elif is_iterable(bindings) and isinstance(bindings[0], str):
-            iterable = [(b, func) for b in bindings]
+            iterable = ((b, func) for b in bindings)
         # bindings is a list or tuple of two tuples or lists
         # in this case the func arg is ignored
         # e.g. [(binding, function), (binding, function), ...]

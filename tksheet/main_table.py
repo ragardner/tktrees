@@ -652,7 +652,7 @@ class MainTable(tk.Canvas):
             self.refresh()
             if self.undo_enabled:
                 self.undo_stack.append(stored_event_dict(event_data))
-            try_binding(self.extra_end_replace_all_func, event_data)
+            try_binding(self.extra_end_replace_all_func, event_data, "end_edit_table")
             self.sheet_modified(event_data)
             self.PAR.emit_event("<<SheetModified>>", event_data)
 
@@ -3323,7 +3323,7 @@ class MainTable(tk.Canvas):
             self.undo_enabled = True
             self._tksheet_bind("undo_bindings", self.undo)
             self._tksheet_bind("redo_bindings", self.redo)
-        if binding in ("find",):
+        if binding in ("all", "find"):
             self.find_enabled = True
             self._tksheet_bind("find_bindings", self.open_find_window)
             self._tksheet_bind("find_next_bindings", self.find_next)

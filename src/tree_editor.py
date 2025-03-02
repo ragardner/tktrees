@@ -5220,6 +5220,25 @@ class Tree_Editor(tk.Frame):
                 )
         self.redraw_sheets()
 
+    def prev_change(self) -> int:
+        return len(self.changelog) - next(
+            i
+            for i, row in enumerate(islice(reversed(self.changelog), 1, None), start=1)
+            if not row[1].startswith(
+                (
+                    "Merge | ",
+                    "Imported change |",
+                    "Edit cell |",
+                    "Delete ID from all hierarchies |",
+                    "Delete ID |",
+                    "Cut and paste ID + children |",
+                    "Copy and paste ID |",
+                    "Copy and paste ID + children |",
+                    "Cut and paste ID |",
+                )
+            )
+        )
+
     def undo(self, event=None):
         if not self.vs:
             return
@@ -5266,26 +5285,7 @@ class Tree_Editor(tk.Frame):
             "delete ids",
         ):
             try:
-                self.changelog = self.changelog[
-                    : len(self.changelog)
-                    - next(
-                        i
-                        for i, row in enumerate(islice(reversed(self.changelog), 1, None), start=1)
-                        if not row[1].startswith(
-                            (
-                                "Merge | ",
-                                "Imported change |",
-                                "Edit cell |",
-                                "Delete ID from all hierarchies |",
-                                "Delete ID |",
-                                "Cut and paste ID + children |",
-                                "Copy and paste ID |",
-                                "Copy and paste ID + children |",
-                                "Cut and paste ID |",
-                            )
-                        )
-                    )
-                ]
+                self.changelog = self.changelog[: self.prev_change()]
             except Exception:
                 self.changelog = []
         else:
