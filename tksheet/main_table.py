@@ -593,7 +593,7 @@ class MainTable(tk.Canvas):
             found_next = self.find_see_and_set(self.find_within(find))
         else:
             found_next = self.find_see_and_set(self.find_all_cells(find))
-        if not found_next:
+        if not found_next and not self.find_window.window.find_in_selection:
             self.deselect()
 
     def replace_all(self, event: tk.Misc | None = None) -> None:
@@ -778,24 +778,6 @@ class MainTable(tk.Canvas):
         current_box = self.selection_boxes[self.selected.fill_iid]
         current_id = self.selected.fill_iid
         if is_last_cell(*current_box.coords, self.selected.row, self.selected.column, reverse=reverse):
-            if coord := self.find_within_non_current_boxes(current_id=current_id, find=find, reverse=reverse):
-                return coord
-            if coord := self.find_within_current_box(current_box=current_box, find=find, reverse=reverse):
-                return coord
-        else:
-            if coord := self.find_within_current_box(current_box=current_box, find=find, reverse=reverse):
-                return coord
-            if coord := self.find_within_non_current_boxes(current_id=current_id, find=find, reverse=reverse):
-                return coord
-        return None
-
-    def find_within_iterable(self, find: str, reverse: bool) -> Generator[tuple[int, int]]:
-        if not self.selected:
-            return None
-        current_box = self.selection_boxes[self.selected.fill_iid]
-        current_id = self.selected.fill_iid
-        if is_last_cell(*current_box.coords, self.selected.row, self.selected.column, reverse=reverse):
-            return chain()
             if coord := self.find_within_non_current_boxes(current_id=current_id, find=find, reverse=reverse):
                 return coord
             if coord := self.find_within_current_box(current_box=current_box, find=find, reverse=reverse):
