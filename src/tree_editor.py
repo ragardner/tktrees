@@ -1625,7 +1625,7 @@ class Tree_Editor(tk.Frame):
             x.unbind(f"<{ctrl_button}-x>")
             x.unbind(f"<{ctrl_button}-X>")
             x.unbind("<Delete>")
-            x.disable_bindings().basic_bindings(False)
+            # x.disable_bindings().basic_bindings(False)
             x.unbind("<Double-Button-1>")
             x.unbind("<FocusIn>")
             x.unbind("<FocusOut>")

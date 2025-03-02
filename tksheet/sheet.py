@@ -2225,6 +2225,16 @@ class Sheet(tk.Frame):
     ) -> EventDataDict:
         return self.RI._sort_columns_by_row(row=row, reverse=reverse, key=key, undo=undo)
 
+    # Find
+
+    @property
+    def find_open(self) -> bool:
+        return self.MT.find_window.open
+
+    def open_find(self, focus: bool = False) -> Sheet:
+        self.MT.open_find_window(focus=focus)
+        return self
+
     # Highlighting Cells
 
     def highlight(
