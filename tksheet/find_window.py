@@ -137,7 +137,7 @@ class FindWindowTkText(tk.Text):
 
 
 class Tooltip(tk.Toplevel):
-    def __init__(self, parent, text, bg, fg):
+    def __init__(self, parent: tk.Misc, text: str, bg: str, fg: str) -> None:
         super().__init__(parent)
         self.withdraw()
         self.overrideredirect(True)
@@ -253,12 +253,12 @@ class FindWindow(tk.Frame):
     def bind_label(self, label: tk.Label, func: Callable) -> None:
         """Bind press and release events with highlight changes."""
 
-        def on_press(event):
+        def on_press(event: tk.Event) -> None:
             label.config(highlightbackground=self.border_color, highlightcolor=self.border_color)
             self.pressed_label = label
             func(event)
 
-        def on_release(event):
+        def on_release(event: tk.Event) -> None:
             self.pressed_label = None
             if 0 <= event.x < label.winfo_width() and 0 <= event.y < label.winfo_height():
                 label.config(highlightbackground=self.fg, highlightcolor=self.fg)
@@ -268,16 +268,15 @@ class FindWindow(tk.Frame):
         label.bind("<Button-1>", on_press)
         label.bind("<ButtonRelease-1>", on_release)
 
-    def on_enter(self, event):
+    def on_enter(self, event: tk.Event) -> None:
         """Handle mouse entering a widget."""
         widget = event.widget
         self.enter_label(widget)
         self.tooltip_widget = widget
-        self.tooltip_last_x = event.x_root
-        self.tooltip_last_y = event.y_root
+        self.tooltip_last_x, self.tooltip_last_y = get_mouse_coords(widget)
         self.start_tooltip_timer()
 
-    def on_leave(self, event):
+    def on_leave(self, event: tk.Event) -> None:
         """Handle mouse leaving a widget."""
         widget = event.widget
         self.leave_label(widget)
@@ -321,7 +320,7 @@ class FindWindow(tk.Frame):
         self.enter_label(self.in_selection)
         self.leave_label(self.in_selection)
 
-    def handle_tab(self, event):
+    def handle_tab(self, event: tk.Event) -> Literal["break"]:
         """Switch focus between find and replace text widgets."""
         if not self.replace_visible:
             self.toggle_replace_window()
@@ -331,7 +330,7 @@ class FindWindow(tk.Frame):
             self.tktext.focus_set()
         return "break"
 
-    def handle_return(self, event):
+    def handle_return(self, event: tk.Event) -> Literal["break"]:
         """Trigger find or replace based on focused widget."""
         if event.widget == self.tktext:
             self.find_next_func()
@@ -413,40 +412,35 @@ class FindWindow(tk.Frame):
             highlightthickness=1,
         )
 
-    def start_tooltip_timer(self):
+    def start_tooltip_timer(self) -> None:
         self.tooltip_after_id = self.after(400, self.check_and_show_tooltip)
 
-    def check_and_show_tooltip(self):
+    def check_and_show_tooltip(self) -> None:
         """Check if the mouse position has changed and show tooltip if stationary."""
         if self.tooltip_widget is None:
             return
-        root = self.winfo_toplevel()
-        pointer_x = root.winfo_pointerx()
-        pointer_y = root.winfo_pointery()
-        if pointer_x < 0 or pointer_y < 0:  # Mouse outside window
+        current_x, current_y = get_mouse_coords(self.tooltip_widget)
+        if current_x < 0 or current_y < 0:  # Mouse outside window
             return
-        current_x = root.winfo_rootx() + pointer_x
-        current_y = root.winfo_rooty() + pointer_y
         # Allow 2-pixel tolerance for minor movements
-        if abs(current_x - self.tooltip_last_x) <= 3 and abs(current_y - self.tooltip_last_y) <= 3:
+        if abs(current_x - self.tooltip_last_x) <= 2 and abs(current_y - self.tooltip_last_y) <= 2:
             self.show_tooltip(self.tooltip_widget)
         else:
             self.tooltip_last_x = current_x
             self.tooltip_last_y = current_y
             self.tooltip_after_id = self.after(400, self.check_and_show_tooltip)
 
-    def show_tooltip(self, widget):
+    def show_tooltip(self, widget: tk.Misc) -> None:
         """Show the tooltip at the specified position."""
         bg = self.bg if self.bg is not None else "white"
         fg = self.fg if self.fg is not None else "black"
         self.tooltip = Tooltip(self, widget.tooltip_text, bg, fg)
         self.tooltip.update_idletasks()
         # Use current mouse position instead of recorded position
-        current_x = self.winfo_toplevel().winfo_pointerx()
-        current_y = self.winfo_toplevel().winfo_pointery()
         self.tooltip.deiconify()
-        x_position = max(0, current_x - self.tooltip.winfo_width() - 5)
-        self.tooltip.wm_geometry(f"+{x_position}+{current_y - 10}")
+        show_x = max(0, self.winfo_toplevel().winfo_pointerx() - self.tooltip.winfo_width() - 5)
+        show_y = self.winfo_toplevel().winfo_pointery()
+        self.tooltip.wm_geometry(f"+{show_x}+{show_y - 10}")
 
     def cancel_tooltip(self):
         """Cancel any scheduled tooltip."""
@@ -474,3 +468,19 @@ def replacer(find: str, replace: str, current: str) -> Callable[[re.Match], str]
                 return match.group(0)
 
     return _replacer
+
+
+def get_mouse_coords(widget: tk.Misc) -> tuple[int, int]:
+    # Get absolute mouse coordinates (relative to screen)
+    mouse_x = widget.winfo_pointerx()
+    mouse_y = widget.winfo_pointery()
+
+    # Get widget's position relative to the screen
+    widget_x = widget.winfo_rootx()
+    widget_y = widget.winfo_rooty()
+
+    # Calculate coordinates relative to the widget
+    relative_x = mouse_x - widget_x
+    relative_y = mouse_y - widget_y
+
+    return relative_x, relative_y

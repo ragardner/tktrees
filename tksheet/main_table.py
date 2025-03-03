@@ -656,22 +656,17 @@ class MainTable(tk.Canvas):
             self.sheet_modified(event_data)
             self.PAR.emit_event("<<SheetModified>>", event_data)
 
-    def find_see_and_set(
-        self,
-        coords: tuple[int, int, int | None] | None,
-        just_see: bool = False,
-    ) -> tuple[int, int]:
+    def find_see_and_set(self, coords: tuple[int, int, int | None] | None) -> tuple[int, int]:
         if coords:
             row, column, item = coords
             if self.PAR.ops.treeview:
                 self.PAR.scroll_to_item(self.PAR.rowitem(row, data_index=True))
             disp_row = self.disprn(row) if not self.all_rows_displayed else row
             disp_col = self.dispcn(column) if not self.all_columns_displayed else column
-            if not just_see:
-                if self.find_window.window.find_in_selection:
-                    self.set_currently_selected(disp_row, disp_col, item=item)
-                else:
-                    self.select_cell(disp_row, disp_col, redraw=False)
+            if self.find_window.window.find_in_selection:
+                self.set_currently_selected(disp_row, disp_col, item=item)
+            else:
+                self.select_cell(disp_row, disp_col, redraw=False)
             if not self.see(disp_row, disp_col):
                 self.refresh()
         return coords
@@ -795,29 +790,30 @@ class MainTable(tk.Canvas):
         reverse: bool = False,
     ) -> tuple[int, int, None] | None:
         tree = self.PAR.ops.treeview
+        totalrows = self.total_data_rows(include_index=False)
+        totalcols = self.total_data_cols(include_header=False)
         if self.selected:
-            row, col = next_cell(
+            start_r, start_c = next_cell(
                 0,
                 0,
-                len(self.row_positions) - 1,
-                len(self.col_positions) - 1,
-                self.selected.row,
-                self.selected.column,
+                totalrows,
+                totalcols,
+                self.datarn(self.selected.row),
+                self.datacn(self.selected.column),
                 reverse=reverse,
             )
         else:
-            row, col = 0, 0
-        row, col = self.datarn(row), self.datacn(col)
-        result = next(
+            start_r, start_c = 0, 0
+        return next(
             (
-                (r, c)
+                (r, c, None)
                 for r, c in box_gen_coords(
                     from_r=0,
                     from_c=0,
-                    upto_r=self.total_data_rows(include_index=False),
-                    upto_c=self.total_data_cols(include_header=False),
-                    start_r=row,
-                    start_c=col,
+                    upto_r=totalrows,
+                    upto_c=totalcols,
+                    start_r=start_r,
+                    start_c=start_c,
                     reverse=reverse,
                 )
                 if (
@@ -828,9 +824,6 @@ class MainTable(tk.Canvas):
             ),
             None,
         )
-        if result:
-            return result + (None,)
-        return None
 
     def find_next(self, event: tk.Misc | None = None) -> Literal["break"]:
         find = self.find_window.get().lower()
