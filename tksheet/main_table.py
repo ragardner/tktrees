@@ -148,6 +148,7 @@ class MainTable(tk.Canvas):
             "<<Redo>>": self.redo,
             "<<SelectAll>>": self.select_all,
         }
+        self.enabled_bindings = set()
 
         self.disp_ctrl_outline = {}
         self.disp_text = {}
@@ -3393,6 +3394,7 @@ class MainTable(tk.Canvas):
         # has to be specifically enabled
         if binding in ("ctrl_click_select", "ctrl_select"):
             self.ctrl_select_enabled = True
+        self.enabled_bindings.add(binding)
 
     def _tksheet_bind(self, bindings_key: str, func: Callable) -> None:
         for widget in (self, self.RI, self.CH, self.TL):
@@ -3402,6 +3404,10 @@ class MainTable(tk.Canvas):
     def _disable_binding(self, binding: Binding) -> None:
         if binding == "disable_all":
             binding = "all"
+        if binding == "all":
+            self.enabled_bindings = set()
+        else:
+            self.enabled_bindings.discard(binding)
         if binding in (
             "all",
             "single",

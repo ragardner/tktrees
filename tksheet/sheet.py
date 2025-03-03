@@ -4166,13 +4166,16 @@ class Sheet(tk.Frame):
     # Sheet Options and Other Functions
 
     def set_options(self, redraw: bool = True, **kwargs) -> Sheet:
+        enabled = tuple(self.MT.enabled_bindings)
         for k, v in kwargs.items():
             if k in self.ops and v != self.ops[k]:
                 if k.endswith("bindings"):
-                    self.MT._disable_binding(k.split("_")[0])
+                    for b in enabled:
+                        self.MT._disable_binding(b)
                 self.ops[k] = v
                 if k.endswith("bindings"):
-                    self.MT._enable_binding(k.split("_")[0])
+                    for b in enabled:
+                        self.MT._enable_binding(b)
         if "name" in kwargs:
             self.name = kwargs["name"]
         if "min_column_width" in kwargs:
