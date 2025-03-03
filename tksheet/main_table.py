@@ -137,6 +137,7 @@ class MainTable(tk.Canvas):
         self.dropdown = DropdownStorage()
         self.text_editor = TextEditorStorage()
         self.find_window = EditorStorageBase()
+        self.find_window_left_x_pc = 1
         self.event_linker = {
             "<<Copy>>": self.ctrl_c,
             "<<Cut>>": self.ctrl_x,
@@ -481,15 +482,24 @@ class MainTable(tk.Canvas):
         else:
             self.deselect()
 
-    def get_find_window_dimensions_coords(self, w_width: int) -> tuple[int, int, int, int]:
+    def get_find_window_dimensions_coords(self, w_width: int | None) -> tuple[int, int, int, int]:
+        if w_width is None:
+            w_width = self.winfo_width()
         width = min(self.get_txt_w("X" * 23), w_width - 7)
         height = self.min_row_height
         if self.find_window.window and self.find_window.window.replace_visible:
             height *= 2
-        return width, height, self.canvasx(max(0, w_width - width - 7)), self.canvasy(7)
+        # Position from left based on percentage
+        xpos = w_width * self.find_window_left_x_pc
+        # Clamp to stay within canvas bounds
+        xpos = min(xpos, w_width - width - 7)  # Don’t exceed right edge
+        xpos = max(0, xpos)  # Don’t go left of 0
+        return width, height, self.canvasx(xpos), self.canvasy(7)
 
-    def reposition_find_window(self) -> None:
-        w, h, x, y = self.get_find_window_dimensions_coords(w_width=self.winfo_width())
+    def reposition_find_window(self, w_width: int | None = None) -> None:
+        if w_width is None:
+            w_width = self.winfo_width()
+        w, h, x, y = self.get_find_window_dimensions_coords(w_width=w_width)
         self.coords(self.find_window.canvas_id, x, y)
         self.itemconfig(
             self.find_window.canvas_id,
@@ -497,6 +507,20 @@ class MainTable(tk.Canvas):
             height=h,
             state="normal",
         )
+
+    def drag_find_window(self, event: tk.Event) -> None:
+        """Receives a tkinter b1-motion event, is bound to a label on the find window"""
+        # Convert screen coordinates to canvas window coordinates
+        window_x = event.x_root - self.winfo_rootx()
+        # Get the visible canvas width
+        visible_width = self.winfo_width()
+        if visible_width > 0:
+            # Calculate the new percentage using widget-relative coordinates
+            new_pc = window_x / visible_width
+            # Clamp the percentage between 0 and 1
+            self.find_window_left_x_pc = min(max(new_pc, 0), 1)
+        # Reposition the find window based on the updated percentage
+        self.reposition_find_window()
 
     def open_find_window(
         self,
@@ -516,6 +540,7 @@ class MainTable(tk.Canvas):
                 replace_func=self.replace_next,
                 replace_all_func=self.replace_all,
                 toggle_replace_func=self.reposition_find_window,
+                drag_func=self.drag_find_window,
             )
             self.find_window.canvas_id = self.create_window((x, y), window=self.find_window.window, anchor="nw")
             for b in chain(self.PAR.ops.escape_bindings, self.PAR.ops.find_bindings):

@@ -141,10 +141,11 @@ class Tooltip(tk.Toplevel):
         super().__init__(parent)
         self.withdraw()
         self.overrideredirect(True)
-        self.label = tk.Label(self, text=text, background=bg, foreground=fg, relief="solid", borderwidth=1)
+        self.label = tk.Label(self, text=text, background=bg, foreground=fg, relief="flat", borderwidth=0)
         self.label.pack()
         self.text = text
-        self.config(background=bg)
+        self.config(background=bg, highlightbackground=bg, highlightthickness=0)
+        self.update_idletasks()
 
 
 class FindWindow(tk.Frame):
@@ -159,6 +160,7 @@ class FindWindow(tk.Frame):
         replace_func: Callable,
         replace_all_func: Callable,
         toggle_replace_func: Callable,
+        drag_func: Callable,
     ) -> None:
         super().__init__(
             parent,
@@ -182,8 +184,9 @@ class FindWindow(tk.Frame):
         self.find_next_func = find_next_func
         self.replace_func = replace_func
         self.toggle_replace_func = toggle_replace_func
+        self.drag_func = drag_func
 
-        self.toggle_replace = tk.Label(self, text="↓", cursor="hand2", highlightthickness=1)
+        self.toggle_replace = tk.Label(self, text="↓", cursor="sb_h_double_arrow", highlightthickness=1)
         self.toggle_replace.grid(row=0, column=0, sticky="ns")
 
         self.tktext = FindWindowTkText(self)
@@ -219,7 +222,7 @@ class FindWindow(tk.Frame):
         self.tktext.bind("<Return>", self.handle_return)
         self.replace_tktext.bind("<Return>", self.handle_return)
 
-        self.bind_label(self.toggle_replace, self.toggle_replace_window)
+        self.bind_label(self.toggle_replace, self.toggle_replace_window, self.drag_func)
         self.bind_label(self.find_previous_arrow, find_prev_func)
         self.bind_label(self.find_next_arrow, find_next_func)
         self.bind_label(self.in_selection, self.toggle_in_selection)
@@ -250,23 +253,25 @@ class FindWindow(tk.Frame):
             widget.bind("<Enter>", self.on_enter)
             widget.bind("<Leave>", self.on_leave)
 
-    def bind_label(self, label: tk.Label, func: Callable) -> None:
-        """Bind press and release events with highlight changes."""
+    def bind_label(self, label: tk.Label, func: Callable, motion_func: Callable | None = None) -> None:
+        """Bind press, release, and optional motion events with highlight changes."""
 
         def on_press(event: tk.Event) -> None:
             label.config(highlightbackground=self.border_color, highlightcolor=self.border_color)
             self.pressed_label = label
-            func(event)
 
         def on_release(event: tk.Event) -> None:
             self.pressed_label = None
             if 0 <= event.x < label.winfo_width() and 0 <= event.y < label.winfo_height():
                 label.config(highlightbackground=self.fg, highlightcolor=self.fg)
+                func(event)
             else:
                 label.config(highlightbackground=self.bg, highlightcolor=self.fg)
 
         label.bind("<Button-1>", on_press)
         label.bind("<ButtonRelease-1>", on_release)
+        if motion_func:
+            label.bind("<B1-Motion>", motion_func)
 
     def on_enter(self, event: tk.Event) -> None:
         """Handle mouse entering a widget."""
@@ -435,7 +440,6 @@ class FindWindow(tk.Frame):
         bg = self.bg if self.bg is not None else "white"
         fg = self.fg if self.fg is not None else "black"
         self.tooltip = Tooltip(self, widget.tooltip_text, bg, fg)
-        self.tooltip.update_idletasks()
         # Use current mouse position instead of recorded position
         self.tooltip.deiconify()
         show_x = max(0, self.winfo_toplevel().winfo_pointerx() - self.tooltip.winfo_width() - 5)
