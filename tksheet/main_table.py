@@ -58,7 +58,9 @@ from .functions import (
     float_to_int,
     gen_coords,
     gen_formatted,
+    get_bg_fg,
     get_data_from_clipboard,
+    get_menu_kwargs,
     get_new_indexes,
     get_seq_without_gaps_at_index,
     index_exists,
@@ -87,7 +89,6 @@ from .other_classes import (
     Box_nt,
     Box_st,
     Box_t,
-    DotDict,
     DropdownStorage,
     EditorStorageBase,
     EventDataDict,
@@ -556,21 +557,10 @@ class MainTable(tk.Canvas):
         self.find_window.open = True
         self.find_window.window.reset(
             **{
-                "menu_kwargs": DotDict(
-                    {
-                        "font": self.PAR.ops.table_font,
-                        "foreground": self.PAR.ops.popup_menu_fg,
-                        "background": self.PAR.ops.popup_menu_bg,
-                        "activebackground": self.PAR.ops.popup_menu_highlight_bg,
-                        "activeforeground": self.PAR.ops.popup_menu_highlight_fg,
-                    }
-                ),
+                "menu_kwargs": get_menu_kwargs(self.PAR.ops),
                 "sheet_ops": self.PAR.ops,
                 "border_color": self.PAR.ops.table_selected_box_cells_fg,
-                "bg": self.PAR.ops.table_editor_bg,
-                "fg": self.PAR.ops.table_editor_fg,
-                "select_bg": self.PAR.ops.table_editor_select_bg,
-                "select_fg": self.PAR.ops.table_editor_select_fg,
+                **get_bg_fg(self.PAR.ops),
             }
         )
         self.itemconfig(self.find_window.canvas_id, width=width, height=height)
@@ -717,38 +707,42 @@ class MainTable(tk.Canvas):
         current_box: SelectionBox,
         find: str,
         reverse: bool,
-    ) -> None | tuple[int, int]:
-        start_row, start_col = next_cell(
+    ) -> None | tuple[int, int, int]:
+        start_r, start_c = next_cell(
             *current_box.coords,
             self.selected.row,
             self.selected.column,
             reverse=reverse,
         )
-        tree = self.PAR.ops.treeview
-        for r, c in box_gen_coords(
-            *current_box.coords,
-            start_row,
-            start_col,
-            reverse=reverse,
-            all_rows_displayed=self.all_rows_displayed,
-            all_cols_displayed=self.all_columns_displayed,
-            displayed_rows=self.displayed_rows,
-            displayed_cols=self.displayed_columns,
-        ):
-            if (
-                self.find_match(find, r, c)
-                and (tree or self.all_rows_displayed or bisect_in(self.displayed_rows, r))
-                and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
-            ):
-                return (r, c, current_box.fill_iid)
-        return None
+        return next(
+            (
+                (r, c, current_box.fill_iid)
+                for r, c in box_gen_coords(
+                    *current_box.coords,
+                    start_r,
+                    start_c,
+                    reverse=reverse,
+                    all_rows_displayed=self.all_rows_displayed,
+                    all_cols_displayed=self.all_columns_displayed,
+                    displayed_rows=self.displayed_rows,
+                    displayed_cols=self.displayed_columns,
+                    no_wrap=True,
+                )
+                if (
+                    self.find_match(find, r, c)
+                    and (self.all_rows_displayed or bisect_in(self.displayed_rows, r))
+                    and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
+                )
+            ),
+            None,
+        )
 
     def find_within_non_current_boxes(
         self,
         current_id: int,
         find: str,
         reverse: bool,
-    ) -> None | tuple[int, int]:
+    ) -> None | tuple[int, int, int]:
         fn = partial(
             box_gen_coords,
             reverse=reverse,
@@ -757,36 +751,44 @@ class MainTable(tk.Canvas):
             displayed_rows=self.displayed_rows,
             displayed_cols=self.displayed_columns,
         )
-        tree = self.PAR.ops.treeview
         if reverse:
             # iterate backwards through selection boxes from the box before current
             idx = next(i for i, k in enumerate(reversed(self.selection_boxes)) if k == current_id)
-            for item, box in chain(
-                islice(reversed(self.selection_boxes.items()), idx + 1, None),
-                islice(reversed(self.selection_boxes.items()), 0, idx),
-            ):
-                for r, c in fn(*box.coords, box.coords.upto_r - 1, box.coords.upto_c - 1):
+            return next(
+                (
+                    (r, c, item)
+                    for item, box in chain(
+                        islice(reversed(self.selection_boxes.items()), idx + 1, None),
+                        islice(reversed(self.selection_boxes.items()), 0, idx),
+                    )
+                    for r, c in fn(*box.coords, box.coords.upto_r - 1, box.coords.upto_c - 1)
                     if (
                         self.find_match(find, r, c)
-                        and (tree or self.all_rows_displayed or bisect_in(self.displayed_rows, r))
+                        and (self.all_rows_displayed or bisect_in(self.displayed_rows, r))
                         and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
-                    ):
-                        return (r, c, item)
+                    )
+                ),
+                None,
+            )
         else:
             # iterate forwards through selection boxes from the box after current
             idx = next(i for i, k in enumerate(self.selection_boxes) if k == current_id)
-            for item, box in chain(
-                islice(self.selection_boxes.items(), idx + 1, None),
-                islice(self.selection_boxes.items(), 0, idx),
-            ):
-                for r, c in fn(*box.coords, box.coords.from_r, box.coords.from_c):
+            return next(
+                (
+                    (r, c, item)
+                    for item, box in chain(
+                        islice(self.selection_boxes.items(), idx + 1, None),
+                        islice(self.selection_boxes.items(), 0, idx),
+                    )
+                    for r, c in fn(*box.coords, box.coords.from_r, box.coords.from_c)
                     if (
                         self.find_match(find, r, c)
-                        and (tree or self.all_rows_displayed or bisect_in(self.displayed_rows, r))
+                        and (self.all_rows_displayed or bisect_in(self.displayed_rows, r))
                         and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
-                    ):
-                        return (r, c, item)
-        return None
+                    )
+                ),
+                None,
+            )
 
     def find_within(
         self,
@@ -7379,15 +7381,7 @@ class MainTable(tk.Canvas):
         w = self.col_positions[c + 1] - x + 1
         h = self.row_positions[r + 1] - y + 1
         kwargs = {
-            "menu_kwargs": DotDict(
-                {
-                    "font": self.PAR.ops.table_font,
-                    "foreground": self.PAR.ops.popup_menu_fg,
-                    "background": self.PAR.ops.popup_menu_bg,
-                    "activebackground": self.PAR.ops.popup_menu_highlight_bg,
-                    "activeforeground": self.PAR.ops.popup_menu_highlight_fg,
-                }
-            ),
+            "menu_kwargs": get_menu_kwargs(self.PAR.ops),
             "sheet_ops": self.PAR.ops,
             "border_color": self.PAR.ops.table_selected_box_cells_fg,
             "text": text,
@@ -7395,10 +7389,7 @@ class MainTable(tk.Canvas):
             "width": w,
             "height": h,
             "show_border": True,
-            "bg": self.PAR.ops.table_editor_bg,
-            "fg": self.PAR.ops.table_editor_fg,
-            "select_bg": self.PAR.ops.table_editor_select_bg,
-            "select_fg": self.PAR.ops.table_editor_select_fg,
+            **get_bg_fg(self.PAR.ops),
             "align": self.get_cell_align(r, c),
             "r": r,
             "c": c,
@@ -7569,14 +7560,14 @@ class MainTable(tk.Canvas):
             and (self.single_selection_enabled or self.toggle_selection_enabled)
             and (edited or self.cell_equal_to(datarn, datacn, value))
         ):
-            self.next_cell(r, c, event.keysym)
+            self.go_to_next_cell(r, c, event.keysym)
         self.recreate_all_selection_boxes()
         self.hide_text_editor_and_dropdown()
         if event.keysym != "FocusOut":
             self.focus_set()
         return "break"
 
-    def next_cell(self, r: int, c: int, key: Any = "Return") -> None:
+    def go_to_next_cell(self, r: int, c: int, key: Any = "Return") -> None:
         r1, c1, r2, c2 = self.selection_boxes[self.selected.fill_iid].coords
         numrows, numcols = r2 - r1, c2 - c1
         if key == "Return":

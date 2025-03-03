@@ -414,6 +414,27 @@ def push_n(num: int, sorted_seq: Sequence[int]) -> int:
         return num + lo
 
 
+def get_menu_kwargs(ops: DotDict[str, Any]) -> DotDict[str, Any]:
+    return DotDict(
+        {
+            "font": ops.table_font,
+            "foreground": ops.popup_menu_fg,
+            "background": ops.popup_menu_bg,
+            "activebackground": ops.popup_menu_highlight_bg,
+            "activeforeground": ops.popup_menu_highlight_fg,
+        }
+    )
+
+
+def get_bg_fg(ops: DotDict[str, Any]) -> dict[str, str]:
+    return {
+        "bg": ops.table_editor_bg,
+        "fg": ops.table_editor_fg,
+        "select_bg": ops.table_editor_select_bg,
+        "select_fg": ops.table_editor_select_fg,
+    }
+
+
 def get_dropdown_kwargs(
     values: list[Any] | None = None,
     set_value: Any = None,
@@ -920,49 +941,57 @@ def box_gen_coords(
     all_cols_displayed: bool = True,
     displayed_cols: list[int] | None = None,
     displayed_rows: list[int] | None = None,
+    no_wrap: bool = False,
 ) -> Generator[tuple[int, int]]:
+    # Initialize empty lists if None
     if displayed_rows is None:
         displayed_rows = []
     if displayed_cols is None:
         displayed_cols = []
+
+    # Adjust row indices based on displayed_rows
     if not all_rows_displayed:
         from_r = displayed_rows[from_r]
         upto_r = displayed_rows[upto_r - 1] + 1
         start_r = displayed_rows[start_r]
+    # Adjust column indices based on displayed_cols (fixing original bug)
     if not all_cols_displayed:
-        from_c = displayed_rows[from_c]
-        upto_c = displayed_rows[upto_c - 1] + 1
-        start_c = displayed_rows[start_c]
+        from_c = displayed_cols[from_c]
+        upto_c = displayed_cols[upto_c - 1] + 1
+        start_c = displayed_cols[start_c]
+
     if not reverse:
-        # Forward: Start from (start_r, start_c) to end of the row
+        # Forward direction
+        # Part 1: From (start_r, start_c) to the end of the box
         for c in range(start_c, upto_c):
             yield (start_r, c)
-        # Subsequent rows from start_r + 1 to upto_r - 1
         for r in range(start_r + 1, upto_r):
             for c in range(from_c, upto_c):
                 yield (r, c)
-        # Rows from from_r to start_r - 1 (before start_r)
-        for r in range(from_r, start_r):
-            for c in range(from_c, upto_c):
-                yield (r, c)
-        # In start_r, from from_c to start_c - 1 (after wrap-around)
-        for c in range(from_c, start_c):
-            yield (start_r, c)
+        if not no_wrap:
+            # Part 2: Wrap around from beginning to just before (start_r, start_c)
+            for r in range(from_r, start_r):
+                for c in range(from_c, upto_c):
+                    yield (r, c)
+            if start_c > from_c:  # Only if there are columns before start_c
+                for c in range(from_c, start_c):
+                    yield (start_r, c)
     else:
-        # Reverse: Start from (start_r, start_c) to start of the row
+        # Reverse direction
+        # Part 1: From (start_r, start_c) backwards to the start of the box
         for c in range(start_c, from_c - 1, -1):
             yield (start_r, c)
-        # Previous rows from start_r - 1 down to from_r in reverse
         for r in range(start_r - 1, from_r - 1, -1):
             for c in range(upto_c - 1, from_c - 1, -1):
                 yield (r, c)
-        # Rows from upto_r - 1 down to start_r + 1 in reverse (after wrap-around)
-        for r in range(upto_r - 1, start_r, -1):
-            for c in range(upto_c - 1, from_c - 1, -1):
-                yield (r, c)
-        # In start_r, from upto_c - 1 to start_c + 1 in reverse
-        for c in range(upto_c - 1, start_c, -1):
-            yield (start_r, c)
+        if not no_wrap:
+            # Part 2: Wrap around from end to just after (start_r, start_c)
+            for r in range(upto_r - 1, start_r, -1):
+                for c in range(upto_c - 1, from_c - 1, -1):
+                    yield (r, c)
+            if start_c < upto_c - 1:  # Only if there are columns after start_c
+                for c in range(upto_c - 1, start_c, -1):
+                    yield (start_r, c)
 
 
 def next_cell(

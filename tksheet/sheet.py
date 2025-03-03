@@ -4081,7 +4081,7 @@ class Sheet(tk.Frame):
     # Cell Text Editor
 
     def next_cell(self, r: int, c: int, key: Literal["Return", "Tab", "??"]) -> Sheet:
-        self.MT.next_cell(r, c, key)
+        self.MT.go_to_next_cell(r, c, key)
         return self
 
     # works on currently selected box
