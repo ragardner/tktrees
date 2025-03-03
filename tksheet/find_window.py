@@ -136,8 +136,19 @@ class FindWindowTkText(tk.Text):
         return "break"
 
 
+class Tooltip(tk.Toplevel):
+    def __init__(self, parent, text, bg, fg):
+        super().__init__(parent)
+        self.withdraw()
+        self.overrideredirect(True)
+        self.label = tk.Label(self, text=text, background=bg, foreground=fg, relief="solid", borderwidth=1)
+        self.label.pack()
+        self.text = text
+        self.config(background=bg)
+
+
 class FindWindow(tk.Frame):
-    """A frame containing find and replace functionality."""
+    """A frame containing find and replace functionality with label highlighting and tooltips."""
 
     def __init__(
         self,
@@ -155,7 +166,6 @@ class FindWindow(tk.Frame):
             height=0,
             bd=0,
         )
-        # Configure grid: column 1 for text widgets, both rows expandable
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure(4, uniform="group1")
         self.grid_columnconfigure(5, uniform="group2")
@@ -163,90 +173,156 @@ class FindWindow(tk.Frame):
         self.grid_rowconfigure(1, weight=1)
         self.grid_propagate(False)
         self.parent = parent
+        self.tooltip_after_id = None
+        self.tooltip_last_x = None
+        self.tooltip_last_y = None
+        self.tooltip_widget = None  # Added to track the current widget
+        self.tooltip = None
 
-        # Store functions for use in handle_return
         self.find_next_func = find_next_func
         self.replace_func = replace_func
-
-        # Toggle label to show/hide replace window
-        self.toggle_replace = tk.Label(self, text="↓", cursor="hand2", highlightthickness=1)
-        self.toggle_replace.grid(row=0, column=0, sticky="ns")
-        self.toggle_replace.bind("<Button-1>", self.toggle_replace_window)
-        self.toggle_replace.bind("<Enter>", lambda e: self.enter_label(widget=self.toggle_replace))
-        self.toggle_replace.bind("<Leave>", lambda e: self.leave_label(widget=self.toggle_replace))
         self.toggle_replace_func = toggle_replace_func
 
-        # Find text widget
+        self.toggle_replace = tk.Label(self, text="↓", cursor="hand2", highlightthickness=1)
+        self.toggle_replace.grid(row=0, column=0, sticky="ns")
+
         self.tktext = FindWindowTkText(self)
         self.tktext.grid(row=0, column=1, sticky="nswe")
 
-        # Find action labels
         self.find_previous_arrow = tk.Label(self, text="▲", cursor="hand2", highlightthickness=1)
-        self.find_previous_arrow.bind("<Button-1>", find_prev_func)
         self.find_previous_arrow.grid(row=0, column=2)
 
         self.find_next_arrow = tk.Label(self, text="▼", cursor="hand2", highlightthickness=1)
-        self.find_next_arrow.bind("<Button-1>", find_next_func)
         self.find_next_arrow.grid(row=0, column=3)
 
         self.find_in_selection = False
         self.in_selection = tk.Label(self, text="🔎", cursor="hand2", highlightthickness=1)
-        self.in_selection.bind("<Button-1>", self.toggle_in_selection)
         self.in_selection.grid(row=0, column=4)
 
         self.close = tk.Label(self, text="✕", cursor="hand2", highlightthickness=1)
-        self.close.bind("<Button-1>", close_func)
         self.close.grid(row=0, column=5, sticky="nswe")
 
-        # Replace text widget, initially hidden
         self.replace_tktext = FindWindowTkText(self)
         self.replace_tktext.grid(row=1, column=1, columnspan=4, sticky="nswe")
         self.replace_tktext.grid_remove()
 
-        # Replace action labels, initially hidden
         self.replace_next = tk.Label(self, text="→", cursor="hand2", highlightthickness=1)
-        self.replace_next.bind("<Button-1>", replace_func)
         self.replace_next.grid(row=1, column=4, sticky="nswe")
         self.replace_next.grid_remove()
 
         self.replace_all = tk.Label(self, text="→*", cursor="hand2", highlightthickness=1)
-        self.replace_all.bind("<Button-1>", replace_all_func)
         self.replace_all.grid(row=1, column=5, sticky="nswe")
         self.replace_all.grid_remove()
 
-        # Bind Tab for focus switching
         self.tktext.bind("<Tab>", self.handle_tab)
         self.replace_tktext.bind("<Tab>", self.handle_tab)
-
-        # Bind Return for find/replace actions
         self.tktext.bind("<Return>", self.handle_return)
         self.replace_tktext.bind("<Return>", self.handle_return)
 
-        # Bind hover events for all action labels
-        for widget in (
-            self.find_previous_arrow,
-            self.find_next_arrow,
-            self.in_selection,
-            self.close,
-            self.toggle_replace,
-            self.replace_next,
-            self.replace_all,
-        ):
-            widget.bind("<Enter>", lambda e, w=widget: self.enter_label(widget=w))
-            widget.bind("<Leave>", lambda e, w=widget: self.leave_label(widget=w))
+        self.bind_label(self.toggle_replace, self.toggle_replace_window)
+        self.bind_label(self.find_previous_arrow, find_prev_func)
+        self.bind_label(self.find_next_arrow, find_next_func)
+        self.bind_label(self.in_selection, self.toggle_in_selection)
+        self.bind_label(self.close, close_func)
+        self.bind_label(self.replace_next, replace_func)
+        self.bind_label(self.replace_all, replace_all_func)
 
-        # State variables
         self.replace_visible = False
         self.bg = None
         self.fg = None
+        self.pressed_label = None
 
-        # Existing bindings for in-selection toggle
         for b in ("Option", "Alt"):
             for c in ("l", "L"):
                 recursive_bind(self, f"<{b}-{c}>", self.toggle_in_selection)
 
+        action_labels = [
+            (self.toggle_replace, "Toggle Replace"),
+            (self.find_previous_arrow, "Find Previous"),
+            (self.find_next_arrow, "Find (Enter)"),
+            (self.in_selection, "Find in Selection"),
+            (self.close, "Close"),
+            (self.replace_next, "Replace (Enter)"),
+            (self.replace_all, "Replace All"),
+        ]
+        for widget, text in action_labels:
+            widget.tooltip_text = text
+            widget.bind("<Enter>", self.on_enter)
+            widget.bind("<Leave>", self.on_leave)
+
+    def bind_label(self, label: tk.Label, func: Callable) -> None:
+        """Bind press and release events with highlight changes."""
+
+        def on_press(event):
+            label.config(highlightbackground=self.border_color, highlightcolor=self.border_color)
+            self.pressed_label = label
+            func(event)
+
+        def on_release(event):
+            self.pressed_label = None
+            if 0 <= event.x < label.winfo_width() and 0 <= event.y < label.winfo_height():
+                label.config(highlightbackground=self.fg, highlightcolor=self.fg)
+            else:
+                label.config(highlightbackground=self.bg, highlightcolor=self.fg)
+
+        label.bind("<Button-1>", on_press)
+        label.bind("<ButtonRelease-1>", on_release)
+
+    def on_enter(self, event):
+        """Handle mouse entering a widget."""
+        widget = event.widget
+        self.enter_label(widget)
+        self.tooltip_widget = widget
+        self.tooltip_last_x = event.x_root
+        self.tooltip_last_y = event.y_root
+        self.start_tooltip_timer()
+
+    def on_leave(self, event):
+        """Handle mouse leaving a widget."""
+        widget = event.widget
+        self.leave_label(widget)
+        self.hide_tooltip()
+        self.cancel_tooltip()
+        self.tooltip_widget = None
+
+    def enter_label(self, widget: tk.Misc) -> None:
+        """Highlight label on hover if no label is pressed."""
+        if self.pressed_label is None:
+            widget.config(highlightbackground=self.fg, highlightcolor=self.fg)
+
+    def leave_label(self, widget: tk.Misc) -> None:
+        """Remove highlight on leave unless toggled or pressed."""
+        if self.pressed_label is None:
+            if widget == self.in_selection and self.find_in_selection:
+                return
+            widget.config(highlightbackground=self.bg, highlightcolor=self.fg)
+
+    def toggle_replace_window(self, event: tk.Misc = None) -> None:
+        """Toggle visibility of the replace window."""
+        if self.replace_visible:
+            self.replace_tktext.grid_remove()
+            self.replace_next.grid_remove()
+            self.replace_all.grid_remove()
+            self.toggle_replace.config(text="↓")
+            self.toggle_replace.grid(row=0, column=0, rowspan=1, sticky="ns")
+            self.replace_visible = False
+        else:
+            self.replace_tktext.grid()
+            self.replace_next.grid()
+            self.replace_all.grid()
+            self.toggle_replace.config(text="↑")
+            self.toggle_replace.grid(row=0, column=0, rowspan=2, sticky="ns")
+            self.replace_visible = True
+        self.toggle_replace_func()
+
+    def toggle_in_selection(self, event: tk.Misc) -> None:
+        """Toggle the find-in-selection state."""
+        self.find_in_selection = not self.find_in_selection
+        self.enter_label(self.in_selection)
+        self.leave_label(self.in_selection)
+
     def handle_tab(self, event):
-        """Handle Tab key presses to switch focus between find and replace text widgets."""
+        """Switch focus between find and replace text widgets."""
         if not self.replace_visible:
             self.toggle_replace_window()
         if event.widget == self.tktext:
@@ -256,63 +332,23 @@ class FindWindow(tk.Frame):
         return "break"
 
     def handle_return(self, event):
-        """Handle Return key presses to trigger find next or replace next based on focus."""
+        """Trigger find or replace based on focused widget."""
         if event.widget == self.tktext:
             self.find_next_func()
         elif event.widget == self.replace_tktext:
             self.replace_func()
         return "break"
 
-    def toggle_replace_window(self, event: tk.Misc = None) -> None:
-        """Toggle the visibility of the replace window and update the toggle label."""
-        if self.replace_visible:
-            self.replace_tktext.grid_remove()
-            self.replace_next.grid_remove()
-            self.replace_all.grid_remove()
-            self.toggle_replace.config(text="↓")
-            self.toggle_replace.grid(row=0, column=0, rowspan=1, sticky="ns")
-            self.replace_visible = False
-        else:
-            self.replace_tktext.grid(row=1, column=1, columnspan=4, sticky="nswe")
-            self.replace_next.grid(row=1, column=4, sticky="nswe")
-            self.replace_all.grid(row=1, column=5, sticky="nswe")
-            self.toggle_replace.config(text="↑")
-            self.toggle_replace.grid(row=0, column=0, rowspan=2, sticky="ns")
-            self.replace_visible = True
-        self.toggle_replace_func()
-
-    def enter_label(self, widget: tk.Misc) -> None:
-        """Highlight label on hover."""
-        widget.config(
-            highlightbackground=self.fg,
-            highlightcolor=self.fg,
-        )
-
-    def leave_label(self, widget: tk.Misc) -> None:
-        """Remove highlight when not hovering, unless toggled."""
-        if widget == self.in_selection and self.find_in_selection:
-            return
-        widget.config(
-            highlightbackground=self.bg,
-            highlightcolor=self.fg,
-        )
-
-    def toggle_in_selection(self, event: tk.Misc) -> None:
-        """Toggle the in-selection state."""
-        self.find_in_selection = not self.find_in_selection
-        self.enter_label(self.in_selection)
-        self.leave_label(self.in_selection)
-
     def get(self) -> str:
-        """Get the find text."""
+        """Return the find text."""
         return self.tktext.get("1.0", "end-1c")
 
     def get_replace(self) -> str:
-        """Get the replace text."""
+        """Return the replace text."""
         return self.replace_tktext.get("1.0", "end-1c")
 
     def get_num_lines(self) -> int:
-        """Get the number of lines in the find text."""
+        """Return the number of lines in the find text."""
         return int(self.tktext.index("end-1c").split(".")[0])
 
     def set_text(self, text: str = "") -> None:
@@ -333,6 +369,7 @@ class FindWindow(tk.Frame):
         """Reset styles and configurations."""
         self.bg = bg
         self.fg = fg
+        self.border_color = border_color
         self.tktext.reset(
             menu_kwargs=menu_kwargs,
             sheet_ops=sheet_ops,
@@ -376,34 +413,64 @@ class FindWindow(tk.Frame):
             highlightthickness=1,
         )
 
+    def start_tooltip_timer(self):
+        self.tooltip_after_id = self.after(400, self.check_and_show_tooltip)
+
+    def check_and_show_tooltip(self):
+        """Check if the mouse position has changed and show tooltip if stationary."""
+        if self.tooltip_widget is None:
+            return
+        root = self.winfo_toplevel()
+        pointer_x = root.winfo_pointerx()
+        pointer_y = root.winfo_pointery()
+        if pointer_x < 0 or pointer_y < 0:  # Mouse outside window
+            return
+        current_x = root.winfo_rootx() + pointer_x
+        current_y = root.winfo_rooty() + pointer_y
+        # Allow 2-pixel tolerance for minor movements
+        if abs(current_x - self.tooltip_last_x) <= 3 and abs(current_y - self.tooltip_last_y) <= 3:
+            self.show_tooltip(self.tooltip_widget)
+        else:
+            self.tooltip_last_x = current_x
+            self.tooltip_last_y = current_y
+            self.tooltip_after_id = self.after(400, self.check_and_show_tooltip)
+
+    def show_tooltip(self, widget):
+        """Show the tooltip at the specified position."""
+        bg = self.bg if self.bg is not None else "white"
+        fg = self.fg if self.fg is not None else "black"
+        self.tooltip = Tooltip(self, widget.tooltip_text, bg, fg)
+        self.tooltip.update_idletasks()
+        # Use current mouse position instead of recorded position
+        current_x = self.winfo_toplevel().winfo_pointerx()
+        current_y = self.winfo_toplevel().winfo_pointery()
+        self.tooltip.deiconify()
+        x_position = max(0, current_x - self.tooltip.winfo_width() - 5)
+        self.tooltip.wm_geometry(f"+{x_position}+{current_y - 10}")
+
+    def cancel_tooltip(self):
+        """Cancel any scheduled tooltip."""
+        if self.tooltip_after_id is not None:
+            self.after_cancel(self.tooltip_after_id)
+            self.tooltip_after_id = None
+
+    def hide_tooltip(self):
+        """Hide the tooltip."""
+        if self.tooltip is not None:
+            self.tooltip.destroy()
+            self.tooltip = None
+
 
 def replacer(find: str, replace: str, current: str) -> Callable[[re.Match], str]:
-    """
-    Creates a replacement function for re.sub with special empty string handling.
-
-    Parameters:
-        find (str): String to search for. If empty, behavior varies.
-        replace (str): String to replace matches with.
-        current (str): Input string where replacements occur.
-
-    Returns:
-        Callable[[re.Match], str]: Function taking a match object, returning a str.
-
-    Behavior:
-        - If `find` is non-empty, returns `replace` for each match.
-        - If `find` is empty:
-            - Returns `replace` if `current` is empty.
-            - Returns matched string (empty) if `current` is non-empty, no change.
-    """
+    """Create a replacement function for re.sub with special empty string handling."""
 
     def _replacer(match: re.Match) -> str:
         if find:
-            return replace  # Normal replacement when find is non-empty
+            return replace
         else:
-            # Special case when find is empty
             if len(current) == 0:
-                return replace  # Return "hello" when current is empty
+                return replace
             else:
-                return match.group(0)  # Preserve current when non-empty
+                return match.group(0)
 
     return _replacer
