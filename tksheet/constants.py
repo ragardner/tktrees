@@ -336,13 +336,12 @@ MODIFIED_BINDINGS = [
 
 visited = set()
 ALL_BINDINGS = []
+SELECT_BINDINGS = []
 for o, b in BINDING_TO_ATTR.values():
     if b not in visited:
         ALL_BINDINGS.append((o, b))
         visited.add(b)
-
-visited = set()
-SELECT_BINDINGS = []
-for o, b in BINDING_TO_ATTR.values():
-    if "select" in b and b not in visited:
+    if "select" in b and (o, b) not in visited:
         SELECT_BINDINGS.append((o, b))
+        visited.add((o, b))
+visited = set()
