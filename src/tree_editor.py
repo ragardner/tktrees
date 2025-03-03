@@ -53,7 +53,6 @@ from .constants import (
     ctrl_button,
     date_formats_usable,
     detail_column_types,
-    dropdown_font,
     menu_kwargs,
     rc_button,
     rc_motion,
@@ -533,7 +532,7 @@ class Tree_Editor(tk.Frame):
         # tag ID tree
         self.tree_tag_id_button = Button(self.btns_tree, text="Tag ID:", underline=0, command=self.tag_ids)
         self.tree_tag_id_button.grid(row=1, column=0, ipady=1, sticky="nswe")
-        self.tree_tagged_ids_dropdown = Ez_Dropdown(self.btns_tree, dropdown_font)
+        self.tree_tagged_ids_dropdown = Ez_Dropdown(self.btns_tree, font=BF)
         self.tree_tagged_ids_dropdown.grid(row=1, column=1, sticky="nswe")
         self.tree_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.tree_go_to_tagged_id)
 
@@ -607,7 +606,7 @@ class Tree_Editor(tk.Frame):
         # tag ID
         self.sheet_tag_id_button = Button(self.btns_sheet, text="↓Tag ID", underline=0, command=self.tag_ids)
         self.sheet_tag_id_button.grid(row=0, column=0, ipady=1, sticky="nswe")
-        self.sheet_tagged_ids_dropdown = Ez_Dropdown(self.btns_sheet, dropdown_font)
+        self.sheet_tagged_ids_dropdown = Ez_Dropdown(self.btns_sheet, font=BF)
         self.sheet_tagged_ids_dropdown.grid(row=1, column=0, sticky="nswe")
         self.sheet_tagged_ids_dropdown.bind("<<ComboboxSelected>>", self.sheet_go_to_tagged_id)
 
