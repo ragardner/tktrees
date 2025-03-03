@@ -529,7 +529,7 @@ class MainTable(tk.Canvas):
         focus: bool = True,
     ) -> Literal["break"]:
         if self.find_window.open:
-            self.close_find_window()
+            self.find_window.window.tktext.focus_set()
             return "break"
         width, height, x, y = self.get_find_window_dimensions_coords(w_width=self.winfo_width())
         if not self.find_window.window:
@@ -544,12 +544,6 @@ class MainTable(tk.Canvas):
                 drag_func=self.drag_find_window,
             )
             self.find_window.canvas_id = self.create_window((x, y), window=self.find_window.window, anchor="nw")
-            for b in chain(self.PAR.ops.escape_bindings, self.PAR.ops.find_bindings):
-                self.find_window.tktext.bind(b, self.close_find_window)
-            for b in chain(self.PAR.ops.find_next_bindings, ("<Return>", "<KP_Enter>")):
-                self.find_window.tktext.bind(b, self.find_next)
-            for b in self.PAR.ops.find_previous_bindings:
-                self.find_window.tktext.bind(b, self.find_previous)
         else:
             self.coords(self.find_window.canvas_id, x, y)
             if not self.find_window.open:
@@ -560,6 +554,7 @@ class MainTable(tk.Canvas):
                 "menu_kwargs": get_menu_kwargs(self.PAR.ops),
                 "sheet_ops": self.PAR.ops,
                 "border_color": self.PAR.ops.table_selected_box_cells_fg,
+                "grid_color": self.PAR.ops.table_grid_fg,
                 **get_bg_fg(self.PAR.ops),
             }
         )
@@ -729,7 +724,7 @@ class MainTable(tk.Canvas):
                     no_wrap=True,
                 )
                 if (
-                    self.find_match(find, r, c)
+                    self.find_match(find, r, c)  # will not show hidden rows
                     and (self.all_rows_displayed or bisect_in(self.displayed_rows, r))
                     and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
                 )
@@ -763,7 +758,7 @@ class MainTable(tk.Canvas):
                     )
                     for r, c in fn(*box.coords, box.coords.upto_r - 1, box.coords.upto_c - 1)
                     if (
-                        self.find_match(find, r, c)
+                        self.find_match(find, r, c)  # will not show hidden rows
                         and (self.all_rows_displayed or bisect_in(self.displayed_rows, r))
                         and (self.all_columns_displayed or bisect_in(self.displayed_columns, c))
                     )
@@ -851,6 +846,13 @@ class MainTable(tk.Canvas):
             ),
             None,
         )
+
+    def replace_toggle(self, event: tk.Event | None) -> None:
+        if not self.find_window.open:
+            self.open_find_window(focus=False)
+        if not self.find_window.window.replace_visible:
+            self.find_window.window.toggle_replace_window()
+        self.find_window.window.replace_tktext.focus_set()
 
     def find_next(self, event: tk.Misc | None = None) -> Literal["break"]:
         find = self.find_window.get().lower()
@@ -3348,6 +3350,7 @@ class MainTable(tk.Canvas):
             self._tksheet_bind("find_bindings", self.open_find_window)
             self._tksheet_bind("find_next_bindings", self.find_next)
             self._tksheet_bind("find_previous_bindings", self.find_previous)
+            self._tksheet_bind("toggle_replace_bindings", self.replace_toggle)
         if binding in bind_del_columns:
             self.rc_delete_column_enabled = True
             self.rc_popup_menus_enabled = True
@@ -3516,6 +3519,7 @@ class MainTable(tk.Canvas):
             self._tksheet_unbind("find_bindings")
             self._tksheet_unbind("find_next_bindings")
             self._tksheet_unbind("find_previous_bindings")
+            self._tksheet_unbind("toggle_replace_bindings")
             self.close_find_window()
 
     def _tksheet_unbind(self, *keys) -> None:

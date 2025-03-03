@@ -172,7 +172,7 @@ class FindWindow(tk.Frame):
         self.grid_columnconfigure(4, uniform="group1")
         self.grid_columnconfigure(5, uniform="group2")
         self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         self.grid_propagate(False)
         self.parent = parent
         self.tooltip_after_id = None
@@ -182,9 +182,11 @@ class FindWindow(tk.Frame):
         self.tooltip = None
 
         self.find_next_func = find_next_func
+        self.find_prev_func = find_prev_func
         self.replace_func = replace_func
         self.toggle_replace_func = toggle_replace_func
         self.drag_func = drag_func
+        self.close_func = close_func
 
         self.toggle_replace = tk.Label(self, text="↓", cursor="sb_h_double_arrow", highlightthickness=1)
         self.toggle_replace.grid(row=0, column=0, sticky="ns")
@@ -192,29 +194,33 @@ class FindWindow(tk.Frame):
         self.tktext = FindWindowTkText(self)
         self.tktext.grid(row=0, column=1, sticky="nswe")
 
-        self.find_previous_arrow = tk.Label(self, text="▲", cursor="hand2", highlightthickness=1)
+        self.find_previous_arrow = tk.Label(self, text="↑", cursor="hand2", highlightthickness=1)
         self.find_previous_arrow.grid(row=0, column=2)
 
-        self.find_next_arrow = tk.Label(self, text="▼", cursor="hand2", highlightthickness=1)
+        self.find_next_arrow = tk.Label(self, text="↓", cursor="hand2", highlightthickness=1)
         self.find_next_arrow.grid(row=0, column=3)
 
         self.find_in_selection = False
-        self.in_selection = tk.Label(self, text="🔎", cursor="hand2", highlightthickness=1)
+        self.in_selection = tk.Label(self, text="≡", cursor="hand2", highlightthickness=1)
         self.in_selection.grid(row=0, column=4)
 
         self.close = tk.Label(self, text="✕", cursor="hand2", highlightthickness=1)
         self.close.grid(row=0, column=5, sticky="nswe")
 
+        self.separator = tk.Frame(self, height=1)
+        self.separator.grid(row=1, column=1, columnspan=3, sticky="we")
+        self.separator.grid_remove()
+
         self.replace_tktext = FindWindowTkText(self)
-        self.replace_tktext.grid(row=1, column=1, columnspan=4, sticky="nswe")
+        self.replace_tktext.grid(row=2, column=1, columnspan=4, sticky="nswe")
         self.replace_tktext.grid_remove()
 
         self.replace_next = tk.Label(self, text="→", cursor="hand2", highlightthickness=1)
-        self.replace_next.grid(row=1, column=4, sticky="nswe")
+        self.replace_next.grid(row=2, column=4, sticky="nswe")
         self.replace_next.grid_remove()
 
-        self.replace_all = tk.Label(self, text="→*", cursor="hand2", highlightthickness=1)
-        self.replace_all.grid(row=1, column=5, sticky="nswe")
+        self.replace_all = tk.Label(self, text="⟳", cursor="hand2", highlightthickness=1)
+        self.replace_all.grid(row=2, column=5, sticky="nswe")
         self.replace_all.grid_remove()
 
         self.tktext.bind("<Tab>", self.handle_tab)
@@ -241,11 +247,11 @@ class FindWindow(tk.Frame):
 
         action_labels = [
             (self.toggle_replace, "Toggle Replace"),
-            (self.find_previous_arrow, "Find Previous"),
-            (self.find_next_arrow, "Find (Enter)"),
+            (self.find_previous_arrow, "Previous Match"),
+            (self.find_next_arrow, "Next Match"),
             (self.in_selection, "Find in Selection"),
             (self.close, "Close"),
-            (self.replace_next, "Replace (Enter)"),
+            (self.replace_next, "Replace"),
             (self.replace_all, "Replace All"),
         ]
         for widget, text in action_labels:
@@ -301,21 +307,39 @@ class FindWindow(tk.Frame):
                 return
             widget.config(highlightbackground=self.bg, highlightcolor=self.fg)
 
+    def focus_find(self, event: tk.Misc = None) -> Literal["break"]:
+        widget = self.focus_get()
+        if widget == self.tktext:
+            self.tktext.select_all()
+        else:
+            self.tktext.focus_set()
+        return "break"
+
+    def focus_replace(self, event: tk.Misc = None) -> Literal["break"]:
+        widget = self.focus_get()
+        if widget == self.replace_tktext:
+            self.replace_tktext.select_all()
+        else:
+            self.replace_tktext.focus_set()
+        return "break"
+
     def toggle_replace_window(self, event: tk.Misc = None) -> None:
         """Toggle visibility of the replace window."""
         if self.replace_visible:
             self.replace_tktext.grid_remove()
             self.replace_next.grid_remove()
             self.replace_all.grid_remove()
+            self.separator.grid_remove()
             self.toggle_replace.config(text="↓")
             self.toggle_replace.grid(row=0, column=0, rowspan=1, sticky="ns")
             self.replace_visible = False
         else:
+            self.separator.grid()
             self.replace_tktext.grid()
             self.replace_next.grid()
             self.replace_all.grid()
             self.toggle_replace.config(text="↑")
-            self.toggle_replace.grid(row=0, column=0, rowspan=2, sticky="ns")
+            self.toggle_replace.grid(row=0, column=0, rowspan=3, sticky="ns")
             self.replace_visible = True
         self.toggle_replace_func()
 
@@ -363,6 +387,7 @@ class FindWindow(tk.Frame):
     def reset(
         self,
         border_color: str,
+        grid_color: str,
         menu_kwargs: DotDict,
         sheet_ops: DotDict,
         bg: str,
@@ -416,6 +441,20 @@ class FindWindow(tk.Frame):
             highlightcolor=border_color,
             highlightthickness=1,
         )
+        self.separator.config(background=grid_color)
+
+        for b in sheet_ops.find_bindings:
+            recursive_bind(self, b, self.focus_find)
+        for b in sheet_ops.toggle_replace_bindings:
+            recursive_bind(self, b, self.focus_replace)
+
+        for b in sheet_ops.escape_bindings:
+            recursive_bind(self, b, self.close_func)
+
+        for b in sheet_ops.find_next_bindings:
+            recursive_bind(self, b, self.find_next_func)
+        for b in sheet_ops.find_previous_bindings:
+            recursive_bind(self, b, self.find_prev_func)
 
     def start_tooltip_timer(self) -> None:
         self.tooltip_after_id = self.after(400, self.check_and_show_tooltip)

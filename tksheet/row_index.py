@@ -1164,16 +1164,14 @@ class RowIndex(tk.Canvas):
                 else:
                     start_col, end_col = 0, len(self.MT.displayed_columns)
                 iterable = self.MT.displayed_columns[start_col:end_col]
-            h = max(
-                h,
-                max(
-                    self.MT.get_wrapped_cell_height(
-                        datarn,
-                        datacn,
-                    )
-                    for datacn in iterable
-                ),
+            cell_heights = (
+                self.MT.get_wrapped_cell_height(
+                    datarn,
+                    datacn,
+                )
+                for datacn in iterable
             )
+            h = max(h, max(cell_heights, default=h))
             self.MT.cells_cache = None
         h = max(h, ih)
         if only_if_too_small and h < self.MT.row_positions[row + 1] - self.MT.row_positions[row]:

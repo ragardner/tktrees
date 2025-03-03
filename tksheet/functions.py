@@ -203,6 +203,12 @@ def recursive_bind(widget: tk.Misc, event: str, callback: Callable) -> None:
         recursive_bind(child, event, callback)
 
 
+def recursive_unbind(widget: tk.Misc, event: str) -> None:
+    widget.unbind(event)
+    for child in widget.winfo_children():
+        recursive_unbind(child, event)
+
+
 def tksheet_type_error(kwarg: str, valid_types: list[str], not_type: Any) -> str:
     valid_types = ", ".join(f"{type_}" for type_ in valid_types)
     return f"Argument '{kwarg}' must be one of the following types: {valid_types}, not {type(not_type)}."
