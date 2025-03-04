@@ -3741,7 +3741,7 @@ class Tree_Editor(tk.Frame):
     def del_id_orphan(self, ID, parent, snapshot=True):
         ik = ID.lower()
         pk = parent.lower()
-        to_refresh = []
+        self.refresh_rows = set()
         if pk:
             self.nodes[pk].cn[self.pc].remove(ik)
         if not self.auto_sort_nodes_bool:
@@ -3760,7 +3760,7 @@ class Tree_Editor(tk.Frame):
                         zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
                     )
                 )
-                to_refresh.append(rn)
+                self.refresh_rows.add(ciid)
             child.ps[self.pc] = ""
             self.sheet.MT.data[rn][self.pc] = ""
         rn = self.rns[ik]
@@ -3779,15 +3779,13 @@ class Tree_Editor(tk.Frame):
                         zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
                     )
                 )
-                to_refresh.append(rn)
+                self.refresh_rows.add(ik)
             self.nodes[ik].cn[self.pc] = []
             self.nodes[ik].ps[self.pc] = None
             self.sheet.MT.data[rn][self.pc] = ""
         if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
             parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
             parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-        if snapshot:
-            self.refresh_formatting(rows=to_refresh)
 
     def del_id_all_hiers_orphan(self, ID, snapshot=True):
         ik = ID.lower()
@@ -3933,7 +3931,7 @@ class Tree_Editor(tk.Frame):
             qvsapp = self.vs[-1]["rows"].append
         ik = ID.lower()
         to_del = []
-        to_refresh = []
+        self.refresh_rows = set()
         self.levels = defaultdict(list)
         self.get_lvls(ik)
         for lvl in sorted(((k, v) for k, v in self.levels.items()), key=itemgetter(0), reverse=True):
@@ -3954,7 +3952,7 @@ class Tree_Editor(tk.Frame):
                                 zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
                             )
                         )
-                        to_refresh.append(rn)
+                        self.refresh_rows.add(ik_)
                     self.nodes[ik_].cn[self.pc] = []
                     self.nodes[ik_].ps[self.pc] = None
                     self.sheet.MT.data[rn][self.pc] = ""
@@ -3977,7 +3975,7 @@ class Tree_Editor(tk.Frame):
                         zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
                     )
                 )
-                to_refresh.append(rn)
+                self.refresh_rows.add(ik)
             self.nodes[ik].cn[self.pc] = []
             self.nodes[ik].ps[self.pc] = None
             self.sheet.MT.data[rn][self.pc] = ""
@@ -3989,8 +3987,6 @@ class Tree_Editor(tk.Frame):
                 parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
         elif not self.auto_sort_nodes_bool and pk == "":
             try_remove(self.topnodes_order[self.pc], ik)
-        if snapshot:
-            self.refresh_formatting(rows=to_refresh)
 
     def del_id_and_children_all_hiers(self, ID, parent, snapshot=True):
         if snapshot:
@@ -7589,6 +7585,7 @@ class Tree_Editor(tk.Frame):
         else:
             self.del_id_orphan(self.selected_ID, "")
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
@@ -7616,6 +7613,7 @@ class Tree_Editor(tk.Frame):
         else:
             self.del_id_and_children(self.selected_ID, "")
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.redo_tree_display()
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
