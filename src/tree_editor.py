@@ -3665,10 +3665,9 @@ class Tree_Editor(tk.Frame):
         self.sheet.MT.data[idrow][hier] = newparent
         return True
 
-    def del_id(self, ID, parent, snapshot=True):
+    def del_id(self, ID, parent):
         ik = ID.lower()
         pk = parent.lower()
-        to_refresh = []
         if pk:
             self.nodes[pk].cn[self.pc].remove(ik)
         if not self.auto_sort_nodes_bool:
@@ -3687,56 +3686,25 @@ class Tree_Editor(tk.Frame):
         if pk:
             for ciid in self.nodes[ik].cn[self.pc]:
                 rn = self.rns[ciid]
-                if snapshot:
-                    self.vs[-1]["rows"].append(
-                        Del_stre(
-                            0,
-                            rn,
-                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                        )
-                    )
-                    to_refresh.append(rn)
                 self.nodes[ciid].ps[self.pc] = pk
                 self.sheet.MT.data[rn][self.pc] = self.nodes[pk].name
         elif pk == "":
             for ciid in self.nodes[ik].cn[self.pc]:
                 rn = self.rns[ciid]
-                if snapshot:
-                    self.vs[-1]["rows"].append(
-                        Del_stre(
-                            0,
-                            rn,
-                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                        )
-                    )
-                    to_refresh.append(rn)
                 self.nodes[ciid].ps[self.pc] = ""
                 self.sheet.MT.data[rn][self.pc] = ""
         rn = self.rns[ik]
         if sum(1 for v in self.nodes[ik].ps.values() if v is not None) < 2:
-            if snapshot:
-                self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
             del self.nodes[ik]
             self.sheet.delete_row(rn, redraw=False)
             self.untag_id(ik)
         else:
-            if snapshot:
-                self.vs[-1]["rows"].append(
-                    Del_stre(
-                        0,
-                        rn,
-                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                    )
-                )
-                to_refresh.append(rn)
             self.nodes[ik].cn[self.pc] = []
             self.nodes[ik].ps[self.pc] = None
             self.sheet.MT.data[rn][self.pc] = ""
         if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
             parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
             parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-        if snapshot:
-            self.refresh_formatting(rows=to_refresh)
 
     def del_id_orphan(self, ID, parent, snapshot=True):
         ik = ID.lower()
@@ -3979,7 +3947,8 @@ class Tree_Editor(tk.Frame):
             self.nodes[ik].cn[self.pc] = []
             self.nodes[ik].ps[self.pc] = None
             self.sheet.MT.data[rn][self.pc] = ""
-        self.sheet.del_rows(to_del)
+        if to_del:
+            self.sheet.del_rows(to_del)
         self.levels = defaultdict(list)
         if self.auto_sort_nodes_bool:
             if pk and self.nodes[pk].ps[self.pc]:
@@ -7474,7 +7443,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Deleting {len(iids)} IDs")
         self.snapshot_delete_ids()
         to_del = []
-        to_refresh = []
+        self.refresh_rows = set()
         for iid in iids:
             par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
             pk = par.lower()
@@ -7505,7 +7474,7 @@ class Tree_Editor(tk.Frame):
                     )
                     self.nodes[ciid].ps[self.pc] = pk
                     self.sheet.MT.data[rn][self.pc] = self.nodes[pk].name
-                    to_refresh.append(rn)
+                    self.refresh_rows.add(ciid)
             elif pk == "":
                 for ciid in self.nodes[iid].cn[self.pc]:
                     rn = self.rns[ciid]
@@ -7518,7 +7487,7 @@ class Tree_Editor(tk.Frame):
                     )
                     self.nodes[ciid].ps[self.pc] = ""
                     self.sheet.MT.data[rn][self.pc] = ""
-                    to_refresh.append(rn)
+                    self.refresh_rows.add(ciid)
             rn = self.rns[iid]
             if sum(1 for v in self.nodes[iid].ps.values() if v is not None) < 2:
                 self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
@@ -7536,7 +7505,7 @@ class Tree_Editor(tk.Frame):
                 self.nodes[iid].cn[self.pc] = []
                 self.nodes[iid].ps[self.pc] = None
                 self.sheet.MT.data[rn][self.pc] = ""
-                to_refresh.append(rn)
+                self.refresh_rows.add(iid)
             if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
                 parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
                 parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
@@ -7555,11 +7524,12 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.changelog_singular("Delete ID")
-        self.sheet.del_rows(map(self.rns.get, to_del), redraw=False)
-        self.sheet.deselect("all", redraw=False)
+        if to_del:
+            self.sheet.del_rows(map(self.rns.get, to_del), redraw=False)
+            self.sheet.deselect("all", redraw=False)
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.disable_paste()
-        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.refresh_formatting(rows=to_refresh)
+        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
@@ -9607,7 +9577,7 @@ class Tree_Editor(tk.Frame):
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
                         oldpc = int(self.pc)
                         self.pc = colnum
-                        self.del_id(cid.lower(), cpar.lower(), snapshot=False)
+                        self.del_id(cid.lower(), cpar.lower())
                         self.pc = int(oldpc)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
