@@ -7480,7 +7480,7 @@ class Tree_Editor(tk.Frame):
         to_del = []
         to_refresh = []
         for iid in iids:
-            par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[self.nodes[iid].ps[self.pc]] else ""
+            par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
             pk = par.lower()
             if pk:
                 self.nodes[pk].cn[self.pc].remove(iid)
