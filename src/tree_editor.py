@@ -3104,10 +3104,10 @@ class Tree_Editor(tk.Frame):
                 )
                 self.refresh_rows.add(int(crow))
             self.sheet.MT.data[crow][hier] = self.nodes[parent_of_ik].name if parent_of_ik else ""
-            if not parent_of_ik and not auto_sort_quick:
-                self.topnodes_order[hier].append(ciid)
-            elif parent_of_ik and not auto_sort_quick or parent_of_ik and auto_sort_quick:
+            if parent_of_ik:
                 self.nodes[parent_of_ik].cn[hier].append(ciid)
+            elif not parent_of_ik and not auto_sort_quick:
+                self.topnodes_order[hier].append(ciid)
         self.nodes[ik].cn[hier] = []
         self.nodes[ik].ps[hier] = None
         if pk != "":
