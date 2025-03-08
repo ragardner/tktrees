@@ -1576,9 +1576,10 @@ class Tree_Editor(tk.Frame):
         self.sheet.bind(rc_release, self.sheet_rc_release)
         self.sheet.bind("<<SheetSelect>>", self.sheet_select_event)
         self.tree.bind("<<SheetSelect>>", self.tree_select_event)
-        self.tree.bind(rc_press, self.tree_rc_press)
-        self.tree.bind(rc_motion, self.tree_rc_motion)
-        self.tree.bind(rc_release, self.tree_rc_release)
+        # self.tree.bind(rc_press, self.tree_rc_press)
+        # self.tree.bind(rc_motion, self.tree_rc_motion)
+        # self.tree.bind(rc_release, self.tree_rc_release)
+        self.tree.bind(rc_press, self.tree_rc_release)  # TODO: uncomment above if enabling rc drag
         self.tree.bind("<FocusIn>", self.tree_focus_enter).bind("<FocusOut>", self.tree_focus_leave)
         self.sheet.bind("<FocusIn>", self.sheet_focus_enter).bind("<FocusOut>", self.sheet_focus_leave)
         self.sheet.bulk_table_edit_validation(self.tree_sheet_edit_table)
@@ -2654,44 +2655,45 @@ class Tree_Editor(tk.Frame):
             self.tree.deselect()
 
     def tree_rc_motion(self, event):
-        if self.auto_sort_nodes_bool or self.drag_iid is None:
-            return
-        iid = self.tree.rowitem(self.tree.identify_row(event, allow_end=False))
-        if not iid or iid == self.last_rced:
-            return
-        selections = self.tree.selection()
-        if not selections or selections[0] != self.drag_iid:
-            self.tree_drop_iid()
-            return
-        if not selections or selections[0] != self.drag_iid:
-            self.tree_drop_iid()
-            return
-        if self.pc != self.drag_pc or len(selections) > 1:
-            self.reset_tree_drag_vars()
-            return
-        if iid:
-            pariid = self.tree.parent(iid)
-            if pariid != self.drag_pariid:
-                return
-            # try:
-            move_to_index = self.tree.index(iid)
-            parik = self.drag_pariid.lower()
-            if parik:
-                pop_index = self.nodes[parik].cn[self.pc].index(self.drag_iid)
-                self.nodes[parik].cn[self.pc].insert(
-                    move_to_index,
-                    self.nodes[parik].cn[self.pc].pop(pop_index),
-                )
-            else:
-                pop_index = self.topnodes_order[self.pc].index(self.drag_iid)
-                self.topnodes_order[self.pc].insert(
-                    move_to_index,
-                    self.topnodes_order[self.pc].pop(pop_index),
-                )
-            self.tree.move(self.drag_iid, self.drag_pariid, move_to_index)
-            self.tree.selection_set(self.drag_iid)
-            # except Exception:
-            #     self.tree_drop_iid()
+        pass
+        # if self.auto_sort_nodes_bool or self.drag_iid is None:
+        #     return
+        # iid = self.tree.rowitem(self.tree.identify_row(event, allow_end=False))
+        # if not iid or iid == self.last_rced:
+        #     return
+        # selections = self.tree.selection()
+        # if not selections or selections[0] != self.drag_iid:
+        #     self.tree_drop_iid()
+        #     return
+        # if not selections or selections[0] != self.drag_iid:
+        #     self.tree_drop_iid()
+        #     return
+        # if self.pc != self.drag_pc or len(selections) > 1:
+        #     self.reset_tree_drag_vars()
+        #     return
+        # if iid:
+        #     pariid = self.tree.parent(iid)
+        #     if pariid != self.drag_pariid:
+        #         return
+        #     # try:
+        #     move_to_index = self.tree.index(iid)
+        #     parik = self.drag_pariid.lower()
+        #     if parik:
+        #         pop_index = self.nodes[parik].cn[self.pc].index(self.drag_iid)
+        #         self.nodes[parik].cn[self.pc].insert(
+        #             move_to_index,
+        #             self.nodes[parik].cn[self.pc].pop(pop_index),
+        #         )
+        #     else:
+        #         pop_index = self.topnodes_order[self.pc].index(self.drag_iid)
+        #         self.topnodes_order[self.pc].insert(
+        #             move_to_index,
+        #             self.topnodes_order[self.pc].pop(pop_index),
+        #         )
+        #     self.tree.move(self.drag_iid, self.drag_pariid, move_to_index)
+        #     self.tree.selection_set(self.drag_iid)
+        #     # except Exception:
+        #     #     self.tree_drop_iid()
 
     def tree_sheet_rc_menu_option_enabler_disabler(self, col: int):
         if col == self.ic or col in self.hiers:
@@ -2704,6 +2706,7 @@ class Tree_Editor(tk.Frame):
     def tree_rc_release(self, event):
         if self.drag_iid is not None:
             self.drag_end_index = self.tree.index(self.drag_iid)
+        self.drag_iid = None  # del if enabling rc move
         if self.auto_sort_nodes_bool or self.drag_iid is None or self.drag_end_index == self.drag_start_index:
             row = self.tree.identify_row(event, allow_end=False)
             col = self.tree.identify_column(event, allow_end=False)
