@@ -5,7 +5,7 @@ This document is in markdown format.
 Tk-Trees is an app for management of hierarchy data in table format. It was written in the Python programming language and utilizes the following libraries:
  - tkinter, tksheet, openpyxl
 
-Tk-Trees is licensed under GPL-3.0 and is the copyright of R. A. Gardner.
+Tk-Trees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
 - github.com/ragardner
 - github@ragardner.simplelogin.com
 
@@ -78,9 +78,9 @@ When using any other delete option it will only delete an ID in the currently se
 
 To delete a column right click on the column you wish to delete and select Delete column. Note you cannot delete a parent column if it is the only parent column in the sheet and you cannot a delete a parent column if you are currently viewing it.
 
-#### Conversion using mapping (find and replace using multiple values in a table)
+#### Find and replace using multiple values in a table
 
-By right clicking in the sheet while multiple cells are selected you can bring up the find and replace window, you can also access it under the Edit menu. Click on the tab labelled Replace using mapping.
+Replace all using a table of values can be accessed through the Edit menu.
 
 This allows a large scale find and replace using a 2 column table, column 1 is the values to find and column 2 the corresponding values to replace them with.
 
@@ -176,8 +176,7 @@ Conditions must have spaces in between statements.
     - Sort by column: Using this button and the two drop-down boxes to its right you can sort the sheet using a basic natrual sorting order, numbers taking priority.
 - Copy to clipboard copies the underlying sheet to your computers clipboard to be pasted as a string, Copy as json will use the json format you have selected under the Options menu.
 - Tag/Untag IDs tags the selected IDs, tagged IDs will be displayed in a dropdown box at the top of the window so you can find them later.
-- Find, replace (Ctrl + F / Ctrl + H). This window also allows a large scale find and replace using a 2 column table, column 1 is the values to find and column 2 the corresponding values to replace them with.
-- Find next (Ctrl + G) goes to the next appropriate search result.
+- Replace using mapping.
 - Clear copied/cut clears any copied/cut IDs
 - Clear panel selections deselects both the treeview and sheet selections.
 - Clear all tagged IDs clears all tagged IDs and the associated drop-down boxes. This is not an Undo-able action.
