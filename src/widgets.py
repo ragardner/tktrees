@@ -65,7 +65,7 @@ class Column_Selection(tk.Frame):
         )
         self.selector.link_sheet(self.sheetdisplay)
         self.flattened_selector.link_sheet(self.sheetdisplay, self.flattened_choices)
-        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
         self.sheetdisplay.headers(newheaders=0)
         self.sheetdisplay.grid(row=0, column=1, rowspan=3, sticky="nswe")
@@ -129,7 +129,7 @@ class Column_Selection(tk.Frame):
         self.flattened_choices.enable_me()
         self.cont_.config(state="normal")
         self.sheetdisplay.basic_bindings(True)
-        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
 
     def disable_widgets(self):

@@ -943,7 +943,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Delete IDs all hierarchies",
-            command=self.tree_del_selected_all_hiers,
+            command=self.del_id_all,
             **menu_kwargs,
         )
 
@@ -1019,37 +1019,42 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_single_row_del = tk.Menu(self.tree_rc_menu_single_row, tearoff=0, **menu_kwargs)
         self.tree_rc_menu_single_row.add_cascade(label="Delete", menu=self.tree_rc_menu_single_row_del, **menu_kwargs)
         self.tree_rc_menu_single_row_del.add_command(
-            label="Clear IDs details", command=self.del_all_details, **menu_kwargs
+            label="Clear IDs details",
+            command=self.del_all_details,
+            **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_separator()
         self.tree_rc_menu_single_row_del.add_command(
-            label="Delete ID", accelerator="Del", command=self.del_key, **menu_kwargs
+            label="Delete ID",
+            accelerator="Del",
+            command=self.del_key,
+            **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_command(
             label="Delete ID, orphan children",
-            command=self.delete_selected_orphan,
+            command=self.del_id_orphan,
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_separator()
         self.tree_rc_menu_single_row_del.add_command(
             label="Delete ID all hierarchies",
-            command=self.delete_all_of_ID,
+            command=self.del_id_all,
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_command(
             label="Delete ID all hierarchies, orphan children",
-            command=self.delete_all_of_ID_orphan,
+            command=self.del_id_all_orphan,
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_separator()
         self.tree_rc_menu_single_row_del.add_command(
             label="Delete ID + children",
-            command=self.delete_ID_and_all_children,
+            command=self.del_id_children,
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_command(
             label="Delete ID + children, all hierarchies",
-            command=self.delete_ID_and_all_children_all_hiers,
+            command=self.del_id_children_all,
             **menu_kwargs,
         )
 
@@ -2000,18 +2005,14 @@ class Tree_Editor(tk.Frame):
                 for row in range(box.coords.from_r, box.coords.upto_r)
                 if box[1] == "rows"
             ):
-                self.delete_selected(iids=iids)
+                self.del_id(iids=iids)
             elif self.tree.boxes:
                 self.tree.delete()
         elif self.sheet.has_focus():
-            if rows := sorted(self.sheet.get_selected_rows(), reverse=True):
-                self.del_rows_ids(rows=rows)
+            if rows := self.sheet.get_selected_rows():
+                self.del_id_all(iids=[self.sheet.MT.data[r][self.ic].lower() for r in rows])
             elif self.sheet.boxes:
                 self.sheet.delete()
-
-    def tree_del_selected_all_hiers(self):
-        if iids := self.tree.selection():
-            self.del_rows_ids(rows=sorted(map(self.rns.get, iids), reverse=True))
 
     def rebuild_tree(self, deselect=True, redraw=False):
         if deselect:
@@ -2066,79 +2067,6 @@ class Tree_Editor(tk.Frame):
                 self.tree.cut()
         elif self.sheet.has_focus() and self.sheet.ctrl_boxes:
             self.sheet.cut()
-
-    def del_rows_ids(self, rows: Sequence[int] | None = None) -> None:
-        if not rows:
-            return
-        newline = "\n"
-        confirm = Ask_Confirm(
-            self,
-            f"Delete every occurrence of the following IDs:\n{newline.join(self.sheet.MT.data[row][self.ic] for row in rows)}",
-            theme=self.C.theme,
-        )
-        if not confirm.boolean:
-            return
-        self.snapshot_delete_ids()
-        self.start_work("Deleting IDs... ")
-        treeselection = self.tree.selection()
-        self.disable_paste()
-        self.sheet.deselect("all", redraw=False)
-        for row in rows:
-            id_ = self.sheet.MT.data[row][self.ic]
-            self.changelog_append_no_unsaved(
-                "Delete ID from all hierarchies |",
-                f"{id_}",
-                "",
-                "",
-            )
-            ik = id_.lower()
-            self.untag_id(ik)
-            pk = self.nodes[ik].ps[self.pc]
-            if not self.auto_sort_nodes_bool:
-                for h, p in self.nodes[ik].ps.items():
-                    if p == "":
-                        self.topnodes_order[h].remove(ik)
-                    self.topnodes_order[h].extend(self.nodes[ik].cn[h])
-            for k, v in self.nodes[ik].ps.items():
-                if v:
-                    v.cn[k].remove(ik)
-            for k, v in self.nodes[ik].cn.items():
-                for iid in v:
-                    self.nodes[iid].ps[k] = ""
-                    rn = self.rns[iid]
-                    self.vs[-1]["rows"].append(
-                        Del_stre(
-                            0,
-                            rn,
-                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                        )
-                    )
-                    self.sheet.MT.data[rn][k] = ""
-            del self.nodes[ik]
-            self.vs[-1]["rows"].append(Del_stre(1, row, self.sheet.MT.data[row]))
-            if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
-                parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
-                parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-        if len(rows) > 1:
-            self.changelog_append(
-                f"Deleted {len(rows)} IDs from all hierarchies",
-                "",
-                "",
-                "",
-            )
-        else:
-            self.changelog_singular("Delete ID from all hierarchies")
-        self.sheet.del_rows(rows, redraw=False)
-        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.reset_tagged_ids_dropdowns()
-        self.rehighlight_tagged_ids()
-        self.disable_paste()
-        self.redo_tree_display()
-        self.tree.selection_set([i for i in treeselection if self.tree.exists(i)])
-        self.move_tree_pos()
-        self.redraw_sheets()
-        self.stop_work(self.get_tree_editor_status_bar_text())
-        return
 
     def paste_key(self, event: object = None) -> None:
         if self.tree.has_focus():
@@ -3665,49 +3593,164 @@ class Tree_Editor(tk.Frame):
         self.sheet.MT.data[idrow][hier] = newparent
         return True
 
-    def del_id(self, ID, parent):
-        ik = ID.lower()
-        pk = parent.lower()
+    def _del_id_core(self, name: str, to_del: list[str] | None = None, snapshot: bool = True) -> list[str]:
+        if to_del is None:
+            to_del = []
+        iid = name.lower()
+        pk = self.get_ids_parent(iid)
         if pk:
-            self.nodes[pk].cn[self.pc].remove(ik)
+            self.nodes[pk].cn[self.pc].remove(iid)
         if not self.auto_sort_nodes_bool:
             if pk == "":
-                self.topnodes_order[self.pc].remove(ik)
-                for ciid in self.nodes[ik].cn[self.pc]:
+                self.topnodes_order[self.pc].remove(iid)
+                for ciid in self.nodes[iid].cn[self.pc]:
                     self.topnodes_order[self.pc].append(ciid)
             else:
-                for ciid in self.nodes[ik].cn[self.pc]:
+                for ciid in self.nodes[iid].cn[self.pc]:
                     self.nodes[pk].cn[self.pc].append(ciid)
         else:
             if pk:
-                for ciid in self.nodes[ik].cn[self.pc]:
+                for ciid in self.nodes[iid].cn[self.pc]:
                     self.nodes[pk].cn[self.pc].append(ciid)
                 self.nodes[pk].cn[self.pc] = self.sort_node_cn(self.nodes[pk].cn[self.pc], self.pc)
         if pk:
-            for ciid in self.nodes[ik].cn[self.pc]:
+            for ciid in self.nodes[iid].cn[self.pc]:
                 rn = self.rns[ciid]
+                if snapshot:
+                    self.vs[-1]["rows"].append(
+                        Del_stre(
+                            0,
+                            rn,
+                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
+                        )
+                    )
                 self.nodes[ciid].ps[self.pc] = pk
                 self.sheet.MT.data[rn][self.pc] = self.nodes[pk].name
+                self.refresh_rows.add(ciid)
         elif pk == "":
-            for ciid in self.nodes[ik].cn[self.pc]:
+            for ciid in self.nodes[iid].cn[self.pc]:
                 rn = self.rns[ciid]
+                if snapshot:
+                    self.vs[-1]["rows"].append(
+                        Del_stre(
+                            0,
+                            rn,
+                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
+                        )
+                    )
                 self.nodes[ciid].ps[self.pc] = ""
                 self.sheet.MT.data[rn][self.pc] = ""
-        rn = self.rns[ik]
-        if sum(1 for v in self.nodes[ik].ps.values() if v is not None) < 2:
-            del self.nodes[ik]
-            self.sheet.delete_row(rn, redraw=False)
-            self.untag_id(ik)
+                self.refresh_rows.add(ciid)
+        rn = self.rns[iid]
+        if sum(1 for v in self.nodes[iid].ps.values() if v is not None) < 2:
+            if snapshot:
+                self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
+            del self.nodes[iid]
+            self.untag_id(iid)
+            to_del.append(iid)
         else:
-            self.nodes[ik].cn[self.pc] = []
-            self.nodes[ik].ps[self.pc] = None
+            if snapshot:
+                self.vs[-1]["rows"].append(
+                    Del_stre(
+                        0,
+                        rn,
+                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
+                    )
+                )
+            self.nodes[iid].cn[self.pc] = []
+            self.nodes[iid].ps[self.pc] = None
             self.sheet.MT.data[rn][self.pc] = ""
+            self.refresh_rows.add(iid)
         if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
             parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
             parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
+        return to_del
 
-    def del_id_orphan(self, ID, parent, snapshot=True):
-        ik = ID.lower()
+    def _del_id_all_core(self, name: str, to_del: list[str] | None = None, snapshot: bool = True) -> list[str]:
+        if to_del is None:
+            to_del = []
+        iid = name.lower()
+        piid = self.get_ids_parent(iid)
+        self.untag_id(iid)
+        if not self.auto_sort_nodes_bool:
+            for h, pk in self.nodes[iid].ps.items():
+                if pk == "":
+                    self.topnodes_order[h].remove(iid)
+                    for ciid in self.nodes[iid].cn[h]:
+                        child = self.nodes[ciid]
+                        self.topnodes_order[h].append(ciid)
+                        child.ps[h] = ""
+                        rn = self.rns[ciid]
+                        if snapshot:
+                            self.vs[-1]["rows"].append(
+                                Del_stre(
+                                    0,
+                                    rn,
+                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
+                                )
+                            )
+                        self.sheet.MT.data[rn][h] = ""
+                elif pk:
+                    for ciid in self.nodes[iid].cn[h]:
+                        self.nodes[pk].cn[h].append(ciid)
+                        child = self.nodes[ciid]
+                        child.ps[h] = pk
+                        rn = self.rns[ciid]
+                        if snapshot:
+                            self.vs[-1]["rows"].append(
+                                Del_stre(
+                                    0,
+                                    rn,
+                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
+                                )
+                            )
+                        self.sheet.MT.data[rn][h] = self.nodes[pk].name
+                    self.nodes[pk].cn[h].remove(iid)
+        else:
+            for h, pk in self.nodes[iid].ps.items():
+                if pk:
+                    for ciid in self.nodes[iid].cn[h]:
+                        self.nodes[pk].cn[h].append(ciid)
+                        child = self.nodes[ciid]
+                        child.ps[h] = pk
+                        rn = self.rns[ciid]
+                        if snapshot:
+                            self.vs[-1]["rows"].append(
+                                Del_stre(
+                                    0,
+                                    rn,
+                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
+                                )
+                            )
+                        self.sheet.MT.data[rn][h] = self.nodes[pk].name
+                    self.nodes[pk].cn[h].remove(iid)
+                    self.nodes[pk].cn[h] = self.sort_node_cn(self.nodes[pk].cn[h], h)
+                elif pk == "":
+                    for ciid in self.nodes[iid].cn[h]:
+                        child = self.nodes[ciid]
+                        child.ps[h] = ""
+                        rn = self.rns[ciid]
+                        if snapshot:
+                            self.vs[-1]["rows"].append(
+                                Del_stre(
+                                    0,
+                                    rn,
+                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
+                                )
+                            )
+                        self.sheet.MT.data[rn][h] = ""
+        rn = self.rns[iid]
+        if snapshot:
+            self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
+        del self.nodes[iid]
+        to_del.append(iid)
+        if self.auto_sort_nodes_bool and piid and self.nodes[piid].ps[self.pc]:
+            parent_parent_node = self.nodes[self.nodes[piid].ps[self.pc]]
+            parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
+        return to_del
+
+    def _del_id_orphan_core(self, name: str, parent: str, snapshot: bool = True) -> None:
+        ik = name.lower()
         pk = parent.lower()
         self.refresh_rows = set()
         if pk:
@@ -3755,8 +3798,8 @@ class Tree_Editor(tk.Frame):
             parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
             parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
 
-    def del_id_all_hiers_orphan(self, ID, snapshot=True):
-        ik = ID.lower()
+    def _del_id_all_orphan_core(self, name: str, snapshot: bool = True) -> None:
+        ik = name.lower()
         pk = self.nodes[ik].ps[self.pc]
         self.untag_id(ik)
         if not self.auto_sort_nodes_bool:
@@ -3791,86 +3834,6 @@ class Tree_Editor(tk.Frame):
             parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
             parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
 
-    def del_id_all_hiers(self, ID, snapshot=True):
-        ik = ID.lower()
-        ik_pk = self.nodes[ik].ps[self.pc]
-        self.untag_id(ik)
-        if not self.auto_sort_nodes_bool:
-            for h, pk in self.nodes[ik].ps.items():
-                if pk == "":
-                    self.topnodes_order[h].remove(ik)
-                    for ciid in self.nodes[ik].cn[h]:
-                        child = self.nodes[ciid]
-                        self.topnodes_order[h].append(ciid)
-                        child.ps[h] = ""
-                        rn = self.rns[ciid]
-                        if snapshot:
-                            self.vs[-1]["rows"].append(
-                                Del_stre(
-                                    0,
-                                    rn,
-                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                                )
-                            )
-                        self.sheet.MT.data[rn][h] = ""
-                elif pk:
-                    for ciid in self.nodes[ik].cn[h]:
-                        self.nodes[pk].cn[h].append(ciid)
-                        child = self.nodes[ciid]
-                        child.ps[h] = self.nodes[pk]
-                        rn = self.rns[ciid]
-                        if snapshot:
-                            self.vs[-1]["rows"].append(
-                                Del_stre(
-                                    0,
-                                    rn,
-                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                                )
-                            )
-                        self.sheet.MT.data[rn][h] = self.nodes[pk].name
-                    self.nodes[pk].cn[h].remove(ik)
-        else:
-            for h, pk in self.nodes[ik].ps.items():
-                if pk:
-                    for ciid in self.nodes[ik].cn[h]:
-                        self.nodes[pk].cn[h].append(ciid)
-                        child = self.nodes[ciid]
-                        child.ps[h] = self.nodes[pk]
-                        rn = self.rns[ciid]
-                        if snapshot:
-                            self.vs[-1]["rows"].append(
-                                Del_stre(
-                                    0,
-                                    rn,
-                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                                )
-                            )
-                        self.sheet.MT.data[rn][h] = self.nodes[pk].name
-                    self.nodes[pk].cn[h].remove(ik)
-                    self.nodes[pk].cn[h] = self.sort_node_cn(self.nodes[pk].cn[h], h)
-                elif pk == "":
-                    for ciid in self.nodes[ik].cn[h]:
-                        child = self.nodes[ciid]
-                        child.ps[h] = ""
-                        rn = self.rns[ciid]
-                        if snapshot:
-                            self.vs[-1]["rows"].append(
-                                Del_stre(
-                                    0,
-                                    rn,
-                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                                )
-                            )
-                        self.sheet.MT.data[rn][h] = ""
-        rn = self.rns[ik]
-        if snapshot:
-            self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
-        del self.nodes[ik]
-        self.sheet.delete_row(rn, redraw=False)
-        if self.auto_sort_nodes_bool and ik_pk and self.nodes[ik_pk].ps[self.pc]:
-            parent_parent_node = self.nodes[self.nodes[ik_pk].ps[self.pc]]
-            parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-
     def get_lvls(self, iid: str, lvl=1):
         # Initialize stack with the initial node at lvl - 1
         stack = [(iid, lvl - 1)]
@@ -3894,10 +3857,10 @@ class Tree_Editor(tk.Frame):
                 self.levels[next_lvl].append(child)
                 stack.append((child, next_lvl))
 
-    def del_id_and_children(self, ID, parent, snapshot=True):
+    def _del_id_children_core(self, name: str, parent: str, snapshot: bool = True) -> None:
         if snapshot:
             qvsapp = self.vs[-1]["rows"].append
-        ik = ID.lower()
+        ik = name.lower()
         to_del = []
         self.refresh_rows = set()
         self.levels = defaultdict(list)
@@ -3957,10 +3920,10 @@ class Tree_Editor(tk.Frame):
         elif not self.auto_sort_nodes_bool and pk == "":
             try_remove(self.topnodes_order[self.pc], ik)
 
-    def del_id_and_children_all_hiers(self, ID, parent, snapshot=True):
+    def _del_id_children_all_core(self, name: str, parent: str, snapshot: bool = True) -> None:
         if snapshot:
             qvsapp = self.vs[-1]["rows"].append
-        ik = ID.lower()
+        ik = name.lower()
         to_del = []
         self.levels = defaultdict(list)
         self.get_lvls(ik)
@@ -5289,7 +5252,7 @@ class Tree_Editor(tk.Frame):
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(rows=rows, columns=cols)
 
-        elif new_vs["type"] == "delete id" or new_vs["type"] == "delete ids":
+        elif new_vs["type"] == "delete ids":
             for obj in reversed(new_vs["rows"]):
                 if obj.t == 1:
                     self.sheet.MT.data.insert(obj.rn, obj.row)
@@ -5547,16 +5510,6 @@ class Tree_Editor(tk.Frame):
         self.vs.append(
             {
                 "type": "paste id",
-                "rows": [],
-                "required_data": self.get_required_snapshot_data(),
-            }
-        )
-
-    def snapshot_delete_id(self):
-        self.snapshot_chore()
-        self.vs.append(
-            {
-                "type": "delete id",
                 "rows": [],
                 "required_data": self.get_required_snapshot_data(),
             }
@@ -7437,7 +7390,7 @@ class Tree_Editor(tk.Frame):
         self.tree.selection_set(popup.result.lower())
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
-    def delete_selected(self, iids: tuple[str]):
+    def del_id(self, iids: Sequence[str]):
         if not iids:
             return
         self.start_work(f"Deleting {len(iids)} IDs")
@@ -7446,69 +7399,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         for iid in iids:
             par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
-            pk = par.lower()
-            if pk:
-                self.nodes[pk].cn[self.pc].remove(iid)
-            if not self.auto_sort_nodes_bool:
-                if pk == "":
-                    self.topnodes_order[self.pc].remove(iid)
-                    for ciid in self.nodes[iid].cn[self.pc]:
-                        self.topnodes_order[self.pc].append(ciid)
-                else:
-                    for ciid in self.nodes[iid].cn[self.pc]:
-                        self.nodes[pk].cn[self.pc].append(ciid)
-            else:
-                if pk:
-                    for ciid in self.nodes[iid].cn[self.pc]:
-                        self.nodes[pk].cn[self.pc].append(ciid)
-                    self.nodes[pk].cn[self.pc] = self.sort_node_cn(self.nodes[pk].cn[self.pc], self.pc)
-            if pk:
-                for ciid in self.nodes[iid].cn[self.pc]:
-                    rn = self.rns[ciid]
-                    self.vs[-1]["rows"].append(
-                        Del_stre(
-                            0,
-                            rn,
-                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                        )
-                    )
-                    self.nodes[ciid].ps[self.pc] = pk
-                    self.sheet.MT.data[rn][self.pc] = self.nodes[pk].name
-                    self.refresh_rows.add(ciid)
-            elif pk == "":
-                for ciid in self.nodes[iid].cn[self.pc]:
-                    rn = self.rns[ciid]
-                    self.vs[-1]["rows"].append(
-                        Del_stre(
-                            0,
-                            rn,
-                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                        )
-                    )
-                    self.nodes[ciid].ps[self.pc] = ""
-                    self.sheet.MT.data[rn][self.pc] = ""
-                    self.refresh_rows.add(ciid)
-            rn = self.rns[iid]
-            if sum(1 for v in self.nodes[iid].ps.values() if v is not None) < 2:
-                self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
-                del self.nodes[iid]
-                self.untag_id(iid)
-                to_del.append(iid)
-            else:
-                self.vs[-1]["rows"].append(
-                    Del_stre(
-                        0,
-                        rn,
-                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                    )
-                )
-                self.nodes[iid].cn[self.pc] = []
-                self.nodes[iid].ps[self.pc] = None
-                self.sheet.MT.data[rn][self.pc] = ""
-                self.refresh_rows.add(iid)
-            if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
-                parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
-                parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
+            to_del = self._del_id_core(iid, to_del, snapshot=True)
             self.changelog_append_no_unsaved(
                 "Delete ID |",
                 f"ID: {self.sheet.data[self.rns[iid]][self.ic]} parent: {par if par else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
@@ -7538,7 +7429,45 @@ class Tree_Editor(tk.Frame):
         self.focus_tree()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
-    def delete_selected_orphan(self, event=None):
+    def del_id_all(self, iids: Iterator[str] | None = None) -> None:
+        if not iids:
+            iids = self.tree.selection()
+        self.start_work(f"Deleting {len(iids)} IDs")
+        self.snapshot_delete_ids()
+        to_del = []
+        self.refresh_rows = set()
+        for iid in iids:
+            to_del = self._del_id_all_core(iid, to_del, snapshot=True)
+            self.changelog_append_no_unsaved(
+                "Delete ID from all hierarchies |",
+                f"{self.sheet.data[self.rns[iid]][self.ic]}",
+                "",
+                "",
+            )
+        if len(to_del) > 1:
+            self.changelog_append(
+                f"Deleted {len(to_del)} IDs from all hierarchies",
+                "",
+                "",
+                "",
+            )
+        else:
+            self.changelog_singular("Delete ID from all hierarchies")
+        if to_del:
+            self.sheet.del_rows(map(self.rns.get, to_del), redraw=False)
+            self.sheet.deselect("all", redraw=False)
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        self.disable_paste()
+        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
+        self.move_tree_pos()
+        self.reset_tagged_ids_dropdowns()
+        self.rehighlight_tagged_ids()
+        self.redo_tree_display()
+        self.redraw_sheets()
+        self.focus_tree()
+        self.stop_work(self.get_tree_editor_status_bar_text())
+
+    def del_id_orphan(self, event=None):
         if not self.selected_ID:
             return
         self.changelog_append(
@@ -7547,13 +7476,10 @@ class Tree_Editor(tk.Frame):
             "",
             "",
         )
-        self.snapshot_delete_id()
+        self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        if self.selected_PAR:
-            self.del_id_orphan(self.selected_ID, self.selected_PAR)
-        else:
-            self.del_id_orphan(self.selected_ID, "")
+        self._del_id_orphan_core(self.selected_ID, self.selected_PAR if self.selected_PAR else "")
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.move_tree_pos()
@@ -7564,7 +7490,7 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.focus_tree()
 
-    def delete_ID_and_all_children(self):
+    def del_id_children(self):
         if not self.selected_ID:
             return
         ik = self.selected_ID.lower()
@@ -7575,13 +7501,10 @@ class Tree_Editor(tk.Frame):
             "",
             "",
         )
-        self.snapshot_delete_id()
+        self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        if self.selected_PAR:
-            self.del_id_and_children(self.selected_ID, self.selected_PAR)
-        else:
-            self.del_id_and_children(self.selected_ID, "")
+        self._del_id_children_core(self.selected_ID, self.selected_PAR if self.selected_PAR else "")
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.redo_tree_display()
@@ -7592,7 +7515,7 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
         self.focus_tree()
 
-    def delete_ID_and_all_children_all_hiers(self):
+    def del_id_children_all(self):
         if not self.selected_ID:
             return
         ik = self.selected_ID.lower()
@@ -7603,13 +7526,10 @@ class Tree_Editor(tk.Frame):
             "",
             "",
         )
-        self.snapshot_delete_id()
+        self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        if self.selected_PAR:
-            self.del_id_and_children_all_hiers(self.selected_ID, self.selected_PAR)
-        else:
-            self.del_id_and_children_all_hiers(self.selected_ID, "")
+        self._del_id_children_all_core(self.selected_ID, self.selected_PAR if self.selected_PAR else "")
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
@@ -7619,29 +7539,7 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
         self.focus_tree()
 
-    def delete_all_of_ID(self):
-        if not self.selected_ID:
-            return
-        self.changelog_append(
-            "Delete ID from all hierarchies",
-            self.selected_ID,
-            "",
-            "",
-        )
-        self.snapshot_delete_id()
-        self.sheet.deselect("all", redraw=False)
-        self.disable_paste()
-        self.del_id_all_hiers(self.selected_ID)
-        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.redo_tree_display()
-        self.move_tree_pos()
-        self.reset_tagged_ids_dropdowns()
-        self.rehighlight_tagged_ids()
-        self.redraw_sheets()
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-        self.focus_tree()
-
-    def delete_all_of_ID_orphan(self):
+    def del_id_all_orphan(self):
         if not self.selected_ID:
             return
         self.changelog_append(
@@ -7650,10 +7548,10 @@ class Tree_Editor(tk.Frame):
             "",
             "",
         )
-        self.snapshot_delete_id()
+        self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        self.del_id_all_hiers_orphan(self.selected_ID)
+        self._del_id_all_orphan_core(self.selected_ID)
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.redo_tree_display()
         self.move_tree_pos()
@@ -8074,7 +7972,7 @@ class Tree_Editor(tk.Frame):
                 )
             except Exception:
                 self.tagged_ids.discard(ik)
-        for ik in filter(self.tree.RI.tree.__contains__, self.tagged_ids):
+        for ik in filter(self.tree.RI.rns.__contains__, self.tagged_ids):
             self.tree.highlight_cells(
                 row=self.tree.itemrow(ik),
                 bg="orange",
@@ -8674,7 +8572,7 @@ class Tree_Editor(tk.Frame):
             except Exception:
                 self.saved_info[self.pc].boxes = ()
                 self.saved_info[self.pc].selected = ()
-        tree_rns = self.tree.RI.tree_rns
+        tree_rns = self.tree.RI.rns
         if self.tagged_ids:
             options = self.tree.RI.cell_options
             highlight = Highlight(
@@ -8682,17 +8580,17 @@ class Tree_Editor(tk.Frame):
                 fg="black",
                 end=False,
             )
-            for ik in filter(self.tree.RI.tree.__contains__, self.tagged_ids):
+            for ik in filter(tree_rns.__contains__, self.tagged_ids):
                 options[tree_rns[ik]] = {}
                 options[tree_rns[ik]]["highlight"] = highlight
         options = self.tree.MT.cell_options
-        tree, sheet = self.tree.RI.tree, self.sheet.MT.data
+        sheet = self.sheet.MT.data
         numrows = len(sheet)
         out_of_bounds = []
         for cell, dct in self.sheet.MT.cell_options.items():
             if cell[0] >= numrows or cell[1] >= self.row_len:
                 out_of_bounds.append(cell)
-            elif "highlight" in dct and (iid := sheet[cell[0]][self.ic].lower()) in tree:
+            elif "highlight" in dct and (iid := sheet[cell[0]][self.ic].lower()) in tree_rns:
                 options[key := (tree_rns[iid], cell[1])] = {}
                 options[key]["highlight"] = dct["highlight"]
         for cell in out_of_bounds:
@@ -9577,7 +9475,7 @@ class Tree_Editor(tk.Frame):
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
                         oldpc = int(self.pc)
                         self.pc = colnum
-                        self.del_id(cid.lower(), cpar.lower())
+                        self._del_id_core(cid.lower(), cpar.lower(), snapshot=False)
                         self.pc = int(oldpc)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
@@ -9611,7 +9509,7 @@ class Tree_Editor(tk.Frame):
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
                         oldpc = int(self.pc)
                         self.pc = colnum
-                        self.del_id_orphan(cid.lower(), cpar.lower(), snapshot=False)
+                        self._del_id_orphan_core(cid.lower(), cpar.lower(), snapshot=False)
                         self.pc = int(oldpc)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
@@ -9645,7 +9543,7 @@ class Tree_Editor(tk.Frame):
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
                         oldpc = int(self.pc)
                         self.pc = colnum
-                        self.del_id_and_children(cid.lower(), cpar.lower(), snapshot=False)
+                        self._del_id_children_core(cid.lower(), cpar.lower(), snapshot=False)
                         self.pc = int(oldpc)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
@@ -9679,7 +9577,7 @@ class Tree_Editor(tk.Frame):
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
                         oldpc = int(self.pc)
                         self.pc = colnum
-                        self.del_id_and_children_all_hiers(cid.lower(), cpar.lower(), snapshot=False)
+                        self._del_id_children_all_core(cid.lower(), cpar.lower(), snapshot=False)
                         self.pc = int(oldpc)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
@@ -9697,7 +9595,8 @@ class Tree_Editor(tk.Frame):
                 elif ctyp == "Delete ID from all hierarchies |" or ctyp == "Delete ID from all hierarchies":
                     cid = change[2]
                     if cid.lower() in self.rns:
-                        self.del_id_all_hiers(cid.lower(), snapshot=False)
+                        to_del = self._del_id_all_core(cid.lower(), snapshot=False)
+                        self.sheet.del_rows(map(self.rns.get, to_del), redraw=False)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID from all hierarchies",
@@ -9714,7 +9613,7 @@ class Tree_Editor(tk.Frame):
                 elif ctyp == "Delete ID from all hierarchies, orphan children":
                     cid = change[2]
                     if cid.lower() in self.rns:
-                        self.del_id_all_hiers_orphan(cid.lower(), snapshot=False)
+                        self._del_id_all_orphan_core(cid.lower(), snapshot=False)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID from all hierarchies, orphan children",
@@ -9779,9 +9678,9 @@ class Tree_Editor(tk.Frame):
         self.refresh_hier_dropdown(0)
         self.set_headers()
         self.sheet.deselect().set_column_widths().row_index(newindex=self.ic)
-        self.refresh_rows = set()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
+        self.refresh_rows = set()
         self.refresh_formatting()
         self.redo_tree_display()
         self.refresh_dropdowns()

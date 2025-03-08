@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from collections import defaultdict
-from collections.abc import Callable, Hashable, Sequence
+from collections.abc import Callable, Hashable, Iterator, Sequence
 from functools import partial
 from itertools import cycle, islice, repeat
 from math import ceil, floor
@@ -37,9 +37,8 @@ from .functions import (
 )
 from .other_classes import DotDict, DraggedRowColumn, DropdownStorage, EventDataDict, TextEditorStorage
 from .row_index import RowIndex
-from .sorting import sort_column, sort_rows_by_column, sort_tree_view
+from .sorting import sort_column, sort_rows_by_column, sort_tree_rows_by_column
 from .text_editor import TextEditor
-from .tksheet_types import AnyIter
 
 
 class ColumnHeaders(tk.Canvas):
@@ -861,7 +860,7 @@ class ColumnHeaders(tk.Canvas):
     def _sort_columns(
         self,
         event: tk.Event | None = None,
-        columns: AnyIter[int] | None = None,
+        columns: Iterator[int] | None = None,
         reverse: bool = False,
         validation: bool = True,
         key: Callable | None = None,
@@ -923,26 +922,30 @@ class ColumnHeaders(tk.Canvas):
         if column is None:
             if not self.MT.selected:
                 return event_data
-            column = self.MT.selected.column
+            column = self.MT.datacn(self.MT.selected.column)
         if try_binding(self.ch_extra_begin_sort_rows_func, event_data, "begin_move_rows"):
             if key is None:
                 key = self.PAR.ops.sort_key
             disp_new_idxs, disp_row_ctr = {}, 0
             if self.ops.treeview:
-                new_nodes_order, data_new_idxs = sort_tree_view(
-                    _row_index=self.MT._row_index,
-                    tree_rns=self.RI.tree_rns,
-                    tree=self.RI.tree,
-                    key=key,
+                new_nodes_order, data_new_idxs = sort_tree_rows_by_column(
+                    data=self.MT.data,
+                    column=column,
+                    index=self.MT._row_index,
+                    rns=self.RI.rns,
                     reverse=reverse,
+                    key=key,
                 )
                 for node in new_nodes_order:
-                    if (idx := try_b_index(self.MT.displayed_rows, self.RI.tree_rns[node.iid])) is not None:
+                    if (idx := try_b_index(self.MT.displayed_rows, self.RI.rns[node.iid])) is not None:
                         disp_new_idxs[idx] = disp_row_ctr
                         disp_row_ctr += 1
             else:
                 new_rows_order, data_new_idxs = sort_rows_by_column(
-                    self.MT.data, column=column, reverse=reverse, key=key
+                    self.MT.data,
+                    column=column,
+                    reverse=reverse,
+                    key=key,
                 )
                 if self.MT.all_rows_displayed:
                     disp_new_idxs = data_new_idxs
@@ -960,6 +963,7 @@ class ColumnHeaders(tk.Canvas):
                     move_data=True,
                     create_selections=False,
                     event_data=event_data,
+                    manage_tree=False,
                 )
             else:
                 data_new_idxs, disp_new_idxs, _ = self.PAR.mapping_move_rows(
@@ -1012,7 +1016,7 @@ class ColumnHeaders(tk.Canvas):
 
     def select_col(
         self,
-        c: int | AnyIter[int],
+        c: int | Iterator[int],
         redraw: bool = False,
         run_binding_func: bool = True,
         ext: bool = False,
@@ -1093,7 +1097,7 @@ class ColumnHeaders(tk.Canvas):
             self.itemconfig(item, state="hidden")
 
     def get_cell_dimensions(self, datacn: int) -> tuple[int, int]:
-        txt = self.get_valid_cell_data_as_str(datacn, fix=False)
+        txt = self.cell_str(datacn, fix=False)
         if txt:
             self.MT.txt_measure_canvas.itemconfig(
                 self.MT.txt_measure_canvas_text,
@@ -1149,7 +1153,7 @@ class ColumnHeaders(tk.Canvas):
             elif isinstance(self.MT._headers, int):
                 datarn = self.MT._headers
                 for datacn in iterable:
-                    if txt := self.MT.get_valid_cell_data_as_str(datarn, datacn, get_displayed=True):
+                    if txt := self.MT.cell_str(datarn, datacn, get_displayed=True):
                         qconf(qtxtm, text=txt, font=qfont)
                         b = qbbox(qtxtm)
                         th = b[3] - b[1] + 5
@@ -1196,7 +1200,7 @@ class ColumnHeaders(tk.Canvas):
             qtxth = self.MT.table_txt_height
             qfont = self.ops.table_font
             for datarn in iterable:
-                if txt := self.MT.get_valid_cell_data_as_str(datarn, datacn, get_displayed=True):
+                if txt := self.MT.cell_str(datarn, datacn, get_displayed=True):
                     qconf(qtxtm, text=txt, font=qfont)
                     b = qbbox(qtxtm)
                     if (
@@ -1628,7 +1632,7 @@ class ColumnHeaders(tk.Canvas):
                 or (align.endswith("n") and cleftgridln + 5 > scrollpos_right)
             ):
                 continue
-            text = self.get_valid_cell_data_as_str(datacn, fix=False)
+            text = self.cell_str(datacn, fix=False)
             if not text:
                 continue
             max_lines = int((self.current_height - top - 2) / txt_h)
@@ -2222,7 +2226,7 @@ class ColumnHeaders(tk.Canvas):
                 edited = True
         if edited and cell_resize and self.ops.cell_auto_resize_enabled:
             if self.height_resizing_enabled:
-                self.set_height_of_header_to_text(self.get_valid_cell_data_as_str(datacn, fix=False))
+                self.set_height_of_header_to_text(self.cell_str(datacn, fix=False))
             self.set_col_width_run_binding(c)
         if redraw:
             self.MT.refresh()
@@ -2269,7 +2273,7 @@ class ColumnHeaders(tk.Canvas):
         redirect_int: bool = False,
     ) -> Any:
         if get_displayed:
-            return self.get_valid_cell_data_as_str(datacn, fix=False)
+            return self.cell_str(datacn, fix=False)
         if redirect_int and isinstance(self.MT._headers, int):  # internal use
             return self.MT.get_cell_data(self.MT._headers, datacn, none_to_empty_str=True)
         if (
@@ -2281,7 +2285,7 @@ class ColumnHeaders(tk.Canvas):
             return ""
         return self.MT._headers[datacn]
 
-    def get_valid_cell_data_as_str(self, datacn: int, fix: bool = True) -> str:
+    def cell_str(self, datacn: int, fix: bool = True) -> str:
         kwargs = self.get_cell_kwargs(datacn, key="dropdown")
         if kwargs:
             if kwargs["text"] is not None:
@@ -2291,7 +2295,7 @@ class ColumnHeaders(tk.Canvas):
             if kwargs:
                 return f"{kwargs['text']}"
         if isinstance(self.MT._headers, int):
-            return self.MT.get_valid_cell_data_as_str(self.MT._headers, datacn, get_displayed=True)
+            return self.MT.cell_str(self.MT._headers, datacn, get_displayed=True)
         if fix:
             self.fix_header(datacn)
         try:

@@ -190,7 +190,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             header_font=sheet_header_font,
             outline_thickness=0,
         )
-        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.extra_bindings("begin_edit_cell", self.begin_edit)
         self.sheetdisplay.extra_bindings("end_edit_cell", self.end_edit)
         self.sheetdisplay.headers(newheaders=0)
@@ -251,7 +251,7 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.enable_widgets()
 
     def enable_widgets(self):
-        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.extra_bindings("begin_edit_cell", self.begin_edit)
         self.sheetdisplay.extra_bindings("end_edit_cell", self.end_edit)
         self.sheetdisplay.basic_bindings(True)
@@ -1295,7 +1295,7 @@ class Replace_Popup(tk.Toplevel):
             data=[["", ""] for r in range(20)],
         )
         self.sheetdisplay.set_all_column_widths()
-        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.disable_bindings("rc_delete_column", "rc_insert_column")
         self.sheetdisplay.grid(row=2, column=0, sticky="ns")
 
@@ -1910,7 +1910,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             outline_thickness=0,
         )
         self.selector.link_sheet(self.sheetdisplay)
-        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.extra_bindings(
             [
                 ("begin_edit_cell", self.begin_edit_cell),
@@ -2188,7 +2188,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.overwrite_details_button.config(state="normal")
         self.overwrite_parents_button.config(state="normal")
         self.confirm_button.config(state="normal")
-        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.extra_bindings(
             [
                 ("begin_edit_cell", self.begin_edit_cell),
@@ -2293,7 +2293,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         )
         self.selector.link_sheet(self.sheetdisplay)
         self.flattened_selector.link_sheet(self.sheetdisplay, self.flattened_choices)
-        self.sheetdisplay.enable_bindings("all", "ctrl_select", "find")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.extra_bindings(
             [
                 ("begin_edit_cell", self.begin_edit_cell),
@@ -3048,7 +3048,7 @@ class Edit_Validation_Popup(tk.Toplevel):
             self.validation_display.data = [[v] for v in validation]
         self.validation_display.insert_rows(100, create_selections=False)
         self.validation_display.edit_validation(self.edit_validation)
-        self.validation_display.enable_bindings("all", "ctrl_select", "find")
+        self.validation_display.enable_bindings("all", "ctrl_select")
         self.validation_display.disable_bindings(
             "insert_columns",
             "delete_columns",

@@ -190,6 +190,7 @@ class FindWindow(tk.Frame):
 
         self.toggle_replace = tk.Label(self, text="↓", cursor="sb_h_double_arrow", highlightthickness=1)
         self.toggle_replace.grid(row=0, column=0, sticky="ns")
+        self.toggle_replace.grid_remove()
 
         self.tktext = FindWindowTkText(self)
         self.tktext.grid(row=0, column=1, sticky="nswe")
@@ -333,7 +334,7 @@ class FindWindow(tk.Frame):
             self.toggle_replace.config(text="↓")
             self.toggle_replace.grid(row=0, column=0, rowspan=1, sticky="ns")
             self.replace_visible = False
-        else:
+        elif self.replace_enabled:
             self.separator.grid()
             self.replace_tktext.grid()
             self.replace_next.grid()
@@ -394,8 +395,14 @@ class FindWindow(tk.Frame):
         fg: str,
         select_bg: str,
         select_fg: str,
+        replace_enabled: bool,
     ) -> None:
         """Reset styles and configurations."""
+        self.replace_enabled = replace_enabled
+        if replace_enabled:
+            self.toggle_replace.grid()
+        else:
+            self.toggle_replace.grid_remove()
         self.bg = bg
         self.fg = fg
         self.border_color = border_color

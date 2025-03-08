@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
 from typing import Literal, Tuple, Union
 
 from .other_classes import Span
@@ -25,8 +24,6 @@ CellPropertyKey = Literal[
     "readonly",
     "align",
 ]
-
-AnyIter = Iterable | Iterator
 
 Binding = Literal[
     "all",
@@ -76,6 +73,7 @@ Binding = Literal[
     "delete",
     "undo",
     "find",
+    "replace",
     "edit_cell",
     "edit_header",
     "edit_index",
