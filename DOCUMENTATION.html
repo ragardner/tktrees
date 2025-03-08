@@ -9,6 +9,8 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            background-color: #1a1a1a; /* Dark gray background */
+            color: #e0e0e0; /* Light gray text */
         }
         #sidebar {
             position: fixed;
@@ -17,7 +19,7 @@
             width: 200px;
             height: 100%;
             overflow-y: auto;
-            background-color: #f4f4f4;
+            background-color: #2d2d2d; /* Darker gray for sidebar */
             padding: 10px;
             box-sizing: border-box;
         }
@@ -26,7 +28,7 @@
             padding: 20px;
             max-width: 800px;
         }
-        #sidebar ul {
+        #sidebar ol {
             list-style-type: none;
             padding: 0;
         }
@@ -35,40 +37,48 @@
         }
         #sidebar a {
             text-decoration: none;
-            color: black;
+            color: #d0d0d0; /* Light gray for sidebar links */
         }
         #sidebar a.active {
             font-weight: bold;
-            color: blue;
+            color: #00b7ff; /* Bright cyan for active link */
         }
         pre {
-            background-color: #eee;
+            background-color: #333333; /* Dark gray for code blocks */
+            color: #e0e0e0; /* Light gray text in code blocks */
             padding: 10px;
             overflow-x: auto;
             white-space: pre-wrap;
         }
         code {
-            background-color: #eee;
+            background-color: #333333; /* Dark gray for inline code */
+            color: #e0e0e0; /* Light gray text in inline code */
             padding: 2px 4px;
             border-radius: 4px;
         }
         table {
             border-collapse: collapse;
             width: 100%;
+            background-color: #2d2d2d; /* Dark gray table background */
         }
         th, td {
-            border: 1px solid #ddd;
+            border: 1px solid #555555; /* Medium gray borders */
             padding: 8px;
             text-align: left;
+            color: #e0e0e0; /* Light gray text */
         }
         th {
-            background-color: #f2f2f2;
+            background-color: #404040; /* Slightly lighter gray for headers */
         }
+        #content h1, #content h2 {
+    text-decoration: underline;
+    text-decoration-color: #e0e0e0;
+}
     </style>
 </head>
 <body>
     <div id="sidebar">
-        <ul>
+        <ol>
             <li><a href="#tk-trees-documentation">TK-TREES DOCUMENTATION</a></li>
             <li><a href="#program-basics">PROGRAM BASICS</a></li>
             <li><a href="#helpful-tips-and-tutorials">HELPFUL TIPS AND TUTORIALS</a></li>
@@ -80,7 +90,7 @@
             <li><a href="#xlsx-files">XLSX FILES</a></li>
             <li><a href="#json-files">JSON FILES</a></li>
             <li><a href="#using-the-api">USING THE API</a></li>
-        </ul>
+        </ol>
     </div>
     <div id="content">
         <h1 id="tk-trees-documentation">TK-TREES DOCUMENTATION</h1>
@@ -468,26 +478,5 @@ or  Used to add extra condition e.g. == 5 or == 6</code></pre>
         <p>Unflatten a file where the flattened id columns are in the order of right to left is top to base:</p>
         <pre><code>python TK-TREES.pyw unflatten-top-base "input filepath here.csv" "output filepath here.csv" -all-parent-columns-0,2,4,6 -delim-tab -o</code></pre>
     </div>
-    <script>
-        const headings = document.querySelectorAll('h1, h2');
-        const options = {
-            root: null,
-            rootMargin: '-50px 0px 0px 0px', // Trigger when heading is near top
-            threshold: 0.1
-        };
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const id = entry.target.id;
-                    const link = document.querySelector(`#sidebar a[href="#${id}"]`);
-                    if (link) {
-                        document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active'));
-                        link.classList.add('active');
-                    }
-                }
-            });
-        }, options);
-        headings.forEach(heading => observer.observe(heading));
-    </script>
 </body>
 </html>
