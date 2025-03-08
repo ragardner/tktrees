@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-only
 # Copyright © R. A. Gardner
 
 from __future__ import annotations
@@ -958,7 +958,7 @@ class Tree_Editor(tk.Frame):
         # cut
         self.tree_rc_menu_single_row_cut = tk.Menu(self.tree_rc_menu_single_row, tearoff=0, **menu_kwargs)
         self.tree_rc_menu_single_row_cut.add_command(
-            label="Cut ID",
+            label="Detach ID",
             accelerator="Ctrl+X",
             command=self.cut_ids,
             **menu_kwargs,
@@ -982,11 +982,9 @@ class Tree_Editor(tk.Frame):
             command=self.copy_key,
             **menu_kwargs,
         )
+        self.tree_rc_menu_single_row_copy.add_command(label="Clipboard row", command=self.copy_ID_row, **menu_kwargs)
         self.tree_rc_menu_single_row_copy.add_command(
-            label="Clipboard IDs row", command=self.copy_ID_row, **menu_kwargs
-        )
-        self.tree_rc_menu_single_row_copy.add_command(
-            label="Clipboard ID + childrens rows",
+            label="Clipboard ID + descendants",
             command=self.copy_ID_children_rows,
             **menu_kwargs,
         )
@@ -3689,6 +3687,7 @@ class Tree_Editor(tk.Frame):
                                     zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
                                 )
                             )
+                            self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = ""
                 elif pk:
                     for ciid in self.nodes[iid].cn[h]:
@@ -3704,6 +3703,7 @@ class Tree_Editor(tk.Frame):
                                     zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
                                 )
                             )
+                            self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = self.nodes[pk].name
                     self.nodes[pk].cn[h].remove(iid)
         else:
@@ -3722,6 +3722,7 @@ class Tree_Editor(tk.Frame):
                                     zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
                                 )
                             )
+                            self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = self.nodes[pk].name
                     self.nodes[pk].cn[h].remove(iid)
                     self.nodes[pk].cn[h] = self.sort_node_cn(self.nodes[pk].cn[h], h)
@@ -3738,6 +3739,7 @@ class Tree_Editor(tk.Frame):
                                     zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
                                 )
                             )
+                            self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = ""
         rn = self.rns[iid]
         if snapshot:
@@ -3801,6 +3803,7 @@ class Tree_Editor(tk.Frame):
     def _del_id_all_orphan_core(self, name: str, snapshot: bool = True) -> None:
         ik = name.lower()
         pk = self.nodes[ik].ps[self.pc]
+        self.refresh_rows = set()
         self.untag_id(ik)
         if not self.auto_sort_nodes_bool:
             for h, p in self.nodes[ik].ps.items():
@@ -3824,6 +3827,7 @@ class Tree_Editor(tk.Frame):
                             zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
                         )
                     )
+                    self.refresh_rows.add(ciid)
                 self.sheet.MT.data[rn][h] = ""
         rn = self.rns[ik]
         if snapshot:
@@ -7419,8 +7423,8 @@ class Tree_Editor(tk.Frame):
             self.sheet.del_rows(map(self.rns.get, to_del), redraw=False)
             self.sheet.deselect("all", redraw=False)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+            self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.disable_paste()
-        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
@@ -7457,8 +7461,8 @@ class Tree_Editor(tk.Frame):
             self.sheet.del_rows(map(self.rns.get, to_del), redraw=False)
             self.sheet.deselect("all", redraw=False)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+            self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.disable_paste()
-        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
@@ -7553,6 +7557,7 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self._del_id_all_orphan_core(self.selected_ID)
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.redo_tree_display()
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()

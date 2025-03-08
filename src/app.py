@@ -1,5 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-only
-# Copyright © R. A. Gardner
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2025 R. A. Gardner
+
 from __future__ import annotations
 
 import os
@@ -137,7 +138,7 @@ class AppGUI(tk.Tk):
         self.number_unsaved_changes = 0
 
         try:
-            with open(upone_dir + "LICENSE", "r") as fh:
+            with open(upone_dir + "LICENSE.txt", "r") as fh:
                 self.LICENSE = fh.read()
         except Exception as errormsg:
             Error(

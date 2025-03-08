@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: GPL-3.0-only
-# Copyright © R. A. Gardner
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2025 R. A. Gardner
 
 from __future__ import annotations
 
