@@ -14,6 +14,7 @@ Tk-Trees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
 If using the program for the first time you can go to the "File" menu or right click in the in the empty space to get started.
 
 This program is for management of hierarchy based master data which is stored in table format. Supported file formats are:
+
 - .xlsx, .xls, .xlsm
 - .json Javascript object notation where the full table is under the key 'records'
 - .csv/.tsv (comma or tab delimited)
@@ -47,6 +48,7 @@ ID2    Par2      Detail 2
 #### Moving IDs between hierarchies
 
 To move an ID to another hierarchy or add an ID to another hierarchy:
+
 1. Right click on the ID in the treeview panel and go to Cut or Copy and then either Cut ID or Copy ID. 
 2. Then using the dropdown box labeled "Hierarchy" at the top of the treeview panel select the hierarchy you would like to move / add the ID to. 
 3. Go to the position or ID where you would like to place the Cut / Copied ID and right click and select a paste option.
@@ -56,6 +58,7 @@ To move multiple IDs in one go you can use Shift + Left Click or Ctrl + Left Cli
 #### Moving IDs by drag and drop
 
 You can move IDs that are at the same level as one another around in a specific hierarchy by using the mouse to drag and drop:
+
 1. Selecting the IDs by left clicking and holding the mouse button down.
 2. Moving the mouse to drag IDs from their existing locations to a new location.
 3. Release the mouse button to drop them.
@@ -79,11 +82,12 @@ If any dragged IDs are on different levels from one another then they will not b
 
 #### Adding multiple new rows
 
-- To add multiple new rows you can use:
+To add multiple new rows you can use:
+
 1. Go to the Import menu then Merge sheets.
 2. Then **either** opening a file, using the clipboard or just using the table in the popup to paste / insert new rows.
 
-- Right clicking in the header or index will result in a popup box where you can insert a new row. You can use Ctrl + V to paste data in, as long as it's in the form of tab delimited text.
+Right clicking in the header or index will result in a popup box where you can insert a new row. You can use Ctrl + V to paste data in, as long as it's in the form of tab delimited text.
 
 #### Getting all information on an ID
 
@@ -92,14 +96,17 @@ If any dragged IDs are on different levels from one another then they will not b
 
 #### Date column conditional formatting
 
-- When entering conditional formatting in Date Detail columns, use forward slash dates e.g. DD/MM/YYYY. This is because hyphens will be interpreted as subtractions. If you want to enter a specific date, for current date use the letters: cd
+- When entering conditional formatting in Date Detail columns, use forward slash dates e.g. DD/MM/YYYY.
+- This is because hyphens will be interpreted as subtractions. If you want to enter a specific date, for current date use the letters: cd
 
 #### Changing the order of IDs in the treeview
 
 To disable automatic ordering of IDs in the treeview go to:
+
 1. The File menu then Settings.
 2. Select Auto-sort treeview IDs.
-- You can re-order children by selecting a single row in the tree and dragging using the left mouse button. To move an ID between parents see the above section on "Moving IDs by drag and drop".
+
+You can re-order children by selecting a single row in the tree and dragging using the left mouse button. To move an ID between parents see the above section on "Moving IDs by drag and drop".
 
 ---
 
@@ -110,6 +117,7 @@ Right clicking on columns in the header will show a popup menu with a few column
 #### Column types:
 
 A detail column can have one of three different types:
+
 - Text
 - Number
 - Date
@@ -120,9 +128,12 @@ Changing a column type will result in any details, formatting or validation bein
 
 #### Conditional Formatting:
 
-- You can add conditional formatting to columns, meaning when certain conditions are met the cells in that column will be filled with a chosen color. You can set a maximum of 35 conditions.
-- For Text detail columns conditions are limited to text matching, e.g. if the cell contains exactly the user input. Text conditions are not case sensitive.
-- For Number Detail columns the following characters are allowed:
+You can add conditional formatting to columns, meaning when certain conditions are met the cells in that column will be filled with a chosen color. You can set a maximum of 35 conditions.
+
+For Text detail columns conditions are limited to text matching, e.g. if the cell contains exactly the user input. Text conditions are not case sensitive.
+
+For Number Detail columns the following characters are allowed:
+
 ```
 0-9 Any number
 .   Decimal place
@@ -139,7 +150,8 @@ or  Used to add extra condition e.g. == 5 or == 6
 e.g. > 100
 e.g. > 100 and < 200
 
-- For Date Detail columns the following characters are allowed:
+For Date Detail columns the following characters are allowed:
+
 ```
 cd  Current date
 0-9 Any number
@@ -254,17 +266,15 @@ You can also recycle the imported changes, importing them again into another fil
 
 In the tree panel:
 
-Find: Clicking the find button will attempt to find either an ID or detail (depending on which you has selected in the drop-down box on the right of "Find") with letters, numbers etc. you have typed into the entry box on the right of the drop-down box. The drop-down box below the Find button will display any results found within the CURRENTLY viewed hierarchy. 
+1. Find: Clicking the find button will attempt to find either an ID or detail.
+    - This depends on which is selected in the drop-down box on the right of "Find".
+    - The drop-down box below the Find button will display any results found within the CURRENTLY viewed hierarchy. 
+    - All finds are **not** case sensitive, including "exact match".
+2. Hierarchy: This is the drop-down box where you can select which parent column/hierarchy to view.
 
-All finds are NOT case sensitive, including "exact match".
-
-Hierarchy: This is the drop-down box where you can select which parent column/hierarchy to view.
-
-In the sheet panel:
-
-Tagged IDs (Ctrl + T): Allows you to tag IDs, tagged IDs show up in the dropdown box next to the button and persist through saving as .json and .xlsx.
-
-Find: Works the same way that the Find button for the Tree panel works except it searches the sheet instead.
+1. In the sheet panel:
+    - Tagged IDs (Ctrl + T): Allows you to tag IDs, tagged IDs show up in the dropdown box next to the button and persist through saving as .json and .xlsx.
+    - Find: Works the same way that the Find button for the Tree panel works except it searches the sheet instead.
 
 ---
 
@@ -273,6 +283,7 @@ Find: Works the same way that the Find button for the Tree panel works except it
 By right clicking on an ID in the tree panel you can select various functions. The main functions are Detach, Copy and Delete.
 
 To cut or copy an ID between different hierarchies:
+
 - Right click on the ID and select whichever option you want then switch hierarchy and right click in empty space or on the ID you want to paste the cut/copied ID to as a sibling or child. 
 - If you want to paste an ID as an ID without a parent right click on a top ID and choose paste as sibling.
 - You can also cut all of an IDs children, including grandchildren and so on, and paste them under where you right click.
@@ -281,11 +292,13 @@ To cut or copy an ID between different hierarchies:
 - Cutting and copying using this method will only perform on IDs that are on the same level as the top most (index-wise) ID, after pressing Ctrl X or C it will deselect any selections that were not cut or copied. 
 
 ID Deletion:
+
 - Pressing the Delete key on multiple selections will work the same way, except performing a Delete immediately. The delete key uses the typical Delete ID function, not deleting its children.
 - In the tree panel there are 5 delete ID options. Delete ID only removes the ID from the hierarchy you're currently viewing IF the ID occurs in another hierarchy, if it does not then it totally removes the ID. 
 - Del all of ID totally removes the ID. Del ID+children is the same as Delete ID but for every child and child of that child and so on recursively under the selected ID.
 
 Editing cells:
+
 - You can quickly edit a detail by double clicking on the detail/cell you want to edit. To delete a detail press Confirm when editing a detail with the cell empty.
 - Right clicking in a cell and selecting edit will pop up a larger window so the text may be easier to view.
 - Pasting a detail or details will work between both panels. You can drag and drop rows in the sheet panel to change their order.
@@ -296,6 +309,7 @@ Editing cells:
 ## TREE COMPARE
 
 Accessible from the "File" menu, this window allows comparison of trees and sheets.
+
 - Once a file has been opened using the open file button, the file name or path will be displayed and if the file is an excel file and was opened from the file dialog then you will have to select a sheet from the drop down box next to "Load sheet". 
 - You can select your sheets ID column and parent column numbers and do the same with the 2nd panel on the right. After you are happy with your selections click the "Create Report" button to compare. A report will be generated and you have the option to save it as an .xlsx file.
 - You can mix different file types when comparing.
