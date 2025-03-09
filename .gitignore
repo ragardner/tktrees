@@ -1,5 +1,6 @@
 # lib
 _exclude/
+md_to_html.py
 test*.py*
 MOD_VERSION.py
 _version.py
