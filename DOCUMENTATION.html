@@ -13,19 +13,27 @@
         }
 
         .side-panel {
-            flex: 0 0 20%; /* Narrower side panel */
+            flex: 0 0 20%; /* Base width for visible state */
             overflow-y: auto;
             height: 100%;
             padding: 10px;
             box-sizing: border-box;
-            display: none; /* Hidden by default */
             background-color: #fff; /* Light theme background */
             border-right: 1px solid #ccc; /* Slim border */
             font-size: 18px; /* Base font size increase */
+            scrollbar-color: #ccc #fff; /* Firefox: Light theme scrollbar */
+            transition: flex-basis 0.3s ease; /* Animate width change */
+            display: none; /* Hidden by default */
         }
 
         #toggle-toc:checked ~ .side-panel {
             display: block; /* Show side panel when checkbox is checked */
+            flex-basis: 20%; /* Ensure visible width */
+        }
+
+        #toggle-toc:not(:checked) ~ .side-panel {
+            flex-basis: 0; /* Shrink to 0 when hidden */
+            padding: 0; /* Remove padding when hidden to avoid visual glitch */
         }
 
         /* Increase font size on mobile screens */
@@ -38,6 +46,20 @@
         /* Style for TOC links and list items in the side panel */
         .side-panel a {
             line-height: 1.5; /* Increase line height for better spacing */
+        }
+
+        .side-panel li {
+            margin-bottom: 8px; /* Add space below each list item */
+        }
+
+        /* WebKit/Blink scrollbar styles for side panel (light theme) */
+        .side-panel::-webkit-scrollbar-track {
+            background: #fff; /* Matches light theme background */
+        }
+
+        .side-panel::-webkit-scrollbar-thumb {
+            background: #ccc; /* Light grey thumb */
+            border-radius: 4px;
         }
 
         .main-content {
@@ -53,6 +75,7 @@
             display: flex;
             gap: 10px; /* Space between buttons */
             z-index: 1; /* Ensure buttons stay above content */
+            transition: left 0.3s ease; /* Animation for buttons */
         }
 
         .toggle-button, .theme-button {
@@ -76,6 +99,30 @@
             overflow-y: auto;
             padding: 20px; /* Added padding to the main view for breathing room */
             padding-top: 70px; /* Adjusted to account for buttons + extra space */
+            scrollbar-color: #ccc #fff; /* Firefox: Light theme scrollbar */
+        }
+
+        /* WebKit/Blink scrollbar styles for main content (light theme) */
+        .content::-webkit-scrollbar-track {
+            background: #fff; /* Matches light theme background */
+        }
+
+        .content::-webkit-scrollbar-thumb {
+            background: #ccc; /* Light grey thumb */
+            border-radius: 4px;
+        }
+
+        /* Table styles */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            border: 1px solid #ccc; /* Light theme border */
+        }
+
+        td, th {
+            border: 1px solid #ccc; /* Light theme gridlines */
+            padding: 8px;
+            text-align: left;
         }
 
         /* Dark theme styles */
@@ -83,6 +130,43 @@
         #toggle-theme:checked ~ .main-content {
             background-color: #000; /* Black background for battery savings on OLED */
             color: #ccc; /* Light grey text */
+        }
+
+        #toggle-theme:checked ~ .side-panel table,
+        #toggle-theme:checked ~ .main-content table {
+            border-color: #555; /* Darker border for dark theme */
+        }
+
+        #toggle-theme:checked ~ .side-panel td,
+        #toggle-theme:checked ~ .side-panel th,
+        #toggle-theme:checked ~ .main-content td,
+        #toggle-theme:checked ~ .main-content th {
+            border-color: #555; /* Darker gridlines for dark theme */
+        }
+
+        /* Dark theme scrollbar styles */
+        #toggle-theme:checked ~ .side-panel {
+            scrollbar-color: #888 #000; /* Firefox: Dark theme scrollbar (lighter thumb) */
+        }
+
+        #toggle-theme:checked ~ .side-panel::-webkit-scrollbar-track {
+            background: #000; /* Matches dark theme background */
+        }
+
+        #toggle-theme:checked ~ .side-panel::-webkit-scrollbar-thumb {
+            background: #888; /* Lighter grey thumb for dark theme */
+        }
+
+        #toggle-theme:checked ~ .main-content .content {
+            scrollbar-color: #888 #000; /* Firefox: Dark theme scrollbar (lighter thumb) */
+        }
+
+        #toggle-theme:checked ~ .main-content .content::-webkit-scrollbar-track {
+            background: #000; /* Matches dark theme background */
+        }
+
+        #toggle-theme:checked ~ .main-content .content::-webkit-scrollbar-thumb {
+            background: #888; /* Lighter grey thumb for dark theme */
         }
 
         #toggle-theme:checked ~ .main-content .buttons-container .toggle-button,
@@ -99,7 +183,7 @@
 </head>
 <body>
     <input type="checkbox" id="toggle-toc" checked style="display: none;">
-    <input type="checkbox" id="toggle-theme" style="display: none;">
+    <input type="checkbox" id="toggle-theme" checked style="display: none;">
     <div class="side-panel">
         <div class="toc">
 <ul>
@@ -172,9 +256,10 @@
 <li>Additional settings and data such as the changelog, formatting and column types can be saved with the formats .xlsx and .json.</li>
 <li>Sheets must have an ID column and atleast one parent column, it does not matter in which order. e.g.</li>
 </ul>
-<p><code>ID     Parent    Detail
+<pre><code>ID     Parent    Detail
 ID1    Par1      Detail 1
-ID2    Par2      Detail 2</code></p>
+ID2    Par2      Detail 2
+</code></pre>
 <ul>
 <li>Sheets can have multiple parent columns (hierarchies) and multiple detail columns but must have only one ID column. In the ID column each ID must be unique else they will be renamed with '<em>DUPLICATE</em>'.</li>
 <li>Sheets can have an unlimited number of parent columns (hierarchies) and an unlimited number of detail columns.</li>
@@ -259,38 +344,32 @@ ID2    Par2      Detail 2</code></p>
 <p>You can add conditional formatting to columns, meaning when certain conditions are met the cells in that column will be filled with a chosen color. You can set a maximum of 35 conditions.</p>
 <p>For Text detail columns conditions are limited to text matching, e.g. if the cell contains exactly the user input. Text conditions are not case sensitive.</p>
 <p>For Number Detail columns the following characters are allowed:</p>
-<p>```
-0-9 Any number
+<pre><code>0-9 Any number
 .   Decimal place
--   Negative number</p>
-<blockquote>
-<p>Greater than
+-   Negative number
+&gt;   Greater than
 &lt;   Less than
 ==  Equal to
-=  Greater than or equal to
+&gt;=  Greater than or equal to
 &lt;=  Less than or equal to
 and Used to add extra condition e.g. &gt; 5 and &lt; 10
 or  Used to add extra condition e.g. == 5 or == 6
-```</p>
-</blockquote>
+</code></pre>
 <p>e.g. &gt; 100
 e.g. &gt; 100 and &lt; 200</p>
 <p>For Date Detail columns the following characters are allowed:</p>
-<p>```
-cd  Current date
+<pre><code>cd  Current date
 0-9 Any number
 .   Decimal place
--   Negative number</p>
-<blockquote>
-<p>Greater than
+-   Negative number
+&gt;   Greater than
 &lt;   Less than
 ==  Equal to
-=  Greater than or equal to
+&gt;=  Greater than or equal to
 &lt;=  Less than or equal to
 and Used to add extra condition e.g. &gt; 5 and &lt; 10
 or  Used to add extra condition e.g. == 5 or == 6
-```</p>
-</blockquote>
+</code></pre>
 <p>e.g. &gt; 20/06/2019
 e.g. == 100</p>
 <p>Conditions must have spaces in between statements.</p>
@@ -338,7 +417,7 @@ e.g. == 100</p>
 <ul>
 <li>Import changes allows an exported/saved changelog to be imported and the individual changes are then attempted on the currently open sheet. Supported changes are:</li>
 </ul>
-<p><code>Edit cell
+<pre><code>    Edit cell
     Edit cell |
     Move rows
     Move columns
@@ -368,7 +447,8 @@ e.g. == 100</p>
     Delete ID from all hierarchies
     Delete ID from all hierarchies |
     Delete ID from all hierarchies, orphan children
-    Sort sheet</code></p>
+    Sort sheet
+</code></pre>
 <p>You can also recycle the imported changes, importing them again into another file. There are certain things that may stop a change from being imported, for example if the change was made to a column with a different name or number than the column in the open sheet or if an IDs parent is different. Unfortunately at this time it does not tell you why a change has not been imported successfully, this may be improved in a future version.</p>
 <ul>
 <li>Get sheet from clipboard and overwrite allows you to get copied data from your devices clipboard and overwrite all current data. This action can be undone.</li>
@@ -446,74 +526,79 @@ e.g. == 100</p>
 <hr />
 <h2 id="json-files">JSON FILES</h2>
 <p>There are four loadable json formats, with each one the entire sheet is kept under the key "records". However the program will also look for the keys: sheet, data and table. The first format, also the first option under "File -&gt; Settings -&gt; json save options -&gt; json format" is displayed as an example below:</p>
-<p>A dictionary of key (column header) and value (list of column cells)
-<code>{"records":
+<p>A dictionary of key (column header) and value (list of column cells)</p>
+<pre><code>{&quot;records&quot;:
     {
-        "ID":
+        &quot;ID&quot;:
                     [
-                     "ID_1",
-                     "ID_2"
+                     &quot;ID_1&quot;,
+                     &quot;ID_2&quot;
                     ],
-        "DETAIL_1":
+        &quot;DETAIL_1&quot;:
                     [
-                     "",
-                     ""
+                     &quot;&quot;,
+                     &quot;&quot;
                     ],
-        "PARENT_1":
+        &quot;PARENT_1&quot;:
                     [
-                     "ID_1s_Parent",
-                     "ID_2s_Parent"
+                     &quot;ID_1s_Parent&quot;,
+                     &quot;ID_2s_Parent&quot;
                     ]
     }
-}</code></p>
+}
+</code></pre>
 <p>The second json format option example is displayed below:</p>
 <p>A list of dictionaries (rows) where inside each dictionary the key is the header and the
-value is the cell
-<code>{
- "records": [
+value is the cell</p>
+<pre><code>{
+ &quot;records&quot;: [
         {
-         "ID":       "ID_1",
-         "DETAIL_1": "",
-         "PARENT_1": "ID1s_Parent"
+         &quot;ID&quot;:       &quot;ID_1&quot;,
+         &quot;DETAIL_1&quot;: &quot;&quot;,
+         &quot;PARENT_1&quot;: &quot;ID1s_Parent&quot;
          },
         {
-         "ID":       "ID1s_Parent",
-         "DETAIL_1": "",
-         "PARENT_1": ""
+         &quot;ID&quot;:       &quot;ID1s_Parent&quot;,
+         &quot;DETAIL_1&quot;: &quot;&quot;,
+         &quot;PARENT_1&quot;: &quot;&quot;
          }
             ]
-}</code></p>
+}
+</code></pre>
 <p>The third json format option is displayed below:</p>
-<p>A list of lists (rows) where each row simply contains values that are the cells
-<code>{
- "records":
+<p>A list of lists (rows) where each row simply contains values that are the cells</p>
+<pre><code>{
+ &quot;records&quot;:
     [
         [
-         "ID",
-         "DETAIL_1",
-         "PARENT_1"
+         &quot;ID&quot;,
+         &quot;DETAIL_1&quot;,
+         &quot;PARENT_1&quot;
         ],
         [
-         "ID_1",
-         "",
-         "ID_1s_parent"
+         &quot;ID_1&quot;,
+         &quot;&quot;,
+         &quot;ID_1s_parent&quot;
         ]
     ]
-}</code></p>
+}
+</code></pre>
 <p>The fourth json format option is displayed below:</p>
 <p>A tab delimited csv stored as a string under the key 'records', this format is really non-
-typical so only use it if you really need to.
-<code>{
- "records":
-    "ID\\tDetail-1\\tParent-1\\nID_1\\t\\tID_1s_Parent"
-}</code></p>
-<p>Program data is only included if Save is used as opposed to Copy to clipboard. It is in the following format:
-<code>{
-    "version": "1.00",
-    "records": &lt;full sheet including headers stored here&gt;,
-    "changelog": [],
-    "program_data": "base32string"
-}</code></p>
+typical so only use it if you really need to.</p>
+<pre><code>{
+ &quot;records&quot;:
+    &quot;ID\\tDetail-1\\tParent-1\\nID_1\\t\\tID_1s_Parent&quot;
+}
+</code></pre>
+<p>Program data is only included if Save is used as opposed to Copy to clipboard. It is in the following format:</p>
+<pre><code>{
+    &quot;version&quot;: &quot;1.00&quot;,
+    &quot;records&quot;: &lt;full sheet including headers stored here&gt;,
+    &quot;changelog&quot;: [],
+    &quot;program_data&quot;: &quot;base32string&quot;
+}
+</code></pre>
 <hr />
 <h2 id="using-the-api">USING THE API</h2>
 <p>The app can be run using the command line without triggering a user interface to get different outputs and file conversions.</p>
@@ -607,10 +692,12 @@ typical so only use it if you really need to.
 </tbody>
 </table>
 <p>Some examples:</p>
-<p>Flatten xlsx files which would flatten the hierarchy at column index 2, column C with the output order top-base:
-<code>python TK-TREES.pyw flatten "input filepath here.xlsx" "output filepath here.xlsx" -all-parent-columns-2,3 -id-0 -parent-2 -input-sheet-Sheet1 "-output-sheet-New Sheet" -odjr</code></p>
-<p>Unflatten a file where the flattened id columns are in the order of right to left is top to base:
-<code>python TK-TREES.pyw unflatten-top-base "input filepath here.csv" "output filepath here.csv" -all-parent-columns-0,2,4,6 -delim-tab -o</code></p>
+<p>Flatten xlsx files which would flatten the hierarchy at column index 2, column C with the output order top-base:</p>
+<pre><code>python TK-TREES.pyw flatten &quot;input filepath here.xlsx&quot; &quot;output filepath here.xlsx&quot; -all-parent-columns-2,3 -id-0 -parent-2 -input-sheet-Sheet1 &quot;-output-sheet-New Sheet&quot; -odjr
+</code></pre>
+<p>Unflatten a file where the flattened id columns are in the order of right to left is top to base:</p>
+<pre><code>python TK-TREES.pyw unflatten-top-base &quot;input filepath here.csv&quot; &quot;output filepath here.csv&quot; -all-parent-columns-0,2,4,6 -delim-tab -o
+</code></pre>
         </div>
     </div>
 </body>
