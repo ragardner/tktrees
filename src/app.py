@@ -576,7 +576,7 @@ To get started once you have closed this popup, either:
         Help_Popup(self, self.DOCUMENTATION, theme=self.theme)
 
     def license_func(self):
-        License_Popup(self, f"Tk-Trees {app_copyright}\n\n" + self.LICENSE, show_buttons=False, theme=self.theme)
+        License_Popup(self, self.LICENSE, show_buttons=False, theme=self.theme)
 
     def about_func(self):
         Text_Popup(
