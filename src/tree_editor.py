@@ -1576,10 +1576,9 @@ class Tree_Editor(tk.Frame):
         self.sheet.bind(rc_release, self.sheet_rc_release)
         self.sheet.bind("<<SheetSelect>>", self.sheet_select_event)
         self.tree.bind("<<SheetSelect>>", self.tree_select_event)
-        # self.tree.bind(rc_press, self.tree_rc_press)
+        self.tree.bind(rc_press, self.tree_rc_press)
         # self.tree.bind(rc_motion, self.tree_rc_motion)
         # self.tree.bind(rc_release, self.tree_rc_release)
-        self.tree.bind(rc_press, self.tree_rc_release)  # TODO: uncomment above if enabling rc drag
         self.tree.bind("<FocusIn>", self.tree_focus_enter).bind("<FocusOut>", self.tree_focus_leave)
         self.sheet.bind("<FocusIn>", self.sheet_focus_enter).bind("<FocusOut>", self.sheet_focus_leave)
         self.sheet.bulk_table_edit_validation(self.tree_sheet_edit_table)
@@ -2653,6 +2652,7 @@ class Tree_Editor(tk.Frame):
                 self.drag_start_index = self.tree.index(iid)
         else:
             self.tree.deselect()
+        self.tree_rc_release(event)
 
     def tree_rc_motion(self, event):
         pass
