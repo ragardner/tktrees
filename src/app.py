@@ -448,7 +448,8 @@ To get started once you have closed this popup, either:
                 return
             self.open_dict["sheet"] = "Sheet1"
             self.frames["column_selection"].populate(
-                list(map(str, range(1, max(map(len, self.frames["tree_edit"].sheet.MT.data), default=0) + 1)))
+                list(map(str, range(1, max(map(len, self.frames["tree_edit"].sheet.MT.data), default=0) + 1))),
+                clear_dd=True,
             )
 
         elif self.open_dict["filepath"].lower().endswith(".json"):
@@ -543,7 +544,8 @@ To get started once you have closed this popup, either:
             )
             self.open_dict["sheet"] = "Sheet1"
             self.frames["column_selection"].populate(
-                list(map(str, range(1, max(map(len, self.frames["tree_edit"].sheet.MT.data), default=0) + 1)))
+                list(map(str, range(1, max(map(len, self.frames["tree_edit"].sheet.MT.data), default=0) + 1))),
+                clear_dd=True,
             )
             return True
         except Exception as error_msg:
@@ -564,7 +566,10 @@ To get started once you have closed this popup, either:
             return
         self.frames["tree_edit"].row_len = max(map(len, self.frames["tree_edit"].sheet.MT.data), default=0)
         self.open_dict["sheet"] = selection
-        self.frames["column_selection"].populate(list(map(str, range(1, self.frames["tree_edit"].row_len + 1))))
+        self.frames["column_selection"].populate(
+            list(map(str, range(1, self.frames["tree_edit"].row_len + 1))),
+            clear_dd=False,
+        )
 
     def help_func(self):
         Help_Popup(self, self.DOCUMENTATION, theme=self.theme)

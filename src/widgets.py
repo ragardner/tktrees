@@ -59,8 +59,8 @@ class Workbook_Sheet_Selection(tk.Frame):
         self.sheet_select.config(state="disabled")
 
     def updatesheets(self, sheets):
-        self.sheet_select.set_my_value(sheets[0])
         self.sheet_select["values"] = sheets
+        self.sheet_select.set_my_value(sheets[0] if sheets else "")
 
     def cont(self, event=None):
         self.C.disable_at_start()
@@ -173,7 +173,9 @@ class Column_Selection(tk.Frame):
         self.sheetdisplay.unbind("<<SheetModified>>")
         self.sheet_selector.disable_widgets()
 
-    def populate(self, columns):
+    def populate(self, columns, clear_dd: bool = False):
+        if clear_dd:
+            self.sheet_selector.updatesheets([])
         self.sheetdisplay.deselect("all")
         self.rowlen = len(columns)
         self.selector.set_columns(self.C.frames.tree_edit.sheet.data[0])
