@@ -41,21 +41,51 @@ from .functions import (
 )
 
 
+class Workbook_Sheet_Selection(tk.Frame):
+    def __init__(self, parent, C):
+        tk.Frame.__init__(self, parent)
+        self.C = C
+        self.columnconfigure(1, weight=1)
+        self.sheets_label = Label(self, text="Workbook sheets:", font=EF, theme=self.C.theme)
+        self.sheets_label.grid(row=0, column=0, padx=10, pady=(10, 20), sticky="e")
+        self.sheet_select = Ez_Dropdown(self, TF)
+        self.sheet_select.bind("<<ComboboxSelected>>", self.cont)
+        self.sheet_select.grid(row=0, column=1, padx=(0, 20), pady=(10, 20), sticky="nswe")
+
+    def enable_widgets(self):
+        self.sheet_select.config(state="readonly")
+
+    def disable_widgets(self):
+        self.sheet_select.config(state="disabled")
+
+    def updatesheets(self, sheets):
+        self.sheet_select.set_my_value(sheets[0])
+        self.sheet_select["values"] = sheets
+
+    def cont(self, event=None):
+        self.C.disable_at_start()
+        self.C.open_dict["sheet"] = self.sheet_select.get_my_value()
+        self.C.wb_sheet_has_been_selected(self.sheet_select.get_my_value())
+
+
 class Column_Selection(tk.Frame):
     def __init__(self, parent, C):
         tk.Frame.__init__(self, parent)
         self.C = C
         self.parent_cols = []
         self.rowlen = 0
-        self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
+        self.sheet_selector = Workbook_Sheet_Selection(parent=self, C=C)
+        self.sheet_selector.grid(row=0, column=0, padx=20, pady=10, sticky="nswe")
+
         self.flattened_choices = FlattenedToggleAndOrder(self, command=self.flattened_mode_toggle)
-        self.flattened_choices.grid(row=1, column=0, padx=20, pady=(10, 5), sticky="wnse")
+        self.flattened_choices.grid(row=2, column=0, padx=20, pady=(10, 5), sticky="wnse")
         self.flattened_selector = Flattened_Column_Selector(self)
         self.selector = Id_Parent_Column_Selector(self)
-        self.selector.grid(row=1, column=0, sticky="wnse")
+        self.selector.grid(row=2, column=0, sticky="wnse")
         self.sheetdisplay = Sheet(
             self,
             theme=self.C.theme,
@@ -68,7 +98,7 @@ class Column_Selection(tk.Frame):
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
         self.sheetdisplay.headers(newheaders=0)
-        self.sheetdisplay.grid(row=0, column=1, rowspan=3, sticky="nswe")
+        self.sheetdisplay.grid(row=1, column=1, rowspan=3, sticky="nswe")
 
         self.cont_ = Button(
             self,
@@ -76,19 +106,19 @@ class Column_Selection(tk.Frame):
             style="TF.Std.TButton",
             command=self.try_to_build_tree,
         )
-        self.cont_.grid(row=2, column=0, sticky="w", padx=20, pady=(10, 50))
+        self.cont_.grid(row=3, column=0, sticky="w", padx=20, pady=(10, 50))
 
-        self.flattened_selector.grid(row=0, column=0, pady=(0, 9), sticky="nswe")
+        self.flattened_selector.grid(row=1, column=0, pady=(0, 9), sticky="nswe")
         self.selector.grid_forget()
-        self.selector.grid(row=0, column=0, sticky="nswe")
+        self.selector.grid(row=1, column=0, sticky="nswe")
         self.flattened_selector.grid_forget()
 
     def flattened_mode_toggle(self):
         if self.flattened_choices.flattened:
-            self.flattened_selector.grid(row=0, column=0, pady=(0, 9), sticky="nswe")
+            self.flattened_selector.grid(row=1, column=0, pady=(0, 9), sticky="nswe")
             self.selector.grid_forget()
         else:
-            self.selector.grid(row=0, column=0, sticky="nswe")
+            self.selector.grid(row=1, column=0, sticky="nswe")
             self.flattened_selector.grid_forget()
 
     def reset_selectors(self, event=None):
@@ -131,6 +161,7 @@ class Column_Selection(tk.Frame):
         self.sheetdisplay.basic_bindings(True)
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
+        self.sheet_selector.enable_widgets()
 
     def disable_widgets(self):
         self.selector.disable_me()
@@ -140,6 +171,7 @@ class Column_Selection(tk.Frame):
         self.sheetdisplay.basic_bindings(False)
         self.sheetdisplay.disable_bindings()
         self.sheetdisplay.unbind("<<SheetModified>>")
+        self.sheet_selector.disable_widgets()
 
     def populate(self, columns):
         self.sheetdisplay.deselect("all")
@@ -151,8 +183,6 @@ class Column_Selection(tk.Frame):
             redraw=True,
         )
         self.sheetdisplay.headers(newheaders=0)
-        if len(self.C.frames.tree_edit.sheet.data) < 3000:
-            self.sheetdisplay.set_all_cell_sizes_to_text()
         self.selector.detect_id_col()
         self.selector.detect_par_cols()
         self.flattened_selector.detect_par_cols()
@@ -170,6 +200,8 @@ class Column_Selection(tk.Frame):
                 return
         if not hier_cols:
             return
+        with suppress(Exception):
+            self.C.wb.close()
         self.C.status_bar.change_text("Loading...   ")
         self.C.disable_at_start()
         self.C.frames.tree_edit.sheet.MT.data = self.sheetdisplay.get_sheet_data()
@@ -214,44 +246,6 @@ class Column_Selection(tk.Frame):
         )
         self.C.frames.tree_edit.populate()
         self.C.frames.tree_edit.show_warnings(str(self.C.open_dict["filepath"]), str(self.C.open_dict["sheet"]))
-
-
-class Workbook_Sheet_Selection(tk.Frame):
-    def __init__(self, parent, C):
-        tk.Frame.__init__(self, parent)
-        self.C = C
-        self.columnconfigure(1, weight=1)
-        self.sheets_label = Label(self, text="Workbook sheets:", font=EF, theme=self.C.theme)
-        self.sheets_label.grid(row=0, column=0, padx=10, pady=(10, 20), sticky="e")
-        self.sheet_select = Ez_Dropdown(self, TF)
-        self.sheet_select.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
-        self.sheet_select.grid(row=0, column=1, padx=(0, 20), pady=(10, 20), sticky="nswe")
-        self.run_with_sheet = Button(
-            self,
-            text="Read data",
-            style="TF.Std.TButton",
-            command=self.cont,
-        )
-        self.run_with_sheet.grid(row=1, column=0, padx=10, sticky="w")
-
-    def enable_widgets(self):
-        self.sheet_select.config(state="readonly")
-        self.run_with_sheet.config(state="normal")
-
-    def disable_widgets(self):
-        self.sheet_select.config(state="disabled")
-        self.run_with_sheet.config(state="disabled")
-
-    def updatesheets(self, sheets):
-        self.run_with_sheet.config(state="normal")
-        self.run_with_sheet.update_idletasks()
-        self.sheet_select.set_my_value(sheets[0])
-        self.sheet_select["values"] = sheets
-
-    def cont(self):
-        self.C.disable_at_start()
-        self.C.open_dict["sheet"] = self.sheet_select.get_my_value()
-        self.C.wb_sheet_has_been_selected(self.sheet_select.get_my_value())
 
 
 class Id_Parent_Column_Selector(tk.Frame):

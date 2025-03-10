@@ -69,7 +69,6 @@ from .widgets import (
     Frame,
     Readonly_Entry,
     Status_Bar,
-    Workbook_Sheet_Selection,
 )
 
 # ________________________ ALLOW USE OF API HERE ________________________
@@ -168,7 +167,6 @@ class AppGUI(tk.Tk):
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
-        self.frames["sheet_selection"] = Workbook_Sheet_Selection(parent=self, C=self)
         self.frames["column_selection"] = Column_Selection(parent=self, C=self)
         self.frames["tree_compare"] = Tree_Compare(parent=self, C=self)
         self.frames["tree_edit"] = Tree_Editor(parent=self, C=self)
@@ -500,20 +498,23 @@ To get started once you have closed this popup, either:
                 try:
                     d = b32_x_dict(ws_x_program_data_str(ws))
                     self.frames["tree_edit"].populate(program_data=d)
-                except Exception as error_msg:
-                    self.frames["tree_edit"].sheet.MT.data = []
+                    self.open_dict["sheet"] = d["sheetname"]
                     self.wb.close()
+                    self.frames["tree_edit"].show_warnings(self.open_dict["filepath"], self.open_dict["sheet"])
+
+                except Exception as error_msg:
+                    self.wb.close()
+                    self.frames["tree_edit"].sheet.MT.data = []
                     self.wb = load_workbook(in_mem, read_only=True, data_only=True)
-                    self.frames["sheet_selection"].updatesheets(self.wb.sheetnames)
-                    self.show_frame("sheet_selection")
+                    self.frames["column_selection"].sheet_selector.updatesheets(self.wb.sheetnames)
+                    self.frames["column_selection"].sheet_selector.cont()
+                    self.show_frame("column_selection")
                     Error(self, f"Error opening program data: {error_msg}   ", theme=self.theme)
-                    return
-                self.wb.close()
-                self.open_dict["sheet"] = d["sheetname"]
-                self.frames["tree_edit"].show_warnings(self.open_dict["filepath"], self.open_dict["sheet"])
+
             else:
-                self.frames["sheet_selection"].updatesheets(self.wb.sheetnames)
-                self.show_frame("sheet_selection")
+                self.frames["column_selection"].sheet_selector.updatesheets(self.wb.sheetnames)
+                self.frames["column_selection"].sheet_selector.cont()
+                self.show_frame("column_selection")
         else:
             Error(
                 self,
@@ -557,13 +558,13 @@ To get started once you have closed this popup, either:
         self.frames["tree_edit"].sheet.MT.data = ws_x_data(ws)
         if not self.frames["tree_edit"].sheet.MT.data:
             Error(self, "Sheet contains no data   ", theme=self.theme)
-            self.frames["sheet_selection"].updatesheets(self.wb.sheetnames)
-            self.show_frame("sheet_selection")
+            self.frames["column_selection"].sheet_selector.updatesheets(self.wb.sheetnames)
+            self.frames["column_selection"].sheet_selector.cont()
+            self.show_frame("column_selection")
             return
         self.frames["tree_edit"].row_len = max(map(len, self.frames["tree_edit"].sheet.MT.data), default=0)
         self.open_dict["sheet"] = selection
         self.frames["column_selection"].populate(list(map(str, range(1, self.frames["tree_edit"].row_len + 1))))
-        self.wb.close()
 
     def help_func(self):
         Help_Popup(self, self.DOCUMENTATION, theme=self.theme)

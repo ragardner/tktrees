@@ -1425,8 +1425,11 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.config(bg=themes[theme].top_left_bg, fg=themes[theme].table_selected_box_cells_fg)
         self.C.status_frame.config(bg=themes[theme].top_left_bg)
 
-        self.C.frames["sheet_selection"].config(bg=themes[theme].top_left_bg)
-        self.C.frames["sheet_selection"].sheets_label.config(bg=themes[theme].top_left_bg, fg=themes[theme].table_fg)
+        self.C.frames["column_selection"].sheet_selector.config(bg=themes[theme].top_left_bg)
+        self.C.frames["column_selection"].sheet_selector.sheets_label.config(
+            bg=themes[theme].top_left_bg,
+            fg=themes[theme].table_fg,
+        )
         self.C.frames["column_selection"].config(bg=themes[theme].top_left_bg)
         self.C.frames["column_selection"].flattened_choices.change_theme(theme)
         self.C.frames["column_selection"].selector.change_theme(theme)
