@@ -4350,7 +4350,7 @@ class Help_Popup(tk.Toplevel):
             style="EF.Std.TButton",
             command=self.open_docs_in_browser,
         )
-        self.open_in_browser.pack(side="top", pady=2, fill="x")
+        self.open_in_browser.pack(side="top", pady=(2, 15), fill="x")
 
         self.basics = Button(
             self.buttonframe,
