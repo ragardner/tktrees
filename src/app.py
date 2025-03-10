@@ -433,6 +433,7 @@ To get started once you have closed this popup, either:
         self.status_bar.change_text("Loading...")
         self.frames["tree_edit"].sheet.MT.data = []
         self.change_app_title(title=os.path.basename(self.open_dict["filepath"]))
+        self.try_to_close_workbook()
         if self.open_dict["filepath"].lower().endswith((".csv", ".tsv")):
             try:
                 with open(self.open_dict["filepath"], "r") as fh:

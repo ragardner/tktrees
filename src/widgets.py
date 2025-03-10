@@ -202,8 +202,7 @@ class Column_Selection(tk.Frame):
                 return
         if not hier_cols:
             return
-        with suppress(Exception):
-            self.C.wb.close()
+        self.C.try_to_close_workbook()
         self.C.status_bar.change_text("Loading...   ")
         self.C.disable_at_start()
         self.C.frames.tree_edit.sheet.MT.data = self.sheetdisplay.get_sheet_data()
