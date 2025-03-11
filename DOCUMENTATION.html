@@ -9,6 +9,7 @@
             margin: 0;
             height: 100vh;
             font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
         }
 
         .side-panel {
@@ -20,25 +21,26 @@
             overflow-y: auto;
             padding: 10px;
             box-sizing: border-box;
-            background-color: #fff;
+            background-color: #f5f5f5;
             border-right: 1px solid #ccc;
             font-size: 18px;
-            scrollbar-color: #ccc #fff;
+            scrollbar-color: #ccc #f5f5f5;
             display: none;
+        }
+
+        .side-panel, .main-content, .content, .toggle-button, .theme-button, .back-to-top, pre, table, td, th {
+            transition: background-color 0.8s ease, color 0.8s ease, border-color 0.8s ease;
         }
 
         #toggle-toc:checked ~ .side-panel {
             display: block;
         }
 
-        @media (max-width: 768px) {
-            .side-panel {
-                font-size: 20px;
-            }
-        }
-
         .side-panel a {
             line-height: 1.5;
+        }
+        .side-panel a:hover {
+            text-decoration: underline;
         }
 
         .side-panel li {
@@ -46,7 +48,7 @@
         }
 
         .side-panel::-webkit-scrollbar-track {
-            background: #fff;
+            background: #f5f5f5;
         }
 
         .side-panel::-webkit-scrollbar-thumb {
@@ -59,7 +61,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            background-color: #fff;
+            background-color: #f5f5f5;
         }
 
         #toggle-toc:checked ~ .main-content {
@@ -79,7 +81,7 @@
             left: calc(20% + 10px);
         }
 
-        .toggle-button, .theme-button {
+        .toggle-button, .theme-button, .back-to-top {
             background-color: #f0f0f0;
             padding: 5px 10px;
             cursor: pointer;
@@ -87,16 +89,27 @@
             border-radius: 5px;
         }
 
+        .back-to-top {
+            text-decoration: none;
+            color: #000;
+        }
+
+        .theme-button::after {
+            content: '🌙';
+            margin-left: 5px;
+        }
+
         .content {
             flex: 1;
             overflow-y: auto;
             padding: 20px;
             padding-top: 70px;
-            scrollbar-color: #ccc #fff;
+            scrollbar-color: #ccc #f5f5f5;
+            line-height: 1.5;
         }
 
         .content::-webkit-scrollbar-track {
-            background: #fff;
+            background: #f5f5f5;
         }
 
         .content::-webkit-scrollbar-thumb {
@@ -159,9 +172,15 @@
         }
 
         #toggle-theme:checked ~ .main-content .buttons-container .toggle-button,
-        #toggle-theme:checked ~ .main-content .buttons-container .theme-button {
+        #toggle-theme:checked ~ .main-content .buttons-container .theme-button,
+        #toggle-theme:checked ~ .main-content .buttons-container .back-to-top {
             background-color: #333;
             color: #fff;
+            border-color: #555;
+        }
+
+        #toggle-theme:checked ~ .main-content .buttons-container .theme-button::after {
+            content: '☀️';
         }
 
         #toggle-theme:checked ~ .side-panel a,
@@ -169,12 +188,11 @@
             color: #90caf9;
         }
 
-        /* Styles for code blocks */
         .main-content .content pre {
             border: 1px solid #ccc;
             border-radius: 5px;
             padding: 10px;
-            background-color: #f5f5f5;
+            background-color: #dcdcdc;
             color: #333;
             font-family: monospace;
             overflow-x: auto;
@@ -185,12 +203,48 @@
             background-color: #222;
             color: #ddd;
         }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            padding: 0;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            border: 0;
+        }
+        
+        .content {
+            scroll-behavior: smooth;
+        }
+        
+        .content img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        @media print {
+            .side-panel, .buttons-container, .back-to-top {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .content {
+                padding: 0;
+            }
+            pre {
+                white-space: pre-wrap; /* Ensures code wraps on paper */
+            }
+        }
+        
     </style>
 </head>
 <body>
     <input type="checkbox" id="toggle-toc" checked style="display: none;">
     <input type="checkbox" id="toggle-theme" checked style="display: none;">
-    <div class="side-panel">
+    <div class="side-panel" role="navigation" aria-label="Table of Contents">
 <div class="toc">
 <ul>
 <li><a href="#tk-trees-documentation">TK-TREES DOCUMENTATION</a></li>
@@ -236,18 +290,20 @@
 </div>
     <div class="main-content">
         <div class="buttons-container">
-            <label for="toggle-toc" class="toggle-button">Toggle Index</label>
-            <label for="toggle-theme" class="theme-button">🌙</label>
+            <label for="toggle-toc" class="toggle-button" role="button">Toggle Table of Contents</label>
+            <label for="toggle-theme" class="theme-button" role="button"><span class="visually-hidden">Toggle theme</span></label>
+            <a href="#top" class="back-to-top">Back to Top</a>
         </div>
-        <div class="content">
-            <h2 id="tk-trees-documentation">TK-TREES DOCUMENTATION</h2>
+        <div class="content" role="main">
+            <a id="top"></a>
+            <h1 id="tk-trees-documentation">TK-TREES DOCUMENTATION</h1>
 <p>Tk-Trees is an app for management of hierarchy data in table format. It was written in the Python programming language and utilizes the following libraries:
  - tkinter, tksheet, openpyxl</p>
 <p>Tk-Trees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
 - github.com/ragardner
 - github@ragardner.simplelogin.com</p>
 <hr />
-<h2 id="program-basics">PROGRAM BASICS</h2>
+<h1 id="program-basics">PROGRAM BASICS</h1>
 <p>If using the program for the first time you can go to the "File" menu or right click in the in the empty space to get started.</p>
 <p>This program is for management of hierarchy based master data which is stored in table format. Supported file formats are:</p>
 <ul>
@@ -277,7 +333,7 @@ ID2    Par2      Detail 2
 <li>Upon opening a file if an ID has no parents or children in any hierarchy it will be placed in the first hierarchy (in order of the columns).</li>
 </ul>
 <hr />
-<h2 id="helpful-tips-and-tutorials">HELPFUL TIPS AND TUTORIALS</h2>
+<h1 id="helpful-tips-and-tutorials">HELPFUL TIPS AND TUTORIALS</h1>
 <h4 id="moving-ids-between-hierarchies">Moving IDs between hierarchies</h4>
 <p>To move an ID to another hierarchy or add an ID to another hierarchy:</p>
 <ol>
@@ -334,7 +390,7 @@ ID2    Par2      Detail 2
 </ol>
 <p>You can re-order children by selecting a single row in the tree and dragging using the left mouse button. To move an ID between parents see the above section on "Moving IDs by drag and drop".</p>
 <hr />
-<h2 id="managing-columns">MANAGING COLUMNS</h2>
+<h1 id="managing-columns">MANAGING COLUMNS</h1>
 <p>Right clicking on columns in the header will show a popup menu with a few column specific options.</p>
 <h4 id="column-types">Column types:</h4>
 <p>A detail column can have one of three different types:</p>
@@ -379,7 +435,7 @@ or  Used to add extra condition e.g. == 5 or == 6
 e.g. == 100</p>
 <p>Conditions must have spaces in between statements.</p>
 <hr />
-<h2 id="menu-bar">MENU BAR</h2>
+<h1 id="menu-bar">MENU BAR</h1>
 <h4 id="file-menu">File Menu</h4>
 <ul>
 <li>New: Create a new sheet.</li>
@@ -465,7 +521,7 @@ e.g. == 100</p>
 <li>Export flattened sheet allows you to add all IDs flattened levels for any hierarchies to a sheet and then gives options for saving as .xlsx or .csv or copying to clipboard.</li>
 </ul>
 <hr />
-<h2 id="tree-buttons">TREE BUTTONS</h2>
+<h1 id="tree-buttons">TREE BUTTONS</h1>
 <p>In the tree panel:</p>
 <ol>
 <li>Find: Clicking the find button will attempt to find either an ID or detail.<ul>
@@ -486,7 +542,7 @@ e.g. == 100</p>
 </li>
 </ol>
 <hr />
-<h2 id="tree-functions">TREE FUNCTIONS</h2>
+<h1 id="tree-functions">TREE FUNCTIONS</h1>
 <p>By right clicking on an ID in the tree panel you can select various functions. The main functions are Detach, Copy and Delete.</p>
 <p>To cut or copy an ID between different hierarchies:</p>
 <ul>
@@ -511,7 +567,7 @@ e.g. == 100</p>
 <li>When using drag and drop you can use your mousewheel to scroll down, move the mouse a little after scrolling to cause the selection to move.</li>
 </ul>
 <hr />
-<h2 id="tree-compare">TREE COMPARE</h2>
+<h1 id="tree-compare">TREE COMPARE</h1>
 <p>Accessible from the "File" menu, this window allows comparison of trees and sheets.</p>
 <ul>
 <li>Once a file has been opened using the open file button, the file name or path will be displayed and if the file is an excel file and was opened from the file dialog then you will have to select a sheet from the drop down box next to "Load sheet". </li>
@@ -519,7 +575,7 @@ e.g. == 100</p>
 <li>You can mix different file types when comparing.</li>
 </ul>
 <hr />
-<h2 id="xlsx-files">XLSX FILES</h2>
+<h1 id="xlsx-files">XLSX FILES</h1>
 <p>The default save format is .xlsx.</p>
 <p>When saving .xlsx files you can also save program data to keep your changelog, row heights, column widths, formatting, validation, treeview ID order and more.</p>
 <p>When loading a file saved with program data the sheet and changelog in the program data, not the visible sheet, will take precedent. This means any edits in the viewable sheet will not be loaded.</p>
@@ -529,7 +585,7 @@ e.g. == 100</p>
 <p>When saving .xlsx files you can also save the flattened format of the currently viewed hierarchy any sheets with "flattened" in their name will be overwritten. If viewing all hierarchies when saving then the first hierarchy will be saved.</p>
 <p>When comparing or merging if the workbook contains program data then it will take precedent, else a sheet will need to be selected to load data.</p>
 <hr />
-<h2 id="json-files">JSON FILES</h2>
+<h1 id="json-files">JSON FILES</h1>
 <p>There are four loadable json formats, with each one the entire sheet is kept under the key "records". However the program will also look for the keys: sheet, data and table. The first format, also the first option under "File -&gt; Settings -&gt; json save options -&gt; json format" is displayed as an example below:</p>
 <p>A dictionary of key (column header) and value (list of column cells)</p>
 <pre><code>{&quot;records&quot;:
@@ -605,7 +661,7 @@ typical so only use it if you really need to.</p>
 }
 </code></pre>
 <hr />
-<h2 id="using-the-api">USING THE API</h2>
+<h1 id="using-the-api">USING THE API</h1>
 <p>The app can be run using the command line without triggering a user interface to get different outputs and file conversions.</p>
 <p>The input file must be either .xlsx, .xls, .xlsm, .csv, .tsv or .json.</p>
 <p>Please note that if any of the parameters include spaces then they may need to be surrounded by double quotes e.g. "my xlsx sheet name" depending on how you choose to start the API.</p>

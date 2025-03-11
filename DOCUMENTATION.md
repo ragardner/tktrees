@@ -1,4 +1,4 @@
-## TK-TREES DOCUMENTATION
+# TK-TREES DOCUMENTATION
 
 Tk-Trees is an app for management of hierarchy data in table format. It was written in the Python programming language and utilizes the following libraries:
  - tkinter, tksheet, openpyxl
@@ -9,7 +9,7 @@ Tk-Trees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
 
 ---
 
-## PROGRAM BASICS
+# PROGRAM BASICS
 
 If using the program for the first time you can go to the "File" menu or right click in the in the empty space to get started.
 
@@ -43,7 +43,7 @@ ID2    Par2      Detail 2
 
 ---
 
-## HELPFUL TIPS AND TUTORIALS
+# HELPFUL TIPS AND TUTORIALS
 
 #### Moving IDs between hierarchies
 
@@ -110,7 +110,7 @@ You can re-order children by selecting a single row in the tree and dragging usi
 
 ---
 
-## MANAGING COLUMNS
+# MANAGING COLUMNS
 
 Right clicking on columns in the header will show a popup menu with a few column specific options.
 
@@ -173,7 +173,7 @@ Conditions must have spaces in between statements.
 
 ---
 
-## MENU BAR
+# MENU BAR
 
 #### File Menu
 
@@ -262,7 +262,7 @@ You can also recycle the imported changes, importing them again into another fil
 
 ---
 
-## TREE BUTTONS
+# TREE BUTTONS
 
 In the tree panel:
 
@@ -278,7 +278,7 @@ In the tree panel:
 
 ---
 
-## TREE FUNCTIONS
+# TREE FUNCTIONS
 
 By right clicking on an ID in the tree panel you can select various functions. The main functions are Detach, Copy and Delete.
 
@@ -306,7 +306,7 @@ Editing cells:
 
 ---
 
-## TREE COMPARE
+# TREE COMPARE
 
 Accessible from the "File" menu, this window allows comparison of trees and sheets.
 
@@ -316,7 +316,7 @@ Accessible from the "File" menu, this window allows comparison of trees and shee
 
 ---
 
-## XLSX FILES
+# XLSX FILES
 
 The default save format is .xlsx.
 
@@ -336,7 +336,7 @@ When comparing or merging if the workbook contains program data then it will tak
 
 ---
 
-## JSON FILES
+# JSON FILES
 
 There are four loadable json formats, with each one the entire sheet is kept under the key "records". However the program will also look for the keys: sheet, data and table. The first format, also the first option under "File -> Settings -> json save options -> json format" is displayed as an example below:
 
@@ -429,7 +429,7 @@ Program data is only included if Save is used as opposed to Copy to clipboard. I
 
 ---
 
-## USING THE API
+# USING THE API
 
 The app can be run using the command line without triggering a user interface to get different outputs and file conversions.
 
