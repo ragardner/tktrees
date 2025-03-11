@@ -53,7 +53,7 @@
 
         .side-panel::-webkit-scrollbar-thumb {
             background: #ccc;
-            border-radius: 4px;
+            border-radius: 5px;
         }
 
         .main-content {
@@ -71,14 +71,10 @@
         .buttons-container {
             position: fixed;
             top: 10px;
-            left: 10px;
+            right: 40px; /* Adjusted to prevent overlap with scrollbar */
             display: flex;
             gap: 10px;
             z-index: 1;
-        }
-
-        #toggle-toc:checked ~ .main-content .buttons-container {
-            left: calc(20% + 10px);
         }
 
         .toggle-button, .theme-button, .back-to-top {
@@ -115,7 +111,7 @@
 
         .content::-webkit-scrollbar-thumb {
             background: #ccc;
-            border-radius: 4px;
+            border-radius: 5px;
         }
 
         table {
@@ -201,6 +197,25 @@
 
         #toggle-theme:checked ~ .main-content .content pre {
             border-color: #555;
+            background-color: #222;
+            color: #ddd;
+        }
+
+        .content code {
+            background-color: #dcdcdc;
+            color: #333;
+            padding: 2px 2px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+
+        .content pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 5;
+        }
+
+        #toggle-theme:checked ~ .main-content .content code {
             background-color: #222;
             color: #ddd;
         }
