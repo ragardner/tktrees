@@ -1054,51 +1054,6 @@ class RowIndex(tk.Canvas):
             self.MT.run_selection_binding("rows")
         return fill_iid
 
-    def display_box(
-        self,
-        x1: int,
-        y1: int,
-        x2: int,
-        y2: int,
-        fill: str,
-        outline: str,
-        state: str,
-        tags: str | tuple[str],
-        iid: None | int = None,
-    ) -> int:
-        coords = rounded_box_coords(
-            x1,
-            y1,
-            x2,
-            y2,
-            radius=5 if self.ops.rounded_boxes else 0,
-        )
-        if isinstance(iid, int):
-            self.coords(iid, coords)
-            self.itemconfig(iid, fill=fill, outline=outline, state=state, tags=tags)
-        else:
-            if self.hidd_boxes:
-                iid = self.hidd_boxes.pop()
-                self.coords(iid, coords)
-                self.itemconfig(iid, fill=fill, outline=outline, state=state, tags=tags)
-            else:
-                iid = self.create_polygon(
-                    coords,
-                    fill=fill,
-                    outline=outline,
-                    state=state,
-                    tags=tags,
-                    smooth=True,
-                )
-            self.disp_boxes.add(iid)
-        return iid
-
-    def hide_box(self, item: int | None) -> None:
-        if isinstance(item, int):
-            self.disp_boxes.discard(item)
-            self.hidd_boxes.add(item)
-            self.itemconfig(item, state="hidden")
-
     def get_cell_dimensions(self, datarn: int) -> tuple[int, int]:
         txt = self.cell_str(datarn, fix=False)
         if txt:
@@ -1308,6 +1263,7 @@ class RowIndex(tk.Canvas):
         sel_rows_bg: str,
         selections: dict,
         datarn: int,
+        has_dd: bool,
     ) -> tuple[str, str, bool]:
         redrawn = False
         kwargs = self.get_cell_kwargs(datarn, key="highlight")
@@ -1348,11 +1304,7 @@ class RowIndex(tk.Canvas):
                     self.current_width - 1,
                     sr,
                     fill=fill,
-                    outline=(
-                        self.ops.index_fg
-                        if self.get_cell_kwargs(datarn, key="dropdown") and self.ops.show_dropdown_borders
-                        else ""
-                    ),
+                    outline=self.ops.index_fg if has_dd and self.ops.show_dropdown_borders else "",
                     tag="s",
                 )
             tree_arrow_fg = txtfg
@@ -1360,9 +1312,27 @@ class RowIndex(tk.Canvas):
             if "rows" in selections and r in selections["rows"]:
                 txtfg = self.ops.index_selected_rows_fg
                 tree_arrow_fg = self.ops.selected_rows_tree_arrow_fg
+                redrawn = self.redraw_highlight(
+                    0,
+                    fr + 1,
+                    self.current_width - 1,
+                    sr,
+                    fill=self.ops.index_selected_rows_bg,
+                    outline=self.ops.index_fg if has_dd and self.ops.show_dropdown_borders else "",
+                    tag="s",
+                )
             elif "cells" in selections and r in selections["cells"]:
                 txtfg = self.ops.index_selected_cells_fg
                 tree_arrow_fg = self.ops.selected_cells_tree_arrow_fg
+                redrawn = self.redraw_highlight(
+                    0,
+                    fr + 1,
+                    self.current_width - 1,
+                    sr,
+                    fill=self.ops.index_selected_cells_bg,
+                    outline=self.ops.index_fg if has_dd and self.ops.show_dropdown_borders else "",
+                    tag="s",
+                )
             else:
                 txtfg = self.ops.index_fg
                 tree_arrow_fg = self.ops.tree_arrow_fg
@@ -1686,6 +1656,7 @@ class RowIndex(tk.Canvas):
                 continue
             checkbox_kwargs = {}
             datarn = r if self.MT.all_rows_displayed else self.MT.displayed_rows[r]
+            dropdown_kwargs = self.get_cell_kwargs(datarn, key="dropdown")
             fill, tree_arrow_fg, dd_drawn = self.redraw_highlight_get_text_fg(
                 fr=rtopgridln,
                 sr=rbotgridln,
@@ -1694,12 +1665,14 @@ class RowIndex(tk.Canvas):
                 sel_rows_bg=sel_rows_bg,
                 selections=selections,
                 datarn=datarn,
+                has_dd=bool(dropdown_kwargs),
             )
+
             if datarn in self.cell_options and "align" in self.cell_options[datarn]:
                 align = self.cell_options[datarn]["align"]
             else:
                 align = self.align
-            if dropdown_kwargs := self.get_cell_kwargs(datarn, key="dropdown"):
+            if dropdown_kwargs:
                 max_width = self.current_width - self.MT.index_txt_height - 2
                 if align.endswith("w"):
                     draw_x = 3
@@ -1811,7 +1784,6 @@ class RowIndex(tk.Canvas):
                             anchor=align,
                             state="normal",
                         )
-                    self.tag_raise(iid)
                 else:
                     iid = self.create_text(
                         draw_x,
@@ -1845,7 +1817,6 @@ class RowIndex(tk.Canvas):
                                 anchor=align,
                                 state="normal",
                             )
-                        self.tag_raise(iid)
                     else:
                         iid = self.create_text(
                             draw_x,
@@ -1898,6 +1869,7 @@ class RowIndex(tk.Canvas):
                 if showing:
                     self.itemconfig(iid, state="hidden")
                     dct[iid] = False
+        self.tag_raise("t")
         if self.disp_resize_lines:
             self.tag_raise("rh")
         return True
@@ -2505,8 +2477,8 @@ class RowIndex(tk.Canvas):
         kwargs = self.get_cell_kwargs(datarn, key=None, cell=r_ops)
         if "checkbox" in kwargs:
             return False
-        elif (kwargs := kwargs.get("dropdown", {})) and kwargs["validate_input"] and kwargs["values"]:
-            return kwargs["values"][0]
+        elif "dropdown" in kwargs and kwargs["dropdown"]["validate_input"] and kwargs["dropdown"]["values"]:
+            return kwargs["dropdown"]["values"][0]
         else:
             return ""
 

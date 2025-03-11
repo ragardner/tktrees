@@ -1058,44 +1058,6 @@ class ColumnHeaders(tk.Canvas):
             self.MT.run_selection_binding("columns")
         return fill_iid
 
-    def display_box(
-        self,
-        x1: int,
-        y1: int,
-        x2: int,
-        y2: int,
-        fill: str,
-        outline: str,
-        state: str,
-        tags: str | tuple[str],
-        iid: None | int = None,
-    ) -> int:
-        coords = rounded_box_coords(
-            x1,
-            y1,
-            x2,
-            y2,
-            radius=5 if self.ops.rounded_boxes else 0,
-        )
-        if isinstance(iid, int):
-            self.coords(iid, coords)
-            self.itemconfig(iid, fill=fill, outline=outline, state=state, tags=tags)
-        else:
-            if self.hidd_boxes:
-                iid = self.hidd_boxes.pop()
-                self.coords(iid, coords)
-                self.itemconfig(iid, fill=fill, outline=outline, state=state, tags=tags)
-            else:
-                iid = self.create_polygon(coords, fill=fill, outline=outline, state=state, tags=tags, smooth=True)
-            self.disp_boxes.add(iid)
-        return iid
-
-    def hide_box(self, item: int) -> None:
-        if isinstance(item, int):
-            self.disp_boxes.discard(item)
-            self.hidd_boxes.add(item)
-            self.itemconfig(item, state="hidden")
-
     def get_cell_dimensions(self, datacn: int) -> tuple[int, int]:
         txt = self.cell_str(datacn, fix=False)
         if txt:
@@ -1279,6 +1241,7 @@ class ColumnHeaders(tk.Canvas):
         sel_cols_bg: str,
         selections: dict,
         datacn: int,
+        has_dd: bool,
     ) -> tuple[str, bool]:
         redrawn = False
         kwargs = self.get_cell_kwargs(datacn, key="highlight")
@@ -1319,18 +1282,32 @@ class ColumnHeaders(tk.Canvas):
                     sc,
                     self.current_height - 1,
                     fill=fill,
-                    outline=(
-                        self.ops.header_fg
-                        if self.get_cell_kwargs(datacn, key="dropdown") and self.ops.show_dropdown_borders
-                        else ""
-                    ),
+                    outline=self.ops.header_fg if has_dd and self.ops.show_dropdown_borders else "",
                     tag="hi",
                 )
         elif not kwargs:
             if "columns" in selections and c in selections["columns"]:
                 txtfg = self.ops.header_selected_columns_fg
+                redrawn = self.redraw_highlight(
+                    fc + 1,
+                    0,
+                    sc,
+                    self.current_height - 1,
+                    fill=self.ops.header_selected_columns_bg,
+                    outline=self.ops.header_fg if has_dd and self.ops.show_dropdown_borders else "",
+                    tag="hi",
+                )
             elif "cells" in selections and c in selections["cells"]:
                 txtfg = self.ops.header_selected_cells_fg
+                redrawn = self.redraw_highlight(
+                    fc + 1,
+                    0,
+                    sc,
+                    self.current_height - 1,
+                    fill=self.ops.header_selected_cells_bg,
+                    outline=self.ops.header_fg if has_dd and self.ops.show_dropdown_borders else "",
+                    tag="hi",
+                )
             else:
                 txtfg = self.ops.header_fg
         return txtfg, redrawn
@@ -1559,6 +1536,7 @@ class ColumnHeaders(tk.Canvas):
             cleftgridln = self.MT.col_positions[c]
             crightgridln = self.MT.col_positions[c + 1]
             datacn = c if self.MT.all_columns_displayed else self.MT.displayed_columns[c]
+            kwargs = self.get_cell_kwargs(datacn, key="dropdown")
             fill, dd_drawn = self.redraw_highlight_get_text_fg(
                 fc=cleftgridln,
                 sc=crightgridln,
@@ -1567,12 +1545,13 @@ class ColumnHeaders(tk.Canvas):
                 sel_cols_bg=sel_cols_bg,
                 selections=selections,
                 datacn=datacn,
+                has_dd=bool(kwargs),
             )
             if datacn in self.cell_options and "align" in self.cell_options[datacn]:
                 align = self.cell_options[datacn]["align"]
             else:
                 align = self.align
-            if kwargs := self.get_cell_kwargs(datacn, key="dropdown"):
+            if kwargs:
                 max_width = crightgridln - cleftgridln - txt_h - 2
                 if align.endswith("w"):
                     draw_x = cleftgridln + 2
@@ -1664,7 +1643,6 @@ class ColumnHeaders(tk.Canvas):
                             anchor=align,
                             state="normal",
                         )
-                    self.tag_raise(iid)
                 else:
                     iid = self.create_text(
                         draw_x,
@@ -1709,6 +1687,7 @@ class ColumnHeaders(tk.Canvas):
                 if showing:
                     self.itemconfig(iid, state="hidden")
                     dct[iid] = False
+        self.tag_raise("t")
         if self.disp_resize_lines:
             self.tag_raise("rw")
         return True
@@ -2314,8 +2293,8 @@ class ColumnHeaders(tk.Canvas):
         kwargs = self.get_cell_kwargs(datacn, key=None, cell=c_ops)
         if "checkbox" in kwargs:
             return False
-        elif (kwargs := kwargs.get("dropdown", {})) and kwargs["validate_input"] and kwargs["values"]:
-            return kwargs["values"][0]
+        elif "dropdown" in kwargs and kwargs["dropdown"]["validate_input"] and kwargs["dropdown"]["values"]:
+            return kwargs["dropdown"]["values"][0]
         else:
             return ""
 
