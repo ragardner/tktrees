@@ -1,35 +1,30 @@
 # Copyright (c) 2010-2024 openpyxl
 
 
-from openpyxl.descriptors.serialisable import Serialisable
+from openpyxl import __version__
 from openpyxl.descriptors import (
     Typed,
 )
 from openpyxl.descriptors.nested import (
     NestedText,
 )
-
+from openpyxl.descriptors.serialisable import Serialisable
 from openpyxl.xml.constants import XPROPS_NS
-from openpyxl import __version__
 
 
 class DigSigBlob(Serialisable):
-
     __elements__ = __attrs__ = ()
 
 
 class VectorLpstr(Serialisable):
-
     __elements__ = __attrs__ = ()
 
 
 class VectorVariant(Serialisable):
-
     __elements__ = __attrs__ = ()
 
 
 class ExtendedProperties(Serialisable):
-
     """
     See 22.2
 
@@ -46,7 +41,7 @@ class ExtendedProperties(Serialisable):
     Manager = NestedText(expected_type=str, allow_none=True)
     Company = NestedText(expected_type=str, allow_none=True)
     Pages = NestedText(expected_type=int, allow_none=True)
-    Words = NestedText(expected_type=int,allow_none=True)
+    Words = NestedText(expected_type=int, allow_none=True)
     Characters = NestedText(expected_type=int, allow_none=True)
     PresentationFormat = NestedText(expected_type=str, allow_none=True)
     Lines = NestedText(expected_type=int, allow_none=True)
@@ -70,38 +65,46 @@ class ExtendedProperties(Serialisable):
     AppVersion = NestedText(expected_type=str, allow_none=True)
     DocSecurity = NestedText(expected_type=int, allow_none=True)
 
-    __elements__ = ('Application', 'AppVersion', 'DocSecurity', 'ScaleCrop',
-                    'LinksUpToDate', 'SharedDoc', 'HyperlinksChanged')
+    __elements__ = (
+        "Application",
+        "AppVersion",
+        "DocSecurity",
+        "ScaleCrop",
+        "LinksUpToDate",
+        "SharedDoc",
+        "HyperlinksChanged",
+    )
 
-    def __init__(self,
-                 Template=None,
-                 Manager=None,
-                 Company=None,
-                 Pages=None,
-                 Words=None,
-                 Characters=None,
-                 PresentationFormat=None,
-                 Lines=None,
-                 Paragraphs=None,
-                 Slides=None,
-                 Notes=None,
-                 TotalTime=None,
-                 HiddenSlides=None,
-                 MMClips=None,
-                 ScaleCrop=None,
-                 HeadingPairs=None,
-                 TitlesOfParts=None,
-                 LinksUpToDate=None,
-                 CharactersWithSpaces=None,
-                 SharedDoc=None,
-                 HyperlinkBase=None,
-                 HLinks=None,
-                 HyperlinksChanged=None,
-                 DigSig=None,
-                 Application=None,
-                 AppVersion=None,
-                 DocSecurity=None,
-                ):
+    def __init__(
+        self,
+        Template=None,
+        Manager=None,
+        Company=None,
+        Pages=None,
+        Words=None,
+        Characters=None,
+        PresentationFormat=None,
+        Lines=None,
+        Paragraphs=None,
+        Slides=None,
+        Notes=None,
+        TotalTime=None,
+        HiddenSlides=None,
+        MMClips=None,
+        ScaleCrop=None,
+        HeadingPairs=None,
+        TitlesOfParts=None,
+        LinksUpToDate=None,
+        CharactersWithSpaces=None,
+        SharedDoc=None,
+        HyperlinkBase=None,
+        HLinks=None,
+        HyperlinksChanged=None,
+        DigSig=None,
+        Application=None,
+        AppVersion=None,
+        DocSecurity=None,
+    ):
         self.Template = Template
         self.Manager = Manager
         self.Company = Company
@@ -129,7 +132,6 @@ class ExtendedProperties(Serialisable):
         self.Application = f"Microsoft Excel Compatible / Openpyxl {__version__}"
         self.AppVersion = ".".join(__version__.split(".")[:-1])
         self.DocSecurity = DocSecurity
-
 
     def to_tree(self):
         tree = super().to_tree()
