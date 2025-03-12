@@ -5313,13 +5313,13 @@ class Tree_Editor(tk.Frame):
             self.changelog = new_vs["rows"] + self.changelog
 
         elif new_vs["type"] == "drag rows":
-            self.sheet.mapping_move_rows(dict(zip(new_vs["row_mapping"].values(), new_vs["row_mapping"])))
+            self.sheet.mapping_move_rows(dict(zip(new_vs["row_mapping"].values(), new_vs["row_mapping"])), undo=False)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
 
         elif new_vs["type"] == "drag cols":
             new_vs["column_mapping"] = dict(zip(new_vs["column_mapping"].values(), new_vs["column_mapping"]))
-            self.sheet.mapping_move_columns(new_vs["column_mapping"])
-            self.tree.mapping_move_columns(new_vs["column_mapping"])
+            self.sheet.mapping_move_columns(new_vs["column_mapping"], undo=False)
+            self.tree.mapping_move_columns(new_vs["column_mapping"], undo=False)
 
         elif new_vs["type"] == "node sort":
             ...
@@ -5380,6 +5380,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_dropdowns()
         self.move_sheet_pos()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        del new_vs
 
     def tree_gen_heights_from_saved(self) -> Generator[int]:
         heights_dict = self.saved_info[self.pc].theights
@@ -5743,12 +5744,14 @@ class Tree_Editor(tk.Frame):
             self.sheet.mapping_move_columns(
                 event_data["moved"]["columns"]["data"],
                 event_data["moved"]["columns"]["displayed"],
+                undo=False,
             )
         else:
             full_new_idxs = self.sheet.full_move_columns_idxs(event_data["moved"]["columns"]["data"])
             self.tree.mapping_move_columns(
                 event_data["moved"]["columns"]["data"],
                 event_data["moved"]["columns"]["displayed"],
+                undo=False,
             )
         self.vs[-1]["column_mapping"] = full_new_idxs
         old_locs = ",".join(f"{c}" for c in event_data["moved"]["columns"]["data"])
@@ -8901,6 +8904,7 @@ class Tree_Editor(tk.Frame):
                         self.sheet.mapping_move_rows(
                             data_new_idxs=new_idxs,
                             disp_new_idxs=new_idxs,
+                            undo=False,
                             create_selections=False,
                             redraw=False,
                         )
