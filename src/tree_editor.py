@@ -502,6 +502,7 @@ class Tree_Editor(tk.Frame):
             row_drag_and_drop_perform=False,
             alternate_color="#f6f9fb",
             allow_cell_overflow=True,
+            max_undos=0,
         )
         self.tree.grid(row=0, column=0, sticky="nswe")
 
@@ -599,6 +600,7 @@ class Tree_Editor(tk.Frame):
             auto_resize_row_index=True,
             header_font=sheet_header_font,
             allow_cell_overflow=True,
+            max_undos=0,
         )
         self.sheet.pack(side="right", fill="both", expand=True)
 
