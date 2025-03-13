@@ -7651,177 +7651,56 @@ class Tree_Editor(tk.Frame):
         to_clipboard(widget=self, s=s.getvalue().rstrip())
 
     def sheet_paste_details(self):
-        self.snapshot_ctrl_x_v_del_key()
-        cells_changed, idcol_hiers = 0, set(self.hiers) | {self.ic}
-        selected_rows = self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)
-        rows, cols = set(), set()
-        for rn in selected_rows:
-            ID = self.sheet.MT.data[rn][self.ic]
-            for c, e in enumerate(self.copied_details["copied"]):
-                if c not in idcol_hiers and self.sheet.MT.data[rn][c] != e:
-                    self.changelog_append_no_unsaved(
-                        "Edit cell |",
-                        f"ID: {ID} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                        f"{self.sheet.MT.data[rn][c]}",
-                        f"{e}",
-                    )
-                    self.vs[-1]["cells"][(rn, c)] = f"{self.sheet.MT.data[rn][c]}"
-                    self.sheet.MT.data[rn][c] = e
-                    rows.add(rn)
-                    cols.add(c)
-                    cells_changed += 1
-        self.refresh_formatting(rows=rows, columns=cols)
-        for rn in rows:
-            self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
-        if not cells_changed:
-            self.vs.pop()
-            self.set_undo_label()
-            self.disable_paste()
-            self.redraw_sheets()
-            self.stop_work(self.get_tree_editor_status_bar_text())
-            return
-        if cells_changed > 1:
-            self.changelog_append(
-                f"Edit {cells_changed} cells",
-                "",
-                "",
-                "",
-            )
-        else:
-            self.changelog_singular("Edit cell")
-        self.disable_paste()
-        self.redraw_sheets()
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        idcol_hiers = set(self.hiers) | {self.ic}
+        event = DotDict(
+            sheetname="sheet",
+            data={
+                (rn, c): e
+                for rn in sorted(self.sheet.get_selected_rows())
+                for c, e in enumerate(self.copied_details["copied"])
+                if c not in idcol_hiers
+            },
+        )
+        self.tree_sheet_edit_table(event=event)
 
     def paste_details(self):
-        self.snapshot_ctrl_x_v_del_key()
-        cells_changed, idcol_hiers = 0, set(self.hiers) | {self.ic}
-        rows, cols = set(), set()
-        for iid in self.tree.selection():
-            ID = self.nodes[iid].name
-            rn = self.rns[iid]
-            for c, e in enumerate(self.copied_details["copied"]):
-                if c not in idcol_hiers and self.sheet.MT.data[rn][c] != e:
-                    self.changelog_append_no_unsaved(
-                        "Edit cell |",
-                        f"ID: {ID} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                        f"{self.sheet.MT.data[rn][c]}",
-                        f"{e}",
-                    )
-                    self.vs[-1]["cells"][(rn, c)] = f"{self.sheet.MT.data[rn][c]}"
-                    self.sheet.MT.data[rn][c] = e
-                    rows.add(rn)
-                    cols.add(c)
-                    cells_changed += 1
-        self.refresh_formatting(rows=rows, columns=cols)
-        for rn in rows:
-            self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
-        if not cells_changed:
-            self.vs.pop()
-            self.set_undo_label()
-            self.disable_paste()
-            self.redraw_sheets()
-            self.stop_work(self.get_tree_editor_status_bar_text())
-            return
-        if cells_changed > 1:
-            self.changelog_append(
-                f"Edit {cells_changed} cells",
-                "",
-                "",
-                "",
-            )
-        else:
-            self.changelog_singular("Edit cell")
-        self.disable_paste()
-        self.redraw_sheets()
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        idcol_hiers = set(self.hiers) | {self.ic}
+        event = DotDict(
+            sheetname="sheet",
+            data={
+                (self.rns[iid], c): e
+                for iid in self.tree.selection()
+                for c, e in enumerate(self.copied_details["copied"])
+                if c not in idcol_hiers
+            },
+        )
+        self.tree_sheet_edit_table(event=event)
 
     def sheet_del_all_details(self):
-        self.snapshot_ctrl_x_v_del_key()
-        cells_changed, idcol_hiers = 0, set(self.hiers) | {self.ic}
-        rows = set()
-        cols = set()
-        for rn in self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True):
-            ID = self.sheet.MT.data[rn][self.ic]
-            for c in range(len(self.sheet.MT.data[rn])):
-                if c not in idcol_hiers and self.sheet.MT.data[rn][c] != "":
-                    self.changelog_append_no_unsaved(
-                        "Edit cell |",
-                        f"ID: {ID} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                        f"{self.sheet.MT.data[rn][c]}",
-                        "",
-                    )
-                    self.vs[-1]["cells"][(rn, c)] = f"{self.sheet.MT.data[rn][c]}"
-                    self.sheet.MT.data[rn][c] = ""
-                    rows.add(rn)
-                    cols.add(c)
-                    cells_changed += 1
-        self.refresh_formatting(rows=rows, columns=cols)
-        for rn in rows:
-            self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
-        if not cells_changed:
-            self.vs.pop()
-            self.set_undo_label()
-            self.disable_paste()
-            self.redraw_sheets()
-            self.stop_work(self.get_tree_editor_status_bar_text())
-            return
-        if cells_changed > 1:
-            self.changelog_append(
-                f"Edit {cells_changed} cells",
-                "",
-                "",
-                "",
-            )
-        else:
-            self.changelog_singular("Edit cell")
-        self.disable_paste()
-        self.redraw_sheets()
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        idcol_hiers = set(self.hiers) | {self.ic}
+        event = DotDict(
+            sheetname="sheet",
+            data={
+                (rn, c): ""
+                for rn in sorted(self.sheet.get_selected_rows())
+                for c in range(len(self.sheet.MT.data[rn]))
+                if c not in idcol_hiers
+            },
+        )
+        self.tree_sheet_edit_table(event=event)
 
     def del_all_details(self):
-        self.snapshot_ctrl_x_v_del_key()
-        cells_changed, idcol_hiers = 0, set(self.hiers) | {self.ic}
-        rows = set()
-        cols = set()
-        for iid in self.tree.selection():
-            ID = self.nodes[iid].name
-            rn = self.rns[iid]
-            for c in range(len(self.sheet.MT.data[rn])):
-                if c not in idcol_hiers and self.sheet.MT.data[rn][c] != "":
-                    self.changelog_append_no_unsaved(
-                        "Edit cell |",
-                        f"ID: {ID} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
-                        f"{self.sheet.MT.data[rn][c]}",
-                        "",
-                    )
-                    self.vs[-1]["cells"][(rn, c)] = f"{self.sheet.MT.data[rn][c]}"
-                    self.sheet.MT.data[rn][c] = ""
-                    rows.add(rn)
-                    cols.add(c)
-                    cells_changed += 1
-        self.refresh_formatting(rows=rows, columns=cols)
-        for rn in rows:
-            self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
-        if not cells_changed:
-            self.vs.pop()
-            self.set_undo_label()
-            self.disable_paste()
-            self.redraw_sheets()
-            self.stop_work(self.get_tree_editor_status_bar_text())
-            return
-        if cells_changed > 1:
-            self.changelog_append(
-                f"Edit {cells_changed} cells",
-                "",
-                "",
-                "",
-            )
-        else:
-            self.changelog_singular("Edit cell")
-        self.disable_paste()
-        self.redraw_sheets()
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        idcol_hiers = set(self.hiers) | {self.ic}
+        event = DotDict(
+            sheetname="sheet",
+            data={
+                (self.rns[iid], c): ""
+                for iid in self.tree.selection()
+                for c in range(len(self.sheet.MT.data[self.rns[iid]]))
+                if c not in idcol_hiers
+            },
+        )
+        self.tree_sheet_edit_table(event=event)
 
     def tag_ids(
         self,
