@@ -5352,7 +5352,7 @@ class Tree_Editor(tk.Frame):
     def tree_gen_widths_from_saved(self) -> Generator[int]:
         widths_dict = self.saved_info[self.pc].twidths
         default_col_width = self.tree.ops.default_column_width
-        return (widths_dict.get(h.name, default_col_width) for h in self.headers)
+        return (widths_dict[h.name] if h.name in widths_dict else default_col_width for h in self.headers)
 
     def save_sheet_row_heights(self) -> None:
         quick_data = self.sheet.MT.data

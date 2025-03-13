@@ -31,4 +31,4 @@ classifiers = [
 line-length = 120
 extend-select = ["I", "F", "C4", "E", "B", "SIM"]
 fix = true
-ignore = ["E501"]
+ignore = ["E501", "SIM401"]
