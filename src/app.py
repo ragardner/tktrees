@@ -134,7 +134,7 @@ class AppGUI(tk.Tk):
         self.created_new = False
 
         self.USER_HAS_QUIT = False
-        self.number_unsaved_changes = 0
+        self.unsaved_changes = True
 
         try:
             with open(upone_dir + "LICENSE.txt", "r") as fh:
@@ -260,8 +260,8 @@ To get started once you have closed this popup, either:
             pass
         self.check_window_size_settings()
         self.save_cfg()
-        if self.number_unsaved_changes:
-            confirm = Ask_Confirm_Quit(self, changes=self.number_unsaved_changes, theme=self.theme)
+        if self.unsaved_changes:
+            confirm = Ask_Confirm_Quit(self, theme=self.theme)
             if confirm.option == "save":
                 if self.file.entrycget("Save new version", "state") == "normal":
                     success = self.frames["tree_edit"].save_(quitting=True)

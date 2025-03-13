@@ -2409,14 +2409,14 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
 
 
 class Ask_Confirm_Quit(tk.Toplevel):
-    def __init__(self, C, changes, theme="dark"):
+    def __init__(self, C, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Quit")
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.action_label = Label(
             self,
-            text=("Save your changes before quitting?" if changes > 1 else "Save your last change before quitting?"),
+            text="Save changes before closing?",
             font=EFB,
             theme=theme,
         )
@@ -2436,7 +2436,7 @@ class Ask_Confirm_Quit(tk.Toplevel):
 
         self.dont_save_button = Button(
             self.button_frame,
-            text="Don't Save",
+            text="Discard",
             style="EF.Std.TButton",
             command=self.dont_save,
         )

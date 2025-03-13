@@ -154,7 +154,7 @@ class Tree_Editor(tk.Frame):
         #     self.monitor_scale = self.C.call("tk", "scaling")
         # except Exception:
         #     self.monitor_scale = 1
-        self.undo_unsaved_changes_passed_0 = False
+        self.undo_in_progress = False
         self.l_frame_proportion = float(0.50)
         self.last_width = 0
         self.last_height = 0
@@ -1472,8 +1472,7 @@ class Tree_Editor(tk.Frame):
             self.C.file.entryconfig("New", command=self.C.create_new_at_start)
             self.C.menubar_state("disabled")
             self.bind_or_unbind_save("disabled")
-        self.C.number_unsaved_changes = 0
-        self.undo_unsaved_changes_passed_0 = False
+        self.C.unsaved_changes = False
         self.sheet_changes = 0
         self.tv_label_col = 0
         self.selected_ID = ""
@@ -1542,8 +1541,8 @@ class Tree_Editor(tk.Frame):
             widget.bind(f"<{ctrl_button}-E>", self.expand_id)
             widget.bind(f"<{ctrl_button}-r>", self.collapse_id)
             widget.bind(f"<{ctrl_button}-R>", self.collapse_id)
-            widget.bind(f"<{ctrl_button}-z>", self.ctrl_z)
-            widget.bind(f"<{ctrl_button}-Z>", self.ctrl_z)
+            widget.bind(f"<{ctrl_button}-z>", self.undo)
+            widget.bind(f"<{ctrl_button}-Z>", self.undo)
             widget.bind(f"<{ctrl_button}-l>", self.show_changelog)
             widget.bind(f"<{ctrl_button}-L>", self.show_changelog)
             widget.bind(f"<{ctrl_button}-v>", self.paste_key)
@@ -1554,8 +1553,6 @@ class Tree_Editor(tk.Frame):
             widget.bind(f"<{ctrl_button}-C>", self.copy_key)
             widget.bind(f"<{ctrl_button}-t>", self.tag_ids)
             widget.bind(f"<{ctrl_button}-T>", self.tag_ids)
-            widget.bind(f"<{ctrl_button}-g>", self.find_next_main)
-            widget.bind(f"<{ctrl_button}-G>", self.find_next_main)
             widget.bind("<Delete>", self.del_key)
             widget.bind("<Double-Button-1>", self.tree_sheet_double_left)
             widget.extra_bindings(
@@ -1624,8 +1621,6 @@ class Tree_Editor(tk.Frame):
             x.unbind(f"<{ctrl_button}-E>")
             x.unbind(f"<{ctrl_button}-r>")
             x.unbind(f"<{ctrl_button}-R>")
-            x.unbind(f"<{ctrl_button}-g>")
-            x.unbind(f"<{ctrl_button}-G>")
             x.unbind(f"<{ctrl_button}-z>")
             x.unbind(f"<{ctrl_button}-Z>")
             x.unbind(f"<{ctrl_button}-l>")
@@ -2108,7 +2103,7 @@ class Tree_Editor(tk.Frame):
             if self.C.USER_HAS_QUIT:
                 return
         if not outside_treeframe:
-            self.enable_widgets()
+            self.after_idle(self.enable_widgets)
         self.C.status_bar.change_text(msg)
 
     def hide_frames(self, l_frame=False, r_frame=False, set_dimensions=True):
@@ -2139,38 +2134,27 @@ class Tree_Editor(tk.Frame):
         if set_dimensions:
             self.WINDOW_DIMENSIONS_CHANGED()
 
+    def ask_continue_unsaved(self):
+        if self.C.unsaved_changes:
+            confirm = Ask_Confirm(
+                self,
+                "You have unsaved changes, continue anyway?",
+                theme=self.C.theme,
+            )
+            return confirm.boolean
+        else:
+            return True
+
     def compare_from_within_treeframe(self):
-        if self.C.number_unsaved_changes:
-            if self.C.number_unsaved_changes == 1:
-                confirm = Ask_Confirm(self, "Compare sheets? 1 unsaved change", theme=self.C.theme)
-                if not confirm.boolean:
-                    return
-            else:
-                confirm = Ask_Confirm(
-                    self,
-                    f"Compare sheets? {self.C.number_unsaved_changes} unsaved changes",
-                    theme=self.C.theme,
-                )
-                if not confirm.boolean:
-                    return
+        if not self.ask_continue_unsaved():
+            return
         self.reset_tree()
         self.bind_or_unbind_save("disabled")
         self.C.frames["tree_compare"].populate()
 
     def open_from_within_treeframe(self, event=None):
-        if self.C.number_unsaved_changes:
-            if self.C.number_unsaved_changes == 1:
-                confirm = Ask_Confirm(self, "Open file? 1 unsaved change", theme=self.C.theme)
-                if not confirm.boolean:
-                    return
-            else:
-                confirm = Ask_Confirm(
-                    self,
-                    f"Open file? {self.C.number_unsaved_changes} unsaved changes",
-                    theme=self.C.theme,
-                )
-                if not confirm.boolean:
-                    return
+        if not self.ask_continue_unsaved():
+            return
         fp = filedialog.askopenfilename(parent=self.C, title="Select file")
         if not fp:
             return
@@ -2192,19 +2176,8 @@ class Tree_Editor(tk.Frame):
             self.enable_widgets()
 
     def create_new_from_within_treeframe(self, event=None):
-        if self.C.number_unsaved_changes:
-            if self.C.number_unsaved_changes == 1:
-                confirm = Ask_Confirm(self, "Create new sheet?  1 unsaved change", theme=self.C.theme)
-                if not confirm.boolean:
-                    return
-            else:
-                confirm = Ask_Confirm(
-                    self,
-                    f"Create new sheet? {self.C.number_unsaved_changes} unsaved changes",
-                    theme=self.C.theme,
-                )
-                if not confirm.boolean:
-                    return
+        if not self.ask_continue_unsaved():
+            return
         self.reset_tree(False)
         self.headers = [
             Header("ID", "ID"),
@@ -4901,8 +4874,8 @@ class Tree_Editor(tk.Frame):
                 quick_data[rn][col] = ""
                 self.refresh_tree_item(quick_data[rn][self.ic])
 
-    def increment_unsaved(self, n=1):
-        self.C.number_unsaved_changes += n
+    def increment_unsaved(self):
+        self.C.unsaved_changes = True
         self.C.change_app_title(star="add")
 
     def get_datetime_changelog(self, increment_unsaved=True):
@@ -5178,21 +5151,18 @@ class Tree_Editor(tk.Frame):
             )
         )
 
+    def undo_complete(self):
+        self.undo_in_progress = False
+
     def undo(self, event=None):
-        if not self.vs:
+        if self.undo_in_progress or not self.vs:
             return
+        self.start_work("Undoing last action...")
+        self.C.unsaved_changes = True
+        self.C.change_app_title(star="add")
+        self.undo_in_progress = True
         self.vp -= 1
         new_vs = self.vs.pop()
-        if self.undo_unsaved_changes_passed_0:
-            self.increment_unsaved()
-        else:
-            if self.C.number_unsaved_changes:
-                self.C.number_unsaved_changes -= 1
-                if not self.C.number_unsaved_changes:
-                    self.C.change_app_title(star="remove")
-            else:
-                self.undo_unsaved_changes_passed_0 = True
-                self.increment_unsaved()
         self.ic = new_vs["required_data"]["ic"]
         self.pc = new_vs["required_data"]["pc"]
         self.hiers = new_vs["required_data"]["hiers"]
@@ -5239,16 +5209,15 @@ class Tree_Editor(tk.Frame):
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
 
         elif new_vs["type"] == "rename id":
-            rows = set()
-            cols = set()
+            rows = {new_vs["ikrow"][0]}
+            cols = {self.ic}
             for tup in new_vs["rows"]:
                 rn, h, v = pickle.loads(zlib.decompress(tup))
                 rows.add(rn)
                 cols.add(h)
                 self.sheet.MT.data[rn][h] = v
-            self.refresh_formatting(rows=rows, columns=cols)
             self.sheet.MT.data[new_vs["ikrow"][0]][self.ic] = new_vs["ikrow"][2]
-            self.refresh_formatting(rows=new_vs["ikrow"][0], columns=self.ic)
+            self.refresh_formatting(rows=rows, columns=cols)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
 
         elif new_vs["type"] == "paste id":
@@ -5319,7 +5288,6 @@ class Tree_Editor(tk.Frame):
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
 
         elif new_vs["type"] == "drag cols":
-            new_vs["column_mapping"] = dict(zip(new_vs["column_mapping"].values(), new_vs["column_mapping"]))
             self.sheet.mapping_move_columns(new_vs["column_mapping"], undo=False)
             self.tree.mapping_move_columns(new_vs["column_mapping"], undo=False)
 
@@ -5383,6 +5351,8 @@ class Tree_Editor(tk.Frame):
         self.move_sheet_pos()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         del new_vs
+        self.after_idle(self.undo_complete)
+        self.stop_work(self.get_tree_editor_status_bar_text())
 
     def tree_gen_heights_from_saved(self) -> Generator[int]:
         heights_dict = self.saved_info[self.pc].theights
@@ -5402,10 +5372,6 @@ class Tree_Editor(tk.Frame):
         self.saved_sheet_row_heights = {
             quick_data[rn][self.ic].lower(): h for rn, h in enumerate(self.sheet.get_row_heights())
         }
-
-    def ctrl_z(self, event=None):
-        if self.vs:
-            self.undo()
 
     def set_undo_label(self, event=None):
         self.edit_menu.entryconfig(0, label=f"Undo {self.vp}/30")
@@ -5755,7 +5721,6 @@ class Tree_Editor(tk.Frame):
                 event_data["moved"]["columns"]["displayed"],
                 undo=False,
             )
-        self.vs[-1]["column_mapping"] = full_new_idxs
         old_locs = ",".join(f"{c}" for c in event_data["moved"]["columns"]["data"])
         new_locs = ",".join(f"{c}" for c in event_data["moved"]["columns"]["data"].values())
         self.changelog_append(
@@ -5782,6 +5747,7 @@ class Tree_Editor(tk.Frame):
         self.clear_copied_details()
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.sheet.row_index(newindex=self.ic)
+        self.vs[-1]["column_mapping"] = dict(zip(full_new_idxs.values(), full_new_idxs))
         self.refresh_dropdowns()
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
@@ -10471,8 +10437,7 @@ class Tree_Editor(tk.Frame):
         if successful:
             self.C.created_new = False
             self.bind_or_unbind_save("normal")
-            self.C.number_unsaved_changes = 0
-            self.undo_unsaved_changes_passed_0 = False
+            self.C.unsaved_changes = False
         if not quitting:
             self.stop_work(self.get_tree_editor_status_bar_text())
         return successful
@@ -10525,8 +10490,7 @@ class Tree_Editor(tk.Frame):
         if successful:
             self.C.created_new = False
             self.bind_or_unbind_save("normal")
-            self.C.number_unsaved_changes = 0
-            self.undo_unsaved_changes_passed_0 = False
+            self.C.unsaved_changes = False
         if not quitting:
             self.stop_work(self.get_tree_editor_status_bar_text())
         return successful
@@ -10624,8 +10588,7 @@ class Tree_Editor(tk.Frame):
         except Exception as error_msg:
             Error(self, f"Error: {error_msg}", theme=self.C.theme)
         if successful:
-            self.C.number_unsaved_changes = 0
-            self.undo_unsaved_changes_passed_0 = False
+            self.C.unsaved_changes = False
             popup = Save_New_Version_Postsave_Popup(self, folder, os.path.basename(newfile), theme=self.C.theme)
         self.stop_work(self.get_tree_editor_status_bar_text())
         return successful
