@@ -2469,7 +2469,7 @@ class Ask_Confirm_Quit(tk.Toplevel):
 
 
 class Ask_Confirm(tk.Toplevel):
-    def __init__(self, C, action, theme="dark"):
+    def __init__(self, C, action, theme="dark", button_text="Confirm"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Confirm Action")
         self.grid_columnconfigure(0, weight=1)
@@ -2480,7 +2480,7 @@ class Ask_Confirm(tk.Toplevel):
         self.button_frame = Frame(self, theme=theme)
         self.button_frame.grid(row=1, column=0, sticky="e", padx=20, pady=(10, 20))
         self.button_frame.grid_rowconfigure(0, weight=True)
-        self.confirm_button = Button(self.button_frame, text="Confirm", style="EF.Std.TButton", command=self.confirm)
+        self.confirm_button = Button(self.button_frame, text=button_text, style="EF.Std.TButton", command=self.confirm)
         self.confirm_button.grid(row=0, column=0, sticky="e", padx=(10, 20))
         self.cancel_button = Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel)
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=10)
@@ -4459,25 +4459,25 @@ class Help_Popup(tk.Toplevel):
 
     def scrollto(self, option):
         if option == "programbasics":
-            self.textbox.see(self.textbox.search("## PROGRAM BASICS", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# PROGRAM BASICS", "1.0").split(".")[0] + ".0")
         elif option == "tutorials":
-            self.textbox.see(self.textbox.search("## HELPFUL TIPS AND TUTORIALS", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# HELPFUL TIPS AND TUTORIALS", "1.0").split(".")[0] + ".0")
         elif option == "columns":
-            self.textbox.see(self.textbox.search("## MANAGING COLUMNS", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# MANAGING COLUMNS", "1.0").split(".")[0] + ".0")
         elif option == "treeviewmenu":
-            self.textbox.see(self.textbox.search("## MENU BAR", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# MENU BAR", "1.0").split(".")[0] + ".0")
         elif option == "treeviewbuttons":
-            self.textbox.see(self.textbox.search("## TREE BUTTONS", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# TREE BUTTONS", "1.0").split(".")[0] + ".0")
         elif option == "treeviewfunctions":
-            self.textbox.see(self.textbox.search("## TREE FUNCTIONS", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# TREE FUNCTIONS", "1.0").split(".")[0] + ".0")
         elif option == "treecompare":
-            self.textbox.see(self.textbox.search("## TREE COMPARE", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# TREE COMPARE", "1.0").split(".")[0] + ".0")
         elif option == "xlsxfiles":
-            self.textbox.see(self.textbox.search("## XLSX FILES", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# XLSX FILES", "1.0").split(".")[0] + ".0")
         elif option == "jsonfiles":
-            self.textbox.see(self.textbox.search("## JSON FILES", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# JSON FILES", "1.0").split(".")[0] + ".0")
         elif option == "api":
-            self.textbox.see(self.textbox.search("## USING THE API", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# USING THE API", "1.0").split(".")[0] + ".0")
 
     def find(self, event=None):
         self.find_reset(True)

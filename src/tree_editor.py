@@ -2133,8 +2133,9 @@ class Tree_Editor(tk.Frame):
         if self.C.unsaved_changes:
             confirm = Ask_Confirm(
                 self,
-                "You have unsaved changes, continue anyway?",
+                "Discard unsaved changes?",
                 theme=self.C.theme,
+                button_text="Continue",
             )
             return confirm.boolean
         else:
@@ -10067,16 +10068,15 @@ class Tree_Editor(tk.Frame):
         }
 
     def nodes_json_x_dict(self, njson: dict, hiers: Sequence[int]) -> dict:
-        nodes = {}
-        for name, nodedict in njson.items():
-            node = Node(
+        return {
+            name.lower(): Node(
                 name=name,
                 hrs=hiers,
+                cn={int(h): cnl for h, cnl in nodedict["cn"].items()},
+                ps={int(h): pk for h, pk in nodedict["ps"].items()},
             )
-            node.ps = {int(h): pk for h, pk in nodedict["ps"].items()}
-            node.cn = {int(h): cnl for h, cnl in nodedict["cn"].items()}
-            nodes[name.lower()] = node
-        return nodes
+            for name, nodedict in njson.items()
+        }
 
     def xlsx_chunker(self, seq):
         size = len(seq) if len(seq) <= 32000 else 32000

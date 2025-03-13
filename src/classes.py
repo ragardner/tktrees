@@ -585,10 +585,16 @@ class SearchResult:
 class Node:
     __slots__ = ("name", "cn", "ps")
 
-    def __init__(self, name: str, hrs: list[int]) -> None:
+    def __init__(
+        self,
+        name: str,
+        hrs: list[int],
+        cn: dict[int, list[str]] | None = None,
+        ps: dict[int, None | str] | None = None,
+    ) -> None:
         self.name: str = name
-        self.cn: dict[int, list[str]] = {v: [] for v in hrs}
-        self.ps: dict[int, None | str] = {v: None for v in hrs}
+        self.cn = cn if cn else {v: [] for v in hrs}
+        self.ps = ps if ps else {v: None for v in hrs}
 
 
 class Header:
