@@ -7382,7 +7382,7 @@ class Tree_Editor(tk.Frame):
         else:
             self.changelog_singular("Delete ID")
         if to_del:
-            self.sheet.del_rows(map(self.rns.get, to_del), redraw=False)
+            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
             self.sheet.deselect("all", redraw=False)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
@@ -7420,7 +7420,7 @@ class Tree_Editor(tk.Frame):
         else:
             self.changelog_singular("Delete ID from all hierarchies")
         if to_del:
-            self.sheet.del_rows(map(self.rns.get, to_del), redraw=False)
+            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
             self.sheet.deselect("all", redraw=False)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
@@ -9318,7 +9318,8 @@ class Tree_Editor(tk.Frame):
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
                         oldpc = int(self.pc)
                         self.pc = colnum
-                        self._del_id_core(cid.lower(), cpar.lower(), snapshot=False)
+                        to_del = self._del_id_core(cid.lower(), snapshot=False)
+                        self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
                         self.pc = int(oldpc)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
@@ -9439,7 +9440,7 @@ class Tree_Editor(tk.Frame):
                     cid = change[2]
                     if cid.lower() in self.rns:
                         to_del = self._del_id_all_core(cid.lower(), snapshot=False)
-                        self.sheet.del_rows(map(self.rns.get, to_del), redraw=False)
+                        self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete ID from all hierarchies",
