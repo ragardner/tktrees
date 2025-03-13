@@ -5127,24 +5127,21 @@ class Tree_Editor(tk.Frame):
                 )
         self.redraw_sheets()
 
-    def prev_change(self) -> int:
-        return len(self.changelog) - next(
-            i
-            for i, row in enumerate(islice(reversed(self.changelog), 1, None), start=1)
-            if not row[1].startswith(
-                (
-                    "Merge | ",
-                    "Imported change |",
-                    "Edit cell |",
-                    "Delete ID from all hierarchies |",
-                    "Delete ID |",
-                    "Cut and paste ID + children |",
-                    "Copy and paste ID |",
-                    "Copy and paste ID + children |",
-                    "Cut and paste ID |",
-                )
-            )
+    def prev_change(self) -> Generator[int]:
+        prefix = (
+            "Merge | ",
+            "Imported change |",
+            "Edit cell |",
+            "Delete ID from all hierarchies |",
+            "Delete ID |",
+            "Cut and paste ID + children |",
+            "Copy and paste ID |",
+            "Copy and paste ID + children |",
+            "Cut and paste ID |",
         )
+        for idx in range(len(self.changelog) - 1, -1, -1):
+            if not self.changelog[idx][1].startswith(prefix):
+                yield idx
 
     def undo(self, event=None):
         if self.C.working or not self.vs:
@@ -5184,8 +5181,13 @@ class Tree_Editor(tk.Frame):
             "delete ids",
         ):
             try:
-                self.changelog = self.changelog[: self.prev_change()]
+                gen = self.prev_change()
+                next(gen)
+                prev_idx = next(gen)
+                self.sheet_changes -= len(self.changelog) - prev_idx - 1
+                self.changelog = self.changelog[: prev_idx + 1]
             except Exception:
+                self.sheet_changes = 0
                 self.changelog = []
         else:
             del self.changelog[-1]
