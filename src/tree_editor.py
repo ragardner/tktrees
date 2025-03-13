@@ -154,7 +154,6 @@ class Tree_Editor(tk.Frame):
         #     self.monitor_scale = self.C.call("tk", "scaling")
         # except Exception:
         #     self.monitor_scale = 1
-        self.undo_in_progress = False
         self.l_frame_proportion = float(0.50)
         self.last_width = 0
         self.last_height = 0
@@ -1324,7 +1323,6 @@ class Tree_Editor(tk.Frame):
         self.copied_details = {"copied": [], "id": ""}
         self.copied_detail = {"copied": "", "id": ""}
         self.vs = deque(maxlen=30)
-        self.vp = 0
         self.cut = []
         self.copied = []
         self.cut_children_dct = {}
@@ -1494,7 +1492,6 @@ class Tree_Editor(tk.Frame):
         self.sheet.MT.data = []
         self.new_sheet = []
         self.vs = deque(maxlen=30)
-        self.vp = 0
         self.row_len = 0
         self.headers = []
         self.ic = 0
@@ -1891,7 +1888,6 @@ class Tree_Editor(tk.Frame):
                     self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
                 else:
                     self.vs.pop()
-                    self.vp -= 1
                     self.set_undo_label()
                     self.edit_cell_rebuild(y1, x1, newtext)
             else:
@@ -1960,9 +1956,8 @@ class Tree_Editor(tk.Frame):
                 self.redraw_sheets()
                 self.stop_work(self.get_tree_editor_status_bar_text())
             else:
-                self.vp -= 1
-                self.set_undo_label()
                 self.vs.pop()
+                self.set_undo_label()
                 self.redraw_sheets()
                 self.stop_work(self.get_tree_editor_status_bar_text())
         event.data = {}
@@ -5151,17 +5146,12 @@ class Tree_Editor(tk.Frame):
             )
         )
 
-    def undo_complete(self):
-        self.undo_in_progress = False
-
     def undo(self, event=None):
-        if self.undo_in_progress or not self.vs:
-            return
+        if self.C.working or not self.vs:
+            return "break"
         self.start_work("Undoing last action...")
         self.C.unsaved_changes = True
         self.C.change_app_title(star="add")
-        self.undo_in_progress = True
-        self.vp -= 1
         new_vs = self.vs.pop()
         self.ic = new_vs["required_data"]["ic"]
         self.pc = new_vs["required_data"]["pc"]
@@ -5339,9 +5329,7 @@ class Tree_Editor(tk.Frame):
         self.set_headers()
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.rehighlight_tagged_ids()
-        self.edit_menu.entryconfig(0, label=f"Undo {self.vp}/30")
-        if not self.vp:
-            self.edit_menu.entryconfig(0, state="disabled")
+        self.set_undo_label()
         self.mirror_sels_disabler = True
         self.move_tree_pos()
         if new_vs["required_data"]["sheet_selections"] is not None:
@@ -5351,7 +5339,6 @@ class Tree_Editor(tk.Frame):
         self.move_sheet_pos()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         del new_vs
-        self.after_idle(self.undo_complete)
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def tree_gen_heights_from_saved(self) -> Generator[int]:
@@ -5374,8 +5361,8 @@ class Tree_Editor(tk.Frame):
         }
 
     def set_undo_label(self, event=None):
-        self.edit_menu.entryconfig(0, label=f"Undo {self.vp}/30")
-        if not self.vp:
+        self.edit_menu.entryconfig(0, label=f"Undo {len(self.vs)}/30")
+        if not self.vs:
             self.edit_menu.entryconfig(0, state="disabled")
 
     def copy_headers(self):
@@ -5832,9 +5819,7 @@ class Tree_Editor(tk.Frame):
 
     def snapshot_chore(self):
         self.save_info_get_saved_info()
-        if self.vp < 30:
-            self.vp += 1
-        self.edit_menu.entryconfig(0, label=f"Undo {self.vp}/30", state="normal")
+        self.edit_menu.entryconfig(0, label=f"Undo {len(self.vs)}/30", state="normal")
 
     def sort_sheet_choice(self):
         popup = Sort_Sheet_Popup(self, [h.name for h in self.headers], theme=self.C.theme)
@@ -6356,7 +6341,6 @@ class Tree_Editor(tk.Frame):
         )
         if not success:
             self.vs.pop()
-            self.vp -= 1
             self.set_undo_label()
             return
         iid = self.nodes[self.cut_children_dct["id"]].name
@@ -6390,7 +6374,6 @@ class Tree_Editor(tk.Frame):
         success = self.cut_paste_children(self.cut_children_dct["id"], "", self.cut_children_dct["hier"])
         if not success:
             self.vs.pop()
-            self.vp -= 1
             self.set_undo_label()
             return
         iid = self.nodes[self.cut_children_dct["id"]].name
@@ -7047,7 +7030,6 @@ class Tree_Editor(tk.Frame):
 
     def unsuccessful_paste(self):
         self.vs.pop()
-        self.vp -= 1
         self.set_undo_label()
         self.stop_work(self.get_tree_editor_status_bar_text())
 
@@ -7690,9 +7672,8 @@ class Tree_Editor(tk.Frame):
         for rn in rows:
             self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
         if not cells_changed:
-            self.vp -= 1
-            self.set_undo_label()
             self.vs.pop()
+            self.set_undo_label()
             self.disable_paste()
             self.redraw_sheets()
             self.stop_work(self.get_tree_editor_status_bar_text())
@@ -7734,9 +7715,8 @@ class Tree_Editor(tk.Frame):
         for rn in rows:
             self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
         if not cells_changed:
-            self.vp -= 1
-            self.set_undo_label()
             self.vs.pop()
+            self.set_undo_label()
             self.disable_paste()
             self.redraw_sheets()
             self.stop_work(self.get_tree_editor_status_bar_text())
@@ -7778,9 +7758,8 @@ class Tree_Editor(tk.Frame):
         for rn in rows:
             self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
         if not cells_changed:
-            self.vp -= 1
-            self.set_undo_label()
             self.vs.pop()
+            self.set_undo_label()
             self.disable_paste()
             self.redraw_sheets()
             self.stop_work(self.get_tree_editor_status_bar_text())
@@ -7823,9 +7802,8 @@ class Tree_Editor(tk.Frame):
         for rn in rows:
             self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
         if not cells_changed:
-            self.vp -= 1
-            self.set_undo_label()
             self.vs.pop()
+            self.set_undo_label()
             self.disable_paste()
             self.redraw_sheets()
             self.stop_work(self.get_tree_editor_status_bar_text())
@@ -9654,7 +9632,6 @@ class Tree_Editor(tk.Frame):
             )
         else:
             self.vs.pop()
-            self.vp -= 1
             self.set_undo_label()
         self.pc = int(self.hiers[0])
         self.clear_copied_details()
@@ -10126,7 +10103,6 @@ class Tree_Editor(tk.Frame):
                 self.show_warnings("n/a - Data imported from: " + popup.file_opened, popup.sheet_opened)
             else:
                 self.vs.pop()
-                self.vp -= 1
                 self.set_undo_label()
                 Error(self, "No applicable changes were made", theme=self.C.theme)
             self.stop_work(self.get_tree_editor_status_bar_text())
