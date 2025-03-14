@@ -824,14 +824,14 @@ def get_new_indexes(
     returns {old idx: new idx, ...}
     """
     offset = sum(1 for i in to_move if i < move_to)
-    calc = move_to - offset
+    correct_move_to = move_to - offset
     if not get_inverse:
-        return {elem: calc + i for i, elem in enumerate(to_move)}
+        return {elem: correct_move_to + i for i, elem in enumerate(to_move)}
     else:
         new_idxs = {}
         old_idxs = {}
         for i, elem in enumerate(to_move):
-            value = calc + i
+            value = correct_move_to + i
             new_idxs[elem] = value
             old_idxs[value] = elem
         return new_idxs, old_idxs
