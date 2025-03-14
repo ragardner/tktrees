@@ -4103,7 +4103,7 @@ class Tree_Editor(tk.Frame):
                 for h in quick_hiers:
                     node.ps[h] = None
         if not self.auto_sort_nodes_bool:
-            current_nodes = {n: None for n in self.topnodes_order[self.hiers[0]]}
+            current_nodes = dict.fromkeys(self.topnodes_order[self.hiers[0]])
             wc = []
             woc = []
             for iid, node in self.nodes.items():
