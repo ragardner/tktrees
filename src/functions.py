@@ -654,7 +654,7 @@ def equalize_sublist_lens(seq: list[list[object]], len_: int | None = None) -> l
         len_ = max(map(len, seq), default=0)
     for sl in seq:
         if len(sl) < len_:
-            sl += list(repeat("", len_ - len(sl)))
+            sl.extend(repeat("", len_ - len(sl)))
     return len_
 
 
