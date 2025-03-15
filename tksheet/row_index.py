@@ -7,7 +7,7 @@ from contextlib import suppress
 from functools import partial
 from itertools import cycle, islice, repeat
 from math import ceil
-from operator import itemgetter
+from re import findall
 from typing import Any, Literal
 
 from .colors import color_map
@@ -1058,14 +1058,16 @@ class RowIndex(tk.Canvas):
     def get_cell_dimensions(self, datarn: int) -> tuple[int, int]:
         txt = self.cell_str(datarn, fix=False)
         if txt:
-            self.MT.txt_measure_canvas.itemconfig(self.MT.txt_measure_canvas_text, text=txt, font=self.ops.index_font)
-            b = self.MT.txt_measure_canvas.bbox(self.MT.txt_measure_canvas_text)
-            w = b[2] - b[0] + 7
-            h = b[3] - b[1] + 5
+            lines = findall(r"[^\n]+", txt)
+            h = self.MT.index_txt_height * len(lines) + 5
+            w = max(sum(self.wrap_get_char_w(c) for c in line) for line in lines) + 8
         else:
             w = self.ops.default_row_index_width
             h = self.MT.min_row_height
-        if self.get_cell_kwargs(datarn, key="dropdown") or self.get_cell_kwargs(datarn, key="checkbox"):
+        # self.get_cell_kwargs not used here to boost performance
+        if (datarn in self.cell_options and "dropdown" in self.cell_options[datarn]) or (
+            datarn in self.cell_options and "checkbox" in self.cell_options[datarn]
+        ):
             w += self.MT.index_txt_height + 2
         if self.ops.treeview:
             if datarn in self.cell_options and "align" in self.cell_options[datarn]:
@@ -1076,6 +1078,27 @@ class RowIndex(tk.Canvas):
                 w += self.MT.index_txt_height
             w += self.get_iid_indent(self.MT._row_index[datarn].iid) + 10
         return w, h
+
+    def get_cell_width(self, datarn: int) -> int:
+        txt = self.cell_str(datarn, fix=False)
+        if txt:
+            w = max(sum(self.wrap_get_char_w(c) for c in line) for line in findall(r"[^\n]+", txt)) + 8
+        else:
+            w = self.ops.default_row_index_width
+        # self.get_cell_kwargs not used here to boost performance
+        if (datarn in self.cell_options and "dropdown" in self.cell_options[datarn]) or (
+            datarn in self.cell_options and "checkbox" in self.cell_options[datarn]
+        ):
+            w += self.MT.index_txt_height + 2
+        if self.ops.treeview:
+            if datarn in self.cell_options and "align" in self.cell_options[datarn]:
+                align = self.cell_options[datarn]["align"]
+            else:
+                align = self.align
+            if align[-1] == "w":
+                w += self.MT.index_txt_height
+            w += self.get_iid_indent(self.MT._row_index[datarn].iid) + 10
+        return w
 
     def get_wrapped_cell_height(self, datarn: int) -> int:
         n_lines = max(
@@ -1094,12 +1117,7 @@ class RowIndex(tk.Canvas):
         )
         return 3 + (n_lines * self.MT.index_txt_height)
 
-    def get_row_text_height(
-        self,
-        row: int,
-        visible_only: bool = False,
-        only_if_too_small: bool = False,
-    ) -> int:
+    def get_row_text_height(self, row: int, visible_only: bool = False, only_if_too_small: bool = False) -> int:
         h = self.MT.min_row_height
         datarn = row if self.MT.all_rows_displayed else self.MT.displayed_rows[row]
         # index
@@ -1161,10 +1179,7 @@ class RowIndex(tk.Canvas):
             self.MT.recreate_all_selection_boxes()
         return height
 
-    def get_index_text_width(
-        self,
-        only_rows: Iterator[int] | None = None,
-    ) -> int:
+    def get_index_text_width(self, only_rows: Iterator[int] | None = None) -> int:
         self.fix_index()
         w = self.ops.default_row_index_width
         if (not self.MT._row_index and isinstance(self.MT._row_index, list)) or (
@@ -1180,17 +1195,13 @@ class RowIndex(tk.Canvas):
                 iterable = range(len(self.MT.data))
         else:
             iterable = self.MT.displayed_rows
-        if (new_w := max(map(itemgetter(0), map(self.get_cell_dimensions, iterable)), default=w)) > w:
+        if (new_w := max(map(self.get_cell_width, iterable), default=w)) > w:
             w = new_w
         if w > self.ops.max_index_width:
             w = int(self.ops.max_index_width)
         return w
 
-    def set_width_of_index_to_text(
-        self,
-        text: None | str = None,
-        only_rows: list[int] | None = None,
-    ) -> int:
+    def set_width_of_index_to_text(self, text: None | str = None, only_rows: list[int] | None = None) -> int:
         self.fix_index()
         w = self.ops.default_row_index_width
         if (text is None and isinstance(self.MT._row_index, list) and not self.MT._row_index) or (
@@ -1211,10 +1222,7 @@ class RowIndex(tk.Canvas):
         return w
 
     def set_height_of_all_rows(
-        self,
-        height: int | None = None,
-        only_if_too_small: bool = False,
-        recreate: bool = True,
+        self, height: int | None = None, only_if_too_small: bool = False, recreate: bool = True
     ) -> None:
         if height is None:
             if self.MT.all_columns_displayed:
@@ -1235,11 +1243,11 @@ class RowIndex(tk.Canvas):
     def auto_set_index_width(self, end_row: int, only_rows: list) -> bool:
         if not isinstance(self.MT._row_index, int) and not self.MT._row_index:
             if self.ops.default_row_index == "letters":
-                new_w = self.MT.get_txt_w(f"{num2alpha(end_row)}", self.index_font) + 20
+                new_w = sum(self.wrap_get_char_w(c) for c in num2alpha(end_row)) + 20
             elif self.ops.default_row_index == "numbers":
-                new_w = self.MT.get_txt_w(f"{end_row}", self.index_font) + 20
+                new_w = sum(self.wrap_get_char_w(c) for c in str(end_row)) + 20
             elif self.ops.default_row_index == "both":
-                new_w = self.MT.get_txt_w(f"{end_row + 1} {num2alpha(end_row)}", self.index_font) + 20
+                new_w = sum(self.wrap_get_char_w(c) for c in f"{end_row + 1} {num2alpha(end_row)}") + 20
             elif self.ops.default_row_index is None:
                 new_w = 20
         elif self.ops.auto_resize_row_index is True:
@@ -1306,7 +1314,6 @@ class RowIndex(tk.Canvas):
                     sr,
                     fill=fill,
                     outline=self.ops.index_fg if has_dd and self.ops.show_dropdown_borders else "",
-                    tag="s",
                 )
             tree_arrow_fg = txtfg
         elif not kwargs:
@@ -1320,7 +1327,6 @@ class RowIndex(tk.Canvas):
                     sr,
                     fill=self.ops.index_selected_rows_bg,
                     outline=self.ops.index_fg if has_dd and self.ops.show_dropdown_borders else "",
-                    tag="s",
                 )
             elif "cells" in selections and r in selections["cells"]:
                 txtfg = self.ops.index_selected_cells_fg
@@ -1332,23 +1338,13 @@ class RowIndex(tk.Canvas):
                     sr,
                     fill=self.ops.index_selected_cells_bg,
                     outline=self.ops.index_fg if has_dd and self.ops.show_dropdown_borders else "",
-                    tag="s",
                 )
             else:
                 txtfg = self.ops.index_fg
                 tree_arrow_fg = self.ops.tree_arrow_fg
         return txtfg, tree_arrow_fg, redrawn
 
-    def redraw_highlight(
-        self,
-        x1: float,
-        y1: float,
-        x2: float,
-        y2: float,
-        fill: str,
-        outline: str,
-        tag: str | tuple[str],
-    ) -> bool:
+    def redraw_highlight(self, x1: float, y1: float, x2: float, y2: float, fill: str, outline: str) -> bool:
         coords = (x1, y1, x2, y2)
         if self.hidd_high:
             iid, showing = self.hidd_high.popitem()
@@ -1356,30 +1352,23 @@ class RowIndex(tk.Canvas):
             if showing:
                 self.itemconfig(iid, fill=fill, outline=outline)
             else:
-                self.itemconfig(iid, fill=fill, outline=outline, tag=tag, state="normal")
-            self.tag_raise(iid)
+                self.itemconfig(iid, fill=fill, outline=outline, state="normal")
         else:
-            iid = self.create_rectangle(coords, fill=fill, outline=outline, tag=tag)
+            iid = self.create_rectangle(coords, fill=fill, outline=outline)
         self.disp_high[iid] = True
         return True
 
-    def redraw_gridline(
-        self,
-        points: tuple[float],
-        fill: str,
-        width: int,
-        tag: str | tuple[str],
-    ) -> None:
+    def redraw_gridline(self, points: tuple[float], fill: str, width: int) -> None:
         if self.hidd_grid:
             t, sh = self.hidd_grid.popitem()
             self.coords(t, points)
             if sh:
-                self.itemconfig(t, fill=fill, width=width, tag=tag)
+                self.itemconfig(t, fill=fill, width=width)
             else:
-                self.itemconfig(t, fill=fill, width=width, tag=tag, state="normal")
+                self.itemconfig(t, fill=fill, width=width, state="normal")
             self.disp_grid[t] = True
         else:
-            self.disp_grid[self.create_line(points, fill=fill, width=width, tag=tag)] = True
+            self.disp_grid[self.create_line(points, fill=fill, width=width)] = True
 
     def redraw_tree_arrow(
         self,
@@ -1387,7 +1376,6 @@ class RowIndex(tk.Canvas):
         y1: float,
         y2: float,
         fill: str,
-        tag: str | tuple[str],
         indent: float,
         has_children: bool = False,
         open_: bool = False,
@@ -1460,16 +1448,15 @@ class RowIndex(tk.Canvas):
             if sh:
                 self.itemconfig(t, fill=fill if has_children else self.ops.index_grid_fg)
             else:
-                self.itemconfig(t, fill=fill if has_children else self.ops.index_grid_fg, tag=tag, state="normal")
-            self.lift(t)
+                self.itemconfig(t, fill=fill if has_children else self.ops.index_grid_fg, state="normal")
         else:
             t = self.create_line(
                 points,
                 fill=fill if has_children else self.ops.index_grid_fg,
-                tag=tag,
                 width=2,
                 capstyle=tk.ROUND,
                 joinstyle=tk.BEVEL,
+                tag="lift",
             )
         self.disp_tree_arrow[t] = True
 
@@ -1481,13 +1468,12 @@ class RowIndex(tk.Canvas):
         y2: float,
         fill: str,
         outline: str,
-        tag: str | tuple[str],
         draw_outline: bool = True,
         draw_arrow: bool = True,
         open_: bool = False,
     ) -> None:
         if draw_outline and self.ops.show_dropdown_borders:
-            self.redraw_highlight(x1 + 1, y1 + 1, x2, y2, fill="", outline=self.ops.index_fg, tag=tag)
+            self.redraw_highlight(x1 + 1, y1 + 1, x2, y2, fill="", outline=self.ops.index_fg)
         if draw_arrow:
             mod = (self.MT.index_txt_height - 1) if self.MT.index_txt_height % 2 else self.MT.index_txt_height
             small_mod = int(mod / 5)
@@ -1518,16 +1504,15 @@ class RowIndex(tk.Canvas):
                 if sh:
                     self.itemconfig(t, fill=fill)
                 else:
-                    self.itemconfig(t, fill=fill, tag=tag, state="normal")
-                self.lift(t)
+                    self.itemconfig(t, fill=fill, state="normal")
             else:
                 t = self.create_line(
                     points,
                     fill=fill,
-                    tag=tag,
                     width=2,
                     capstyle=tk.ROUND,
                     joinstyle=tk.BEVEL,
+                    tag="lift",
                 )
             self.disp_dropdown[t] = True
 
@@ -1539,7 +1524,6 @@ class RowIndex(tk.Canvas):
         y2: float,
         fill: str,
         outline: str,
-        tag: str | tuple[str],
         draw_check: bool = False,
     ) -> None:
         points = rounded_box_coords(x1, y1, x2, y2)
@@ -1549,10 +1533,9 @@ class RowIndex(tk.Canvas):
             if sh:
                 self.itemconfig(t, fill=outline, outline=fill)
             else:
-                self.itemconfig(t, fill=outline, outline=fill, tag=tag, state="normal")
-            self.lift(t)
+                self.itemconfig(t, fill=outline, outline=fill, state="normal")
         else:
-            t = self.create_polygon(points, fill=outline, outline=fill, tag=tag, smooth=True)
+            t = self.create_polygon(points, fill=outline, outline=fill, smooth=True, tag="lift")
         self.disp_checkbox[t] = True
         if draw_check:
             # draw filled box
@@ -1567,10 +1550,9 @@ class RowIndex(tk.Canvas):
                 if sh:
                     self.itemconfig(t, fill=fill, outline=outline)
                 else:
-                    self.itemconfig(t, fill=fill, outline=outline, tag=tag, state="normal")
-                self.lift(t)
+                    self.itemconfig(t, fill=fill, outline=outline, state="normal")
             else:
-                t = self.create_polygon(points, fill=fill, outline=outline, tag=tag, smooth=True)
+                t = self.create_polygon(points, fill=fill, outline=outline, smooth=True, tag="lift")
             self.disp_checkbox[t] = True
 
     def configure_scrollregion(self, last_row_line_pos: float) -> bool:
@@ -1588,15 +1570,15 @@ class RowIndex(tk.Canvas):
             return False
 
     def wrap_get_char_w(self, c: str) -> int:
-        self.MT.txt_measure_canvas.itemconfig(
-            self.MT.txt_measure_canvas_text,
-            text=_test_str + c,
-            font=self.index_font,
-        )
-        b = self.MT.txt_measure_canvas.bbox(self.MT.txt_measure_canvas_text)
         if c in self.MT.char_widths[self.index_font]:
             return self.MT.char_widths[self.index_font][c]
         else:
+            self.MT.txt_measure_canvas.itemconfig(
+                self.MT.txt_measure_canvas_text,
+                text=_test_str + c,
+                font=self.index_font,
+            )
+            b = self.MT.txt_measure_canvas.bbox(self.MT.txt_measure_canvas_text)
             wd = b[2] - b[0] - self.index_test_str_w
             self.MT.char_widths[self.index_font][c] = wd
             return wd
@@ -1635,6 +1617,35 @@ class RowIndex(tk.Canvas):
             self.current_width,
             scrollpos_bot,
         )
+
+        if (self.ops.show_horizontal_grid or self.height_resizing_enabled) and row_pos_exists:
+            xend = self.current_width - 6
+            points = [
+                self.current_width - 1,
+                y_stop - 1,
+                self.current_width - 1,
+                scrollpos_top - 1,
+                -1,
+                scrollpos_top - 1,
+            ]
+            for r in range(grid_start_row, grid_end_row):
+                draw_y = self.MT.row_positions[r]
+                if r and self.height_resizing_enabled:
+                    self.visible_row_dividers[r] = (1, draw_y - 2, xend, draw_y + 2)
+                points.extend(
+                    (
+                        -1,
+                        draw_y,
+                        self.current_width,
+                        draw_y,
+                        -1,
+                        draw_y,
+                        -1,
+                        self.MT.row_positions[r + 1] if len(self.MT.row_positions) - 1 > r else draw_y,
+                    )
+                )
+            self.redraw_gridline(points=points, fill=self.ops.index_grid_fg, width=1)
+
         sel_cells_bg = (
             self.ops.index_selected_cells_bg
             if self.ops.index_selected_cells_bg.startswith("#")
@@ -1688,7 +1699,6 @@ class RowIndex(tk.Canvas):
                     rbotgridln - 1,
                     fill=fill if dropdown_kwargs["state"] != "disabled" else self.ops.index_grid_fg,
                     outline=fill,
-                    tag="dd",
                     draw_outline=not dd_drawn,
                     draw_arrow=True,
                     open_=dd_coords == r,
@@ -1727,7 +1737,6 @@ class RowIndex(tk.Canvas):
                         rtopgridln + self.MT.index_txt_height + 3,
                         fill=fill if checkbox_kwargs["state"] == "normal" else self.ops.index_grid_fg,
                         outline="",
-                        tag="cb",
                         draw_check=draw_check,
                     )
             if treeview and isinstance(self.MT._row_index, list) and len(self.MT._row_index) > datarn:
@@ -1742,7 +1751,6 @@ class RowIndex(tk.Canvas):
                     rtopgridln,
                     rbotgridln - 1,
                     fill=tree_arrow_fg,
-                    tag="ta",
                     indent=indent,
                     has_children=bool(self.MT._row_index[datarn].children),
                     open_=self.MT._row_index[datarn].iid in self.tree_open_ids,
@@ -1764,7 +1772,7 @@ class RowIndex(tk.Canvas):
                 wrap=wrap,
                 start_line=start_line,
             )
-            if align.endswith(("w", "e")):
+            if align[-1] == "w" or align[-1] == "e":
                 if self.hidd_text:
                     iid, showing = self.hidd_text.popitem()
                     self.coords(iid, draw_x, draw_y)
@@ -1793,18 +1801,18 @@ class RowIndex(tk.Canvas):
                         fill=fill,
                         font=font,
                         anchor=align,
-                        tags="t",
+                        tag="lift",
                     )
                 self.disp_text[iid] = True
             else:
-                for text in gen_lines:
+                for line in gen_lines:
                     if self.hidd_text:
                         iid, showing = self.hidd_text.popitem()
                         self.coords(iid, draw_x, draw_y)
                         if showing:
                             self.itemconfig(
                                 iid,
-                                text=text,
+                                text=line,
                                 fill=fill,
                                 font=font,
                                 anchor=align,
@@ -1812,7 +1820,7 @@ class RowIndex(tk.Canvas):
                         else:
                             self.itemconfig(
                                 iid,
-                                text=text,
+                                text=line,
                                 fill=fill,
                                 font=font,
                                 anchor=align,
@@ -1822,42 +1830,15 @@ class RowIndex(tk.Canvas):
                         iid = self.create_text(
                             draw_x,
                             draw_y,
-                            text=text,
+                            text=line,
                             fill=fill,
                             font=font,
                             anchor=align,
-                            tags="t",
+                            tag="lift",
                         )
                     self.disp_text[iid] = True
                     draw_y += self.MT.header_txt_height
 
-        xend = self.current_width - 6
-        if (self.ops.show_horizontal_grid or self.height_resizing_enabled) and row_pos_exists:
-            points = [
-                self.current_width - 1,
-                y_stop - 1,
-                self.current_width - 1,
-                scrollpos_top - 1,
-                -1,
-                scrollpos_top - 1,
-            ]
-            for r in range(grid_start_row, grid_end_row):
-                draw_y = self.MT.row_positions[r]
-                if r and self.height_resizing_enabled:
-                    self.visible_row_dividers[r] = (1, draw_y - 2, xend, draw_y + 2)
-                points.extend(
-                    (
-                        -1,
-                        draw_y,
-                        self.current_width,
-                        draw_y,
-                        -1,
-                        draw_y,
-                        -1,
-                        self.MT.row_positions[r + 1] if len(self.MT.row_positions) - 1 > r else draw_y,
-                    )
-                )
-            self.redraw_gridline(points=points, fill=self.ops.index_grid_fg, width=1, tag="h")
         for dct in (
             self.hidd_text,
             self.hidd_high,
@@ -1870,7 +1851,7 @@ class RowIndex(tk.Canvas):
                 if showing:
                     self.itemconfig(iid, state="hidden")
                     dct[iid] = False
-        self.tag_raise("t")
+        self.tag_raise("lift")
         if self.disp_resize_lines:
             self.tag_raise("rh")
         return True
