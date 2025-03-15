@@ -1117,7 +1117,12 @@ class RowIndex(tk.Canvas):
         )
         return 3 + (n_lines * self.MT.index_txt_height)
 
-    def get_row_text_height(self, row: int, visible_only: bool = False, only_if_too_small: bool = False) -> int:
+    def get_row_text_height(
+        self,
+        row: int,
+        visible_only: bool = False,
+        only_if_too_small: bool = False,
+    ) -> int:
         h = self.MT.min_row_height
         datarn = row if self.MT.all_rows_displayed else self.MT.displayed_rows[row]
         # index
@@ -1201,7 +1206,11 @@ class RowIndex(tk.Canvas):
             w = int(self.ops.max_index_width)
         return w
 
-    def set_width_of_index_to_text(self, text: None | str = None, only_rows: list[int] | None = None) -> int:
+    def set_width_of_index_to_text(
+        self,
+        text: None | str = None,
+        only_rows: list[int] | None = None,
+    ) -> int:
         self.fix_index()
         w = self.ops.default_row_index_width
         if (text is None and isinstance(self.MT._row_index, list) and not self.MT._row_index) or (
@@ -1222,7 +1231,10 @@ class RowIndex(tk.Canvas):
         return w
 
     def set_height_of_all_rows(
-        self, height: int | None = None, only_if_too_small: bool = False, recreate: bool = True
+        self,
+        height: int | None = None,
+        only_if_too_small: bool = False,
+        recreate: bool = True,
     ) -> None:
         if height is None:
             if self.MT.all_columns_displayed:
@@ -1344,7 +1356,15 @@ class RowIndex(tk.Canvas):
                 tree_arrow_fg = self.ops.tree_arrow_fg
         return txtfg, tree_arrow_fg, redrawn
 
-    def redraw_highlight(self, x1: float, y1: float, x2: float, y2: float, fill: str, outline: str) -> bool:
+    def redraw_highlight(
+        self,
+        x1: float,
+        y1: float,
+        x2: float,
+        y2: float,
+        fill: str,
+        outline: str,
+    ) -> bool:
         coords = (x1, y1, x2, y2)
         if self.hidd_high:
             iid, showing = self.hidd_high.popitem()
@@ -1358,7 +1378,12 @@ class RowIndex(tk.Canvas):
         self.disp_high[iid] = True
         return True
 
-    def redraw_gridline(self, points: tuple[float], fill: str, width: int) -> None:
+    def redraw_gridline(
+        self,
+        points: tuple[float],
+        fill: str,
+        width: int,
+    ) -> None:
         if self.hidd_grid:
             t, sh = self.hidd_grid.popitem()
             self.coords(t, points)
