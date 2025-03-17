@@ -913,7 +913,7 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_command(
-            label="Clipboard selected + children",
+            label="Clipboard IDs & descendants",
             command=self.copy_ID_children_rows,
             **menu_kwargs,
         )
@@ -985,7 +985,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_rc_menu_single_row_copy.add_command(label="Clipboard row", command=self.copy_ID_row, **menu_kwargs)
         self.tree_rc_menu_single_row_copy.add_command(
-            label="Clipboard ID + descendants",
+            label="Clipboard ID & descendants",
             command=self.copy_ID_children_rows,
             **menu_kwargs,
         )
