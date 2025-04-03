@@ -1675,7 +1675,6 @@ class View_Id_Popup(tk.Toplevel):
 
             else:
                 self.C.vs.pop()
-                self.C.vp -= 1
                 self.C.set_undo_label()
                 self.C.changelog_append(
                     "Edit cell",
