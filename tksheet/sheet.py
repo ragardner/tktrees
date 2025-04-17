@@ -328,6 +328,7 @@ class Sheet(tk.Frame):
         if treeview:
             index_align = "w"
             auto_resize_row_index = True
+            paste_can_expand_y = False
         for k, v in locals().items():
             if (xk := backwards_compatibility_keys.get(k, k)) in self.ops and v != self.ops[xk]:
                 self.ops[xk] = v
@@ -445,7 +446,6 @@ class Sheet(tk.Frame):
             style=f"Sheet{self.unique_id}.Vertical.TScrollbar",
         )
         self.MT["yscrollcommand"] = self.yscroll.set
-        self.RI["yscrollcommand"] = self.yscroll.set
         self.xscroll = ttk.Scrollbar(
             self,
             command=self.MT._xscrollbar,
@@ -453,7 +453,6 @@ class Sheet(tk.Frame):
             style=f"Sheet{self.unique_id}.Horizontal.TScrollbar",
         )
         self.MT["xscrollcommand"] = self.xscroll.set
-        self.CH["xscrollcommand"] = self.xscroll.set
         self.show()
         if show_top_left is False or (show_top_left is None and (not show_row_index or not show_header)):
             self.hide("top_left")
@@ -614,8 +613,8 @@ class Sheet(tk.Frame):
 
     # Bindings and Functionality
 
-    def enable_bindings(self, *bindings: Binding) -> Sheet:
-        self.MT.enable_bindings(bindings)
+    def enable_bindings(self, *bindings: Binding, menu: bool = True) -> Sheet:
+        self.MT.enable_bindings(bindings, menu=menu)
         return self
 
     def disable_bindings(self, *bindings: Binding) -> Sheet:
@@ -4182,6 +4181,7 @@ class Sheet(tk.Frame):
         self.MT.create_rc_menus()
         if "treeview" in kwargs:
             self.index_align("nw", redraw=False)
+            self.ops.paste_can_expand_y = False
         return self.set_refresh_timer(redraw)
 
     def set_scrollbar_options(self) -> Sheet:

@@ -7,7 +7,7 @@ from bisect import bisect_left, bisect_right
 from collections import defaultdict, deque
 from collections.abc import Callable, Generator, Hashable, Iterator, Sequence
 from functools import partial
-from itertools import accumulate, chain, cycle, filterfalse, islice, repeat
+from itertools import accumulate, chain, filterfalse, islice, repeat
 from operator import itemgetter
 from re import IGNORECASE, escape, sub
 from tkinter import TclError
@@ -130,8 +130,6 @@ class MainTable(tk.Canvas):
         self.ctrl_b1_pressed = False
         self.b1_pressed_loc = None
         self.closed_dropdown = None
-        self.centre_alignment_text_mod_indexes = (slice(1, None), slice(None, -1))
-        self.c_align_cyc = cycle(self.centre_alignment_text_mod_indexes)
         self.allow_auto_resize_columns = True
         self.allow_auto_resize_rows = True
         self.span = self.PAR.span
@@ -150,6 +148,7 @@ class MainTable(tk.Canvas):
             "<<SelectAll>>": self.select_all,
         }
         self.enabled_bindings = set()
+        self.enabled_bindings_menu_entries = set()
         self.selection_box_ctr = 0
         self.disp_selection_fills = set()
         self.hidd_selection_fills = set()
@@ -386,8 +385,8 @@ class MainTable(tk.Canvas):
 
     def basic_bindings(self, enable: bool = True) -> None:
         bindings = (
+            ("<Enter>", self, self.mouse_motion),
             ("<Configure>", self, self.window_configured),
-            ("<Motion>", self, self.mouse_motion),
             ("<ButtonPress-1>", self, self.b1_press),
             ("<B1-Motion>", self, self.b1_motion),
             ("<ButtonRelease-1>", self, self.b1_release),
@@ -1389,25 +1388,25 @@ class MainTable(tk.Canvas):
                 )
         selboxr = selected_r + new_data_numrows if added_rows else selected_r_adjusted_new_data_numrows
         selboxc = selected_c + new_data_numcols if added_cols else selected_c_adjusted_new_data_numcols
-        self.deselect("all", redraw=False)
-        self.set_currently_selected(
-            *curr_coords,
-            item=self.create_selection_box(
-                selected_r,
-                selected_c,
-                selboxr,
-                selboxc,
-                type_="cells",
-                set_current=False,
-                run_binding=True,
-            ),
-        )
-        event_data["selection_boxes"] = self.get_boxes()
-        event_data["selected"] = self.selected
-        self.see(selected_r, selected_c, redraw=False)
-        self.refresh()
         event_data = self.bulk_edit_validation(event_data)
         if event_data["cells"]["table"] or event_data["added"]["rows"] or event_data["added"]["columns"]:
+            self.deselect("all", redraw=False)
+            self.set_currently_selected(
+                *curr_coords,
+                item=self.create_selection_box(
+                    selected_r,
+                    selected_c,
+                    selboxr,
+                    selboxc,
+                    type_="cells",
+                    set_current=False,
+                    run_binding=True,
+                ),
+            )
+            event_data["selection_boxes"] = self.get_boxes()
+            event_data["selected"] = self.selected
+            self.see(selected_r, selected_c, redraw=False)
+            self.refresh()
             if self.undo_enabled:
                 self.undo_stack.append(stored_event_dict(event_data))
             try_binding(self.extra_end_ctrl_v_func, event_data, "end_ctrl_v")
@@ -2928,28 +2927,42 @@ class MainTable(tk.Canvas):
         ):
             menu.delete(0, "end")
         mnkwgs = get_menu_kwargs(self.PAR.ops)
-        if self.rc_popup_menus_enabled and self.CH.edit_cell_enabled:
+        if (
+            self.rc_popup_menus_enabled
+            and self.CH.edit_cell_enabled
+            and "edit_header" in self.enabled_bindings_menu_entries
+        ):
             self.menu_add_command(
                 self.CH.ch_rc_popup_menu,
                 label=self.PAR.ops.edit_header_label,
                 command=lambda: self.CH.open_cell(event="rc"),
                 **mnkwgs,
             )
-        if self.rc_popup_menus_enabled and self.RI.edit_cell_enabled:
+        if (
+            self.rc_popup_menus_enabled
+            and self.RI.edit_cell_enabled
+            and "edit_index" in self.enabled_bindings_menu_entries
+        ):
             self.menu_add_command(
                 self.RI.ri_rc_popup_menu,
                 label=self.PAR.ops.edit_index_label,
                 command=lambda: self.RI.open_cell(event="rc"),
                 **mnkwgs,
             )
-        if self.rc_popup_menus_enabled and self.edit_cell_enabled:
+        if (
+            self.rc_popup_menus_enabled
+            and self.edit_cell_enabled
+            and any(x in self.enabled_bindings_menu_entries for x in ("all", "edit_cell", "edit_bindings", "edit"))
+        ):
             self.menu_add_command(
                 self.rc_popup_menu,
                 label=self.PAR.ops.edit_cell_label,
                 command=lambda: self.open_cell(event="rc"),
                 **mnkwgs,
             )
-        if self.cut_enabled:
+        if self.cut_enabled and any(
+            x in self.enabled_bindings_menu_entries for x in ("all", "cut", "edit_bindings", "edit")
+        ):
             self.menu_add_command(
                 self.rc_popup_menu,
                 label=self.PAR.ops.cut_label,
@@ -2971,7 +2984,9 @@ class MainTable(tk.Canvas):
                 command=self.ctrl_x,
                 **mnkwgs,
             )
-        if self.copy_enabled:
+        if self.copy_enabled and any(
+            x in self.enabled_bindings_menu_entries for x in ("all", "copy", "edit_bindings", "edit")
+        ):
             self.menu_add_command(
                 self.rc_popup_menu,
                 label=self.PAR.ops.copy_label,
@@ -2993,7 +3008,9 @@ class MainTable(tk.Canvas):
                 command=self.ctrl_c,
                 **mnkwgs,
             )
-        if self.paste_enabled:
+        if self.paste_enabled and any(
+            x in self.enabled_bindings_menu_entries for x in ("all", "paste", "edit_bindings", "edit")
+        ):
             self.menu_add_command(
                 self.rc_popup_menu,
                 label=self.PAR.ops.paste_label,
@@ -3023,7 +3040,9 @@ class MainTable(tk.Canvas):
                     command=self.ctrl_v,
                     **mnkwgs,
                 )
-        if self.delete_key_enabled:
+        if self.delete_key_enabled and any(
+            x in self.enabled_bindings_menu_entries for x in ("all", "paste", "edit_bindings", "edit")
+        ):
             self.menu_add_command(
                 self.rc_popup_menu,
                 label=self.PAR.ops.delete_label,
@@ -3219,18 +3238,18 @@ class MainTable(tk.Canvas):
                 **mnkwgs,
             )
 
-    def enable_bindings(self, bindings: Any) -> None:
+    def enable_bindings(self, bindings: Any, menu: bool = True) -> None:
         if not bindings:
-            self._enable_binding("all")
+            self._enable_binding("all", menu)
         elif isinstance(bindings, (list, tuple)):
             for binding in bindings:
                 if isinstance(binding, (list, tuple)):
                     for bind in binding:
-                        self._enable_binding(bind.lower())
+                        self._enable_binding(bind.lower(), menu)
                 elif isinstance(binding, str):
-                    self._enable_binding(binding.lower())
+                    self._enable_binding(binding.lower(), menu)
         elif isinstance(bindings, str):
-            self._enable_binding(bindings.lower())
+            self._enable_binding(bindings.lower(), menu)
         self.create_rc_menus()
 
     def disable_bindings(self, bindings: Any) -> None:
@@ -3247,7 +3266,7 @@ class MainTable(tk.Canvas):
             self._disable_binding(bindings)
         self.create_rc_menus()
 
-    def _enable_binding(self, binding: Binding) -> None:
+    def _enable_binding(self, binding: Binding, menu: bool = True) -> None:
         if binding == "enable_all":
             binding = "all"
         if binding in (
@@ -3389,6 +3408,8 @@ class MainTable(tk.Canvas):
         if binding in ("ctrl_click_select", "ctrl_select"):
             self.ctrl_select_enabled = True
         self.enabled_bindings.add(binding)
+        if menu:
+            self.enabled_bindings_menu_entries.add(binding)
 
     def _tksheet_bind(self, bindings_key: str, func: Callable) -> None:
         for widget in (self, self.RI, self.CH, self.TL):
@@ -3400,8 +3421,10 @@ class MainTable(tk.Canvas):
             binding = "all"
         if binding == "all":
             self.enabled_bindings = set()
+            self.enabled_bindings_menu_entries = set()
         else:
             self.enabled_bindings.discard(binding)
+            self.enabled_bindings_menu_entries.discard(binding)
         if binding in (
             "all",
             "single",
@@ -3529,19 +3552,16 @@ class MainTable(tk.Canvas):
                 for binding in self.PAR.ops[bindings_key]:
                     widget.unbind(binding)
 
-    def reset_mouse_motion_creations(self) -> None:
-        if self.current_cursor != "":
-            self.config(cursor="")
-            self.RI.config(cursor="")
-            self.CH.config(cursor="")
-            self.current_cursor = ""
+    def reset_resize_vars(self) -> None:
         self.RI.rsz_w = None
         self.RI.rsz_h = None
         self.CH.rsz_w = None
         self.CH.rsz_h = None
 
     def mouse_motion(self, event: Any) -> None:
-        self.reset_mouse_motion_creations()
+        self.config(cursor="")
+        self.current_cursor = ""
+        self.reset_resize_vars()
         try_binding(self.extra_motion_func, event)
 
     def not_currently_resizing(self) -> bool:
@@ -6162,7 +6182,7 @@ class MainTable(tk.Canvas):
             and can_width >= self.col_positions[-1] + self.PAR.ops.empty_horizontal
             and self.PAR.xscroll_showing
         ):
-            self.PAR.xscroll.grid_forget()
+            self.PAR.xscroll.grid_remove()
             self.PAR.xscroll_showing = False
         elif (
             can_width < self.col_positions[-1] + self.PAR.ops.empty_horizontal
@@ -6170,10 +6190,10 @@ class MainTable(tk.Canvas):
             and not self.PAR.xscroll_disabled
             and can_height > 40
         ):
-            self.PAR.xscroll.grid(row=2, column=0, columnspan=2, sticky="nswe")
+            self.PAR.xscroll.grid()
             self.PAR.xscroll_showing = True
         if can_height >= self.row_positions[-1] + self.PAR.ops.empty_vertical and self.PAR.yscroll_showing:
-            self.PAR.yscroll.grid_forget()
+            self.PAR.yscroll.grid_remove()
             self.PAR.yscroll_showing = False
         elif (
             can_height < self.row_positions[-1] + self.PAR.ops.empty_vertical
@@ -6181,7 +6201,7 @@ class MainTable(tk.Canvas):
             and not self.PAR.yscroll_disabled
             and can_width > 40
         ):
-            self.PAR.yscroll.grid(row=0, column=2, rowspan=3, sticky="nswe")
+            self.PAR.yscroll.grid()
             self.PAR.yscroll_showing = True
 
     def _overflow(
