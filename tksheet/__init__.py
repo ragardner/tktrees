@@ -4,13 +4,25 @@
 tksheet - A Python tkinter table widget
 """
 
-__version__ = "7.4.21"
+__version__ = "7.5.0"
 
 from .colors import (
     color_map,
 )
 from .column_headers import ColumnHeaders
 from .constants import (
+    ICON_ADD,
+    ICON_CLEAR,
+    ICON_COPY,
+    ICON_CUT,
+    ICON_DEL,
+    ICON_EDIT,
+    ICON_PASTE,
+    ICON_REDO,
+    ICON_SELECT_ALL,
+    ICON_SORT_ASC,
+    ICON_SORT_DESC,
+    ICON_UNDO,
     USER_OS,
     ctrl_key,
     emitted_events,

@@ -24,7 +24,19 @@ from typing import Literal
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell import WriteOnlyCell
-from tksheet import (
+from tksheet import (  # noqa: F401
+    ICON_ADD,
+    ICON_CLEAR,
+    ICON_COPY,
+    ICON_CUT,
+    ICON_DEL,
+    ICON_EDIT,
+    ICON_PASTE,
+    ICON_REDO,
+    ICON_SELECT_ALL,
+    ICON_SORT_ASC,
+    ICON_SORT_DESC,
+    ICON_UNDO,
     DotDict,
     Highlight,
     Sheet,
@@ -52,16 +64,22 @@ from .constants import (
     changelog_header,
     ctrl_button,
     date_formats_usable,
+    date_icon,
     detail_column_types,
+    letters_icon,
     menu_kwargs,
+    nums_icon,
     rc_button,
     rc_motion,
     rc_press,
     rc_release,
     remove_nrt,
+    right_icon,
+    search_icon,
     sheet_bindings,
     sheet_header_font,
     software_version_number,
+    tag_icon,
     themes,
     tree_bindings,
     tv_lvls_colors,
@@ -219,10 +237,28 @@ class Tree_Editor(tk.Frame):
         self.warnings_sheet = ""
 
         # cell alignment menu images
-        self.align_icons = {
+        self.icons = {
             "w": tk.PhotoImage(format="png", data=align_w_icon),
             "c": tk.PhotoImage(format="png", data=align_c_icon),
             "e": tk.PhotoImage(format="png", data=align_e_icon),
+            "letters": tk.PhotoImage(format="png", data=letters_icon),
+            "dates": tk.PhotoImage(format="png", data=date_icon),
+            "numbers": tk.PhotoImage(format="png", data=nums_icon),
+            "tag": tk.PhotoImage(format="png", data=tag_icon),
+            "search": tk.PhotoImage(format="png", data=search_icon),
+            "right": tk.PhotoImage(format="png", data=right_icon),
+            "ICON_ADD": tk.PhotoImage(format="png", data=ICON_ADD),
+            "ICON_CLEAR": tk.PhotoImage(format="png", data=ICON_CLEAR),
+            "ICON_COPY": tk.PhotoImage(format="png", data=ICON_COPY),
+            "ICON_CUT": tk.PhotoImage(format="png", data=ICON_CUT),
+            "ICON_DEL": tk.PhotoImage(format="png", data=ICON_DEL),
+            "ICON_EDIT": tk.PhotoImage(format="png", data=ICON_EDIT),
+            "ICON_PASTE": tk.PhotoImage(format="png", data=ICON_PASTE),
+            "ICON_REDO": tk.PhotoImage(format="png", data=ICON_REDO),
+            "ICON_SELECT_ALL": tk.PhotoImage(format="png", data=ICON_SELECT_ALL),
+            "ICON_SORT_ASC": tk.PhotoImage(format="png", data=ICON_SORT_ASC),
+            "ICON_SORT_DESC": tk.PhotoImage(format="png", data=ICON_SORT_DESC),
+            "ICON_UNDO": tk.PhotoImage(format="png", data=ICON_UNDO),
         }
 
         self.C.file.entryconfig("Save", command=self.save_)
@@ -246,6 +282,8 @@ class Tree_Editor(tk.Frame):
             accelerator="Ctrl+Z",
             state="disabled",
             command=self.undo,
+            image=self.icons["ICON_UNDO"],
+            compound="left",
             **menu_kwargs,
         )
         self.edit_menu.add_separator()
@@ -253,16 +291,22 @@ class Tree_Editor(tk.Frame):
         self.copy_clipboard_menu.add_command(
             label="Copy sheet to clipboard (indent separated)",
             command=self.clipboard_sheet_indent,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.copy_clipboard_menu.add_command(
             label="Copy sheet to clipboard (comma separated)",
             command=self.clipboard_sheet,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.copy_clipboard_menu.add_command(
             label="Copy sheet to clipboard as json",
             command=self.clipboard_sheet_json,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.edit_menu.add_command(
@@ -661,30 +705,40 @@ class Tree_Editor(tk.Frame):
         self.tree_sheet_rc_menu_single_cell.add_command(
             label="Edit",
             command=self.tree_sheet_edit_detail,
+            image=self.icons["ICON_EDIT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_cell.add_command(
             label="Cut",
             accelerator="Ctrl+X",
             command=self.cut_key,
+            image=self.icons["ICON_CUT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_cell.add_command(
             label="Copy",
             accelerator="Ctrl+C",
             command=self.copy_key,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_cell.add_command(
             label="Paste",
             accelerator="Ctrl+V",
             command=self.paste_key,
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_cell.add_command(
             label="Clear contents",
             accelerator="Del",
             command=self.del_key,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -698,24 +752,32 @@ class Tree_Editor(tk.Frame):
             label="Cut",
             accelerator="Ctrl+X",
             command=self.cut_key,
+            image=self.icons["ICON_CUT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_multi_cell.add_command(
             label="Copy",
             accelerator="Ctrl+C",
             command=self.copy_key,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_multi_cell.add_command(
             label="Paste",
             accelerator="Ctrl+V",
             command=self.paste_key,
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_multi_cell.add_command(
             label="Clear contents",
             accelerator="Del",
             command=self.del_key,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -729,7 +791,7 @@ class Tree_Editor(tk.Frame):
             parent=self.tree_sheet_rc_menu_single_col,
             command=self.tree_sheet_align,
             menu_kwargs=menu_kwargs,
-            icons=self.align_icons,
+            icons=self.icons,
         )
         self.tree_sheet_rc_menu_single_col.add_cascade(
             label="Alignment",
@@ -740,45 +802,61 @@ class Tree_Editor(tk.Frame):
             label="Cut",
             accelerator="Ctrl+X",
             command=self.cut_key,
+            image=self.icons["ICON_CUT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Copy",
             accelerator="Ctrl+C",
             command=self.copy_key,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Paste",
             accelerator="Ctrl+V",
             command=self.paste_key,
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Clear contents",
             accelerator="Del",
             command=self.del_key,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Delete column",
             command=self.del_cols_rc,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_separator()
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Add detail",
             command=self.rc_add_col,
+            image=self.icons["ICON_ADD"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Add hierarchy",
             command=self.rc_add_hier_col,
+            image=self.icons["ICON_ADD"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Rename column",
             command=self.rc_rename_col,
+            image=self.icons["ICON_EDIT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_separator()
@@ -795,48 +873,66 @@ class Tree_Editor(tk.Frame):
         self.tree_sheet_rc_menu_single_col_type.add_command(
             label="Text",
             command=self.rc_change_coltype_text,
+            image=self.icons["letters"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col_type.add_command(
             label="Number",
             command=self.rc_change_coltype_number,
+            image=self.icons["numbers"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col_type.add_command(
             label="Date",
             command=self.rc_change_coltype_date,
+            image=self.icons["dates"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Validation",
             command=self.rc_edit_validation,
+            image=self.icons["ICON_EDIT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Conditional Formatting",
             command=self.rc_edit_formatting,
+            image=self.icons["ICON_EDIT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_separator()
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Sort sheet A → Z",
             command=self.sort_sheet_rc_asc,
+            image=self.icons["ICON_SORT_ASC"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Sort sheet Z → A",
             command=self.sort_sheet_rc_desc,
+            image=self.icons["ICON_SORT_DESC"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Sort sheet tree walk",
             command=self.sort_sheet_walk,
+            image=self.icons["ICON_SORT_ASC"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_separator()
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Set as treeview label",
             command=self.sheet_rc_tv_label,
+            image=self.icons["letters"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -850,7 +946,7 @@ class Tree_Editor(tk.Frame):
             parent=self.tree_sheet_rc_menu_multi_col,
             command=self.tree_sheet_align,
             menu_kwargs=menu_kwargs,
-            icons=self.align_icons,
+            icons=self.icons,
         )
         self.tree_sheet_rc_menu_multi_col.add_cascade(
             label="Alignment",
@@ -861,29 +957,39 @@ class Tree_Editor(tk.Frame):
             label="Cut",
             accelerator="Ctrl+X",
             command=self.cut_key,
+            image=self.icons["ICON_CUT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_multi_col.add_command(
             label="Copy",
             accelerator="Ctrl+C",
             command=self.copy_key,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_multi_col.add_command(
             label="Paste",
             accelerator="Ctrl+V",
             command=self.paste_key,
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_multi_col.add_command(
             label="Clear contents",
             accelerator="Del",
             command=self.del_key,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_multi_col.add_command(
             label="Delete columns",
             command=self.del_cols_rc,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -893,34 +999,46 @@ class Tree_Editor(tk.Frame):
             label="Cut",
             accelerator="Ctrl+X",
             command=self.cut_ids,
+            image=self.icons["ICON_CUT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Copy",
             accelerator="Ctrl+C",
             command=self.copy_key,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Paste",
             accelerator="Ctrl+V",
             command=self.paste_key,
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Clipboard",
             command=self.copy_ID_row,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Clipboard IDs & descendants",
             command=self.copy_ID_children_rows,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Paste details",
             state="disabled",
             command=self.paste_details,
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_separator()
@@ -928,23 +1046,31 @@ class Tree_Editor(tk.Frame):
             label="Tag/Untag IDs",
             accelerator="Ctrl+T",
             command=self.tag_ids,
+            image=self.icons["tag"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_separator()
         self.tree_rc_menu_multi_row.add_command(
             label="Clear IDs details",
             command=self.del_all_details,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Delete IDs",
             accelerator="Del",
             command=self.del_key,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Delete IDs all hierarchies",
             command=self.del_id_all,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -952,9 +1078,27 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_single_row = tk.Menu(self.treeframe, tearoff=0, **menu_kwargs)
         self.tree_rc_menu_single_row_add = tk.Menu(self.tree_rc_menu_single_row, tearoff=0, **menu_kwargs)
         self.tree_rc_menu_single_row.add_cascade(label="Add", menu=self.tree_rc_menu_single_row_add, **menu_kwargs)
-        self.tree_rc_menu_single_row_add.add_command(label="Add child", command=self.add_child_node, **menu_kwargs)
-        self.tree_rc_menu_single_row_add.add_command(label="Add sibling", command=self.add_sibling_node, **menu_kwargs)
-        self.tree_rc_menu_single_row_add.add_command(label="Add top ID", command=self.add_top_node, **menu_kwargs)
+        self.tree_rc_menu_single_row_add.add_command(
+            label="Add child",
+            command=self.add_child_node,
+            image=self.icons["ICON_ADD"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_single_row_add.add_command(
+            label="Add sibling",
+            command=self.add_sibling_node,
+            image=self.icons["ICON_ADD"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_single_row_add.add_command(
+            label="Add top ID",
+            command=self.add_top_node,
+            image=self.icons["ICON_ADD"],
+            compound="left",
+            **menu_kwargs,
+        )
 
         # cut
         self.tree_rc_menu_single_row_cut = tk.Menu(self.tree_rc_menu_single_row, tearoff=0, **menu_kwargs)
@@ -962,11 +1106,15 @@ class Tree_Editor(tk.Frame):
             label="Detach ID",
             accelerator="Ctrl+X",
             command=self.cut_ids,
+            image=self.icons["ICON_CUT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_cut.add_command(
             label="Detach children",
             command=self.cut_children,
+            image=self.icons["ICON_CUT"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row.add_cascade(
@@ -981,15 +1129,31 @@ class Tree_Editor(tk.Frame):
             label="Copy ID",
             accelerator="Ctrl+C",
             command=self.copy_key,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
-        self.tree_rc_menu_single_row_copy.add_command(label="Clipboard row", command=self.copy_ID_row, **menu_kwargs)
+        self.tree_rc_menu_single_row_copy.add_command(
+            label="Clipboard row",
+            command=self.copy_ID_row,
+            image=self.icons["ICON_COPY"],
+            compound="left",
+            **menu_kwargs,
+        )
         self.tree_rc_menu_single_row_copy.add_command(
             label="Clipboard ID & descendants",
             command=self.copy_ID_children_rows,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
-        self.tree_rc_menu_single_row_copy.add_command(label="Copy details", command=self.copy_details, **menu_kwargs)
+        self.tree_rc_menu_single_row_copy.add_command(
+            label="Copy details",
+            command=self.copy_details,
+            image=self.icons["ICON_COPY"],
+            compound="left",
+            **menu_kwargs,
+        )
         self.tree_rc_menu_single_row.add_cascade(label="Copy", menu=self.tree_rc_menu_single_row_copy, **menu_kwargs)
 
         # paste options
@@ -1000,17 +1164,44 @@ class Tree_Editor(tk.Frame):
             menu=self.tree_rc_menu_single_row_paste,
             **menu_kwargs,
         )
-        self.tree_rc_menu_single_row_paste.add_command(label="Paste IDs as sibling", **menu_kwargs)
-        self.tree_rc_menu_single_row_paste.add_command(label="Paste IDs as child", **menu_kwargs)
+        self.tree_rc_menu_single_row_paste.add_command(
+            label="Paste IDs as sibling",
+            image=self.icons["ICON_PASTE"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_single_row_paste.add_command(
+            label="Paste IDs as child",
+            image=self.icons["ICON_PASTE"],
+            compound="left",
+            **menu_kwargs,
+        )
         self.tree_rc_menu_single_row_paste.add_separator()
-        self.tree_rc_menu_single_row_paste.add_command(label="Paste IDs and children as sibling", **menu_kwargs)
-        self.tree_rc_menu_single_row_paste.add_command(label="Paste IDs and children as child", **menu_kwargs)
+        self.tree_rc_menu_single_row_paste.add_command(
+            label="Paste IDs and children as sibling",
+            image=self.icons["ICON_PASTE"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_single_row_paste.add_command(
+            label="Paste IDs and children as child",
+            image=self.icons["ICON_PASTE"],
+            compound="left",
+            **menu_kwargs,
+        )
         self.tree_rc_menu_single_row_paste.add_separator()
-        self.tree_rc_menu_single_row_paste.add_command(label="Attach children", **menu_kwargs)
+        self.tree_rc_menu_single_row_paste.add_command(
+            label="Attach children",
+            image=self.icons["ICON_PASTE"],
+            compound="left",
+            **menu_kwargs,
+        )
         self.tree_rc_menu_single_row_paste.add_command(
             label="Paste details",
             state="disabled",
             command=self.paste_details,
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -1020,6 +1211,8 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_single_row_del.add_command(
             label="Clear IDs details",
             command=self.del_all_details,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_separator()
@@ -1027,33 +1220,45 @@ class Tree_Editor(tk.Frame):
             label="Delete ID",
             accelerator="Del",
             command=self.del_key,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_command(
             label="Delete ID, orphan children",
             command=self.del_id_orphan,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_separator()
         self.tree_rc_menu_single_row_del.add_command(
             label="Delete ID all hierarchies",
             command=self.del_id_all,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_command(
             label="Delete ID all hierarchies, orphan children",
             command=self.del_id_all_orphan,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_separator()
         self.tree_rc_menu_single_row_del.add_command(
             label="Delete ID + children",
             command=self.del_id_children,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row_del.add_command(
             label="Delete ID + children, all hierarchies",
             command=self.del_id_children_all,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -1061,26 +1266,78 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_single_row.add_command(
             label="ID concise view",
             command=self.show_ids_details_tree,
+            image=self.icons["search"],
+            compound="left",
             **menu_kwargs,
         )
         self.tree_rc_menu_single_row.add_command(
             label="Tag/Untag ID",
             accelerator="Ctrl+T",
             command=self.tag_ids,
+            image=self.icons["tag"],
+            compound="left",
             **menu_kwargs,
         )
-        self.tree_rc_menu_single_row.add_command(label="Rename ID", command=self.rename_node, **menu_kwargs)
+        self.tree_rc_menu_single_row.add_command(
+            label="Rename ID",
+            command=self.rename_node,
+            image=self.icons["ICON_EDIT"],
+            compound="left",
+            **menu_kwargs,
+        )
 
         # EMPTY MENU - TREE
         self.tree_rc_menu_empty = tk.Menu(self.treeframe, tearoff=0, **menu_kwargs)
-        self.tree_rc_menu_empty.add_command(label="Paste IDs", state="disabled", **menu_kwargs)
-        self.tree_rc_menu_empty.add_command(label="Paste IDs and children", state="disabled", **menu_kwargs)
-        self.tree_rc_menu_empty.add_command(label="Attach children", state="disabled", **menu_kwargs)
+        self.tree_rc_menu_empty.add_command(
+            label="Paste IDs",
+            state="disabled",
+            image=self.icons["ICON_PASTE"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_empty.add_command(
+            label="Paste IDs and children",
+            state="disabled",
+            image=self.icons["ICON_PASTE"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_empty.add_command(
+            label="Attach children",
+            state="disabled",
+            image=self.icons["ICON_PASTE"],
+            compound="left",
+            **menu_kwargs,
+        )
         self.tree_rc_menu_empty.add_separator()
-        self.tree_rc_menu_empty.add_command(label="Add top ID", command=self.add_top_node, **menu_kwargs)
-        self.tree_rc_menu_empty.add_command(label="Add rows", command=self.add_rows_rc, **menu_kwargs)
-        self.tree_rc_menu_empty.add_command(label="Add detail", command=self.rc_add_col, **menu_kwargs)
-        self.tree_rc_menu_empty.add_command(label="Add hierarchy", command=self.rc_add_hier_col, **menu_kwargs)
+        self.tree_rc_menu_empty.add_command(
+            label="Add top ID",
+            command=self.add_top_node,
+            image=self.icons["ICON_ADD"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_empty.add_command(
+            label="Add rows",
+            command=self.add_rows_rc,
+            image=self.icons["ICON_ADD"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_empty.add_command(
+            label="Add detail",
+            command=self.rc_add_col,
+            image=self.icons["ICON_ADD"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_empty.add_command(
+            label="Add hierarchy",
+            command=self.rc_add_hier_col,
+            image=self.icons["ICON_ADD"],
+            compound="left",
+            **menu_kwargs,
+        )
 
         # SINGLE ROW MENU - SHEET
         self.sheet_rc_menu_single_row = tk.Menu(self.sheet, tearoff=0, **menu_kwargs)
@@ -1088,16 +1345,22 @@ class Tree_Editor(tk.Frame):
             label="Tag/Untag ID",
             accelerator="Ctrl+T",
             command=self.tag_ids,
+            image=self.icons["tag"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_command(
             label="Go to ID in Treeview",
             command=self.select_id_in_treeview_from_sheet,
+            image=self.icons["right"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_command(
             label="ID concise view",
             command=self.show_ids_details_sheet,
+            image=self.icons["search"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_separator()
@@ -1105,51 +1368,69 @@ class Tree_Editor(tk.Frame):
             label="Clipboard",
             accelerator="Ctrl+C",
             command=self.copy_key,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_command(
             label="Paste",
             accelerator="Ctrl+V",
             command=self.paste_key,
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_separator()
         self.sheet_rc_menu_single_row.add_command(
             label="Copy details",
             command=self.sheet_copy_details,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_command(
             label="Paste details",
             command=self.sheet_paste_details,
             state="disabled",
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_command(
             label="Clear IDs details",
             command=self.sheet_del_all_details,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_separator()
         self.sheet_rc_menu_single_row.add_command(
             label="Add top ID",
             command=self.sheet_add_top_node,
+            image=self.icons["ICON_ADD"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_command(
             label="Insert rows",
             command=lambda: self.add_rows_rc(True),
+            image=self.icons["ICON_ADD"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_command(
             label="Rename ID",
             command=self.sheet_rename_node,
+            image=self.icons["ICON_EDIT"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_single_row.add_separator()
         self.sheet_rc_menu_single_row.add_command(
             label="Del IDs, all hierarchies",
             command=self.del_key,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -1163,18 +1444,24 @@ class Tree_Editor(tk.Frame):
             label="Tag/Untag IDs",
             accelerator="Ctrl+T",
             command=self.tag_ids,
+            image=self.icons["tag"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_multi_row.add_separator()
         self.sheet_rc_menu_multi_row.add_command(
             label="Clear all details",
             command=self.sheet_del_all_details,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_multi_row.add_command(
             label="Paste details",
             command=self.sheet_paste_details,
             state="disabled",
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_multi_row.add_separator()
@@ -1182,12 +1469,16 @@ class Tree_Editor(tk.Frame):
             label="Clipboard",
             accelerator="Ctrl+C",
             command=self.copy_key,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_multi_row.add_command(
             label="Paste",
             accelerator="Ctrl+V",
             command=self.paste_key,
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_multi_row.add_separator()
@@ -1195,6 +1486,8 @@ class Tree_Editor(tk.Frame):
             label="Del IDs, all hierarchies",
             accelerator="Del",
             command=self.del_key,
+            image=self.icons["ICON_DEL"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -1207,21 +1500,29 @@ class Tree_Editor(tk.Frame):
         self.sheet_rc_menu_empty.add_command(
             label="Add top ID",
             command=self.sheet_add_top_node,
+            image=self.icons["ICON_ADD"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_empty.add_command(
             label="Add rows",
             command=self.add_rows_rc,
+            image=self.icons["ICON_ADD"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_empty.add_command(
             label="Add detail",
             command=self.rc_add_col,
+            image=self.icons["ICON_ADD"],
+            compound="left",
             **menu_kwargs,
         )
         self.sheet_rc_menu_empty.add_command(
             label="Add hierarchy",
             command=self.rc_add_hier_col,
+            image=self.icons["ICON_ADD"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -2706,12 +3007,16 @@ class Tree_Editor(tk.Frame):
                         self.tree_rc_menu_single_row.add_command(
                             label="Sort children",
                             command=self.tree_sort_children,
+                            image=self.icons["ICON_SORT_ASC"],
+                            compound="left",
                             **menu_kwargs,
                         )
                     if self.tree_rc_menu_multi_row.entrycget("end", "label") != "Sort children":
                         self.tree_rc_menu_multi_row.add_command(
                             label="Sort children",
                             command=self.tree_sort_children,
+                            image=self.icons["ICON_SORT_ASC"],
+                            compound="left",
                             **menu_kwargs,
                         )
                 self.treecolsel = self.ic
@@ -4872,6 +5177,7 @@ class Tree_Editor(tk.Frame):
 
     def increment_unsaved(self):
         self.C.unsaved_changes = True
+        self.set_undo_label()
         self.C.change_app_title(star="add")
 
     def get_datetime_changelog(self, increment_unsaved=True):
@@ -5364,9 +5670,10 @@ class Tree_Editor(tk.Frame):
         }
 
     def set_undo_label(self, event=None):
-        self.edit_menu.entryconfig(0, label=f"Undo {len(self.vs)}/30")
-        if not self.vs:
-            self.edit_menu.entryconfig(0, state="disabled")
+        if self.vs:
+            self.edit_menu.entryconfig(0, label=f"Undo {len(self.vs)}/30")
+        else:
+            self.edit_menu.entryconfig(0, label=f"Undo {len(self.vs)}/30", state="disabled")
 
     def copy_headers(self):
         return [

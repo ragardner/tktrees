@@ -1,6 +1,23 @@
 from __future__ import annotations
 
-from .constants import USER_OS, ctrl_key
+import tkinter as tk
+
+from .constants import (  # noqa: F401
+    ICON_ADD,
+    ICON_CLEAR,
+    ICON_COPY,
+    ICON_CUT,
+    ICON_DEL,
+    ICON_EDIT,
+    ICON_PASTE,
+    ICON_REDO,
+    ICON_SELECT_ALL,
+    ICON_SORT_ASC,
+    ICON_SORT_DESC,
+    ICON_UNDO,
+    USER_OS,
+    ctrl_key,
+)
 from .other_classes import DotDict, FontTuple
 from .sorting import fast_sort_key, natural_sort_key, version_sort_key  # noqa: F401
 from .themes import theme_light_blue
@@ -30,62 +47,111 @@ def new_sheet_options() -> DotDict:
                 13 if USER_OS == "darwin" else 11,
                 "normal",
             ),
-            # cell editing
+            # edit header
             "edit_header_label": "Edit header",
             "edit_header_accelerator": "",
+            "edit_header_image": tk.PhotoImage(data=ICON_EDIT),
+            "edit_header_compound": "left",
+            # edit index
             "edit_index_label": "Edit index",
             "edit_index_accelerator": "",
+            "edit_index_image": tk.PhotoImage(data=ICON_EDIT),
+            "edit_index_compound": "left",
+            # edit cell
             "edit_cell_label": "Edit cell",
             "edit_cell_accelerator": "",
-            # cut/copy/paste
+            "edit_cell_image": tk.PhotoImage(data=ICON_EDIT),
+            "edit_cell_compound": "left",
+            # cut
             "cut_label": "Cut",
             "cut_accelerator": "Ctrl+X",
+            "cut_image": tk.PhotoImage(data=ICON_CUT),
+            "cut_compound": "left",
+            # cut contents
             "cut_contents_label": "Cut contents",
             "cut_contents_accelerator": "Ctrl+X",
+            "cut_contents_image": tk.PhotoImage(data=ICON_CUT),
+            "cut_contents_compound": "left",
+            # copy
             "copy_label": "Copy",
             "copy_accelerator": "Ctrl+C",
+            "copy_image": tk.PhotoImage(data=ICON_COPY),
+            "copy_compound": "left",
+            # copy contents
             "copy_contents_label": "Copy contents",
             "copy_contents_accelerator": "Ctrl+C",
+            "copy_contents_image": tk.PhotoImage(data=ICON_COPY),
+            "copy_contents_compound": "left",
+            # paste
             "paste_label": "Paste",
             "paste_accelerator": "Ctrl+V",
-            # clear/del
+            "paste_image": tk.PhotoImage(data=ICON_PASTE),
+            "paste_compound": "left",
+            # delete
             "delete_label": "Delete",
             "delete_accelerator": "Del",
+            "delete_image": tk.PhotoImage(data=ICON_CLEAR),
+            "delete_compound": "left",
+            # clear contents
             "clear_contents_label": "Clear contents",
             "clear_contents_accelerator": "Del",
-            # del/insert columns
+            "clear_contents_image": tk.PhotoImage(data=ICON_CLEAR),
+            "clear_contents_compound": "left",
+            # del columns
             "delete_columns_label": "Delete columns",
             "delete_columns_accelerator": "",
+            "delete_columns_image": tk.PhotoImage(data=ICON_DEL),
+            "delete_columns_compound": "left",
+            # insert columns left
             "insert_columns_left_label": "Insert columns left",
             "insert_columns_left_accelerator": "",
-            "insert_column_label": "Insert column",
-            "insert_column_accelerator": "",
+            "insert_columns_left_image": tk.PhotoImage(data=ICON_ADD),
+            "insert_columns_left_compound": "left",
+            # insert columns right
             "insert_columns_right_label": "Insert columns right",
             "insert_columns_right_accelerator": "",
-            # del/insert rows
+            "insert_columns_right_image": tk.PhotoImage(data=ICON_ADD),
+            "insert_columns_right_compound": "left",
+            # insert single column
+            "insert_column_label": "Insert column",
+            "insert_column_accelerator": "",
+            "insert_column_image": tk.PhotoImage(data=ICON_ADD),
+            "insert_column_compound": "left",
+            # del rows
             "delete_rows_label": "Delete rows",
             "delete_rows_accelerator": "",
+            "delete_rows_image": tk.PhotoImage(data=ICON_DEL),
+            "delete_rows_compound": "left",
+            # insert rows above
             "insert_rows_above_label": "Insert rows above",
             "insert_rows_above_accelerator": "",
+            "insert_rows_above_image": tk.PhotoImage(data=ICON_ADD),
+            "insert_rows_above_compound": "left",
+            # insert rows below
             "insert_rows_below_label": "Insert rows below",
             "insert_rows_below_accelerator": "",
+            "insert_rows_below_image": tk.PhotoImage(data=ICON_ADD),
+            "insert_rows_below_compound": "left",
+            # insert single row
             "insert_row_label": "Insert row",
             "insert_row_accelerator": "",
+            "insert_row_image": tk.PhotoImage(data=ICON_ADD),
+            "insert_row_compound": "left",
             # sorting
             # labels
-            "sort_cells_label": "Sort ↓",
-            "sort_cells_x_label": "Sort →",
-            "sort_row_label": "Sort values →",
-            "sort_column_label": "Sort values ↓",
-            "sort_rows_label": "Sort rows ↓",
-            "sort_columns_label": "Sort columns →",
+            "sort_cells_label": "Sort Asc.",
+            "sort_cells_x_label": "Sort row-wise Asc.",
+            "sort_row_label": "Sort values Asc.",
+            "sort_column_label": "Sort values Asc.",
+            "sort_rows_label": "Sort rows Asc.",
+            "sort_columns_label": "Sort columns Asc.",
             # reverse labels
-            "sort_cells_reverse_label": "Sort ↑",
-            "sort_cells_x_reverse_label": "Sort ←",
-            "sort_row_reverse_label": "Sort values ←",
-            "sort_column_reverse_label": "Sort values ↑",
-            "sort_rows_reverse_label": "Sort rows ↑",
-            "sort_columns_reverse_label": "Sort columns ←",
+            "sort_cells_reverse_label": "Sort Desc.",
+            "sort_cells_x_reverse_label": "Sort row-wise Desc.",
+            "sort_row_reverse_label": "Sort values Desc.",
+            "sort_column_reverse_label": "Sort values Desc.",
+            "sort_rows_reverse_label": "Sort rows Desc.",
+            "sort_columns_reverse_label": "Sort columns Desc.",
             # accelerators
             "sort_cells_accelerator": "",
             "sort_cells_x_accelerator": "",
@@ -100,12 +166,49 @@ def new_sheet_options() -> DotDict:
             "sort_column_reverse_accelerator": "",
             "sort_rows_reverse_accelerator": "",
             "sort_columns_reverse_accelerator": "",
+            # images
+            "sort_cells_image": tk.PhotoImage(data=ICON_SORT_ASC),
+            "sort_cells_x_image": tk.PhotoImage(data=ICON_SORT_ASC),
+            "sort_row_image": tk.PhotoImage(data=ICON_SORT_ASC),
+            "sort_column_image": tk.PhotoImage(data=ICON_SORT_ASC),
+            "sort_rows_image": tk.PhotoImage(data=ICON_SORT_ASC),
+            "sort_columns_image": tk.PhotoImage(data=ICON_SORT_ASC),
+            # compounds
+            "sort_cells_compound": "left",
+            "sort_cells_x_compound": "left",
+            "sort_row_compound": "left",
+            "sort_column_compound": "left",
+            "sort_rows_compound": "left",
+            "sort_columns_compound": "left",
+            # reverse images
+            "sort_cells_reverse_image": tk.PhotoImage(data=ICON_SORT_DESC),
+            "sort_cells_x_reverse_image": tk.PhotoImage(data=ICON_SORT_DESC),
+            "sort_row_reverse_image": tk.PhotoImage(data=ICON_SORT_DESC),
+            "sort_column_reverse_image": tk.PhotoImage(data=ICON_SORT_DESC),
+            "sort_rows_reverse_image": tk.PhotoImage(data=ICON_SORT_DESC),
+            "sort_columns_reverse_image": tk.PhotoImage(data=ICON_SORT_DESC),
+            # reverse compounds
+            "sort_cells_reverse_compound": "left",
+            "sort_cells_x_reverse_compound": "left",
+            "sort_row_reverse_compound": "left",
+            "sort_column_reverse_compound": "left",
+            "sort_rows_reverse_compound": "left",
+            "sort_columns_reverse_compound": "left",
             # select all
             "select_all_label": "Select all",
             "select_all_accelerator": "Ctrl+A",
+            "select_all_image": tk.PhotoImage(data=ICON_SELECT_ALL),
+            "select_all_compound": "left",
             # undo
             "undo_label": "Undo",
             "undo_accelerator": "Ctrl+Z",
+            "undo_image": tk.PhotoImage(data=ICON_UNDO),
+            "undo_compound": "left",
+            # redo
+            "redo_label": "Redo",
+            "redo_accelerator": "Ctrl+Shift+Z",
+            "redo_image": tk.PhotoImage(data=ICON_REDO),
+            "redo_compound": "left",
             # bindings
             "copy_bindings": [
                 f"<{ctrl_key}-c>",

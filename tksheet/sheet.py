@@ -329,7 +329,7 @@ class Sheet(tk.Frame):
             index_align = "w"
             auto_resize_row_index = True
             paste_can_expand_y = False
-        for k, v in locals().items():
+        for k, v in chain(locals().items(), kwargs.items()):
             if (xk := backwards_compatibility_keys.get(k, k)) in self.ops and v != self.ops[xk]:
                 self.ops[xk] = v
         self.ops.from_clipboard_delimiters = (
@@ -784,15 +784,19 @@ class Sheet(tk.Frame):
         index_menu: bool = True,
         header_menu: bool = True,
         empty_space_menu: bool = True,
+        image: tk.PhotoImage | Literal[""] = "",
+        compound: Literal["top", "bottom", "left", "right", "none"] | None = None,
+        accelerator: str | None = None,
     ) -> Sheet:
-        if label not in self.MT.extra_table_rc_menu_funcs and table_menu:
-            self.MT.extra_table_rc_menu_funcs[label] = func
-        if label not in self.MT.extra_index_rc_menu_funcs and index_menu:
-            self.MT.extra_index_rc_menu_funcs[label] = func
-        if label not in self.MT.extra_header_rc_menu_funcs and header_menu:
-            self.MT.extra_header_rc_menu_funcs[label] = func
-        if label not in self.MT.extra_empty_space_rc_menu_funcs and empty_space_menu:
-            self.MT.extra_empty_space_rc_menu_funcs[label] = func
+        dct = {"command": func, "image": image, "accelerator": accelerator, "compound": compound}
+        if table_menu:
+            self.MT.extra_table_rc_menu_funcs[label] = dct
+        if index_menu:
+            self.MT.extra_index_rc_menu_funcs[label] = dct
+        if header_menu:
+            self.MT.extra_header_rc_menu_funcs[label] = dct
+        if empty_space_menu:
+            self.MT.extra_empty_space_rc_menu_funcs[label] = dct
         self.MT.create_rc_menus()
         return self
 
@@ -954,8 +958,11 @@ class Sheet(tk.Frame):
         self.create_options_from_span(span)
         return span
 
-    def create_options_from_span(self, span: Span) -> Sheet:
-        getattr(self, span.type_)(span, **span.kwargs)
+    def create_options_from_span(self, span: Span, set_data: bool = True) -> Sheet:
+        if span.type_ == "format":
+            self.format(span, set_data=set_data, **span.kwargs)
+        else:
+            getattr(self, span.type_)(span, **span.kwargs)
         return self
 
     def del_named_span(self, name: str) -> Sheet:
@@ -1534,32 +1541,22 @@ class Sheet(tk.Frame):
                 event_data = set_h(startc, data, event_data)
         # add row/column lines (positions) if required
         if self.MT.all_columns_displayed and maxc >= (ncols := len(self.MT.col_positions) - 1):
-            _, _, widths = self.MT.get_args_for_add_columns(
-                data_ins_col=len(self.MT.col_positions) - 1,
-                displayed_ins_col=len(self.MT.col_positions) - 1,
-                columns=maxc + 1 - ncols,
-                widths=None,
-                headers=False,
-            )
+            disp_ins_col, widths_n_cols = len(self.MT.col_positions) - 1, maxc + 1 - ncols
+            w = self.ops.default_column_width
             event_data = self.MT.add_columns(
                 columns={},
                 header={},
-                column_widths=widths,
+                column_widths=dict(zip(range(disp_ins_col, disp_ins_col + widths_n_cols), repeat(w))),
                 event_data=event_data,
                 create_selections=False,
             )
         if self.MT.all_rows_displayed and maxr >= (nrows := len(self.MT.row_positions) - 1):
-            _, _, heights = self.MT.get_args_for_add_rows(
-                data_ins_row=len(self.MT.row_positions) - 1,
-                displayed_ins_row=len(self.MT.row_positions) - 1,
-                rows=maxr + 1 - nrows,
-                heights=None,
-                row_index=False,
-            )
+            disp_ins_row, heights_n_rows = len(self.MT.row_positions) - 1, maxr + 1 - nrows
+            h = self.MT.get_default_row_height()
             event_data = self.MT.add_rows(
                 rows={},
                 index={},
-                row_heights=heights,
+                row_heights=dict(zip(range(disp_ins_row, disp_ins_row + heights_n_rows), repeat(h))),
                 event_data=event_data,
                 create_selections=False,
             )
@@ -1572,8 +1569,9 @@ class Sheet(tk.Frame):
         ):
             if undo is True or (undo is None and span.undo):
                 self.MT.undo_stack.append(stored_event_dict(event_data))
-            if emit_event is True or (emit_event is None and span.emit_event):
-                self.emit_event("<<SheetModified>>", event_data)
+            self.MT.sheet_modified(
+                event_data, emit_event=emit_event is True or (emit_event is None and span.emit_event)
+            )
         self.set_refresh_timer(redraw)
         return event_data
 
@@ -1612,8 +1610,9 @@ class Sheet(tk.Frame):
         if event_data["cells"]["table"] or event_data["cells"]["header"] or event_data["cells"]["index"]:
             if undo is True or (undo is None and span.undo):
                 self.MT.undo_stack.append(stored_event_dict(event_data))
-            if emit_event is True or (emit_event is None and span.emit_event):
-                self.emit_event("<<SheetModified>>", event_data)
+            self.MT.sheet_modified(
+                event_data, emit_event=emit_event is True or (emit_event is None and span.emit_event)
+            )
         self.set_refresh_timer(redraw)
         return event_data
 
@@ -1750,8 +1749,7 @@ class Sheet(tk.Frame):
         )
         if undo:
             self.MT.undo_stack.append(stored_event_dict(event_data))
-        if emit_event:
-            self.emit_event("<<SheetModified>>", event_data)
+        self.MT.sheet_modified(event_data, emit_event=emit_event)
         self.set_refresh_timer(redraw)
         return event_data
 
@@ -1804,8 +1802,7 @@ class Sheet(tk.Frame):
         )
         if undo:
             self.MT.undo_stack.append(stored_event_dict(event_data))
-        if emit_event:
-            self.emit_event("<<SheetModified>>", event_data)
+        self.MT.sheet_modified(event_data, emit_event=emit_event)
         self.set_refresh_timer(redraw)
         return event_data
 
@@ -1946,8 +1943,7 @@ class Sheet(tk.Frame):
         )
         if undo:
             self.MT.undo_stack.append(stored_event_dict(event_data))
-        if emit_event:
-            self.emit_event("<<SheetModified>>", event_data)
+        self.MT.sheet_modified(event_data, emit_event=emit_event)
         self.set_refresh_timer(redraw)
         return data_idxs, disp_idxs, event_data
 
@@ -1981,8 +1977,7 @@ class Sheet(tk.Frame):
         )
         if undo:
             self.MT.undo_stack.append(stored_event_dict(event_data))
-        if emit_event:
-            self.emit_event("<<SheetModified>>", event_data)
+        self.MT.sheet_modified(event_data, emit_event=emit_event)
         self.set_refresh_timer(redraw)
         return data_idxs, disp_idxs, event_data
 
@@ -2006,8 +2001,7 @@ class Sheet(tk.Frame):
         )
         if undo:
             self.MT.undo_stack.append(stored_event_dict(event_data))
-        if emit_event:
-            self.emit_event("<<SheetModified>>", event_data)
+        self.MT.sheet_modified(event_data, emit_event=emit_event)
         self.set_refresh_timer(redraw)
         return data_idxs, disp_idxs, event_data
 
@@ -2033,8 +2027,7 @@ class Sheet(tk.Frame):
         )
         if undo:
             self.MT.undo_stack.append(stored_event_dict(event_data))
-        if emit_event:
-            self.emit_event("<<SheetModified>>", event_data)
+        self.MT.sheet_modified(event_data, emit_event=emit_event)
         self.set_refresh_timer(redraw)
         return data_idxs, disp_idxs, event_data
 
@@ -2249,7 +2242,6 @@ class Sheet(tk.Frame):
                 self.MT.undo_stack.append(stored_event_dict(event_data))
             try_binding(self.MT.extra_end_replace_all_func, event_data)
             self.MT.sheet_modified(event_data)
-            self.emit_event("<<SheetModified>>", event_data)
         return event_data
 
     # Highlighting Cells
@@ -2580,6 +2572,7 @@ class Sheet(tk.Frame):
         formatter_options: dict | None = None,
         formatter_class: Any = None,
         redraw: bool = True,
+        set_data: bool = True,
         **kwargs,
     ) -> Span:
         if formatter_options is None:
@@ -2592,36 +2585,39 @@ class Sheet(tk.Frame):
                 for c in cols:
                     self.del_cell_options_checkbox(r, c)
                     add_to_options(self.MT.cell_options, (r, c), "format", kwargs)
-                    self.MT.set_cell_data(
-                        r,
-                        c,
-                        value=kwargs["value"] if "value" in kwargs else self.MT.get_cell_data(r, c),
-                        kwargs=kwargs,
-                    )
+                    if set_data:
+                        self.MT.set_cell_data(
+                            r,
+                            c,
+                            value=kwargs["value"] if "value" in kwargs else self.MT.get_cell_data(r, c),
+                            kwargs=kwargs,
+                        )
         elif span.kind == "row":
             for r in rows:
                 self.del_row_options_checkbox(r)
                 kwargs = fix_format_kwargs(kwargs)
                 add_to_options(self.MT.row_options, r, "format", kwargs)
-                for c in cols:
-                    self.MT.set_cell_data(
-                        r,
-                        c,
-                        value=kwargs["value"] if "value" in kwargs else self.MT.get_cell_data(r, c),
-                        kwargs=kwargs,
-                    )
+                if set_data:
+                    for c in cols:
+                        self.MT.set_cell_data(
+                            r,
+                            c,
+                            value=kwargs["value"] if "value" in kwargs else self.MT.get_cell_data(r, c),
+                            kwargs=kwargs,
+                        )
         elif span.kind == "column":
             for c in cols:
                 self.del_column_options_checkbox(c)
                 kwargs = fix_format_kwargs(kwargs)
                 add_to_options(self.MT.col_options, c, "format", kwargs)
-                for r in rows:
-                    self.MT.set_cell_data(
-                        r,
-                        c,
-                        value=kwargs["value"] if "value" in kwargs else self.MT.get_cell_data(r, c),
-                        kwargs=kwargs,
-                    )
+                if set_data:
+                    for r in rows:
+                        self.MT.set_cell_data(
+                            r,
+                            c,
+                            value=kwargs["value"] if "value" in kwargs else self.MT.get_cell_data(r, c),
+                            kwargs=kwargs,
+                        )
         self.set_refresh_timer(redraw)
         return span
 
@@ -4145,6 +4141,8 @@ class Sheet(tk.Frame):
             self.ops.paste_can_expand_y = kwargs["expand_sheet_if_paste_too_big"]
         if "show_top_left" in kwargs:
             self.show("top_left")
+        if "popup_menu_font" in kwargs:
+            self.ops.popup_menu_font = FontTuple(*self.ops.popup_menu_font)
         if "font" in kwargs:
             self.MT.set_table_font(kwargs["font"])
         elif "table_font" in kwargs:
@@ -4875,8 +4873,7 @@ class Sheet(tk.Frame):
         if event_data:
             if undo and self.MT.undo_enabled:
                 self.MT.undo_stack.append(stored_event_dict(event_data))
-            if emit_event:
-                self.emit_event("<<SheetModified>>", event_data)
+            self.MT.sheet_modified(event_data, emit_event=emit_event)
 
         self.set_refresh_timer(redraw=not get_only and redraw)
         if get_only:
@@ -4976,8 +4973,7 @@ class Sheet(tk.Frame):
         )
         if undo:
             self.MT.undo_stack.append(stored_event_dict(event_data))
-        if emit_event:
-            self.emit_event("<<SheetModified>>", event_data)
+        self.MT.sheet_modified(event_data, emit_event=emit_event)
         self.set_refresh_timer()
         return data_new_idxs, disp_new_idxs, event_data
 

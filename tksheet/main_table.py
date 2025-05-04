@@ -71,6 +71,7 @@ from .functions import (
     is_last_cell,
     is_type_int,
     len_to_idx,
+    menu_item_exists,
     mod_event_val,
     mod_span,
     move_elements_by_mapping_gen,
@@ -456,28 +457,84 @@ class MainTable(tk.Canvas):
         self.tagged_rows = {}
         self.tagged_columns = {}
 
+    def create_ctrl_outline(
+        self,
+        x1: int,
+        y1: int,
+        x2: int,
+        y2: int,
+        fill: str,
+        dash: tuple[int, int],
+        width: int,
+        outline: str,
+        tags: str | tuple[str, ...],
+    ) -> int:
+        if self.hidd_ctrl_outline:
+            t, sh = self.hidd_ctrl_outline.popitem()
+            self.coords(t, x1, y1, x2, y2)
+            if sh:
+                self.itemconfig(t, fill=fill, dash=dash, width=width, outline=outline, tags=tags)
+            else:
+                self.itemconfig(
+                    t,
+                    fill=fill,
+                    dash=dash,
+                    width=width,
+                    outline=outline,
+                    tags=tags,
+                    state="normal",
+                )
+        else:
+            t = self.create_rectangle(
+                x1,
+                y1,
+                x2,
+                y2,
+                fill=fill,
+                dash=dash,
+                width=width,
+                outline=outline,
+                tags=tags,
+            )
+        self.lift(t)
+        self.disp_ctrl_outline[t] = True
+        return t
+
+    def delete_ctrl_outlines(self, iid: int | None = None) -> None:
+        if isinstance(iid, int) and iid in self.disp_ctrl_outline:
+            self.hidd_ctrl_outline[iid] = self.disp_ctrl_outline.pop(iid)
+            self.itemconfig(iid, state="hidden")
+            self.hidd_ctrl_outline[iid] = False
+        else:
+            self.hidd_ctrl_outline.update(self.disp_ctrl_outline)
+            self.disp_ctrl_outline = {}
+            for t, sh in self.hidd_ctrl_outline.items():
+                if sh:
+                    self.itemconfig(t, state="hidden")
+                    self.hidd_ctrl_outline[t] = False
+
     def show_ctrl_outline(
         self,
         canvas: Literal["table"] = "table",
         start_cell: tuple[int, int] = (0, 0),
         end_cell: tuple[int, int] = (0, 0),
-        dash: tuple[int, int] = (20, 20),
+        dash: tuple[int, int] = (15, 15),
         outline: str | None = None,
         delete_on_timer: bool = True,
     ) -> None:
-        self.create_ctrl_outline(
+        iid = self.create_ctrl_outline(
             self.col_positions[start_cell[0]] + 1,
             self.row_positions[start_cell[1]] + 1,
-            self.col_positions[end_cell[0]] - 1,
-            self.row_positions[end_cell[1]] - 1,
+            self.col_positions[end_cell[0]],
+            self.row_positions[end_cell[1]],
             fill="",
             dash=dash,
-            width=3,
+            width=2,
             outline=self.PAR.ops.resizing_line_fg if outline is None else outline,
-            tags="ctrl",
+            tags="lift",
         )
         if delete_on_timer:
-            self.after(1500, self.delete_ctrl_outlines)
+            self.after(1500, lambda: self.delete_ctrl_outlines(iid))
 
     def escape(self, event: tk.Misc | None) -> None:
         if self.find_window.open:
@@ -895,56 +952,6 @@ class MainTable(tk.Canvas):
             self.find_window.open = False
             self.focus_set()
 
-    def create_ctrl_outline(
-        self,
-        x1: int,
-        y1: int,
-        x2: int,
-        y2: int,
-        fill: str,
-        dash: tuple[int, int],
-        width: int,
-        outline: str,
-        tags: str | tuple[str, ...],
-    ) -> None:
-        if self.hidd_ctrl_outline:
-            t, sh = self.hidd_ctrl_outline.popitem()
-            self.coords(t, x1, y1, x2, y2)
-            if sh:
-                self.itemconfig(t, fill=fill, dash=dash, width=width, outline=outline, tags=tags)
-            else:
-                self.itemconfig(
-                    t,
-                    fill=fill,
-                    dash=dash,
-                    width=width,
-                    outline=outline,
-                    tags=tags,
-                    state="normal",
-                )
-            self.lift(t)
-        else:
-            t = self.create_rectangle(
-                x1,
-                y1,
-                x2,
-                y2,
-                fill=fill,
-                dash=dash,
-                width=width,
-                outline=outline,
-                tags=tags,
-            )
-        self.disp_ctrl_outline[t] = True
-
-    def delete_ctrl_outlines(self) -> None:
-        self.hidd_ctrl_outline.update(self.disp_ctrl_outline)
-        self.disp_ctrl_outline = {}
-        for t, sh in self.hidd_ctrl_outline.items():
-            if sh:
-                self.itemconfig(t, state="hidden")
-                self.hidd_ctrl_outline[t] = False
-
     def get_ctrl_x_c_boxes(self) -> tuple[dict[tuple[int, int, int, int], str], int]:
         maxrows = 0
         if not self.selected:
@@ -1324,7 +1331,7 @@ class MainTable(tk.Canvas):
                             and self.input_valid_for_cell(r, datacn, val, ignore_empty=True)
                         )
                     ):
-                        rows[r][datacn] = val
+                        rows[r][datacn] = self.format_value(r, datacn, val)
                         ctr += 1
             if ctr:
                 event_data = self.add_rows(
@@ -1374,7 +1381,7 @@ class MainTable(tk.Canvas):
                             and self.input_valid_for_cell(datarn, c, val, ignore_empty=True)
                         )
                     ):
-                        columns[c][datarn] = val
+                        columns[c][datarn] = self.format_value(datarn, c, val)
                         ctr += 1
             if ctr:
                 event_data = self.add_columns(
@@ -1410,6 +1417,7 @@ class MainTable(tk.Canvas):
             try_binding(self.extra_end_ctrl_v_func, event_data, "end_ctrl_v")
             self.sheet_modified(event_data)
             self.PAR.emit_event("<<Paste>>", event_data)
+            self.show_ctrl_outline("table", (selected_c, selected_r), (selboxc, selboxr), dash=())
         return event_data
 
     def delete_key(self, event: Any = None, validation: bool = True) -> None | EventDataDict:
@@ -1446,6 +1454,8 @@ class MainTable(tk.Canvas):
             try_binding(self.extra_end_delete_key_func, event_data, "end_delete")
             self.sheet_modified(event_data)
             self.PAR.emit_event("<<Delete>>", event_data)
+            for r1, c1, r2, c2 in boxes:
+                self.show_ctrl_outline(canvas="table", start_cell=(c1, r1), end_cell=(c2, r2))
         return event_data
 
     def event_data_set_cell(self, datarn: int, datacn: int, value: Any, event_data: EventDataDict) -> EventDataDict:
@@ -1796,6 +1806,9 @@ class MainTable(tk.Canvas):
                     disp_new_idxs=disp_new_idxs,
                     maxidx=maxidx,
                     event_data=event_data,
+                    # undo_modification is the old saved stuff
+                    # event_data is the new event
+                    # node change only comes from Sheet.move()
                     undo_modification=undo_modification,
                     node_change=node_change,
                 )
@@ -2020,8 +2033,9 @@ class MainTable(tk.Canvas):
         self.PAR.emit_event("<<Redo>>", event_data)
         return event_data
 
-    def sheet_modified(self, event_data: EventDataDict, purge_redo: bool = True) -> None:
-        self.PAR.emit_event("<<SheetModified>>", event_data)
+    def sheet_modified(self, event_data: EventDataDict, purge_redo: bool = True, emit_event: bool = True) -> None:
+        if emit_event:
+            self.PAR.emit_event("<<SheetModified>>", event_data)
         if purge_redo:
             self.purge_redo_stack()
 
@@ -2906,6 +2920,27 @@ class MainTable(tk.Canvas):
             pass
         menu.add_command(**kwargs)
 
+    def table_edit_cell_enabled(self) -> bool:
+        return (
+            self.rc_popup_menus_enabled
+            and self.edit_cell_enabled
+            and any(x in self.enabled_bindings_menu_entries for x in ("all", "edit_cell", "edit_bindings", "edit"))
+        )
+
+    def index_edit_cell_enabled(self) -> bool:
+        return (
+            self.rc_popup_menus_enabled
+            and self.RI.edit_cell_enabled
+            and "edit_index" in self.enabled_bindings_menu_entries
+        )
+
+    def header_edit_cell_enabled(self) -> bool:
+        return (
+            self.rc_popup_menus_enabled
+            and self.CH.edit_cell_enabled
+            and "edit_header" in self.enabled_bindings_menu_entries
+        )
+
     def create_rc_menus(self) -> None:
         if not self.rc_popup_menu:
             self.rc_popup_menu = tk.Menu(self, tearoff=0, background=self.PAR.ops.popup_menu_bg)
@@ -2923,37 +2958,31 @@ class MainTable(tk.Canvas):
         ):
             menu.delete(0, "end")
         mnkwgs = get_menu_kwargs(self.PAR.ops)
-        if (
-            self.rc_popup_menus_enabled
-            and self.CH.edit_cell_enabled
-            and "edit_header" in self.enabled_bindings_menu_entries
-        ):
+        if self.header_edit_cell_enabled():
             self.menu_add_command(
                 self.CH.ch_rc_popup_menu,
                 label=self.PAR.ops.edit_header_label,
                 command=lambda: self.CH.open_cell(event="rc"),
+                image=self.PAR.ops.edit_header_image,
+                compound=self.PAR.ops.edit_header_compound,
                 **mnkwgs,
             )
-        if (
-            self.rc_popup_menus_enabled
-            and self.RI.edit_cell_enabled
-            and "edit_index" in self.enabled_bindings_menu_entries
-        ):
+        if self.index_edit_cell_enabled():
             self.menu_add_command(
                 self.RI.ri_rc_popup_menu,
                 label=self.PAR.ops.edit_index_label,
                 command=lambda: self.RI.open_cell(event="rc"),
+                image=self.PAR.ops.edit_index_image,
+                compound=self.PAR.ops.edit_index_compound,
                 **mnkwgs,
             )
-        if (
-            self.rc_popup_menus_enabled
-            and self.edit_cell_enabled
-            and any(x in self.enabled_bindings_menu_entries for x in ("all", "edit_cell", "edit_bindings", "edit"))
-        ):
+        if self.table_edit_cell_enabled():
             self.menu_add_command(
                 self.rc_popup_menu,
                 label=self.PAR.ops.edit_cell_label,
                 command=lambda: self.open_cell(event="rc"),
+                image=self.PAR.ops.edit_cell_image,
+                compound=self.PAR.ops.edit_cell_compound,
                 **mnkwgs,
             )
         if self.cut_enabled and any(
@@ -2964,6 +2993,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.cut_label,
                 accelerator=self.PAR.ops.cut_accelerator,
                 command=self.ctrl_x,
+                image=self.PAR.ops.cut_image,
+                compound=self.PAR.ops.cut_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -2971,6 +3002,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.cut_contents_label,
                 accelerator=self.PAR.ops.cut_contents_accelerator,
                 command=self.ctrl_x,
+                image=self.PAR.ops.cut_contents_image,
+                compound=self.PAR.ops.cut_contents_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -2978,6 +3011,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.cut_contents_label,
                 accelerator=self.PAR.ops.cut_contents_accelerator,
                 command=self.ctrl_x,
+                image=self.PAR.ops.cut_contents_image,
+                compound=self.PAR.ops.cut_contents_compound,
                 **mnkwgs,
             )
         if self.copy_enabled and any(
@@ -2988,6 +3023,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.copy_label,
                 accelerator=self.PAR.ops.copy_accelerator,
                 command=self.ctrl_c,
+                image=self.PAR.ops.copy_image,
+                compound=self.PAR.ops.copy_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -2995,6 +3032,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.copy_contents_label,
                 accelerator=self.PAR.ops.copy_contents_accelerator,
                 command=self.ctrl_c,
+                image=self.PAR.ops.copy_contents_image,
+                compound=self.PAR.ops.copy_contents_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3002,6 +3041,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.copy_contents_label,
                 accelerator=self.PAR.ops.copy_contents_accelerator,
                 command=self.ctrl_c,
+                image=self.PAR.ops.copy_contents_image,
+                compound=self.PAR.ops.copy_contents_compound,
                 **mnkwgs,
             )
         if self.paste_enabled and any(
@@ -3012,6 +3053,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.paste_label,
                 accelerator=self.PAR.ops.paste_accelerator,
                 command=self.ctrl_v,
+                image=self.PAR.ops.paste_image,
+                compound=self.PAR.ops.paste_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3019,6 +3062,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.paste_label,
                 accelerator=self.PAR.ops.paste_accelerator,
                 command=self.ctrl_v,
+                image=self.PAR.ops.paste_image,
+                compound=self.PAR.ops.paste_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3026,6 +3071,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.paste_label,
                 accelerator=self.PAR.ops.paste_accelerator,
                 command=self.ctrl_v,
+                image=self.PAR.ops.paste_image,
+                compound=self.PAR.ops.paste_compound,
                 **mnkwgs,
             )
             if self.PAR.ops.paste_can_expand_x or self.PAR.ops.paste_can_expand_y:
@@ -3034,6 +3081,8 @@ class MainTable(tk.Canvas):
                     label=self.PAR.ops.paste_label,
                     accelerator=self.PAR.ops.paste_accelerator,
                     command=self.ctrl_v,
+                    image=self.PAR.ops.paste_image,
+                    compound=self.PAR.ops.paste_compound,
                     **mnkwgs,
                 )
         if self.delete_key_enabled and any(
@@ -3044,6 +3093,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.delete_label,
                 accelerator=self.PAR.ops.delete_accelerator,
                 command=self.delete_key,
+                image=self.PAR.ops.delete_image,
+                compound=self.PAR.ops.delete_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3051,6 +3102,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.clear_contents_label,
                 accelerator=self.PAR.ops.clear_contents_accelerator,
                 command=self.delete_key,
+                image=self.PAR.ops.clear_contents_image,
+                compound=self.PAR.ops.clear_contents_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3058,6 +3111,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.clear_contents_label,
                 accelerator=self.PAR.ops.clear_contents_accelerator,
                 command=self.delete_key,
+                image=self.PAR.ops.clear_contents_image,
+                compound=self.PAR.ops.clear_contents_compound,
                 **mnkwgs,
             )
         if self.rc_delete_column_enabled:
@@ -3065,6 +3120,8 @@ class MainTable(tk.Canvas):
                 self.CH.ch_rc_popup_menu,
                 label=self.PAR.ops.delete_columns_label,
                 command=self.delete_columns,
+                image=self.PAR.ops.delete_columns_image,
+                compound=self.PAR.ops.delete_columns_compound,
                 **mnkwgs,
             )
         if self.rc_insert_column_enabled:
@@ -3072,18 +3129,24 @@ class MainTable(tk.Canvas):
                 self.CH.ch_rc_popup_menu,
                 label=self.PAR.ops.insert_columns_left_label,
                 command=lambda: self.rc_add_columns("left"),
+                image=self.PAR.ops.insert_columns_left_image,
+                compound=self.PAR.ops.insert_columns_left_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
                 self.CH.ch_rc_popup_menu,
                 label=self.PAR.ops.insert_columns_right_label,
                 command=lambda: self.rc_add_columns("right"),
+                image=self.PAR.ops.insert_columns_right_image,
+                compound=self.PAR.ops.insert_columns_right_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
                 self.empty_rc_popup_menu,
                 label=self.PAR.ops.insert_column_label,
                 command=lambda: self.rc_add_columns("left"),
+                image=self.PAR.ops.insert_column_image,
+                compound=self.PAR.ops.insert_column_compound,
                 **mnkwgs,
             )
         if self.rc_delete_row_enabled:
@@ -3091,6 +3154,8 @@ class MainTable(tk.Canvas):
                 self.RI.ri_rc_popup_menu,
                 label=self.PAR.ops.delete_rows_label,
                 command=self.delete_rows,
+                image=self.PAR.ops.delete_rows_image,
+                compound=self.PAR.ops.delete_rows_compound,
                 **mnkwgs,
             )
         if self.rc_insert_row_enabled:
@@ -3098,18 +3163,24 @@ class MainTable(tk.Canvas):
                 self.RI.ri_rc_popup_menu,
                 label=self.PAR.ops.insert_rows_above_label,
                 command=lambda: self.rc_add_rows("above"),
+                image=self.PAR.ops.insert_rows_above_image,
+                compound=self.PAR.ops.insert_rows_above_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
                 self.RI.ri_rc_popup_menu,
                 label=self.PAR.ops.insert_rows_below_label,
                 command=lambda: self.rc_add_rows("below"),
+                image=self.PAR.ops.insert_rows_below_image,
+                compound=self.PAR.ops.insert_rows_below_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
                 self.empty_rc_popup_menu,
                 label=self.PAR.ops.insert_row_label,
                 command=lambda: self.rc_add_rows("below"),
+                image=self.PAR.ops.insert_row_image,
+                compound=self.PAR.ops.insert_row_compound,
                 **mnkwgs,
             )
         if self.rc_sort_cells_enabled:
@@ -3118,6 +3189,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_cells_label,
                 accelerator=self.PAR.ops.sort_cells_accelerator,
                 command=self.sort_boxes,
+                image=self.PAR.ops.sort_cells_image,
+                compound=self.PAR.ops.sort_cells_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3125,6 +3198,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_cells_reverse_label,
                 accelerator=self.PAR.ops.sort_cells_reverse_accelerator,
                 command=lambda: self.sort_boxes(reverse=True),
+                image=self.PAR.ops.sort_cells_reverse_image,
+                compound=self.PAR.ops.sort_cells_reverse_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3132,6 +3207,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_cells_x_label,
                 accelerator=self.PAR.ops.sort_cells_x_accelerator,
                 command=lambda: self.sort_boxes(row_wise=True),
+                image=self.PAR.ops.sort_cells_x_image,
+                compound=self.PAR.ops.sort_cells_x_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3139,6 +3216,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_cells_x_reverse_label,
                 accelerator=self.PAR.ops.sort_cells_x_reverse_accelerator,
                 command=lambda: self.sort_boxes(reverse=True, row_wise=True),
+                image=self.PAR.ops.sort_cells_x_reverse_image,
+                compound=self.PAR.ops.sort_cells_x_reverse_compound,
                 **mnkwgs,
             )
         # row index sort rows cells
@@ -3148,6 +3227,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_row_label,
                 accelerator=self.PAR.ops.sort_row_accelerator,
                 command=self.RI._sort_rows,
+                image=self.PAR.ops.sort_row_image,
+                compound=self.PAR.ops.sort_row_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3155,6 +3236,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_row_reverse_label,
                 accelerator=self.PAR.ops.sort_row_reverse_accelerator,
                 command=lambda: self.RI._sort_rows(reverse=True),
+                image=self.PAR.ops.sort_row_reverse_image,
+                compound=self.PAR.ops.sort_row_reverse_compound,
                 **mnkwgs,
             )
         # header sort columns cells
@@ -3164,6 +3247,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_column_label,
                 accelerator=self.PAR.ops.sort_column_accelerator,
                 command=self.CH._sort_columns,
+                image=self.PAR.ops.sort_column_image,
+                compound=self.PAR.ops.sort_column_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3171,6 +3256,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_column_reverse_label,
                 accelerator=self.PAR.ops.sort_column_reverse_accelerator,
                 command=lambda: self.CH._sort_columns(reverse=True),
+                image=self.PAR.ops.sort_column_reverse_image,
+                compound=self.PAR.ops.sort_column_reverse_compound,
                 **mnkwgs,
             )
         # row index sort columns by row
@@ -3180,6 +3267,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_columns_label,
                 accelerator=self.PAR.ops.sort_columns_accelerator,
                 command=self.RI._sort_columns_by_row,
+                image=self.PAR.ops.sort_columns_image,
+                compound=self.PAR.ops.sort_columns_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3187,6 +3276,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_columns_reverse_label,
                 accelerator=self.PAR.ops.sort_columns_reverse_accelerator,
                 command=lambda: self.RI._sort_columns_by_row(reverse=True),
+                image=self.PAR.ops.sort_columns_reverse_image,
+                compound=self.PAR.ops.sort_columns_reverse_compound,
                 **mnkwgs,
             )
         # header sort rows by column
@@ -3196,6 +3287,8 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_rows_label,
                 accelerator=self.PAR.ops.sort_rows_accelerator,
                 command=self.CH._sort_rows_by_column,
+                image=self.PAR.ops.sort_rows_image,
+                compound=self.PAR.ops.sort_rows_compound,
                 **mnkwgs,
             )
             self.menu_add_command(
@@ -3203,36 +3296,46 @@ class MainTable(tk.Canvas):
                 label=self.PAR.ops.sort_rows_reverse_label,
                 accelerator=self.PAR.ops.sort_rows_reverse_accelerator,
                 command=lambda: self.CH._sort_rows_by_column(reverse=True),
+                image=self.PAR.ops.sort_rows_reverse_image,
+                compound=self.PAR.ops.sort_rows_reverse_compound,
                 **mnkwgs,
             )
-        for label, func in self.extra_table_rc_menu_funcs.items():
-            self.menu_add_command(
+        if self.undo_enabled and any(
+            x in self.enabled_bindings_menu_entries for x in ("all", "undo", "redo", "edit_bindings", "edit")
+        ):
+            for menu in (
                 self.rc_popup_menu,
-                label=label,
-                command=func,
-                **mnkwgs,
-            )
-        for label, func in self.extra_index_rc_menu_funcs.items():
-            self.menu_add_command(
                 self.RI.ri_rc_popup_menu,
-                label=label,
-                command=func,
-                **mnkwgs,
-            )
-        for label, func in self.extra_header_rc_menu_funcs.items():
-            self.menu_add_command(
                 self.CH.ch_rc_popup_menu,
-                label=label,
-                command=func,
-                **mnkwgs,
-            )
-        for label, func in self.extra_empty_space_rc_menu_funcs.items():
-            self.menu_add_command(
                 self.empty_rc_popup_menu,
-                label=label,
-                command=func,
-                **mnkwgs,
-            )
+            ):
+                self.menu_add_command(
+                    menu,
+                    label=self.PAR.ops.undo_label,
+                    accelerator=self.PAR.ops.undo_accelerator,
+                    command=self.undo,
+                    image=self.PAR.ops.undo_image,
+                    compound=self.PAR.ops.undo_compound,
+                    **mnkwgs,
+                )
+                self.menu_add_command(
+                    menu,
+                    label=self.PAR.ops.redo_label,
+                    accelerator=self.PAR.ops.redo_accelerator,
+                    command=self.redo,
+                    image=self.PAR.ops.redo_image,
+                    compound=self.PAR.ops.redo_compound,
+                    **mnkwgs,
+                )
+        # Added popup menu commands
+        for label, kws in self.extra_table_rc_menu_funcs.items():
+            self.menu_add_command(self.rc_popup_menu, label=label, **{**mnkwgs, **kws})
+        for label, kws in self.extra_index_rc_menu_funcs.items():
+            self.menu_add_command(self.RI.ri_rc_popup_menu, label=label, **{**mnkwgs, **kws})
+        for label, kws in self.extra_header_rc_menu_funcs.items():
+            self.menu_add_command(self.CH.ch_rc_popup_menu, label=label, **{**mnkwgs, **kws})
+        for label, kws in self.extra_empty_space_rc_menu_funcs.items():
+            self.menu_add_command(self.empty_rc_popup_menu, label=label, **{**mnkwgs, **kws})
 
     def enable_bindings(self, bindings: Any, menu: bool = True) -> None:
         if not bindings:
@@ -3563,6 +3666,65 @@ class MainTable(tk.Canvas):
     def not_currently_resizing(self) -> bool:
         return all(v is None for v in (self.RI.rsz_h, self.RI.rsz_w, self.CH.rsz_h, self.CH.rsz_w))
 
+    def is_readonly(self, datarn: int, datacn: int) -> bool:
+        return (
+            ((datarn, datacn) in self.cell_options and "readonly" in self.cell_options[(datarn, datacn)])
+            or (datarn in self.row_options and "readonly" in self.row_options[datarn])
+            or (datacn in self.col_options and "readonly" in self.col_options[datacn])
+        )
+
+    def popup_menu_disable_edit_if_readonly(self, popup_menu: tk.Menu) -> None:
+        # table
+        if (
+            self.selected
+            and self.index_edit_cell_enabled()
+            and menu_item_exists(popup_menu, self.PAR.ops.edit_cell_label)
+        ):
+            datarn, datacn = self.datarn(self.selected.row), self.datacn(self.selected.column)
+            if self.is_readonly(datarn, datacn):
+                popup_menu.entryconfig(self.PAR.ops.edit_cell_label, image="", state="disabled")
+            else:
+                popup_menu.entryconfig(self.PAR.ops.edit_cell_label, image=self.PAR.ops.edit_cell_image, state="normal")
+        # index
+        if (
+            self.selected
+            and self.index_edit_cell_enabled()
+            and menu_item_exists(popup_menu, self.PAR.ops.edit_index_label)
+        ):
+            datarn = self.datarn(self.selected.row)
+            if self.RI.is_readonly(datarn):
+                popup_menu.entryconfig(self.PAR.ops.edit_index_label, image="", state="disabled")
+            else:
+                popup_menu.entryconfig(
+                    self.PAR.ops.edit_index_label, image=self.PAR.ops.edit_index_image, state="normal"
+                )
+        # header
+        if (
+            self.selected
+            and self.header_edit_cell_enabled()
+            and menu_item_exists(popup_menu, self.PAR.ops.edit_header_label)
+        ):
+            datacn = self.datacn(self.selected.column)
+            if self.CH.is_readonly(datacn):
+                popup_menu.entryconfig(self.PAR.ops.edit_header_label, image="", state="disabled")
+            else:
+                popup_menu.entryconfig(
+                    self.PAR.ops.edit_header_label, image=self.PAR.ops.edit_header_image, state="normal"
+                )
+
+    def popup_menu_disable_undo_redo(self, popup_menu: tk.Menu) -> None:
+        if not self.undo_enabled:
+            return
+        if menu_item_exists(popup_menu, self.PAR.ops.undo_label):
+            if not self.undo_stack:
+                popup_menu.entryconfig(self.PAR.ops.undo_label, image="", state="disabled")
+            else:
+                popup_menu.entryconfig(self.PAR.ops.undo_label, image=self.PAR.ops.undo_image, state="normal")
+            if not self.redo_stack:
+                popup_menu.entryconfig(self.PAR.ops.redo_label, image="", state="disabled")
+            else:
+                popup_menu.entryconfig(self.PAR.ops.redo_label, image=self.PAR.ops.redo_image, state="normal")
+
     def rc(self, event: Any = None) -> None:
         self.mouseclick_outside_editor_or_dropdown_all_canvases()
         self.focus_set()
@@ -3594,6 +3756,8 @@ class MainTable(tk.Canvas):
                     popup_menu = self.empty_rc_popup_menu
         try_binding(self.extra_rc_func, event)
         if popup_menu:
+            self.popup_menu_disable_edit_if_readonly(popup_menu)
+            self.popup_menu_disable_undo_redo(popup_menu)
             popup_menu.tk_popup(event.x_root, event.y_root)
 
     def b1_press(self, event: Any = None) -> None:
@@ -4788,7 +4952,7 @@ class MainTable(tk.Canvas):
         # if there are named spans where columns were added
         # add options to gap which was created by adding columns
         totalrows = None
-        new_ops = self.PAR.create_options_from_span
+        new_ops = partial(self.PAR.create_options_from_span, set_data=False)
         qkspan = self.span()
         for span in self.named_spans.values():
             if isinstance(span["from_c"], int):
@@ -4851,7 +5015,7 @@ class MainTable(tk.Canvas):
         # if there are named spans where rows were added
         # add options to gap which was created by adding rows
         totalcols = None
-        new_ops = self.PAR.create_options_from_span
+        new_ops = partial(self.PAR.create_options_from_span, set_data=False)
         qkspan = self.span()
         for span in self.named_spans.values():
             if isinstance(span["from_r"], int):
@@ -5119,7 +5283,7 @@ class MainTable(tk.Canvas):
                 )
         if isinstance(self._headers, list) and header:
             self._headers = insert_items(self._headers, header, self.CH.fix_header)
-        if push_ops:
+        if push_ops and columns:
             self.adjust_options_post_add_columns(
                 cols=tuple(columns),
                 create_ops=create_ops,
@@ -5241,7 +5405,7 @@ class MainTable(tk.Canvas):
                         repeat(default_width, maxcn + 1 - (len(self.col_positions) - 1)),
                     )
                 )
-        if push_ops:
+        if push_ops and rows:
             self.adjust_options_post_add_rows(
                 rows=tuple(rows),
                 create_ops=create_ops,
@@ -5370,11 +5534,16 @@ class MainTable(tk.Canvas):
                 for datacn, column in enumerate(columns, data_ins_col):
                     if column:
                         header_dict[datacn] = column[0]
-                        columns_dict[datacn] = dict(enumerate(islice(column, 1, None)))
+                        columns_dict[datacn] = {
+                            datarn: self.format_value(datarn, datacn, v)
+                            for datarn, v in enumerate(islice(column, 1, None))
+                        }
             else:
                 for datacn, column in enumerate(columns, data_ins_col):
                     if column:
-                        columns_dict[datacn] = dict(enumerate(column))
+                        columns_dict[datacn] = {
+                            datarn: self.format_value(datarn, datacn, v) for datarn, v in enumerate(column)
+                        }
 
         rng = range(displayed_ins_col, displayed_ins_col + len(columns_dict))
         if widths is None:
@@ -5414,12 +5583,12 @@ class MainTable(tk.Canvas):
                     if row:
                         index_dict[datarn] = row[0]
                     if len(row) > 1:
-                        rows_dict[datarn] = row[1:]
+                        rows_dict[datarn] = [self.format_value(datarn, datacn, v) for datacn, v in enumerate(row[1:])]
                     else:
                         rows_dict[datarn] = []
             else:
                 for datarn, row in enumerate(rows, data_ins_row):
-                    rows_dict[datarn] = row
+                    rows_dict[datarn] = [self.format_value(datarn, datacn, v) for datacn, v in enumerate(row)]
 
         rng = range(displayed_ins_row, displayed_ins_row + len(rows_dict))
         if heights is None:
@@ -5561,7 +5730,6 @@ class MainTable(tk.Canvas):
         if self.PAR.ops.treeview:
             event_data["deleted"]["index"] = {datarn: self._row_index[datarn] for datarn in rows}
             event_data = self.RI.tree_del_rows(event_data=event_data)
-
         elif isinstance(self._row_index, list):
             for i, datarn in enumerate(rows):
                 r = datarn - i
@@ -7599,9 +7767,30 @@ class MainTable(tk.Canvas):
             return
         if numcols == 1 and numrows == 1:
             if direction == "right":
-                self.select_right(r, c)
+                new_r, new_c = cell_right_within_box(
+                    r,
+                    c,
+                    0,
+                    0,
+                    len(self.row_positions) - 1,
+                    len(self.col_positions) - 1,
+                    len(self.row_positions) - 1,
+                    len(self.col_positions) - 1,
+                )
             elif direction == "down":
-                self.select_down(r, c)
+                new_r, new_c = cell_down_within_box(
+                    r,
+                    c,
+                    0,
+                    0,
+                    len(self.row_positions) - 1,
+                    len(self.col_positions) - 1,
+                    len(self.row_positions) - 1,
+                    len(self.col_positions) - 1,
+                )
+            if direction in ("right", "down"):
+                self.select_cell(new_r, new_c)
+                self.see(new_r, new_c)
         else:
             if direction == "right":
                 new_r, new_c = cell_right_within_box(r, c, r1, c1, r2, c2, numrows, numcols)
@@ -7627,28 +7816,34 @@ class MainTable(tk.Canvas):
                 value = None
         return value, event_data
 
-    def select_right(self, r: int, c: int) -> None:
-        self.select_cell(r, c + 1 if c < len(self.col_positions) - 2 else c)
-        self.see(
-            r,
-            c + 1 if c < len(self.col_positions) - 2 else c,
-            bottom_right_corner=True,
-        )
-
-    def select_down(self, r: int, c: int) -> None:
-        self.select_cell(r + 1 if r < len(self.row_positions) - 2 else r, c)
-        self.see(r + 1 if r < len(self.row_positions) - 2 else r, c)
-
     def tab_key(self, event: Any = None) -> str:
-        if not self.selected:
-            return
-        r, c = self.selected.row, self.selected.column
-        r1, c1, r2, c2 = self.selection_boxes[self.selected.fill_iid].coords
-        numcols = c2 - c1
-        numrows = r2 - r1
+        if self.selected:
+            r, c = self.selected.row, self.selected.column
+            r1, c1, r2, c2 = self.selection_boxes[self.selected.fill_iid].coords
+            numcols = c2 - c1
+            numrows = r2 - r1
+        else:
+            if (
+                self.row_positions == [0]
+                or self.col_positions == [0]
+                or not self.row_positions
+                or not self.col_positions
+            ):
+                return
+            r, c = len(self.row_positions) - 2, len(self.col_positions) - 2
+            r1, c1, r2, c2 = 0, 0, len(self.row_positions) - 1, len(self.col_positions) - 1
+            numcols, numrows = 1, 1
         if numcols == 1 and numrows == 1:
-            new_r = r
-            new_c = c + 1 if c < len(self.col_positions) - 2 else c
+            new_r, new_c = cell_right_within_box(
+                r,
+                c,
+                0,
+                0,
+                len(self.row_positions) - 1,
+                len(self.col_positions) - 1,
+                len(self.row_positions) - 1,
+                len(self.col_positions) - 1,
+            )
             self.select_cell(new_r, new_c)
         else:
             new_r, new_c = cell_right_within_box(r, c, r1, c1, r2, c2, numrows, numcols)
@@ -7996,6 +8191,17 @@ class MainTable(tk.Canvas):
                 else:
                     self.data[datarn][datacn] = value
 
+    def format_value(self, datarn: int, datacn: int, value: Any) -> Any:
+        if (datarn, datacn) in self.cell_options and "checkbox" in self.cell_options[(datarn, datacn)]:
+            return try_to_bool(value)
+        elif kwargs := self.get_cell_kwargs(datarn, datacn, key="format"):
+            if kwargs["formatter"] is None:
+                return format_data(value=value, **kwargs)
+            else:
+                return kwargs["formatter"](value, **kwargs)
+        else:
+            return value
+
     def get_value_for_empty_cell(self, datarn: int, datacn: int, r_ops: bool = True, c_ops: bool = True) -> Any:
         kwargs = self.get_cell_kwargs(
             datarn,
@@ -8010,7 +8216,7 @@ class MainTable(tk.Canvas):
         elif "dropdown" in kwargs and kwargs["dropdown"]["validate_input"] and kwargs["dropdown"]["values"]:
             return kwargs["dropdown"]["values"][0]
         else:
-            return ""
+            return self.format_value(datarn, datacn, "")
 
     def get_empty_row_seq(
         self, datarn: int, end: int, start: int = 0, r_ops: bool = True, c_ops: bool = True

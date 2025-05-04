@@ -65,31 +65,49 @@ class TextEditorTkText(tk.Text):
         self.rc_popup_menu.add_command(
             label=sheet_ops.select_all_label,
             accelerator=sheet_ops.select_all_accelerator,
+            image=sheet_ops.select_all_image,
+            compound=sheet_ops.select_all_compound,
             command=self.select_all,
             **menu_kwargs,
         )
         self.rc_popup_menu.add_command(
             label=sheet_ops.cut_label,
             accelerator=sheet_ops.cut_accelerator,
+            image=sheet_ops.cut_image,
+            compound=sheet_ops.cut_compound,
             command=self.cut,
             **menu_kwargs,
         )
         self.rc_popup_menu.add_command(
             label=sheet_ops.copy_label,
             accelerator=sheet_ops.copy_accelerator,
+            image=sheet_ops.copy_image,
+            compound=sheet_ops.copy_compound,
             command=self.copy,
             **menu_kwargs,
         )
         self.rc_popup_menu.add_command(
             label=sheet_ops.paste_label,
             accelerator=sheet_ops.paste_accelerator,
+            image=sheet_ops.paste_image,
+            compound=sheet_ops.paste_compound,
             command=self.paste,
             **menu_kwargs,
         )
         self.rc_popup_menu.add_command(
             label=sheet_ops.undo_label,
             accelerator=sheet_ops.undo_accelerator,
+            image=sheet_ops.undo_image,
+            compound=sheet_ops.undo_compound,
             command=self.undo,
+            **menu_kwargs,
+        )
+        self.rc_popup_menu.add_command(
+            label=sheet_ops.redo_label,
+            accelerator=sheet_ops.redo_accelerator,
+            image=sheet_ops.redo_image,
+            compound=sheet_ops.redo_compound,
+            command=self.redo,
             **menu_kwargs,
         )
         self.align = align_helper[convert_align(align)]
@@ -98,6 +116,7 @@ class TextEditorTkText(tk.Text):
         self.yview_moveto(1)
         self.tag_configure("align", justify=self.align)
         self.tag_add("align", 1.0, "end")
+        self.edit_reset()
 
     def _proxy(self, command: Any, *args) -> Any:
         try:
@@ -140,8 +159,8 @@ class TextEditorTkText(tk.Text):
             return "break"
 
     def select_all(self, event: Any = None) -> Literal["break"]:
-        self.tag_add(tk.SEL, "1.0", tk.END)
-        self.mark_set(tk.INSERT, tk.END)
+        self.tag_add(tk.SEL, "1.0", "end-1c")
+        self.mark_set(tk.INSERT, "end-1c")
         # self.see(tk.INSERT)
         return "break"
 
@@ -161,6 +180,11 @@ class TextEditorTkText(tk.Text):
 
     def undo(self, event: Any = None) -> Literal["break"]:
         self.event_generate(f"<{ctrl_key}-z>")
+        self.event_generate("<KeyRelease>")
+        return "break"
+
+    def redo(self, event: Any = None) -> Literal["break"]:
+        self.event_generate(f"<{ctrl_key}-Shift-z>")
         self.event_generate("<KeyRelease>")
         return "break"
 
