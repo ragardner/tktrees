@@ -4836,6 +4836,7 @@ class Tree_Editor(tk.Frame):
         rows: int | Iterator | None = None,
         columns: int | Iterator | None = None,
         dehighlight: bool = False,
+        ignore_empty: bool = False,
     ):
         if dehighlight:
             self.sheet.dehighlight_cells(all_=True, redraw=False)
@@ -4872,7 +4873,7 @@ class Tree_Editor(tk.Frame):
                 date_cols.add(col)
 
         for col in columns:
-            if not self.headers[col].formatting:
+            if ignore_empty and not self.headers[col].formatting:
                 continue
             modified_conditions = []
             all_conditions[col] = {}
@@ -4997,7 +4998,7 @@ class Tree_Editor(tk.Frame):
         self.save_info_get_saved_info()
         Edit_Conditional_Formatting_Popup(self, column=col, theme=self.C.theme)
         self.headers[col].formatting = [tup for tup in self.headers[col].formatting if tup[1]]
-        self.refresh_formatting(columns=col)
+        self.refresh_formatting(columns=col, ignore_empty=bool(self.headers[col].formatting))
         self.redo_tree_display()
         self.redraw_sheets()
 
