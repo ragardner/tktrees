@@ -204,6 +204,9 @@ class Span(dict):
     def del_format(self) -> Span:
         return self["widget"].del_format(self)
 
+    def note(self, note: str | None = None, readonly: bool = True) -> Span:
+        return self["widget"].note(self, note=note, readonly=readonly)
+
     def highlight(
         self,
         bg: bool | None | str = False,
@@ -481,10 +484,10 @@ class Node:
         parent: str = "",
         children: list[str] | None = None,
     ) -> None:
-        self.text = text
-        self.iid = iid
-        self.parent = parent
-        self.children = children if children else []
+        self.text: str = text
+        self.iid: str = iid
+        self.parent: str = parent
+        self.children: list[str] = children if children else []
 
 
 class StorageBase:

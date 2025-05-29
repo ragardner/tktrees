@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import csv
 import io
 import re
@@ -9,6 +10,7 @@ from collections import deque
 from collections.abc import Callable, Generator, Hashable, Iterable, Iterator, Sequence
 from difflib import SequenceMatcher
 from itertools import chain, islice, repeat
+from types import ModuleType
 from typing import Any, Literal
 
 from .colors import color_map
@@ -16,7 +18,6 @@ from .constants import align_value_error, symbols_set
 from .formatters import to_bool
 from .other_classes import DotDict, EventDataDict, Highlight, Loc, Span
 
-lines_re = re.compile(r"[^\n]+")
 ORD_A = ord("A")
 
 
@@ -33,8 +34,8 @@ def wrap_text(
     line_width = 0
     if wrap == "c":
         current_line = []
-        for match in lines_re.finditer(text):
-            for char in match.group():
+        for line in text.split("\n"):
+            for char in line:
                 try:
                     char_width = widths[char]
                 except KeyError:
@@ -75,8 +76,8 @@ def wrap_text(
             space_width = char_width_fn(" ")
         current_line = []
 
-        for match in lines_re.finditer(text):
-            for i, word in enumerate(match.group().split()):
+        for line in text.split("\n"):
+            for i, word in enumerate(line.split()):
                 # if we're going to next word and
                 # if a space fits on the end of the current line we add one
                 if i and line_width + space_width < max_width:
@@ -155,10 +156,10 @@ def wrap_text(
             line_width = 0
 
     else:
-        for match in lines_re.finditer(text):
+        for line in text.split("\n"):
             line_width = 0
             current_line = []
-            for char in match.group():
+            for char in line:
                 try:
                     char_width = widths[char]
                 except KeyError:
@@ -203,6 +204,16 @@ def get_data_from_clipboard(
     if dialect.delimiter in data or lineterminator in data:
         return list(csv.reader(io.StringIO(data), dialect=dialect, skipinitialspace=True))
     return [[data]]
+
+
+def widget_descendants(widget: tk.Misc) -> list[tk.Misc]:
+    result = []
+    queue = deque([widget])
+    while queue:
+        current_widget = queue.popleft()
+        result.append(current_widget)
+        queue.extend(current_widget.winfo_children())
+    return result
 
 
 def recursive_bind(widget: tk.Misc, event: str, callback: Callable) -> None:
@@ -461,6 +472,8 @@ def get_dropdown_kwargs(
     search_function: Callable = dropdown_search_function,
     validate_input: bool = True,
     text: None | str = None,
+    edit_data: bool = True,
+    default_value: Any = None,
 ) -> dict:
     return {
         "values": [] if values is None else values,
@@ -472,6 +485,8 @@ def get_dropdown_kwargs(
         "search_function": search_function,
         "validate_input": validate_input,
         "text": text,
+        "edit_data": edit_data,
+        "default_value": default_value,
     }
 
 
@@ -484,6 +499,7 @@ def get_dropdown_dict(**kwargs) -> dict:
         "validate_input": kwargs["validate_input"],
         "text": kwargs["text"],
         "state": kwargs["state"],
+        "default_value": kwargs["default_value"],
     }
 
 
@@ -765,6 +781,14 @@ def add_to_displayed(displayed: list[int], to_add: Iterable[int]) -> list[int]:
     return displayed
 
 
+def push_displayed(displayed: list[int], to_add: Iterable[int]) -> list[int]:
+    # assumes to_add is sorted
+    for i in to_add:
+        ins = bisect_left(displayed, i)
+        displayed[ins:] = [e + 1 for e in islice(displayed, ins, None)]
+    return displayed
+
+
 def move_elements_by_mapping(
     seq: list[Any],
     new_idxs: dict[int, int],
@@ -853,18 +877,6 @@ def insert_items(
     return seq
 
 
-def del_placeholder_dict_key(
-    d: dict[Hashable, Any],
-    k: Hashable,
-    v: Any,
-    p: tuple = (),
-) -> dict[Hashable, Any]:
-    if p in d:
-        del d[p]
-    d[k] = v
-    return d
-
-
 def data_to_displayed_idxs(
     to_convert: list[int],
     displayed: list[int],
@@ -885,50 +897,38 @@ def rounded_box_coords(
     x2: float,
     y2: float,
     radius: int = 5,
-) -> tuple[float]:
+) -> tuple[float, ...]:
+    # Handle case where rectangle is too small for rounding
     if y2 - y1 < 2 or x2 - x1 < 2:
-        return x1, y1, x2, y1, x2, y2, x1, y2
+        return (x1, y1, x2, y1, x2, y2, x1, y2, x1, y1)
+    # Coordinates for a closed rectangle with rounded corners
     return (
         x1 + radius,
-        y1,
-        x1 + radius,
-        y1,
+        y1,  # Top side start
         x2 - radius,
-        y1,
-        x2 - radius,
-        y1,
+        y1,  # Top side end
         x2,
-        y1,
+        y1,  # Top-right corner
         x2,
         y1 + radius,
         x2,
-        y1 + radius,
+        y2 - radius,  # Right side
         x2,
-        y2 - radius,
-        x2,
-        y2 - radius,
-        x2,
-        y2,
-        x2 - radius,
-        y2,
+        y2,  # Bottom-right corner
         x2 - radius,
         y2,
         x1 + radius,
-        y2,
+        y2,  # Bottom side
+        x1,
+        y2,  # Bottom-left corner
+        x1,
+        y2 - radius,
+        x1,
+        y1 + radius,  # Left side
+        x1,
+        y1,  # Top-left corner
         x1 + radius,
-        y2,
-        x1,
-        y2,
-        x1,
-        y2 - radius,
-        x1,
-        y2 - radius,
-        x1,
-        y1 + radius,
-        x1,
-        y1 + radius,
-        x1,
-        y1,
+        y1,  # Close the shape
     )
 
 
@@ -1207,14 +1207,14 @@ PATTERN_ALL = re.compile(r"^:$")  # ":"
 
 def span_a2i(a: str) -> int | None:
     n = 0
-    for c in a:
+    for c in a.upper():
         n = n * 26 + ord(c) - ORD_A + 1
     return n - 1
 
 
 def span_a2n(a: str) -> int | None:
     n = 0
-    for c in a:
+    for c in a.upper():
         n = n * 26 + ord(c) - ORD_A + 1
     return n
 
@@ -1251,7 +1251,7 @@ def key_to_span(
         return coords_to_span(widget=widget, from_r=None, from_c=None, upto_r=None, upto_c=None)
 
     # Validate input type
-    elif not isinstance(key, (str, int, slice, list, tuple)):
+    elif not isinstance(key, (str, int, slice, tuple, list)):
         return f"Key type must be either str, int, list, tuple or slice, not '{type(key).__name__}'."
 
     try:
@@ -1277,22 +1277,34 @@ def key_to_span(
             )
 
         # Sequence key: various span formats
-        elif isinstance(key, (list, tuple)):
-            if (
-                len(key) == 2
-                and (isinstance(key[0], int) or key[0] is None)
-                and (isinstance(key[1], int) or key[1] is None)
-            ):
-                # Single cell or partial span: (row, col)
-                r_int = isinstance(key[0], int)
-                c_int = isinstance(key[1], int)
-                return span_dict(
-                    from_r=key[0] if r_int else 0,
-                    from_c=key[1] if c_int else 0,
-                    upto_r=key[0] + 1 if r_int else None,
-                    upto_c=key[1] + 1 if c_int else None,
-                    widget=widget,
-                )
+        elif isinstance(key, (tuple, list)):
+            if len(key) == 2:
+                if (isinstance(key[0], int) or key[0] is None) and (isinstance(key[1], int) or key[1] is None):
+                    # Single cell or partial span: (row, col)
+                    r_int = isinstance(key[0], int)
+                    c_int = isinstance(key[1], int)
+                    return span_dict(
+                        from_r=key[0] if r_int else 0,
+                        from_c=key[1] if c_int else 0,
+                        upto_r=key[0] + 1 if r_int else None,
+                        upto_c=key[1] + 1 if c_int else None,
+                        widget=widget,
+                    )
+
+                elif isinstance(key[0], int) and isinstance(key[1], str):
+                    # Single cell with column letter: (row 0, col A)
+                    c_int = span_a2i(key[1])
+                    return span_dict(
+                        from_r=key[0],
+                        from_c=c_int,
+                        upto_r=key[0] + 1,
+                        upto_c=c_int + 1,
+                        widget=widget,
+                    )
+
+                else:
+                    return f"'{key}' could not be converted to span."
+
             elif len(key) == 4:
                 # Full span coordinates: (from_r, from_c, upto_r, upto_c)
                 return coords_to_span(
@@ -1302,7 +1314,7 @@ def key_to_span(
                     upto_r=key[2],
                     upto_c=key[3],
                 )
-            elif len(key) == 2 and all(isinstance(k, (list, tuple)) for k in key):
+            elif len(key) == 2 and all(isinstance(k, (tuple, list)) for k in key):
                 # Start and end points: ((from_r, from_c), (upto_r, upto_c))
                 return coords_to_span(
                     widget=widget,
@@ -1339,11 +1351,12 @@ def key_to_span(
                     widget=widget,
                 )
             elif m := PATTERN_COL.match(key):
+                c_int = span_a2i(m[1])
                 return span_dict(
                     from_r=None,
-                    from_c=span_a2i(m[1]),
+                    from_c=c_int,
                     upto_r=None,
-                    upto_c=span_a2n(m[1]),
+                    upto_c=c_int + 1,
                     widget=widget,
                 )
             elif m := PATTERN_CELL.match(key):
@@ -1509,6 +1522,17 @@ def del_named_span_options_nested(
             k = (k1, k2)
             if k in options and type_ in options[k]:
                 del options[k][type_]
+
+
+def mod_note(options: dict, key: int | tuple[int, int], note: str | None, readonly: bool = True) -> dict:
+    if note is not None:
+        if key not in options:
+            options[key] = {}
+        options[key]["note"] = {"note": note, "readonly": readonly}
+    else:
+        if key in options and "note" in options[key]:
+            del options[key]["note"]
+    return options
 
 
 def add_highlight(
@@ -1745,7 +1769,7 @@ def get_vertical_gridline_points(
     positions: list[float],
     start: int,
     end: int,
-) -> list[float]:
+) -> list[int | float]:
     return list(
         chain.from_iterable(
             (
@@ -1761,3 +1785,44 @@ def get_vertical_gridline_points(
             for c in range(start, end)
         )
     )
+
+
+def safe_copy(value: Any) -> Any:
+    """
+    Attempts to create a deep copy of the input value. If copying fails,
+    returns the original value.
+
+    Args:
+        value: Any Python object to be copied
+
+    Returns:
+        A deep copy of the value if possible, otherwise the original value
+    """
+    try:
+        # Try deep copy first for most objects
+        return copy.deepcopy(value)
+    except Exception:
+        try:
+            # For types that deepcopy might fail on, try shallow copy
+            return copy.copy(value)
+        except Exception:
+            try:
+                # For built-in immutable types, return as-is
+                if isinstance(value, (int, float, str, bool, bytes, tuple, frozenset)):
+                    return value
+                # For None
+                if value is None:
+                    return None
+                # For functions, return same function
+                if isinstance(value, Callable):
+                    return value
+                # For modules
+                if isinstance(value, ModuleType):
+                    return value
+                # For classes
+                if isinstance(value, type):
+                    return value
+            except Exception:
+                pass
+            # If all copy attempts fail, return original value
+            return value
