@@ -206,6 +206,7 @@ class Sheet(tk.Frame):
         note_corners: bool = False,
         tooltip_width: int = 210,
         tooltip_height: int = 210,
+        tooltip_hover_delay: int = 1200,
         # colors
         outline_thickness: int = 0,
         theme: str = "light blue",
@@ -4669,51 +4670,52 @@ class Sheet(tk.Frame):
             deselect_all=False,
             data_indexes=True,
         )
-        open_ids = set(filter(self.exists, open_ids))
         self.RI.tree_open_ids = set()
-        if open_ids:
-            self.show_rows(
-                rows=self._tree_open(open_ids),
-                redraw=False,
-                deselect_all=False,
-            )
+        open_ids = filter(self.exists, open_ids)
+        try:
+            first_id = next(open_ids)
+        except StopIteration:
+            return self.set_refresh_timer()
+        self.show_rows(
+            rows=self._tree_open(chain((first_id,), open_ids)),
+            redraw=False,
+            deselect_all=False,
+        )
         return self.set_refresh_timer()
 
-    def _tree_open(self, items: set[str]) -> list[int]:
+    def _tree_open(self, items: Iterator[str]) -> Generator[int]:
         """
         Only meant for internal use
         """
-        to_open = []
         disp_set = set(self.MT.displayed_rows)
         index = self.MT._row_index
         rns = self.RI.rns
         open_ids = self.RI.tree_open_ids
         descendants = self.RI.get_iid_descendants
-        for item in filter(items.__contains__, self.get_children()):
-            if index[rns[item]].children:
+        for item in items:
+            if item in rns and index[rns[item]].children:
                 open_ids.add(item)
                 if rns[item] in disp_set:
                     for did in descendants(item, check_open=True):
                         disp_set.add(rns[did])
-                        to_open.append(rns[did])
-        return to_open
+                        yield rns[did]
 
-    def tree_open(self, *items, redraw: bool = True) -> Sheet:
+    def tree_open(self, *items: str, redraw: bool = True) -> Sheet:
         """
         If used without args all items are opened
         """
-        to_open = self._tree_open(items) if (items := set(unpack(items))) else self._tree_open(set(self.get_children()))
+        to_show = self._tree_open(items) if (items := set(unpack(items))) else self._tree_open(self.get_children())
         return self.show_rows(
-            rows=to_open,
+            rows=to_show,
             redraw=redraw,
             deselect_all=False,
         )
 
-    def _tree_close(self, items: Iterator[str]) -> list[int]:
+    def _tree_close(self, items: Iterator[str]) -> set[int]:
         """
         Only meant for internal use
         """
-        to_close = set()
+        to_hide = set()
         disp_set = set(self.MT.displayed_rows)
         index = self.MT._row_index
         rns = self.RI.rns
@@ -4724,16 +4726,16 @@ class Sheet(tk.Frame):
                 open_ids.discard(item)
                 if rns[item] in disp_set:
                     for did in descendants(item, check_open=True):
-                        to_close.add(rns[did])
-        return to_close
+                        to_hide.add(rns[did])
+        return to_hide
 
-    def tree_close(self, *items, redraw: bool = True) -> Sheet:
+    def tree_close(self, *items: str, redraw: bool = True) -> Sheet:
         """
         If used without args all items are closed
         """
-        to_close = self._tree_close(unpack(items)) if items else self._tree_close(self.get_children())
+        to_hide = self._tree_close(unpack(items)) if items else self._tree_close(self.get_children())
         return self.hide_rows(
-            rows=to_close,
+            rows=to_hide,
             redraw=redraw,
             deselect_all=False,
             data_indexes=True,
@@ -5109,7 +5111,7 @@ class Sheet(tk.Frame):
         """
         if not self.item_displayed(item) and self.RI.iid_parent(item):
             self.show_rows(
-                rows=self._tree_open(list(self.RI.get_iid_ancestors(item))),
+                rows=self._tree_open(self.RI.get_iid_ancestors(item)),
                 redraw=False,
                 deselect_all=False,
             )
@@ -5154,11 +5156,11 @@ class Sheet(tk.Frame):
         return self.set_refresh_timer(redraw)
 
     def selection_add(self, *items, run_binding: bool = True, redraw: bool = True) -> Sheet:
-        to_open = []
+        to_open = set()
         quick_displayed_check = set(self.MT.displayed_rows)
         for item in filter(self.RI.rns.__contains__, unpack(items)):
             if self.RI.rns[item] not in quick_displayed_check and self.RI.iid_parent(item):
-                to_open.extend(list(self.RI.get_iid_ancestors(item)))
+                to_open.update(self.RI.get_iid_ancestors(item))
         if to_open:
             self.show_rows(
                 rows=self._tree_open(to_open),
