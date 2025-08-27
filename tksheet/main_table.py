@@ -24,7 +24,6 @@ from .constants import (
     bind_del_rows,
     ctrl_key,
     font_value_error,
-    rc_binding,
     text_editor_close_bindings,
     text_editor_newline_bindings,
     text_editor_to_unbind,
@@ -52,6 +51,7 @@ from .functions import (
     consecutive_ranges,
     data_to_displayed_idxs,
     diff_gen,
+    estimate_max_visible_cells,
     event_dict,
     event_has_char_key,
     event_opens_dropdown_or_checkbox,
@@ -145,6 +145,7 @@ class MainTable(tk.Canvas):
                 "menu_kwargs": get_menu_kwargs(self.PAR.ops),
                 **get_bg_fg(self.PAR.ops),
                 "scrollbar_style": f"Sheet{self.PAR.unique_id}.Vertical.TScrollbar",
+                "rc_binding": self.PAR.ops.rc_binding,
             }
         )
         self.tooltip_widgets = widget_descendants(self.tooltip)
@@ -189,7 +190,7 @@ class MainTable(tk.Canvas):
         self.hidd_checkbox = {}
         self.hidd_corners = set()
 
-        self.selection_boxes = {}
+        self.selection_boxes: dict[int, SelectionBox] = {}
         self.selected = ()
         self.named_spans = {}
         self.reset_tags()
@@ -419,7 +420,7 @@ class MainTable(tk.Canvas):
             ("<Shift-ButtonPress-1>", self, self.shift_b1_press),
             ("<Shift-ButtonPress-1>", self.CH, self.CH.shift_b1_press),
             ("<Shift-ButtonPress-1>", self.RI, self.RI.shift_b1_press),
-            (rc_binding, self, self.rc),
+            (self.PAR.ops.rc_binding, self, self.rc),
             (f"<{ctrl_key}-ButtonPress-1>", self, self.ctrl_b1_press),
             (f"<{ctrl_key}-ButtonPress-1>", self.CH, self.CH.ctrl_b1_press),
             (f"<{ctrl_key}-ButtonPress-1>", self.RI, self.RI.ctrl_b1_press),
@@ -625,6 +626,7 @@ class MainTable(tk.Canvas):
                 replace_all_func=self.replace_all,
                 toggle_replace_func=self.reposition_find_window,
                 drag_func=self.drag_find_window,
+                rc_binding=self.PAR.ops.rc_binding,
             )
             self.find_window.canvas_id = self.create_window((x, y), window=self.find_window.window, anchor="nw")
         else:
@@ -1051,6 +1053,52 @@ class MainTable(tk.Canvas):
                         event_data["cells"]["table"][(datarn, datacn)] = v
                         row.append(v)
                     writer.writerow(row)
+        for r1, c1, r2, c2 in boxes:
+            self.show_ctrl_outline(canvas="table", start_cell=(c1, r1), end_cell=(c2, r2))
+        self.clipboard_clear()
+        if len(event_data["cells"]["table"]) == 1 and self.PAR.ops.to_clipboard_lineterminator not in next(
+            iter(event_data["cells"]["table"].values())
+        ):
+            self.clipboard_append(next(iter(event_data["cells"]["table"].values())))
+        else:
+            self.clipboard_append(s.getvalue())
+        self.update_idletasks()
+        try_binding(self.extra_end_ctrl_c_func, event_data, new_name="end_ctrl_c")
+        self.PAR.emit_event("<<Copy>>", EventDataDict({**event_data, **{"eventname": "copy"}}))
+        return event_data
+
+    def ctrl_c_plain(self, event=None) -> None | EventDataDict:
+        if not self.selected:
+            return
+        event_data = self.new_event_dict("begin_ctrl_c")
+        boxes, maxrows = self.get_ctrl_x_c_boxes()
+        event_data["selection_boxes"] = boxes
+        s = io.StringIO()
+        delim, line_term = self.PAR.ops.to_clipboard_delimiter, self.PAR.ops.to_clipboard_lineterminator
+        if not try_binding(self.extra_begin_ctrl_c_func, event_data):
+            return
+        if self.selected.type_ in ("cells", "columns"):
+            for rn in range(maxrows):
+                row = []
+                for r1, c1, _, c2 in boxes:
+                    datarn = (r1 + rn) if self.all_rows_displayed else self.displayed_rows[r1 + rn]
+                    for c in range(c1, c2):
+                        datacn = self.datacn(c)
+                        v = self.get_cell_clipboard(datarn, datacn)
+                        event_data["cells"]["table"][(datarn, datacn)] = v
+                        row.append(v)
+                s.write(delim.join(row) + line_term)
+        else:
+            for r1, c1, r2, c2 in boxes:
+                for rn in range(r2 - r1):
+                    row = []
+                    datarn = (r1 + rn) if self.all_rows_displayed else self.displayed_rows[r1 + rn]
+                    for c in range(c1, c2):
+                        datacn = self.datacn(c)
+                        v = self.get_cell_clipboard(datarn, datacn)
+                        event_data["cells"]["table"][(datarn, datacn)] = v
+                        row.append(v)
+                    s.write(delim.join(row) + line_term)
         for r1, c1, r2, c2 in boxes:
             self.show_ctrl_outline(canvas="table", start_cell=(c1, r1), end_cell=(c2, r2))
         self.clipboard_clear()
@@ -3092,6 +3140,7 @@ class MainTable(tk.Canvas):
         if binding in ("all", "copy", "edit_bindings", "edit"):
             self.copy_enabled = True
             self._tksheet_bind("copy_bindings", self.ctrl_c)
+            self._tksheet_bind("copy_plain_bindings", self.ctrl_c_plain)
         if binding in ("all", "cut", "edit_bindings", "edit"):
             self.cut_enabled = True
             self._tksheet_bind("cut_bindings", self.ctrl_x)
@@ -3251,6 +3300,7 @@ class MainTable(tk.Canvas):
         if binding in ("all", "copy", "edit_bindings", "edit"):
             self.copy_enabled = False
             self._tksheet_unbind("copy_bindings")
+            self._tksheet_unbind("copy_plain_bindings")
         if binding in ("all", "cut", "edit_bindings", "edit"):
             self.cut_enabled = False
             self._tksheet_unbind("cut_bindings")
@@ -3321,6 +3371,29 @@ class MainTable(tk.Canvas):
             or (datacn in self.col_options and "readonly" in self.col_options[datacn])
         )
 
+    def estimate_selections_readonly(self) -> bool:
+        max_cells = estimate_max_visible_cells(self)
+        total_cells = 0
+        for box in self.selection_boxes.values():
+            r1, c1, r2, c2 = box.coords
+            total_cells += (r2 - r1) * (c2 - c1)
+
+        if total_cells > max_cells:
+            return False
+
+        for box in self.selection_boxes.values():
+            r1, c1, r2, c2 = box.coords
+            for r in range(r1, r2):
+                for c in range(c1, c2):
+                    datarn, datacn = self.datarn(r), self.datacn(c)
+                    if not (
+                        ((datarn, datacn) in self.cell_options and "readonly" in self.cell_options[(datarn, datacn)])
+                        or (datarn in self.row_options and "readonly" in self.row_options[datarn])
+                        or (datacn in self.col_options and "readonly" in self.col_options[datacn])
+                    ):
+                        return False
+        return True
+
     def rc(self, event: Any = None) -> None:
         self.mouseclick_outside_editor_or_dropdown_all_canvases()
         self.focus_set()
@@ -3332,15 +3405,15 @@ class MainTable(tk.Canvas):
                 if self.col_selected(c):
                     if self.rc_popup_menus_enabled:
                         popup_menu = self.CH.ch_rc_popup_menu
-                        build_header_rc_menu(self, popup_menu, c)
+                        build_header_rc_menu(self, popup_menu, self.selected)
                 elif self.row_selected(r):
                     if self.rc_popup_menus_enabled:
                         popup_menu = self.RI.ri_rc_popup_menu
-                        build_index_rc_menu(self, popup_menu, r)
+                        build_index_rc_menu(self, popup_menu, self.selected)
                 elif self.cell_selected(r, c):
                     if self.rc_popup_menus_enabled:
                         popup_menu = self.rc_popup_menu
-                        build_table_rc_menu(self, popup_menu, r, c)
+                        build_table_rc_menu(self, popup_menu, self.selected)
                 else:
                     if self.rc_select_enabled:
                         if self.single_selection_enabled:
@@ -3349,7 +3422,7 @@ class MainTable(tk.Canvas):
                             self.toggle_select_cell(r, c, redraw=True)
                     if self.rc_popup_menus_enabled:
                         popup_menu = self.rc_popup_menu
-                        build_table_rc_menu(self, popup_menu, r, c)
+                        build_table_rc_menu(self, popup_menu, self.selected)
             else:
                 self.deselect("all")
                 if self.rc_popup_menus_enabled:
@@ -4945,8 +5018,12 @@ class MainTable(tk.Canvas):
                         data_ins_col = int(self.displayed_columns[-1])
         else:
             numcols = 1
-            displayed_ins_col = len(self.col_positions) - 1
-            data_ins_col = self.total_data_cols()
+            if event == "left":
+                displayed_ins_col = 0
+                data_ins_col = 0
+            else:
+                displayed_ins_col = len(self.col_positions) - 1
+                data_ins_col = self.total_data_cols()
         if (
             isinstance(self.PAR.ops.paste_insert_column_limit, int)
             and self.PAR.ops.paste_insert_column_limit < displayed_ins_col + numcols
@@ -5081,8 +5158,12 @@ class MainTable(tk.Canvas):
                         data_ins_row = int(self.displayed_rows[-1])
         else:
             numrows = 1
-            displayed_ins_row = len(self.row_positions) - 1
-            data_ins_row = self.total_data_rows()
+            if event == "above":
+                displayed_ins_row = 0
+                data_ins_row = 0
+            else:
+                displayed_ins_row = len(self.row_positions) - 1
+                data_ins_row = self.total_data_rows()
         if (
             isinstance(self.PAR.ops.paste_insert_row_limit, int)
             and self.PAR.ops.paste_insert_row_limit < displayed_ins_row + numrows
@@ -7391,7 +7472,9 @@ class MainTable(tk.Canvas):
             "c": c,
         }
         if not self.text_editor.window:
-            self.text_editor.window = TextEditor(self, newline_binding=self.text_editor_newline_binding)
+            self.text_editor.window = TextEditor(
+                self, newline_binding=self.text_editor_newline_binding, rc_binding=self.PAR.ops.rc_binding
+            )
             self.text_editor.canvas_id = self.create_window((x, y), window=self.text_editor.window, anchor="nw")
         self.text_editor.window.reset(**kwargs)
         if not self.text_editor.open:

@@ -10,6 +10,7 @@ from collections import deque
 from collections.abc import Callable, Generator, Hashable, Iterable, Iterator, Sequence
 from difflib import SequenceMatcher
 from itertools import chain, islice, repeat
+from platform import system as get_os
 from types import ModuleType
 from typing import Any, Literal
 
@@ -176,6 +177,36 @@ def wrap_text(
             total_lines += 1
             if total_lines >= max_lines:
                 return
+
+
+def estimate_max_visible_cells(table: tk.Canvas) -> int:
+    """
+    This is used limit for readonly checks to avoid perf issues on large selections.
+    Calculate the rough maximum number of cells that could fit in the visible portion of the table.
+    This uses a sort of minimum cell size in pixels and ignores headers, scrollbars, borders, etc.
+    """
+    # Get current table dimensions in pixels
+    widget_width = table.winfo_width()
+    widget_height = table.winfo_height()
+
+    # If widget isn't realized yet (e.g., before pack/grid), winfo returns 1; handle that
+    if widget_width <= 1 or widget_height <= 1:
+        return 10000  # Fallback to a reasonable default
+
+    # Calculate max columns and rows that fit
+    max_cols = widget_width // 30
+    max_rows = widget_height // 26
+
+    # Rough max cells
+    return max_rows * max_cols
+
+
+def get_rc_binding(widget: tk.Misc) -> str:
+    os_name = get_os().lower()
+    if os_name != "darwin":
+        return "<3>"
+    window_system = widget.tk.call("tk", "windowingsystem").lower()
+    return "<2>" if window_system == "aqua" else "<3>"
 
 
 def get_csv_str_dialect(s: str, delimiters: str) -> csv.Dialect:

@@ -12,7 +12,6 @@ from typing import Any, Literal
 from .colors import color_map
 from .constants import (
     _test_str,
-    rc_binding,
     text_editor_close_bindings,
     text_editor_newline_bindings,
     text_editor_to_unbind,
@@ -71,6 +70,7 @@ class RowIndex(tk.Canvas):
                 "menu_kwargs": get_menu_kwargs(self.ops),
                 **get_bg_fg(self.ops),
                 "scrollbar_style": f"Sheet{self.PAR.unique_id}.Vertical.TScrollbar",
+                "rc_binding": self.ops.rc_binding,
             }
         )
         self.tooltip_widgets = widget_descendants(self.tooltip)
@@ -161,14 +161,14 @@ class RowIndex(tk.Canvas):
             self.bind("<B1-Motion>", self.b1_motion)
             self.bind("<ButtonRelease-1>", self.b1_release)
             self.bind("<Double-Button-1>", self.double_b1)
-            self.bind(rc_binding, self.rc)
+            self.bind(self.ops.rc_binding, self.rc)
         else:
             self.unbind("<Motion>")
             self.unbind("<ButtonPress-1>")
             self.unbind("<B1-Motion>")
             self.unbind("<ButtonRelease-1>")
             self.unbind("<Double-Button-1>")
-            self.unbind(rc_binding)
+            self.unbind(self.ops.rc_binding)
 
     def set_width(self, new_width: int, set_TL: bool = False, recreate_selection_boxes: bool = True) -> None:
         try:
@@ -200,7 +200,7 @@ class RowIndex(tk.Canvas):
                 if self.MT.row_selected(r):
                     if self.MT.rc_popup_menus_enabled:
                         popup_menu = self.ri_rc_popup_menu
-                        build_index_rc_menu(self.MT, popup_menu, r)
+                        build_index_rc_menu(self.MT, popup_menu, self.MT.selected)
                 else:
                     if self.MT.single_selection_enabled and self.MT.rc_select_enabled:
                         self.select_row(r, redraw=True)
@@ -208,7 +208,7 @@ class RowIndex(tk.Canvas):
                         self.toggle_select_row(r, redraw=True)
                     if self.MT.rc_popup_menus_enabled:
                         popup_menu = self.ri_rc_popup_menu
-                        build_index_rc_menu(self.MT, popup_menu, r)
+                        build_index_rc_menu(self.MT, popup_menu, self.MT.selected)
         try_binding(self.extra_rc_func, event)
         if popup_menu is not None:
             self.popup_menu_loc = r
@@ -2169,7 +2169,9 @@ class RowIndex(tk.Canvas):
             "r": r,
         }
         if not self.text_editor.window:
-            self.text_editor.window = TextEditor(self, newline_binding=self.text_editor_newline_binding)
+            self.text_editor.window = TextEditor(
+                self, newline_binding=self.text_editor_newline_binding, rc_binding=self.ops.rc_binding
+            )
             self.text_editor.canvas_id = self.create_window((x, y), window=self.text_editor.window, anchor="nw")
         self.text_editor.window.reset(**kwargs)
         if not self.text_editor.open:
