@@ -627,6 +627,52 @@ class TreeBuilder:
         output = [["ID", "Parent"] + [f"Detail_{n}" for n in range(1, len(output[0]) - 1)]] + output
         return output, rowlen, 0, [1]
 
+    def convert_indented_tree_with_header_to_normal(
+        self,
+        data: list[list[str]] | None = None,
+    ) -> tuple[list[list[str]], int, int, list[int]]:
+        # Assumes data has header
+        output, parents = [], []
+        details_start = 0
+        for row in islice(data, 1, None):
+            for col, value in enumerate(row):
+                if value:
+                    if col > details_start:
+                        details_start = col
+                    break
+        details_start += 1
+        for row in islice(data, 1, None):
+            for level, value in enumerate(row):
+                if value:
+                    parents = parents[
+                        : next(
+                            (
+                                len(parents) - i
+                                for i, (parent_level, _) in enumerate(reversed(parents))
+                                if parent_level < level
+                            ),
+                            0,
+                        )
+                    ]
+                    parent = parents[-1][1] if parents else ""
+                    details = row[details_start:]
+                    try:
+                        details = details[: len(details) - next(i for i, e in enumerate(reversed(details)) if e)]
+                    except Exception:
+                        details = []
+                    if details:
+                        output.append([value, parent] + details)
+                    else:
+                        output.append([value, parent])
+                    parents.append((level, value))
+                    break
+        if not output:
+            return [], 0, 0, [1]
+        header = [["ID", "Parent"] + data[0][details_start:]]
+        output = header + output
+        rowlen = equalize_sublist_lens(output)
+        return output, rowlen, 0, [1]
+
 
 class SearchResult:
     __slots__ = ("hierarchy", "text", "iid", "column", "term", "type_", "exact")

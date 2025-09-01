@@ -8814,6 +8814,12 @@ class Tree_Editor(tk.Frame):
                     data=self.new_sheet,
                 )
             )
+        elif popup.format == 5:
+            self.new_sheet, self.row_len, self.ic, self.hiers = (
+                TreeBuilder().convert_indented_tree_with_header_to_normal(
+                    data=self.new_sheet,
+                )
+            )
         else:
             self.row_len = new_row_len
             self.ic = popup.ic

@@ -193,7 +193,7 @@ class Column_Selection(tk.Frame):
         fmt = self.data_format_selector.format
         if flattened:
             hier_cols = self.flattened_selector.get_par_cols()
-        elif fmt in (3, 4):
+        elif fmt in (3, 4, 5):
             hier_cols = [1]
         else:
             hier_cols = list(self.selector.get_par_cols())
@@ -237,6 +237,15 @@ class Column_Selection(tk.Frame):
                 idcol,
                 hier_cols,
             ) = TreeBuilder().convert_indented_tree_details_adjacent_to_normal(
+                data=self.C.frames.tree_edit.sheet.MT.data,
+            )
+        elif fmt == 5:
+            (
+                self.C.frames.tree_edit.sheet.MT.data,
+                self.rowlen,
+                idcol,
+                hier_cols,
+            ) = TreeBuilder().convert_indented_tree_with_header_to_normal(
                 data=self.C.frames.tree_edit.sheet.MT.data,
             )
         self.C.frames.tree_edit.ic = idcol
@@ -546,11 +555,12 @@ class DataFormatSelector(tk.Frame):
         self.format_dropdown = Ez_Dropdown(self, font=EFB, width_=28)
         self.format_dropdown.bind("<<ComboboxSelected>>", self.dropdown_select)
         self.format_dropdown["values"] = [
-            "ID, Parent - Adjacency List",
-            "Flattened - Top → Base",
-            "Flattened - Base → Top",
-            "Level-Based Columns",
-            "Level-Based Columns Multi-Detail",
+            "ID, Parent - Adjacency List",  # 0
+            "Flattened - Top → Base",  # 1
+            "Flattened - Base → Top",  # 2
+            "Level-Based Columns",  # 3
+            "Level-Based Columns Multi-Detail",  # 4
+            "Level-Based Columns with Header",  # 5
         ]
         self.format_dropdown.current(0)
         self.format_dropdown.grid(row=0, column=1, sticky="nswe")
