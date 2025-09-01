@@ -561,19 +561,24 @@ class TreeBuilder:
         self,
         data: list[list[str]] | None = None,
     ) -> tuple[list[list[str]], int, int, list[int]]:
-        output, parents = [], []
+        output, parents = [], []  # parents: list of (level, value) tuples
 
         for row in data:
             for level, value in enumerate(row):
                 if value:
-                    parent = ""
-                    if level:
-                        if level - 1 < len(parents):
-                            parent = parents[level - 1]
-                        elif parents:
-                            parent = parents[-1]
+                    parents = parents[
+                        : next(
+                            (
+                                len(parents) - i
+                                for i, (parent_level, _) in enumerate(reversed(parents))
+                                if parent_level < level
+                            ),
+                            0,
+                        )
+                    ]
+                    parent = parents[-1][1] if parents else ""
                     output.append([value, parent] + row[level + 1 :])
-                    parents = parents[:level] + [value]
+                    parents.append((level, value))
                     break
 
         if not output:
@@ -584,7 +589,7 @@ class TreeBuilder:
                 row[:] = row[: len(row) - next(i for i, e in enumerate(reversed(row)) if e)]
 
         rowlen = equalize_sublist_lens(output)
-        output = [["ID", "Parent"] + [f"Detail_{n}" for n in range(1, len(output[0]) - 3)]] + output
+        output = [["ID", "Parent"] + [f"Detail_{n}" for n in range(1, len(output[0]) - 1)]] + output
 
         return output, rowlen, 0, [1]
 
