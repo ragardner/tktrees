@@ -46,11 +46,11 @@ class Workbook_Sheet_Selection(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.C = C
         self.columnconfigure(1, weight=1)
-        self.sheets_label = Label(self, text="Workbook sheets:", font=EF, theme=self.C.theme)
-        self.sheets_label.grid(row=0, column=0, padx=10, pady=(10, 20), sticky="e")
+        self.sheets_label = Label(self, text="Workbook sheets:", font=EFB, theme=self.C.theme)
+        self.sheets_label.grid(row=0, column=0, sticky="e")
         self.sheet_select = Ez_Dropdown(self, TF)
         self.sheet_select.bind("<<ComboboxSelected>>", self.cont)
-        self.sheet_select.grid(row=0, column=1, padx=(0, 20), pady=(10, 20), sticky="nswe")
+        self.sheet_select.grid(row=0, column=1, padx=(10, 20), sticky="nswe")
 
     def enable_widgets(self):
         self.sheet_select.config(state="readonly")
@@ -74,18 +74,25 @@ class Column_Selection(tk.Frame):
         self.C = C
         self.parent_cols = []
         self.rowlen = 0
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(3, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
+        self.cont_ = Button(
+            self,
+            text="Build tree ",
+            style="TF.Std.TButton",
+            command=self.try_to_build_tree,
+        )
+        self.cont_.grid(row=0, column=0, padx=20, pady=10, sticky="w")
+
         self.sheet_selector = Workbook_Sheet_Selection(parent=self, C=C)
-        self.sheet_selector.grid(row=0, column=0, padx=20, pady=10, sticky="nswe")
+        self.sheet_selector.grid(row=1, column=0, padx=(20, 5), pady=5, sticky="nswe")
 
         self.data_format_selector = DataFormatSelector(self, command=self.flattened_mode_toggle)
-        self.data_format_selector.grid(row=2, column=0, padx=20, pady=(10, 5), sticky="wnse")
+        self.data_format_selector.grid(row=2, column=0, padx=(20, 5), pady=5, sticky="wnse")
+
         self.flattened_selector = Flattened_Column_Selector(self)
         self.selector = Id_Parent_Column_Selector(self)
-        self.selector.grid(row=2, column=0, sticky="wnse")
         self.sheetdisplay = Sheet(
             self,
             theme=self.C.theme,
@@ -98,27 +105,18 @@ class Column_Selection(tk.Frame):
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
         self.sheetdisplay.headers(newheaders=0)
-        self.sheetdisplay.grid(row=1, column=1, rowspan=3, sticky="nswe")
-
-        self.cont_ = Button(
-            self,
-            text="Build tree ",
-            style="TF.Std.TButton",
-            command=self.try_to_build_tree,
-        )
-        self.cont_.grid(row=3, column=0, sticky="w", padx=20, pady=(10, 50))
-
-        self.flattened_selector.grid(row=1, column=0, pady=(0, 9), sticky="nswe")
-        self.selector.grid_forget()
-        self.selector.grid(row=1, column=0, sticky="nswe")
-        self.flattened_selector.grid_forget()
+        self.sheetdisplay.grid(row=0, column=1, rowspan=4, sticky="nswe")
+        self.flattened_mode_toggle()
 
     def flattened_mode_toggle(self):
         if self.data_format_selector.flattened:
-            self.flattened_selector.grid(row=1, column=0, pady=(0, 9), sticky="nswe")
+            self.flattened_selector.grid(row=3, column=0, sticky="nswe")
             self.selector.grid_forget()
+        elif self.data_format_selector.format == 3:
+            self.selector.grid_forget()
+            self.flattened_selector.grid_forget()
         else:
-            self.selector.grid(row=1, column=0, sticky="nswe")
+            self.selector.grid(row=3, column=0, sticky="nswe")
             self.flattened_selector.grid_forget()
 
     def reset_selectors(self, event=None):
@@ -396,20 +394,11 @@ class Id_Parent_Column_Selector(tk.Frame):
             if not e:
                 continue
             x = e[0].lower().strip()
-            if x == "id" or x.startswith("id"):
+            if x == "id" or x.startswith("id") or "id" in x:
                 self.set_id_col(i)
                 return
-        if self.sheet is not None and len(self.sheet.data) > 1:
-            for c in range(self.sheet.total_columns()):
-                if (
-                    c not in self.par_cols
-                    and any(
-                        r[c] != f"{n}" for r, n in zip(islice(self.sheet.data, 1, None), range(len(self.sheet.data)))
-                    )
-                    and all(r[c].rstrip() for r in islice(self.sheet.data, 1, None) if len(r) > c)
-                ):
-                    self.set_id_col(c)
-                    break
+        if isinstance(self.sheet, list) and self.sheet:
+            self.set_id_col(0)
 
     def detect_par_cols(self):
         if len(self.par_col_selection.MT.data) <= 1:
@@ -543,30 +532,32 @@ class DataFormatSelector(tk.Frame):
         self.C = parent
         self.extra_func = command
         self._flattened = False
-        self.order_dropdown = Ez_Dropdown(self, font=EFB, width_=28)
-        self.order_dropdown.bind("<<ComboboxSelected>>", self.dropdown_select)
-        self.order_dropdown["values"] = [
+        self.format_label = Label(self, text="Data Format: ", font=EFB, theme=theme)
+        self.format_label.grid(row=0, column=0)
+        self.format_dropdown = Ez_Dropdown(self, font=EFB, width_=28)
+        self.format_dropdown.bind("<<ComboboxSelected>>", self.dropdown_select)
+        self.format_dropdown["values"] = [
             "ID, Parent - Adjacency List",
             "Flattened - Top → Base",
             "Flattened - Base → Top",
             "Level-Based Columns",
         ]
-        self.order_dropdown.current(0)
-        self.order_dropdown.grid(row=0, column=0, sticky="nswe")
+        self.format_dropdown.current(0)
+        self.format_dropdown.grid(row=0, column=1, sticky="nswe")
         self.select_mode(func=False)
 
     def disable_me(self, func=False):
-        self.order_dropdown.config(state="disabled")
+        self.format_dropdown.config(state="disabled")
 
     def enable_me(self, func=False):
-        self.order_dropdown.config(state="readonly")
+        self.format_dropdown.config(state="readonly")
 
     def select_mode(self, event=None, func=True):
         if func:
             self.extra_func()
 
     def dropdown_select(self, event=None):
-        if not self.order_dropdown.get_my_value().startswith("Flat"):
+        if not self.format_dropdown.get_my_value().startswith("Flat"):
             self._flattened = False
         else:
             self._flattened = True
@@ -578,10 +569,11 @@ class DataFormatSelector(tk.Frame):
 
     @property
     def format(self) -> int:
-        return self.order_dropdown.current()
+        return self.format_dropdown.current()
 
     def change_theme(self, theme="dark"):
         self.config(bg=themes[theme].top_left_bg)
+        self.format_label.change_theme(theme)
 
 
 class Flattened_Column_Selector(tk.Frame):

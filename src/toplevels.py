@@ -2271,19 +2271,23 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         )
         # self.grid_columnconfigure(0,weight=1)
         self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         # self.grid_rowconfigure(2,weight=1,uniform="y")
-        self.selector = Id_Parent_Column_Selector(self)
-        self.selector.grid(row=0, column=0, sticky="nsew")
+
+        self.confirm_button = Button(self, text="Build tree", style="TF.Std.TButton", command=self.confirm)
+        self.confirm_button.grid(row=0, column=0, sticky="w", padx=10, pady=(20, 20))
 
         self.data_format_selector = DataFormatSelector(self, command=self.flattened_mode_toggle, theme=theme)
         self.data_format_selector.change_theme(theme)
         self.data_format_selector.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+
+        self.selector = Id_Parent_Column_Selector(self)
+        self.selector.set_columns(cols)
+        self.selector.change_theme(theme)
         self.flattened_selector = Flattened_Column_Selector(self)
         self.flattened_selector.set_columns(cols)
-        self.selector.change_theme(theme)
         self.flattened_selector.change_theme(theme)
-        self.selector.set_columns(cols)
+
         self.sheetdisplay = Sheet(
             self,
             theme=theme,
@@ -2307,27 +2311,13 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.selector.detect_id_col()
         self.selector.detect_par_cols()
 
-        self.button_frame = Frame(self, theme=theme)
-        self.button_frame.grid(row=2, column=0, sticky="e")
-        self.button_frame.grid_rowconfigure(0, weight=1)
-
-        self.confirm_button = Button(
-            self.button_frame, text=" Overwrite existing sheet ", style="EF.Std.TButton", command=self.confirm
-        )
-        self.confirm_button.grid(row=0, column=0, sticky="e", padx=10, pady=(20, 20))
-        self.cancel_button = Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel)
-        self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=(20, 20))
         self.status = Status_Bar(self, text="Select ID and Parent columns", theme=theme)
         self.status.grid(row=3, column=0, sticky="we")
         self.result = False
         self.ic = None
         self.pcols = []
         self.bind("<Escape>", self.cancel)
-
-        self.selector.grid_forget()
-        self.flattened_selector.grid(row=0, column=0, pady=(0, 35), sticky="nsew")
-        self.flattened_selector.grid_forget()
-        self.selector.grid(row=0, column=0, sticky="nsew")
+        self.flattened_mode_toggle()
         show_toplevel_chores(self, height=600)
 
     def begin_edit_cell(self, event):
@@ -2374,10 +2364,13 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
     def flattened_mode_toggle(self):
         if self.data_format_selector.flattened:
             self.selector.grid_forget()
-            self.flattened_selector.grid(row=0, column=0, pady=(0, 35), sticky="nsew")
+            self.flattened_selector.grid(row=2, column=0, sticky="nsew")
+        elif self.data_format_selector.format == 3:
+            self.selector.grid_forget()
+            self.flattened_selector.grid_forget()
         else:
             self.flattened_selector.grid_forget()
-            self.selector.grid(row=0, column=0, sticky="nsew")
+            self.selector.grid(row=2, column=0, sticky="nsew")
 
     def confirm(self, event=None):
         self.ic = self.selector.get_id_col()
