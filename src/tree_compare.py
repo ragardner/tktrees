@@ -643,7 +643,7 @@ class Tree_Compare(tk.Frame):
         for coln in range(len(heads)):
             cell = heads[coln]
             if not cell:
-                cell = f"_MISSING_{coln + 1}"
+                cell = f"MISSING_{coln + 1}"
                 addition.append([f" - Missing header in column #{coln + 1}"])
             hk = cell.lower()
             tally_of_heads[hk] += 1

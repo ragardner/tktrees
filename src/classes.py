@@ -302,9 +302,7 @@ class TreeBuilder:
         data: list[list[str]] | None = None,
         hier_cols: list[int] | None = None,
         rowlen: None | int = None,
-        order: Literal[
-            "Flattened - Left → Right is Top → Base", "Flattened - Left → Right is Base → Top"
-        ] = "Flattened - Left → Right is Top → Base",
+        order: int = 1,  # 1. Top - Base, 2. Base - Top
         warnings: list[object] | None = None,
     ) -> tuple[list[list[str]], int, int, list[int]]:
         if data is None:
@@ -351,7 +349,7 @@ class TreeBuilder:
             )
             ids_details_tally = {}
 
-            if order == "Flattened - Left → Right is Base → Top":
+            if order == 2:
                 for rn, r in enumerate(islice(data, 1, None), 1):
                     for idx in hier_cols:
                         if r[idx]:
@@ -388,7 +386,7 @@ class TreeBuilder:
                             added_ids.add(pk)
                             to_add[pk] = (par, "")
 
-            elif order == "Flattened - Left → Right is Top → Base":
+            elif order == 1:
                 for rn, r in enumerate(islice(data, 1, None), 1):
                     for idx in reversed(hier_cols):
                         if r[idx]:
@@ -478,7 +476,7 @@ class TreeBuilder:
             return output, max(map(len, output), default=0), 0, [1]
 
         elif not detail_cols:
-            if order == "Flattened - Left → Right is Base → Top":
+            if order == 2:
                 for rn, r in enumerate(islice(data, 1, None), 1):
                     for idx in hier_cols:
                         if r[idx] and r[idx].lower() not in rns:
@@ -506,7 +504,7 @@ class TreeBuilder:
                             added_ids.add(par.lower())
                             to_add[pk] = (par, "")
 
-            elif order == "Flattened - Left → Right is Top → Base":
+            elif order == 1:
                 for rn, r in enumerate(islice(data, 1, None), 1):
                     for idx in reversed(hier_cols):
                         if r[idx] and r[idx].lower() not in rns:
@@ -559,6 +557,37 @@ class TreeBuilder:
                     output.append([ID, par] + list(repeat("", other_cols_len)))
             return output, max(map(len, output), default=0), 0, [1]
 
+    def convert_indented_tree_details_adjacent_to_normal(
+        self,
+        data: list[list[str]] | None = None,
+    ) -> tuple[list[list[str]], int, int, list[int]]:
+        output, parents = [], []
+
+        for row in data:
+            for level, value in enumerate(row):
+                if value:
+                    parent = ""
+                    if level:
+                        if level - 1 < len(parents):
+                            parent = parents[level - 1]
+                        elif parents:
+                            parent = parents[-1]
+                    output.append([value, parent] + row[level + 1 :])
+                    parents = parents[:level] + [value]
+                    break
+
+        if not output:
+            return [], 0, 0, [1]
+
+        for row in output:
+            if len(row) > 2:
+                row[:] = row[: len(row) - next(i for i, e in enumerate(reversed(row)) if e)]
+
+        rowlen = equalize_sublist_lens(output)
+        output = [["ID", "Parent"] + [f"Detail_{n}" for n in range(1, len(output[0]) - 3)]] + output
+
+        return output, rowlen, 0, [1]
+
 
 class SearchResult:
     __slots__ = ("hierarchy", "text", "iid", "column", "term", "type_", "exact")
@@ -594,7 +623,7 @@ class Node:
     ) -> None:
         self.name: str = name
         self.cn = cn if cn else {v: [] for v in hrs}
-        self.ps = ps if ps else {v: None for v in hrs}
+        self.ps = ps if ps else dict.fromkeys(hrs)
 
 
 class Header:
@@ -734,10 +763,7 @@ def tk_trees_api(
             )
 
         elif api_action.startswith("unflatten"):
-            if api_action.endswith("base"):
-                order = "Flattened - Left → Right is Top → Base"
-            else:
-                order = "Flattened - Left → Right is Base → Top"
+            order = 1 if api_action.endswith("base") else 2
             data = TreeBuilder().convert_flattened_to_normal(
                 data=sheet,
                 hier_cols=all_parent_column_indexes,

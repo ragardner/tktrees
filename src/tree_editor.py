@@ -1732,7 +1732,7 @@ class Tree_Editor(tk.Frame):
             fg=themes[theme].table_fg,
         )
         self.C.frames["column_selection"].config(bg=themes[theme].top_left_bg)
-        self.C.frames["column_selection"].flattened_choices.change_theme(theme)
+        self.C.frames["column_selection"].data_format_selector.change_theme(theme)
         self.C.frames["column_selection"].selector.change_theme(theme)
         self.C.frames["column_selection"].flattened_selector.change_theme(theme)
         self.C.frames["tree_compare"].sheet_filename1.change_theme(theme)
@@ -2764,7 +2764,7 @@ class Tree_Editor(tk.Frame):
         for coln in range(len(headers)):
             cell = headers[coln]
             if not cell:
-                cell = f"_MISSING_{coln + 1}"
+                cell = f"MISSING_{coln + 1}"
                 if warnings:
                     self.warnings.append(f" - Missing header in column #{coln + 1}")
             if not allow_whitespace:
@@ -8785,7 +8785,6 @@ class Tree_Editor(tk.Frame):
             return
         new_row_len = equalize_sublist_lens(self.new_sheet)
         flattened = popup.flattened
-        order = popup.order
         if flattened:
             hier_cols = popup.flattened_pcols
             if not hier_cols:
@@ -8800,8 +8799,14 @@ class Tree_Editor(tk.Frame):
                 data=self.new_sheet,
                 hier_cols=hier_cols,
                 rowlen=new_row_len,
-                order=order,
+                order=popup.format,
                 warnings=self.warnings,
+            )
+        elif popup.format == 3:
+            self.new_sheet, self.row_len, self.ic, self.hiers = (
+                TreeBuilder().convert_indented_tree_details_adjacent_to_normal(
+                    data=self.new_sheet,
+                )
             )
         else:
             self.row_len = new_row_len

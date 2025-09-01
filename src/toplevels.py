@@ -65,13 +65,13 @@ from .widgets import (
     Auto_Add_Condition_Date_Frame,
     Auto_Add_Condition_Num_Frame,
     Button,
+    DataFormatSelector,
     Date_Entry,
     Display_Text,
     Entry_With_Scrollbar,
     Error_Frame,
     Ez_Dropdown,
     Flattened_Column_Selector,
-    FlattenedToggleAndOrder,
     Frame,
     Id_Parent_Column_Selector,
     Label,
@@ -2276,9 +2276,9 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.selector = Id_Parent_Column_Selector(self)
         self.selector.grid(row=0, column=0, sticky="nsew")
 
-        self.flattened_choices = FlattenedToggleAndOrder(self, command=self.flattened_mode_toggle, theme=theme)
-        self.flattened_choices.change_theme(theme)
-        self.flattened_choices.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        self.data_format_selector = DataFormatSelector(self, command=self.flattened_mode_toggle, theme=theme)
+        self.data_format_selector.change_theme(theme)
+        self.data_format_selector.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
         self.flattened_selector = Flattened_Column_Selector(self)
         self.flattened_selector.set_columns(cols)
         self.selector.change_theme(theme)
@@ -2291,7 +2291,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
             expand_sheet_if_paste_too_big=True,
         )
         self.selector.link_sheet(self.sheetdisplay)
-        self.flattened_selector.link_sheet(self.sheetdisplay, self.flattened_choices)
+        self.flattened_selector.link_sheet(self.sheetdisplay, self.data_format_selector)
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.extra_bindings(
             [
@@ -2372,7 +2372,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
             pass
 
     def flattened_mode_toggle(self):
-        if self.flattened_choices.flattened:
+        if self.data_format_selector.flattened:
             self.selector.grid_forget()
             self.flattened_selector.grid(row=0, column=0, pady=(0, 35), sticky="nsew")
         else:
@@ -2383,14 +2383,14 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.ic = self.selector.get_id_col()
         self.pcols = self.selector.get_par_cols()
         self.flattened_pcols = self.flattened_selector.get_par_cols()
-        self.flattened = self.flattened_choices.flattened
-        self.order = self.flattened_choices.order
+        self.flattened = self.data_format_selector.flattened
+        self.format = self.data_format_selector.format
         self.C.new_sheet = self.sheetdisplay.get_sheet_data()
         if self.flattened:
             if not self.flattened_pcols:
                 self.status.change_text("Select hierarchy columns")
                 return
-        else:
+        elif self.format == 0:
             if self.ic in set(self.pcols):
                 self.status.change_text("ID column must be different to all parent columns")
                 return

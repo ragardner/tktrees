@@ -81,8 +81,8 @@ class Column_Selection(tk.Frame):
         self.sheet_selector = Workbook_Sheet_Selection(parent=self, C=C)
         self.sheet_selector.grid(row=0, column=0, padx=20, pady=10, sticky="nswe")
 
-        self.flattened_choices = FlattenedToggleAndOrder(self, command=self.flattened_mode_toggle)
-        self.flattened_choices.grid(row=2, column=0, padx=20, pady=(10, 5), sticky="wnse")
+        self.data_format_selector = DataFormatSelector(self, command=self.flattened_mode_toggle)
+        self.data_format_selector.grid(row=2, column=0, padx=20, pady=(10, 5), sticky="wnse")
         self.flattened_selector = Flattened_Column_Selector(self)
         self.selector = Id_Parent_Column_Selector(self)
         self.selector.grid(row=2, column=0, sticky="wnse")
@@ -94,7 +94,7 @@ class Column_Selection(tk.Frame):
             outline_thickness=1,
         )
         self.selector.link_sheet(self.sheetdisplay)
-        self.flattened_selector.link_sheet(self.sheetdisplay, self.flattened_choices)
+        self.flattened_selector.link_sheet(self.sheetdisplay, self.data_format_selector)
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
         self.sheetdisplay.headers(newheaders=0)
@@ -114,7 +114,7 @@ class Column_Selection(tk.Frame):
         self.flattened_selector.grid_forget()
 
     def flattened_mode_toggle(self):
-        if self.flattened_choices.flattened:
+        if self.data_format_selector.flattened:
             self.flattened_selector.grid(row=1, column=0, pady=(0, 9), sticky="nswe")
             self.selector.grid_forget()
         else:
@@ -156,7 +156,7 @@ class Column_Selection(tk.Frame):
     def enable_widgets(self):
         self.selector.enable_me()
         self.flattened_selector.enable_me()
-        self.flattened_choices.enable_me()
+        self.data_format_selector.enable_me()
         self.cont_.config(state="normal")
         self.sheetdisplay.basic_bindings(True)
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
@@ -166,7 +166,7 @@ class Column_Selection(tk.Frame):
     def disable_widgets(self):
         self.selector.disable_me()
         self.flattened_selector.disable_me()
-        self.flattened_choices.disable_me()
+        self.data_format_selector.disable_me()
         self.cont_.config(state="disabled")
         self.sheetdisplay.basic_bindings(False)
         self.sheetdisplay.disable_bindings()
@@ -191,10 +191,12 @@ class Column_Selection(tk.Frame):
         self.C.show_frame("column_selection")
 
     def try_to_build_tree(self):
-        flattened = self.flattened_choices.flattened
+        flattened = self.data_format_selector.flattened
+        fmt = self.data_format_selector.format
         if flattened:
-            order = self.flattened_choices.order
             hier_cols = self.flattened_selector.get_par_cols()
+        elif fmt == 3:
+            hier_cols = [1]
         else:
             hier_cols = list(self.selector.get_par_cols())
             idcol = self.selector.get_id_col()
@@ -218,8 +220,17 @@ class Column_Selection(tk.Frame):
                 data=self.C.frames.tree_edit.sheet.MT.data,
                 hier_cols=hier_cols,
                 rowlen=self.rowlen,
-                order=order,
+                order=fmt,
                 warnings=self.C.frames.tree_edit.warnings,
+            )
+        elif fmt == 3:
+            (
+                self.C.frames.tree_edit.sheet.MT.data,
+                self.rowlen,
+                idcol,
+                hier_cols,
+            ) = TreeBuilder().convert_indented_tree_details_adjacent_to_normal(
+                data=self.C.frames.tree_edit.sheet.MT.data,
             )
         self.C.frames.tree_edit.ic = idcol
         self.C.frames.tree_edit.hiers = hier_cols
@@ -461,17 +472,18 @@ class Id_Parent_Column_Selector(tk.Frame):
         self.par_col_selection.set_sheet_data()
 
     def set_id_col(self, col):
-        self.id_col = col
-        self.id_col_selection.deselect("all")
-        self.id_col_selection.refresh()
-        self.id_col_selection.select_cell(row=col, column=0, redraw=True)
-        self.id_col_selection.see(row=col, column=0)
-        self.id_col_display.set_my_value(f"ID: {num2alpha(col)}")
+        if len(self.id_col_selection.data) > col:
+            self.id_col = col
+            self.id_col_selection.deselect("all")
+            self.id_col_selection.refresh()
+            self.id_col_selection.select_cell(row=col, column=0, redraw=True)
+            self.id_col_selection.see(row=col, column=0)
+            self.id_col_display.set_my_value(f"ID: {num2alpha(col)}")
 
     def set_par_cols(self, cols):
         self.par_col_selection.deselect("all")
         self.par_col_selection.refresh()
-        if cols:
+        if cols and all(len(self.par_col_selection.data) > r for r in cols):
             self.par_cols = set(cols)
             for r in cols:
                 self.par_col_selection.toggle_select_cell(r, 0, redraw=False)
@@ -525,7 +537,7 @@ class Id_Parent_Column_Selector(tk.Frame):
         )
 
 
-class FlattenedToggleAndOrder(tk.Frame):
+class DataFormatSelector(tk.Frame):
     def __init__(self, parent, command, theme="dark"):
         tk.Frame.__init__(self, parent, background=themes[theme].top_left_bg)
         self.C = parent
@@ -534,11 +546,12 @@ class FlattenedToggleAndOrder(tk.Frame):
         self.order_dropdown = Ez_Dropdown(self, font=EFB, width_=28)
         self.order_dropdown.bind("<<ComboboxSelected>>", self.dropdown_select)
         self.order_dropdown["values"] = [
-            "Sheet is NOT in flattened format",
-            "Flattened - Left → Right is Top → Base",
-            "Flattened - Left → Right is Base → Top",
+            "ID, Parent - Adjacency List",
+            "Flattened - Top → Base",
+            "Flattened - Base → Top",
+            "Level-Based Columns",
         ]
-        self.order_dropdown.set_my_value("Sheet is NOT in flattened format")
+        self.order_dropdown.current(0)
         self.order_dropdown.grid(row=0, column=0, sticky="nswe")
         self.select_mode(func=False)
 
@@ -553,7 +566,7 @@ class FlattenedToggleAndOrder(tk.Frame):
             self.extra_func()
 
     def dropdown_select(self, event=None):
-        if self.order_dropdown.get_my_value() == "Sheet is NOT in flattened format":
+        if not self.order_dropdown.get_my_value().startswith("Flat"):
             self._flattened = False
         else:
             self._flattened = True
@@ -564,8 +577,8 @@ class FlattenedToggleAndOrder(tk.Frame):
         return self._flattened
 
     @property
-    def order(self):
-        return self.order_dropdown.get_my_value()
+    def format(self) -> int:
+        return self.order_dropdown.current()
 
     def change_theme(self, theme="dark"):
         self.config(bg=themes[theme].top_left_bg)
@@ -581,7 +594,7 @@ class Flattened_Column_Selector(tk.Frame):
         self.grid_columnconfigure(0, weight=1)
         self.C = parent
         self.sheet = None
-        self.flattened_choices = None
+        self.data_format_selector = None
         self.headers = headers
         self.par_cols = set()
         self.par_col_display = Readonly_Entry_With_Scrollbar(self, font=EFB, theme=theme)
@@ -618,7 +631,7 @@ class Flattened_Column_Selector(tk.Frame):
 
     def link_sheet(self, sheet, choices):
         self.sheet = sheet
-        self.flattened_choices = choices
+        self.data_format_selector = choices
 
     def set_columns(self, columns):
         self.clear_displays()
