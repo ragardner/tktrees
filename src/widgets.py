@@ -112,7 +112,7 @@ class Column_Selection(tk.Frame):
         if self.data_format_selector.flattened:
             self.flattened_selector.grid(row=3, column=0, sticky="nswe")
             self.selector.grid_forget()
-        elif self.data_format_selector.format == 3:
+        elif self.data_format_selector.format >= 3:
             self.selector.grid_forget()
             self.flattened_selector.grid_forget()
         else:
@@ -193,7 +193,7 @@ class Column_Selection(tk.Frame):
         fmt = self.data_format_selector.format
         if flattened:
             hier_cols = self.flattened_selector.get_par_cols()
-        elif fmt == 3:
+        elif fmt in (3, 4):
             hier_cols = [1]
         else:
             hier_cols = list(self.selector.get_par_cols())
@@ -222,6 +222,15 @@ class Column_Selection(tk.Frame):
                 warnings=self.C.frames.tree_edit.warnings,
             )
         elif fmt == 3:
+            (
+                self.C.frames.tree_edit.sheet.MT.data,
+                self.rowlen,
+                idcol,
+                hier_cols,
+            ) = TreeBuilder().convert_indented_tree_detail_adjacent_to_normal(
+                data=self.C.frames.tree_edit.sheet.MT.data,
+            )
+        elif fmt == 4:
             (
                 self.C.frames.tree_edit.sheet.MT.data,
                 self.rowlen,
@@ -541,6 +550,7 @@ class DataFormatSelector(tk.Frame):
             "Flattened - Top → Base",
             "Flattened - Base → Top",
             "Level-Based Columns",
+            "Level-Based Columns Multi-Detail",
         ]
         self.format_dropdown.current(0)
         self.format_dropdown.grid(row=0, column=1, sticky="nswe")

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import io
 from collections import defaultdict, deque
@@ -557,12 +558,11 @@ class TreeBuilder:
                     output.append([ID, par] + list(repeat("", other_cols_len)))
             return output, max(map(len, output), default=0), 0, [1]
 
-    def convert_indented_tree_details_adjacent_to_normal(
+    def convert_indented_tree_detail_adjacent_to_normal(
         self,
         data: list[list[str]] | None = None,
     ) -> tuple[list[list[str]], int, int, list[int]]:
-        output, parents = [], []  # parents: list of (level, value) tuples
-
+        output, parents = [], []
         for row in data:
             for level, value in enumerate(row):
                 if value:
@@ -577,20 +577,54 @@ class TreeBuilder:
                         )
                     ]
                     parent = parents[-1][1] if parents else ""
-                    output.append([value, parent] + row[level + 1 :])
+                    with contextlib.suppress(Exception):
+                        detail = next((e for e in row[level + 1 :] if e), "")
+                    if detail:
+                        output.append([value, parent, detail])
+                    else:
+                        output.append([value, parent])
                     parents.append((level, value))
                     break
-
         if not output:
             return [], 0, 0, [1]
+        rowlen = equalize_sublist_lens(output)
+        output = [["ID", "Parent"]] + output if rowlen <= 2 else [["ID", "Parent", "Detail"]] + output
+        return output, rowlen, 0, [1]
 
-        for row in output:
-            if len(row) > 2:
-                row[:] = row[: len(row) - next(i for i, e in enumerate(reversed(row)) if e)]
-
+    def convert_indented_tree_details_adjacent_to_normal(
+        self,
+        data: list[list[str]] | None = None,
+    ) -> tuple[list[list[str]], int, int, list[int]]:
+        output, parents = [], []
+        for row in data:
+            for level, value in enumerate(row):
+                if value:
+                    parents = parents[
+                        : next(
+                            (
+                                len(parents) - i
+                                for i, (parent_level, _) in enumerate(reversed(parents))
+                                if parent_level < level
+                            ),
+                            0,
+                        )
+                    ]
+                    parent = parents[-1][1] if parents else ""
+                    details = row[level + 1 :]
+                    try:
+                        details = details[: len(details) - next(i for i, e in enumerate(reversed(details)) if e)]
+                    except Exception:
+                        details = []
+                    if details:
+                        output.append([value, parent] + details)
+                    else:
+                        output.append([value, parent])
+                    parents.append((level, value))
+                    break
+        if not output:
+            return [], 0, 0, [1]
         rowlen = equalize_sublist_lens(output)
         output = [["ID", "Parent"] + [f"Detail_{n}" for n in range(1, len(output[0]) - 1)]] + output
-
         return output, rowlen, 0, [1]
 
 

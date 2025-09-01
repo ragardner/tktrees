@@ -2365,7 +2365,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         if self.data_format_selector.flattened:
             self.selector.grid_forget()
             self.flattened_selector.grid(row=2, column=0, sticky="nsew")
-        elif self.data_format_selector.format == 3:
+        elif self.data_format_selector.format >= 3:
             self.selector.grid_forget()
             self.flattened_selector.grid_forget()
         else:
