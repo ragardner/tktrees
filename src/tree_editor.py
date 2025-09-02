@@ -160,8 +160,6 @@ override_locale = None
 
 # DEFAULT SETTING FOR SAVING WITH PROGRAM DATA
 save_xlsx_and_json_with_program_data = True
-# "normal" to allowed user choice or "disabled" to disallow user choice
-user_option_save_with_program_data = "normal"
 
 
 class Tree_Editor(tk.Frame):
