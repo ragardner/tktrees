@@ -1773,7 +1773,6 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.grid_columnconfigure(0, weight=1)
 
         self.l_frame = Frame(self, theme=theme)
-        self.l_frame.grid_rowconfigure(2, weight=1)
         self.l_frame.grid_rowconfigure(3, weight=1)
         self.l_frame.grid_columnconfigure(0, weight=1)
         self.l_frame.grid(row=0, column=0, sticky="nswe")
@@ -1796,10 +1795,13 @@ class Merge_Sheets_Popup(tk.Toplevel):
             state="disabled",
             command=self.select_sheet,
         )
-        self.select_sheet_button.grid(row=1, column=1, padx=10, pady=10, sticky="nswe")
+        self.select_sheet_button.grid(row=1, column=1, padx=10, pady=(5, 0), sticky="nswe")
+
+        self.data_format_selector = DataFormatSelector(self.l_frame, command=self.flattened_mode_toggle, theme=theme)
+        self.data_format_selector.grid(row=2, column=0, padx=5, pady=(20, 5), sticky="nsew")
 
         self.selector = Id_Parent_Column_Selector(self.l_frame, theme=theme)
-        self.selector.grid(row=2, column=0, rowspan=2, padx=5, pady=5, sticky="nswe")
+        self.flattened_selector = Flattened_Column_Selector(self.l_frame, theme=theme)
 
         self.clipboard_button = Button(
             self.l_frame,
@@ -1921,12 +1923,24 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.setup_selectors()
         self.selector.detect_id_col()
         self.selector.detect_par_cols()
+        self.flattened_mode_toggle()
         self.sheetdisplay.grid(row=0, column=1, sticky="nswe")
         if add_rows:
             self.toggle_left_panel()
             self.toggle_left_button2.config(text="Show\nOptions")
         self.bind("<Escape>", self.cancel)
-        show_toplevel_chores(self, 800, 600)
+        show_toplevel_chores(self, 800, 700)
+
+    def flattened_mode_toggle(self):
+        if self.data_format_selector.flattened:
+            self.selector.grid_forget()
+            self.flattened_selector.grid(row=3, column=0, padx=(0, 5), sticky="nswe")
+        elif self.data_format_selector.format >= 3:
+            self.selector.grid_forget()
+            self.flattened_selector.grid_forget()
+        else:
+            self.flattened_selector.grid_forget()
+            self.selector.grid(row=3, column=0, padx=(0, 5), sticky="nswe")
 
     def setup_selectors(self, event=None):
         self.sheetdisplay.deselect("all")
@@ -1935,6 +1949,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         ]
         self.C.new_sheet = self.sheetdisplay.set_sheet_data(self.C.new_sheet, verify=False)
         self.selector.set_columns(self.C.new_sheet[0] if self.C.new_sheet else [])
+        self.flattened_selector.set_columns(self.C.new_sheet[0] if self.C.new_sheet else [])
 
     def toggle_left_panel(self, event=None):
         if self.showing_left:
@@ -1972,6 +1987,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         idcol = self.selector.get_id_col()
         parcols = self.selector.get_par_cols()
         self.selector.set_columns(self.C.new_sheet[0] if self.C.new_sheet else [])
+        self.flattened_selector.set_columns(self.C.new_sheet[0] if self.C.new_sheet else [])
         try:
             if idcol is not None and self.C.new_sheet:
                 self.selector.set_id_col(idcol)
@@ -2231,6 +2247,8 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.overwrite_parents = self.overwrite_parents_button.get_checked()
         self.ic = self.selector.get_id_col()
         self.pcols = self.selector.get_par_cols()
+        self.flattened_pcols = self.flattened_selector.get_par_cols()
+        self.format = self.data_format_selector.format
         if not self.C.new_sheet:
             self.status.change_text("Open a file to load data")
             return
@@ -2247,12 +2265,13 @@ class Merge_Sheets_Popup(tk.Toplevel):
         ):
             self.status.change_text("Select at least one option")
             return
-        if self.ic in set(self.pcols):
-            self.status.change_text("ID column must be different to all parent columns")
-            return
-        if self.ic is None:
-            self.status.change_text("Select an ID column")
-            return
+        if self.format == 0:
+            if self.ic in set(self.pcols):
+                self.status.change_text("ID column must be different to all parent columns")
+                return
+            if self.ic is None:
+                self.status.change_text("Select an ID column")
+                return
         self.result = True
         self.destroy()
 
@@ -2278,7 +2297,6 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.confirm_button.grid(row=0, column=0, sticky="w", padx=10, pady=(20, 20))
 
         self.data_format_selector = DataFormatSelector(self, command=self.flattened_mode_toggle, theme=theme)
-        self.data_format_selector.change_theme(theme)
         self.data_format_selector.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
 
         self.selector = Id_Parent_Column_Selector(self)

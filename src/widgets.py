@@ -50,7 +50,7 @@ class Workbook_Sheet_Selection(tk.Frame):
         self.sheets_label.grid(row=0, column=0, sticky="e")
         self.sheet_select = Ez_Dropdown(self, TF)
         self.sheet_select.bind("<<ComboboxSelected>>", self.cont)
-        self.sheet_select.grid(row=0, column=1, padx=(10, 20), sticky="nswe")
+        self.sheet_select.grid(row=0, column=1, sticky="nswe")
 
     def enable_widgets(self):
         self.sheet_select.config(state="readonly")
@@ -89,7 +89,7 @@ class Column_Selection(tk.Frame):
         self.sheet_selector.grid(row=1, column=0, padx=(20, 5), pady=5, sticky="nswe")
 
         self.data_format_selector = DataFormatSelector(self, command=self.flattened_mode_toggle)
-        self.data_format_selector.grid(row=2, column=0, padx=(20, 5), pady=5, sticky="wnse")
+        self.data_format_selector.grid(row=2, column=0, padx=(20, 5), pady=(5, 10), sticky="wnse")
 
         self.flattened_selector = Flattened_Column_Selector(self)
         self.selector = Id_Parent_Column_Selector(self)
@@ -550,9 +550,10 @@ class DataFormatSelector(tk.Frame):
         self.C = parent
         self.extra_func = command
         self._flattened = False
+        self.grid_columnconfigure(1, weight=1)
         self.format_label = Label(self, text="Data Format: ", font=EFB, theme=theme)
         self.format_label.grid(row=0, column=0)
-        self.format_dropdown = Ez_Dropdown(self, font=EFB, width_=28)
+        self.format_dropdown = Ez_Dropdown(self, font=EFB)
         self.format_dropdown.bind("<<ComboboxSelected>>", self.dropdown_select)
         self.format_dropdown["values"] = [
             "ID, Parent - Adjacency List",  # 0

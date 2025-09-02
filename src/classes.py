@@ -588,7 +588,7 @@ class TreeBuilder:
         if not output:
             return [], 0, 0, [1]
         rowlen = equalize_sublist_lens(output)
-        output = [["ID", "Parent"]] + output if rowlen <= 2 else [["ID", "Parent", "Detail"]] + output
+        output = [["ID", "PARENT_1"]] + output if rowlen <= 2 else [["ID", "PARENT_1", "DETAIL_1"]] + output
         return output, rowlen, 0, [1]
 
     def convert_indented_tree_details_adjacent_to_normal(
@@ -624,7 +624,7 @@ class TreeBuilder:
         if not output:
             return [], 0, 0, [1]
         rowlen = equalize_sublist_lens(output)
-        output = [["ID", "Parent"] + [f"Detail_{n}" for n in range(1, len(output[0]) - 1)]] + output
+        output = [["ID", "PARENT_1"] + [f"DETAIL_{n}" for n in range(1, len(output[0]) - 1)]] + output
         return output, rowlen, 0, [1]
 
     def convert_indented_tree_with_header_to_normal(
@@ -668,7 +668,7 @@ class TreeBuilder:
                     break
         if not output:
             return [], 0, 0, [1]
-        header = [["ID", "Parent"] + data[0][details_start:]]
+        header = [["ID", "PARENT_1"] + data[0][details_start:]]
         output = header + output
         rowlen = equalize_sublist_lens(output)
         return output, rowlen, 0, [1]

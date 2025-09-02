@@ -2801,15 +2801,16 @@ class Tree_Editor(tk.Frame):
         selected = event.selected
         if selected and self.tree.data:
             iid = self.tree.rowitem(selected.row)
-            self.selected_ID = self.nodes[iid].name
-            pariid = self.tree.parent(iid)
-            if pariid == "":
-                self.selected_PAR = ""
-            else:
-                self.selected_PAR = self.nodes[pariid].name
-            if self.mirror_var and not self.mirror_sels_disabler:
-                self.go_to_row()
-            self.mirror_sels_disabler = False
+            if isinstance(iid, str):
+                self.selected_ID = self.nodes[iid].name
+                pariid = self.tree.parent(iid)
+                if pariid == "":
+                    self.selected_PAR = ""
+                else:
+                    self.selected_PAR = self.nodes[pariid].name
+                if self.mirror_var and not self.mirror_sels_disabler:
+                    self.go_to_row()
+                self.mirror_sels_disabler = False
         else:
             self.selected_ID = ""
             self.selected_PAR = ""
@@ -9920,14 +9921,40 @@ class Tree_Editor(tk.Frame):
             self.start_work("Merging sheets...")
             self.snapshot_sheet()
             self.warnings = []
-            ns_ic = popup.ic
-            ns_hiers = popup.pcols
-            ns_hiers_set = set(ns_hiers)
-            ns_row_len = popup.row_len
-            ns_headers = self.new_sheet.pop(0)
-            ns_headers = self.fix_headers(ns_headers, ns_row_len)
-            ns_num_hdrs = len(ns_headers)
-            equalize_sublist_lens(seq=self.new_sheet, len_=ns_num_hdrs)
+            if popup.format == 0:
+                ns_ic = popup.ic
+                ns_hiers = popup.pcols
+                ns_hiers_set = set(ns_hiers)
+                ns_row_len = popup.row_len
+                ns_headers = self.fix_headers(self.new_sheet.pop(0), ns_row_len)
+                equalize_sublist_lens(seq=self.new_sheet, len_=len(ns_headers))
+            elif popup.format in (1, 2):
+                self.new_sheet, ns_row_len, ns_ic, ns_hiers = TreeBuilder().convert_flattened_to_normal(
+                    data=self.new_sheet,
+                    hier_cols=popup.flattened_pcols,
+                    rowlen=ns_row_len,
+                    order=popup.format,
+                    warnings=self.warnings,
+                )
+            elif popup.format == 3:
+                self.new_sheet, ns_row_len, ns_ic, ns_hiers = (
+                    TreeBuilder().convert_indented_tree_detail_adjacent_to_normal(
+                        data=self.new_sheet,
+                    )
+                )
+            elif popup.format == 4:
+                self.new_sheet, ns_row_len, ns_ic, ns_hiers = (
+                    TreeBuilder().convert_indented_tree_details_adjacent_to_normal(
+                        data=self.new_sheet,
+                    )
+                )
+            elif popup.format == 5:
+                self.new_sheet, ns_row_len, ns_ic, ns_hiers = TreeBuilder().convert_indented_tree_with_header_to_normal(
+                    data=self.new_sheet,
+                )
+            if popup.format > 0:
+                ns_hiers_set = set(ns_hiers)
+                ns_headers = self.fix_headers(self.new_sheet.pop(0), ns_row_len)
             ns_pcol_names = {cell.lower(): i for i, cell in enumerate(ns_headers) if i in ns_hiers_set}
             ns_dcol_names = {
                 cell.lower(): i for i, cell in enumerate(ns_headers) if i not in ns_hiers_set and i != ns_ic
