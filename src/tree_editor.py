@@ -310,11 +310,15 @@ class Tree_Editor(tk.Frame):
         self.edit_menu.add_command(
             label="Sort sheet",
             command=self.sort_sheet_choice,
+            image=self.icons["ICON_SORT_ASC"],
+            compound="left",
             **menu_kwargs,
         )
         self.edit_menu.add_cascade(
             label="Copy to clipboard",
             menu=self.copy_clipboard_menu,
+            image=self.icons["ICON_COPY"],
+            compound="left",
             state="normal",
             **menu_kwargs,
         )
@@ -322,28 +326,38 @@ class Tree_Editor(tk.Frame):
             label="Tag/Untag IDs",
             command=self.tag_ids,
             accelerator="Ctrl+T",
+            image=self.icons["tag"],
+            compound="left",
             **menu_kwargs,
         )
         self.edit_menu.add_separator()
         self.edit_menu.add_command(
             label="Replace using mapping",
             command=self.replace_using_mapping,
+            image=self.icons["ICON_EDIT"],
+            compound="left",
             **menu_kwargs,
         )
         self.edit_menu.add_separator()
         self.edit_menu.add_command(
             label="Clear copied/cut",
             command=self.clear_copied_details,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
         self.edit_menu.add_command(
             label="Clear panel selections",
             command=self.remove_selections,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
         self.edit_menu.add_command(
             label="Clear all tagged IDs",
             command=self.clear_tagged_ids,
+            image=self.icons["ICON_CLEAR"],
+            compound="left",
             **menu_kwargs,
         )
 
@@ -456,16 +470,22 @@ class Tree_Editor(tk.Frame):
         self.import_menu.add_command(
             label="Import changes",
             command=self.import_changes,
+            image=self.icons["ICON_EDIT"],
+            compound="left",
             **menu_kwargs,
         )
         self.import_menu.add_command(
-            label="Get sheet from clipboard and overwrite",
+            label="Paste Clipboard & Overwrite Sheet",
             command=self.get_clipboard_data,
+            image=self.icons["ICON_PASTE"],
+            compound="left",
             **menu_kwargs,
         )
         self.import_menu.add_command(
-            label="Merge sheets / Add rows",
+            label="Merge Sheets / Add rows",
             command=self.merge_sheets,
+            image=self.icons["ICON_ADD"],
+            compound="left",
             **menu_kwargs,
         )
 

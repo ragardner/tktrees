@@ -252,7 +252,7 @@ Please note that when you undo a change not related to details such as copying o
 
 You can also recycle the imported changes, importing them again into another file. There are certain things that may stop a change from being imported, for example if the change was made to a column with a different name or number than the column in the open sheet or if an IDs parent is different. Unfortunately at this time it does not tell you why a change has not been imported successfully, this may be improved in a future version.
 
-- Get sheet from clipboard and overwrite allows you to get copied data from your devices clipboard and overwrite all current data. This action can be undone.
+- Paste Clipboard & Overwrite Sheet allows you to get copied data from your devices clipboard and overwrite all current data. This action can be undone.
 - Merge sheets allows you to merge one sheet with another, you have options to overwrite details, parents, add new ids etc. You also can simply add multiple additional rows by pasting into the sheet on the right hand side of the pop-up.
 
 #### Export Menu
