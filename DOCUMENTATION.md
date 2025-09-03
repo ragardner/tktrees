@@ -19,22 +19,64 @@ This program is for management of hierarchy based master data which is stored in
 - .json Javascript object notation where the full table is under the key 'records'
 - .csv/.tsv (comma or tab delimited)
 
+The following six data formats are supported for loading:
+
+| Data Structure                   | Header Requirement   | Details Requirement |
+|----------------------------------|----------------------|---------------------|
+| ID, Parent - Adjacency List      | Must have header     | Optional, Unlimited |
+| Flattened - Top → Base           | Must have header     | Optional, Unlimited |
+| Flattened - Base → Top           | Must have header     | Optional, Unlimited |
+| Level-Based Columns              | Must NOT have header | Optional, Max. 1    |
+| Level-Based Columns Multi-Detail | Must NOT have header | Optional, Unlimited |
+| Level-Based Columns with Header  | Must have header     | Optional, Unlimited |
+
+**Example: ID, Parent - Adjacency List**
+
+| ID    | Parent    | Detail           |
+|-------|-----------|------------------|
+| Top   |           | Top Description  |
+| Mid   | Top       | Mid Description  |
+| Base  | Mid       | Base Description |
+
+**Example: Flattened - Top → Base**
+
+| Level0 | Description0    | Level1 | Description1    | Level2 | Description2     |
+|--------|-----------------|--------|-----------------|--------|------------------|
+| Top    | Top Description | Mid    | Mid Description | Base   | Base Description |
+
+**Example: Flattened - Base → Top**
+
+| Level2 | Description2     | Level1 | Description1    | Level0 | Description0    |
+|--------|------------------|--------|-----------------|--------|-----------------|
+| Base   | Base Description | Mid    | Mid Description | Top    | Top Description |
+
+**Example: Level-Based Columns**
+
+|     |                 |                 |                  |
+|-----|-----------------|-----------------|------------------|
+| Top | Top Description |                 |                  |
+|     | Mid             | Mid Description |                  |
+|     |                 | Base            | Base Description |
+
+**Example: Level-Based Columns Multi-Detail**
+
+|     |                   |                   |                    |                    |
+|-----|-------------------|-------------------|--------------------|--------------------|
+| Top | Top Description 1 | Top Description 2 |                    |                    |
+|     | Mid               | Mid Description 1 | Mid Description 2  |                    |
+|     |                   | Base              | Base Description 1 | Base Description 2 |
+
+**Example: Level-Based Columns with Header**
+
+| Level0 | Level1 | Level2 | Description 1      | Description 2      |
+|--------|--------|--------|--------------------|--------------------|
+| Top    |        |        | Top Description 1  | Top Description 2  |
+|        | Mid    |        | Mid Description 1  | Mid Description 2  |
+|        |        | Base   | Base Description 1 | Base Description 2 |
+
 **Notes:**
 
-- Any sheets opened with tk-trees should contain a single header row at the top of the sheet.
 - Additional settings and data such as the changelog, formatting and column types can be saved with the formats .xlsx and .json.
-- Sheets must have an ID column and atleast one parent column, it does not matter in which order. e.g.
-
-```
-ID     Parent    Detail
-ID1    Par1      Detail 1
-ID2    Par2      Detail 2
-```
-
-- Sheets can have multiple parent columns (hierarchies) and multiple detail columns but must have only one ID column. In the ID column each ID must be unique else they will be renamed with '_DUPLICATE_'.
-- Sheets can have an unlimited number of parent columns (hierarchies) and an unlimited number of detail columns.
-- The columns can be in any order and multiple columns of the same type can be separated by other types of columns.
-- If the headers are not unique they will be renamed with a duplicate number. Any missing headers will have names created for them. Header names are not case sensitive.
 - There is no limit to the number of characters allowed for headers, details or ID names. To allow spaces in ID/Header names go to File -> Settings on the main menubar while in the Treeview. Details are exempt from this rule.
 - Any mistakes in the sheet such as infinite loops of children, IDs appearing in a parent column but not in the ID column and duplications will be corrected upon creating the tree.
 - The corrections will not be made to the original sheet unless you choose to save the sheet. Such corrections will appear as warnings when you first view the treeview window.

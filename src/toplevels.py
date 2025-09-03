@@ -4458,7 +4458,7 @@ class Help_Popup(tk.Toplevel):
         self.yscrollb.grid(row=1, column=2, sticky="nswe")
         self.textbox.focus_set()
         self.bind("<Escape>", self.cancel)
-        show_toplevel_chores(self, 800, 600)
+        show_toplevel_chores(self, 1199, 700)
 
     def open_docs_in_browser(self):
         try:

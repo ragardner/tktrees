@@ -327,21 +327,225 @@
 <li>.json Javascript object notation where the full table is under the key 'records'</li>
 <li>.csv/.tsv (comma or tab delimited)</li>
 </ul>
+<p>The following six data formats are supported for loading:</p>
+<table>
+<thead>
+<tr>
+<th>Data Structure</th>
+<th>Header Requirement</th>
+<th>Details Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID, Parent - Adjacency List</td>
+<td>Must have header</td>
+<td>Optional, Unlimited</td>
+</tr>
+<tr>
+<td>Flattened - Top → Base</td>
+<td>Must have header</td>
+<td>Optional, Unlimited</td>
+</tr>
+<tr>
+<td>Flattened - Base → Top</td>
+<td>Must have header</td>
+<td>Optional, Unlimited</td>
+</tr>
+<tr>
+<td>Level-Based Columns</td>
+<td>Must NOT have header</td>
+<td>Optional, Max. 1</td>
+</tr>
+<tr>
+<td>Level-Based Columns Multi-Detail</td>
+<td>Must NOT have header</td>
+<td>Optional, Unlimited</td>
+</tr>
+<tr>
+<td>Level-Based Columns with Header</td>
+<td>Must have header</td>
+<td>Optional, Unlimited</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example: ID, Parent - Adjacency List</strong></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Parent</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top</td>
+<td></td>
+<td>Top Description</td>
+</tr>
+<tr>
+<td>Mid</td>
+<td>Top</td>
+<td>Mid Description</td>
+</tr>
+<tr>
+<td>Base</td>
+<td>Mid</td>
+<td>Base Description</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example: Flattened - Top → Base</strong></p>
+<table>
+<thead>
+<tr>
+<th>Level0</th>
+<th>Description0</th>
+<th>Level1</th>
+<th>Description1</th>
+<th>Level2</th>
+<th>Description2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top</td>
+<td>Top Description</td>
+<td>Mid</td>
+<td>Mid Description</td>
+<td>Base</td>
+<td>Base Description</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example: Flattened - Base → Top</strong></p>
+<table>
+<thead>
+<tr>
+<th>Level2</th>
+<th>Description2</th>
+<th>Level1</th>
+<th>Description1</th>
+<th>Level0</th>
+<th>Description0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base</td>
+<td>Base Description</td>
+<td>Mid</td>
+<td>Mid Description</td>
+<td>Top</td>
+<td>Top Description</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example: Level-Based Columns</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top</td>
+<td>Top Description</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Mid</td>
+<td>Mid Description</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>Base</td>
+<td>Base Description</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example: Level-Based Columns Multi-Detail</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top</td>
+<td>Top Description 1</td>
+<td>Top Description 2</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Mid</td>
+<td>Mid Description 1</td>
+<td>Mid Description 2</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>Base</td>
+<td>Base Description 1</td>
+<td>Base Description 2</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example: Level-Based Columns with Header</strong></p>
+<table>
+<thead>
+<tr>
+<th>Level0</th>
+<th>Level1</th>
+<th>Level2</th>
+<th>Description 1</th>
+<th>Description 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top</td>
+<td></td>
+<td></td>
+<td>Top Description 1</td>
+<td>Top Description 2</td>
+</tr>
+<tr>
+<td></td>
+<td>Mid</td>
+<td></td>
+<td>Mid Description 1</td>
+<td>Mid Description 2</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>Base</td>
+<td>Base Description 1</td>
+<td>Base Description 2</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Notes:</strong></p>
 <ul>
-<li>Any sheets opened with tk-trees should contain a single header row at the top of the sheet.</li>
 <li>Additional settings and data such as the changelog, formatting and column types can be saved with the formats .xlsx and .json.</li>
-<li>Sheets must have an ID column and atleast one parent column, it does not matter in which order. e.g.</li>
-</ul>
-<pre><code>ID     Parent    Detail
-ID1    Par1      Detail 1
-ID2    Par2      Detail 2
-</code></pre>
-<ul>
-<li>Sheets can have multiple parent columns (hierarchies) and multiple detail columns but must have only one ID column. In the ID column each ID must be unique else they will be renamed with '<em>DUPLICATE</em>'.</li>
-<li>Sheets can have an unlimited number of parent columns (hierarchies) and an unlimited number of detail columns.</li>
-<li>The columns can be in any order and multiple columns of the same type can be separated by other types of columns.</li>
-<li>If the headers are not unique they will be renamed with a duplicate number. Any missing headers will have names created for them. Header names are not case sensitive.</li>
 <li>There is no limit to the number of characters allowed for headers, details or ID names. To allow spaces in ID/Header names go to File -&gt; Settings on the main menubar while in the Treeview. Details are exempt from this rule.</li>
 <li>Any mistakes in the sheet such as infinite loops of children, IDs appearing in a parent column but not in the ID column and duplications will be corrected upon creating the tree.</li>
 <li>The corrections will not be made to the original sheet unless you choose to save the sheet. Such corrections will appear as warnings when you first view the treeview window.</li>
@@ -528,7 +732,7 @@ e.g. == 100</p>
 </code></pre>
 <p>You can also recycle the imported changes, importing them again into another file. There are certain things that may stop a change from being imported, for example if the change was made to a column with a different name or number than the column in the open sheet or if an IDs parent is different. Unfortunately at this time it does not tell you why a change has not been imported successfully, this may be improved in a future version.</p>
 <ul>
-<li>Paste Clipboard & Overwrite Sheet allows you to get copied data from your devices clipboard and overwrite all current data. This action can be undone.</li>
+<li>Paste Clipboard &amp; Overwrite Sheet allows you to get copied data from your devices clipboard and overwrite all current data. This action can be undone.</li>
 <li>Merge sheets allows you to merge one sheet with another, you have options to overwrite details, parents, add new ids etc. You also can simply add multiple additional rows by pasting into the sheet on the right hand side of the pop-up.</li>
 </ul>
 <h4 id="export-menu">Export Menu</h4>
