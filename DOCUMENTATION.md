@@ -21,14 +21,16 @@ This program is for management of hierarchy based master data which is stored in
 
 The following six data formats are supported for loading:
 
-| Data Structure                   | Header Requirement   | Details Requirement |
-|----------------------------------|----------------------|---------------------|
-| ID, Parent - Adjacency List      | Must have header     | Optional, Unlimited |
-| Flattened - Top → Base           | Must have header     | Optional, Unlimited |
-| Flattened - Base → Top           | Must have header     | Optional, Unlimited |
-| Level-Based Columns              | Must NOT have header | Optional, Max. 1    |
-| Level-Based Columns Multi-Detail | Must NOT have header | Optional, Unlimited |
-| Level-Based Columns with Header  | Must have header     | Optional, Unlimited |
+| Data Structure                    | Header Requirement   | Details Requirement |
+|-----------------------------------|----------------------|---------------------|
+| ID, Parent - Adjacency List       | Must have header     | Optional, Unlimited |
+| Top → Base                        | Must have header     | Optional, Unlimited |
+| Top → Base (Unique Details)       | Must have header     | Optional, Unlimited |
+| Base → Top                        | Must have header     | Optional, Unlimited |
+| Base → Top (Unique Details)       | Must have header     | Optional, Unlimited |
+| Level-Indent Columns              | Must NOT have header | Optional, Max. 1    |
+| Level-Indent Columns Multi-Detail | Must NOT have header | Optional, Unlimited |
+| Level-Indent Columns with Header  | Must have header     | Optional, Unlimited |
 
 **Example: ID, Parent - Adjacency List**
 
@@ -38,13 +40,29 @@ The following six data formats are supported for loading:
 | Mid   | Top       | Mid Description  |
 | Base  | Mid       | Base Description |
 
-**Example: Flattened - Top → Base**
+**Example: Top → Base**
 
 | Level0 | Description0    | Level1 | Description1    | Level2 | Description2     |
 |--------|-----------------|--------|-----------------|--------|------------------|
 | Top    | Top Description | Mid    | Mid Description | Base   | Base Description |
 
-**Example: Flattened - Base → Top**
+**Output with normal Mode →**
+
+| ID    | Parent    | Description0     |
+|-------|-----------|------------------|
+| Top   |           | Top Description  |
+| Mid   | Top       | Mid Description  |
+| Base  | Mid       | Base Description |
+
+**Output with Unique Details Mode →**
+
+| ID    | Parent    | Description0     | Description1    | Description2     |
+|-------|-----------|------------------|-----------------|------------------|
+| Top   |           | Top Description  |                 |                  |
+| Mid   | Top       |                  | Mid Description |                  |
+| Base  | Mid       |                  |                 | Base Description |
+
+**Example: Base → Top**
 
 | Level2 | Description2     | Level1 | Description1    | Level0 | Description0    |
 |--------|------------------|--------|-----------------|--------|-----------------|

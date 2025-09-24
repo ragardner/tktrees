@@ -343,27 +343,37 @@
 <td>Optional, Unlimited</td>
 </tr>
 <tr>
-<td>Flattened - Top → Base</td>
+<td>Top → Base</td>
 <td>Must have header</td>
 <td>Optional, Unlimited</td>
 </tr>
 <tr>
-<td>Flattened - Base → Top</td>
+<td>Top → Base (Unique Details)</td>
 <td>Must have header</td>
 <td>Optional, Unlimited</td>
 </tr>
 <tr>
-<td>Level-Based Columns</td>
+<td>Base → Top</td>
+<td>Must have header</td>
+<td>Optional, Unlimited</td>
+</tr>
+<tr>
+<td>Base → Top (Unique Details)</td>
+<td>Must have header</td>
+<td>Optional, Unlimited</td>
+</tr>
+<tr>
+<td>Level-Indent Columns</td>
 <td>Must NOT have header</td>
 <td>Optional, Max. 1</td>
 </tr>
 <tr>
-<td>Level-Based Columns Multi-Detail</td>
+<td>Level-Indent Columns Multi-Detail</td>
 <td>Must NOT have header</td>
 <td>Optional, Unlimited</td>
 </tr>
 <tr>
-<td>Level-Based Columns with Header</td>
+<td>Level-Indent Columns with Header</td>
 <td>Must have header</td>
 <td>Optional, Unlimited</td>
 </tr>
@@ -396,7 +406,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Example: Flattened - Top → Base</strong></p>
+<p><strong>Example: Top → Base</strong></p>
 <table>
 <thead>
 <tr>
@@ -419,7 +429,69 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Example: Flattened - Base → Top</strong></p>
+<p><strong>Output with normal Mode →</strong></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Parent</th>
+<th>Description0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top</td>
+<td></td>
+<td>Top Description</td>
+</tr>
+<tr>
+<td>Mid</td>
+<td>Top</td>
+<td>Mid Description</td>
+</tr>
+<tr>
+<td>Base</td>
+<td>Mid</td>
+<td>Base Description</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Output with Unique Details Mode →</strong></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Parent</th>
+<th>Description0</th>
+<th>Description1</th>
+<th>Description2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top</td>
+<td></td>
+<td>Top Description</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Mid</td>
+<td>Top</td>
+<td></td>
+<td>Mid Description</td>
+<td></td>
+</tr>
+<tr>
+<td>Base</td>
+<td>Mid</td>
+<td></td>
+<td></td>
+<td>Base Description</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example: Base → Top</strong></p>
 <table>
 <thead>
 <tr>
