@@ -1935,7 +1935,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         if self.data_format_selector.flattened:
             self.selector.grid_forget()
             self.flattened_selector.grid(row=3, column=0, padx=(0, 5), sticky="nswe")
-        elif self.data_format_selector.format >= 3:
+        elif self.data_format_selector.format_selector_current() >= 5:
             self.selector.grid_forget()
             self.flattened_selector.grid_forget()
         else:
@@ -2248,7 +2248,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.ic = self.selector.get_id_col()
         self.pcols = self.selector.get_par_cols()
         self.flattened_pcols = self.flattened_selector.get_par_cols()
-        self.format = self.data_format_selector.format
+        self.format_selector_current = self.data_format_selector.format_selector_current()
         if not self.C.new_sheet:
             self.status.change_text("Open a file to load data")
             return
@@ -2383,7 +2383,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         if self.data_format_selector.flattened:
             self.selector.grid_forget()
             self.flattened_selector.grid(row=2, column=0, sticky="nsew")
-        elif self.data_format_selector.format >= 3:
+        elif self.data_format_selector.format_selector_current() >= 5:
             self.selector.grid_forget()
             self.flattened_selector.grid_forget()
         else:
@@ -2395,7 +2395,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.pcols = self.selector.get_par_cols()
         self.flattened_pcols = self.flattened_selector.get_par_cols()
         self.flattened = self.data_format_selector.flattened
-        self.format = self.data_format_selector.format
+        self.format_selector_current = self.data_format_selector.format_selector_current()
         self.C.new_sheet = self.sheetdisplay.get_sheet_data()
         if self.flattened:
             if not self.flattened_pcols:

@@ -303,9 +303,15 @@ class TreeBuilder:
         data: list[list[str]] | None = None,
         hier_cols: list[int] | None = None,
         rowlen: None | int = None,
-        order: int = 1,  # 1. Top - Base, 2. Base - Top
+        fmt: int = 1,
         warnings: list[object] | None = None,
     ) -> tuple[list[list[str]], int, int, list[int]]:
+        """
+        1. Top -> Base
+        2. Top -> Base With Unique Detail Columns
+        3. Base -> Top
+        4. Base -> Top With Unique Detail Columns
+        """
         if data is None:
             data = []
         if hier_cols is None:
@@ -313,14 +319,17 @@ class TreeBuilder:
         if warnings is None:
             warnings = []
         rowlen = max(map(len, data), default=0) if rowlen is None else rowlen
-        added_ids, to_add, ids_parents_tally, rns = set(), {}, {}, {}
+        to_add, ids_parents_tally = {}, {}
         detail_cols = sorted(set(range(rowlen)).difference(hier_cols))
+        # justify left means the detail columns are on the right hand side of
+        # each hierarchy column
         justify_left = (
             not hier_cols[0]
             or (hier_cols[0] and hier_cols[-1] < rowlen - 1)
             or (not hier_cols[0] and hier_cols[-1] == rowlen - 1)
         )
         hier_cols_detail_cols = {}
+
         if detail_cols and justify_left:
             hier_cols_detail_cols = {
                 hier_col: (
@@ -335,72 +344,63 @@ class TreeBuilder:
                 hier_col: list(range(hier_cols[i - 1] + 1, hier_col)) if i else list(range(hier_col))
                 for i, hier_col in enumerate(hier_cols)
             }
+
         if detail_cols:
-            hier_col_with_most_detail_cols = max(
-                hier_cols_detail_cols.items(), key=lambda kv: len(kv[1]), default=(hier_cols[0], [])
-            )[0]
-            num_detail_cols = sum(map(len, hier_cols_detail_cols.values()))
-            detail_col_names = [
-                data[0][detail_col] for detail_col in hier_cols_detail_cols[hier_col_with_most_detail_cols]
-            ]
-            num_detail_cols_to_be_added = len(detail_col_names)
+            ids_details_tally = {}
             not_detail_cols_or_hier_cols = sorted(
                 set(range(rowlen))
                 - ({idx for detail_cols in hier_cols_detail_cols.values() for idx in detail_cols} | set(hier_cols))
             )
-            ids_details_tally = {}
+            # if justify left any extra columns are at the start
+            if not_detail_cols_or_hier_cols:
+                attach_to = min(hier_cols_detail_cols) if justify_left else max(hier_cols_detail_cols)
+                if justify_left:
+                    hier_cols_detail_cols[attach_to] += not_detail_cols_or_hier_cols
+                else:
+                    hier_cols_detail_cols[attach_to] = not_detail_cols_or_hier_cols + hier_cols_detail_cols[attach_to]
+                not_detail_cols_or_hier_cols = []
 
-            if order == 2:
+            if fmt in (1, 3):
+                # use hier column with most detail columns next to it to determine new detail column names
+                hcol_w_most_dcols = max(
+                    hier_cols_detail_cols.items(), key=lambda kv: len(kv[1]), default=(hier_cols[0], [])
+                )[0]
+                detail_col_names = [data[0][detail_col] for detail_col in hier_cols_detail_cols[hcol_w_most_dcols]]
+
+            elif fmt in (2, 4):
+                # all detail columns are unique
+                detail_col_names = [
+                    data[0][detail_col]
+                    for detail_col_list in hier_cols_detail_cols.values()
+                    for detail_col in detail_col_list
+                ]
+            num_detail_cols = sum(map(len, hier_cols_detail_cols.values()))
+            num_detail_cols_to_be_added = len(detail_col_names)
+
+            # Top - Base
+            if fmt in (1, 2):
                 for rn, r in enumerate(islice(data, 1, None), 1):
-                    for idx in hier_cols:
-                        if r[idx]:
-                            ik = r[idx].lower()
-                            if ik not in ids_details_tally:
-                                ids_details_tally[ik] = {}
-                            for det_col_enum, det_col in enumerate(hier_cols_detail_cols[idx]):
-                                if det_col_enum not in ids_details_tally[ik]:
-                                    ids_details_tally[ik][det_col_enum] = defaultdict(int)
-                                ids_details_tally[ik][det_col_enum][r[det_col]] += 1
-                            if ik not in rns:
-                                rns[ik] = rn
-
-                    for idx, (idcol, pcol) in enumerate(zip(hier_cols, islice(hier_cols, 1, None))):
-                        ID = r[idcol]
-                        ik = ID.lower()
-                        par = r[pcol]
-                        pk = par.lower()
-                        if ik:
-                            if not par:
-                                try:
-                                    par = next(r[i] for i in islice(hier_cols, idx + 1, None) if r[i])
-                                    pk = par.lower()
-                                    warnings.append(f" - Missing ID in hierarchy column {data[0][pcol]} row #{rn + 1}")
-                                except Exception:
-                                    pass
-                            if ik not in ids_parents_tally:
-                                ids_parents_tally[ik] = defaultdict(int)
-                            ids_parents_tally[ik][pk] += 1
-                            if ik not in added_ids:
-                                added_ids.add(ik)
-                                to_add[ik] = (ID, par)
-                        if pcol == hier_cols[-1] and pk not in added_ids and par:
-                            added_ids.add(pk)
-                            to_add[pk] = (par, "")
-
-            elif order == 1:
-                for rn, r in enumerate(islice(data, 1, None), 1):
+                    # details
                     for idx in reversed(hier_cols):
                         if r[idx]:
                             ik = r[idx].lower()
                             if ik not in ids_details_tally:
                                 ids_details_tally[ik] = {}
-                            for det_col_enum, det_col in enumerate(hier_cols_detail_cols[idx]):
-                                if det_col_enum not in ids_details_tally[ik]:
-                                    ids_details_tally[ik][det_col_enum] = defaultdict(int)
-                                ids_details_tally[ik][det_col_enum][r[det_col]] += 1
-                            if ik not in rns:
-                                rns[ik] = rn
-
+                            if fmt == 1:
+                                for det_col_enum, det_col in enumerate(hier_cols_detail_cols[idx]):
+                                    if det_col_enum not in ids_details_tally[ik]:
+                                        ids_details_tally[ik][det_col_enum] = defaultdict(int)
+                                    ids_details_tally[ik][det_col_enum][r[det_col]] += 1
+                            elif fmt == 2:
+                                for hcol, det_cols in hier_cols_detail_cols.items():
+                                    for det_col in det_cols:
+                                        if det_col not in ids_details_tally[ik]:
+                                            ids_details_tally[ik][det_col] = defaultdict(int)
+                                        if hcol != idx:
+                                            ids_details_tally[ik][det_col][""] += 1
+                                        else:
+                                            ids_details_tally[ik][det_col][r[det_col]] += 1
+                    # ids
                     for idx, (idcol, pcol) in enumerate(zip(reversed(hier_cols), islice(reversed(hier_cols), 1, None))):
                         ID = r[idcol]
                         ik = ID.lower()
@@ -417,22 +417,67 @@ class TreeBuilder:
                             if ik not in ids_parents_tally:
                                 ids_parents_tally[ik] = defaultdict(int)
                             ids_parents_tally[ik][pk] += 1
-                            if ik not in added_ids:
-                                added_ids.add(ik)
+                            if ik not in to_add:
                                 to_add[ik] = (ID, par)
-                        if pcol == hier_cols[0] and par.lower() not in added_ids and par:
-                            added_ids.add(par.lower())
+                        if pcol == hier_cols[0] and pk not in to_add and par:
                             to_add[pk] = (par, "")
 
-            for ik, dct in ids_details_tally.items():
-                for det_col_enum, detail_dct in dct.items():
-                    if len(detail_dct) > 1:
-                        tallies = "\n\t".join(f"{det}: {tally}" for det, tally in detail_dct.items())
-                        warnings.append(
-                            f" - {to_add[ik][0]} has multiple details in column '{detail_col_names[det_col_enum]}', "
-                            f"using detail with highest tally '{max(detail_dct.items(), key=itemgetter(1))[0]}':\n\t"
-                            f"{tallies}"
-                        )
+            # Base - Top
+            elif fmt in (3, 4):
+                for rn, r in enumerate(islice(data, 1, None), 1):
+                    # details
+                    for idx in hier_cols:
+                        if r[idx]:
+                            ik = r[idx].lower()
+                            if ik not in ids_details_tally:
+                                ids_details_tally[ik] = {}
+                            if fmt == 3:
+                                for det_col_enum, det_col in enumerate(hier_cols_detail_cols[idx]):
+                                    if det_col_enum not in ids_details_tally[ik]:
+                                        ids_details_tally[ik][det_col_enum] = defaultdict(int)
+                                    ids_details_tally[ik][det_col_enum][r[det_col]] += 1
+                            elif fmt == 4:
+                                for hcol, det_cols in hier_cols_detail_cols.items():
+                                    for det_col in det_cols:
+                                        if det_col not in ids_details_tally[ik]:
+                                            ids_details_tally[ik][det_col] = defaultdict(int)
+                                        if hcol != idx:
+                                            ids_details_tally[ik][det_col][""] += 1
+                                        else:
+                                            ids_details_tally[ik][det_col][r[det_col]] += 1
+                    # ids
+                    for idx, (idcol, pcol) in enumerate(zip(hier_cols, islice(hier_cols, 1, None))):
+                        ID = r[idcol]
+                        ik = ID.lower()
+                        par = r[pcol]
+                        pk = par.lower()
+                        if ik:
+                            if not par:
+                                try:
+                                    par = next(r[i] for i in islice(hier_cols, idx + 1, None) if r[i])
+                                    pk = par.lower()
+                                    warnings.append(f" - Missing ID in hierarchy column {data[0][pcol]} row #{rn + 1}")
+                                except Exception:
+                                    pass
+                            if ik not in ids_parents_tally:
+                                ids_parents_tally[ik] = defaultdict(int)
+                            ids_parents_tally[ik][pk] += 1
+                            if ik not in to_add:
+                                to_add[ik] = (ID, par)
+                        if pcol == hier_cols[-1] and pk not in to_add and par:
+                            to_add[pk] = (par, "")
+            # details
+            if fmt in (1, 3):
+                for ik, dct in ids_details_tally.items():
+                    for det_col, detail_dct in dct.items():
+                        if len(detail_dct) > 1:
+                            tallies = "\n\t".join(f"{det}: {tally}" for det, tally in detail_dct.items())
+                            warnings.append(
+                                f" - {to_add[ik][0]} has multiple details in column '{detail_col_names[det_col]}', "
+                                f"using detail with highest tally '{max(detail_dct.items(), key=itemgetter(1))[0]}':\n\t"
+                                f"{tallies}"
+                            )
+            # ids
             for ik, dct in ids_parents_tally.items():
                 if len(dct) > 1:
                     tallies = "\n\t".join(f"{to_add[pk][0]}: {num}" for pk, num in dct.items() if pk)
@@ -444,72 +489,24 @@ class TreeBuilder:
                         f"using parent with highest tally '{chosen_par}':\n\t"
                         f"{tallies}"
                     )
-            output = []
-            added_ids = set()
-            other_cols_len = rowlen - num_detail_cols - len(hier_cols)
-            output.append(["ID", "PARENT"] + detail_col_names + [data[0][i] for i in not_detail_cols_or_hier_cols])
+            output = [["ID", "PARENT"] + detail_col_names]
             for ID, par in to_add.values():
-                if (ik := ID.lower()) in ids_details_tally:
-                    other_cols = (
-                        [data[rns[ik]][i] for i in not_detail_cols_or_hier_cols]
-                        if ik in rns
-                        else list(repeat("", other_cols_len))
-                    )
-                    if ids_details_tally[ik]:
-                        details = [
-                            max(detail_dct.items(), key=itemgetter(1))[0]
-                            for detail_dct in ids_details_tally[ik].values()
-                        ]
-                        if len(details) < num_detail_cols_to_be_added:
-                            details += list(repeat("", num_detail_cols_to_be_added - len(details)))
-                        output.append([ID, par] + details + other_cols)
-                    else:
-                        output.append([ID, par] + list(repeat("", num_detail_cols)) + other_cols)
-                    added_ids.add(ik)
-            for ID, par in to_add.values():
-                if (ik := ID.lower()) not in added_ids:
-                    other_cols = (
-                        [data[rns[ik]][i] for i in not_detail_cols_or_hier_cols]
-                        if ik in rns
-                        else list(repeat("", other_cols_len))
-                    )
-                    output.append([ID, par] + list(repeat("", num_detail_cols)) + other_cols)
+                ik = ID.lower()
+                if ids_details_tally[ik]:
+                    details = [
+                        max(detail_dct.items(), key=itemgetter(1))[0] for detail_dct in ids_details_tally[ik].values()
+                    ]
+                    if len(details) < num_detail_cols_to_be_added:
+                        details += list(repeat("", num_detail_cols_to_be_added - len(details)))
+                    output.append([ID, par] + details)
+                else:
+                    output.append([ID, par] + list(repeat("", num_detail_cols)))
             return output, max(map(len, output), default=0), 0, [1]
 
         elif not detail_cols:
-            if order == 2:
+            # Top - Base
+            if fmt in (1, 2):
                 for rn, r in enumerate(islice(data, 1, None), 1):
-                    for idx in hier_cols:
-                        if r[idx] and r[idx].lower() not in rns:
-                            rns[r[idx].lower()] = rn
-                    for idx, (idcol, pcol) in enumerate(zip(hier_cols, islice(hier_cols, 1, None))):
-                        ID = r[idcol]
-                        ik = ID.lower()
-                        par = r[pcol]
-                        pk = par.lower()
-                        if ik:
-                            if not par:
-                                try:
-                                    par = next(r[i] for i in islice(hier_cols, idx + 1, None) if r[i])
-                                    pk = par.lower()
-                                    warnings.append(f" - Missing ID in hierarchy column {data[0][pcol]} row #{rn + 1}")
-                                except Exception:
-                                    pass
-                            if ik not in ids_parents_tally:
-                                ids_parents_tally[ik] = defaultdict(int)
-                            ids_parents_tally[ik][pk] += 1
-                            if ik not in added_ids:
-                                added_ids.add(ik)
-                                to_add[ik] = (ID, par)
-                        if pcol == hier_cols[-1] and par.lower() not in added_ids and par:
-                            added_ids.add(par.lower())
-                            to_add[pk] = (par, "")
-
-            elif order == 1:
-                for rn, r in enumerate(islice(data, 1, None), 1):
-                    for idx in reversed(hier_cols):
-                        if r[idx] and r[idx].lower() not in rns:
-                            rns[r[idx].lower()] = rn
                     for idx, (idcol, pcol) in enumerate(zip(reversed(hier_cols), islice(reversed(hier_cols), 1, None))):
                         ID = r[idcol]
                         ik = ID.lower()
@@ -526,11 +523,33 @@ class TreeBuilder:
                             if ik not in ids_parents_tally:
                                 ids_parents_tally[ik] = defaultdict(int)
                             ids_parents_tally[ik][pk] += 1
-                            if ik not in added_ids:
-                                added_ids.add(ik)
+                            if ik not in to_add:
                                 to_add[ik] = (ID, par)
-                        if pcol == hier_cols[0] and par.lower() not in added_ids and par:
-                            added_ids.add(par.lower())
+                        if pcol == hier_cols[0] and pk not in to_add and par:
+                            to_add[pk] = (par, "")
+
+            # Base - Top
+            elif fmt in (3, 4):
+                for rn, r in enumerate(islice(data, 1, None), 1):
+                    for idx, (idcol, pcol) in enumerate(zip(hier_cols, islice(hier_cols, 1, None))):
+                        ID = r[idcol]
+                        ik = ID.lower()
+                        par = r[pcol]
+                        pk = par.lower()
+                        if ik:
+                            if not par:
+                                try:
+                                    par = next(r[i] for i in islice(hier_cols, idx + 1, None) if r[i])
+                                    pk = par.lower()
+                                    warnings.append(f" - Missing ID in hierarchy column {data[0][pcol]} row #{rn + 1}")
+                                except Exception:
+                                    pass
+                            if ik not in ids_parents_tally:
+                                ids_parents_tally[ik] = defaultdict(int)
+                            ids_parents_tally[ik][pk] += 1
+                            if ik not in to_add:
+                                to_add[ik] = (ID, par)
+                        if pcol == hier_cols[-1] and pk not in to_add and par:
                             to_add[pk] = (par, "")
 
             for ik, dct in ids_parents_tally.items():
@@ -544,18 +563,7 @@ class TreeBuilder:
                         f"using parent with highest tally ({chosen_par}):\n\t"
                         f"{lp}"
                     )
-            output = []
-            added_ids = set()
-            qindices = set(hier_cols)
-            other_cols_len = rowlen - len(qindices)
-            output.append(["ID", "PARENT"] + [e for i, e in enumerate(data[0]) if i not in qindices])
-            for ID, par in to_add.values():
-                if (ik := ID.lower()) in rns:
-                    output.append([ID, par] + [e for i, e in enumerate(data[rns[ik]]) if i not in qindices])
-                    added_ids.add(ik)
-            for ID, par in to_add.values():
-                if (ik := ID.lower()) not in added_ids:
-                    output.append([ID, par] + list(repeat("", other_cols_len)))
+            output = [["ID", "PARENT"]] + [[ID, par] for ID, par in to_add.values()]
             return output, max(map(len, output), default=0), 0, [1]
 
     def convert_indented_tree_detail_adjacent_to_normal(
@@ -848,12 +856,19 @@ def tk_trees_api(
             )
 
         elif api_action.startswith("unflatten"):
-            order = 1 if api_action.endswith("base") else 2
+            if api_action.endswith("top"):
+                fmt = 1
+            elif api_action.endswith("topu"):
+                fmt = 2
+            elif api_action.endswith("base"):
+                fmt = 3
+            elif api_action.endswith("baseu"):
+                fmt = 4
             data = TreeBuilder().convert_flattened_to_normal(
                 data=sheet,
                 hier_cols=all_parent_column_indexes,
                 rowlen=row_len,
-                order=order,
+                fmt=fmt,
             )[0]
         if output_filepath.endswith((".csv", ".tsv")):
             to_csv(

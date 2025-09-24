@@ -112,7 +112,7 @@ class Column_Selection(tk.Frame):
         if self.data_format_selector.flattened:
             self.flattened_selector.grid(row=3, column=0, sticky="nswe")
             self.selector.grid_forget()
-        elif self.data_format_selector.format >= 3:
+        elif self.data_format_selector.format_selector_current() >= 5:
             self.selector.grid_forget()
             self.flattened_selector.grid_forget()
         else:
@@ -190,10 +190,10 @@ class Column_Selection(tk.Frame):
 
     def try_to_build_tree(self):
         flattened = self.data_format_selector.flattened
-        fmt = self.data_format_selector.format
+        fmt = self.data_format_selector.format_selector_current()
         if flattened:
             hier_cols = self.flattened_selector.get_par_cols()
-        elif fmt in (3, 4, 5):
+        elif fmt in (5, 6, 7):
             hier_cols = [1]
         else:
             hier_cols = list(self.selector.get_par_cols())
@@ -218,7 +218,7 @@ class Column_Selection(tk.Frame):
                 data=self.C.frames.tree_edit.sheet.MT.data,
                 hier_cols=hier_cols,
                 rowlen=self.rowlen,
-                order=fmt,
+                fmt=fmt,
                 warnings=self.C.frames.tree_edit.warnings,
             )
         elif fmt == 3:
@@ -557,11 +557,13 @@ class DataFormatSelector(tk.Frame):
         self.format_dropdown.bind("<<ComboboxSelected>>", self.dropdown_select)
         self.format_dropdown["values"] = [
             "ID, Parent - Adjacency List",  # 0
-            "Flattened - Top → Base",  # 1
-            "Flattened - Base → Top",  # 2
-            "Level-Based Columns",  # 3
-            "Level-Based Columns Multi-Detail",  # 4
-            "Level-Based Columns with Header",  # 5
+            "Top → Base",  # 1
+            "Top → Base (Unique Details)",  # 2
+            "Base → Top",  # 3
+            "Base → Top (Unique Details)",  # 4
+            "Level-Indent Columns",  # 5
+            "Level-Indent Columns Multi-Detail",  # 6
+            "Level-Indent Columns with Header",  # 7
         ]
         self.format_dropdown.current(0)
         self.format_dropdown.grid(row=0, column=1, sticky="nswe")
@@ -578,18 +580,18 @@ class DataFormatSelector(tk.Frame):
             self.extra_func()
 
     def dropdown_select(self, event=None):
-        if not self.format_dropdown.get_my_value().startswith("Flat"):
-            self._flattened = False
-        else:
+        curr = self.format_dropdown.current()
+        if curr in (1, 2, 3, 4):
             self._flattened = True
+        else:
+            self._flattened = False
         self.select_mode(func=True)
 
     @property
     def flattened(self):
         return self._flattened
 
-    @property
-    def format(self) -> int:
+    def format_selector_current(self) -> int:
         return self.format_dropdown.current()
 
     def change_theme(self, theme="dark"):
