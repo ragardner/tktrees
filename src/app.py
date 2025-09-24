@@ -226,7 +226,7 @@ class AppGUI(tk.Tk):
             First_Start_Popup(
                 self,
                 text=f"""
-Welcome to Tk-Trees!
+Welcome to TkTrees!
 
 This program is for management of tree/hierarchy data which is in table format.
 

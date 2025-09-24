@@ -1,4 +1,4 @@
-### Tk-Trees License
+### tktrees License
 
                     Copyright (c) 2025 R. A. Gardner
 

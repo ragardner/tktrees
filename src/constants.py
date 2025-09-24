@@ -48,7 +48,7 @@ from_clipboard_delimiters = "\t,|"
 
 software_version_number = "1.14.3"
 software_version_full = "Version: " + software_version_number
-app_title = "tk-trees"
+app_title = "tktrees"
 contact_email = "github@ragardner.simplelogin.com"
 website1 = "github.com/ragardner"
 current_year = f"{datetime.datetime.now().year}"
@@ -56,7 +56,7 @@ app_copyright = f"Copyright © 2019-{current_year} R. A. Gardner."
 contact_info = f" {software_version_full}\n {app_copyright}\n {contact_email}\n {website1}"
 about_system = "\n".join(
     (
-        f"Tk-Trees: {software_version_number}",
+        f"TkTrees: {software_version_number}",
         f"OS: {USER_OS}",
         f"OS Version: {USER_OS_VERSION}",
         f"Python: {USER_PYTHON_VERSION}",

@@ -43,7 +43,7 @@ from .constants import (
 
 def try_write_error_log(error: str) -> bool:
     try:
-        with open(upone_dir + "TK-TREES-ERROR.txt", "w") as fh:
+        with open(upone_dir + "TKTREES-ERROR.txt", "w") as fh:
             fh.write(f"{error}")
     except Exception:
         pass

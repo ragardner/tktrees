@@ -3,7 +3,7 @@
 # Copyright © R. A. Gardner
 
 """
-tk-Trees - Hierarchy Management Tool
+tktrees - Hierarchy Management Tool
 
 This program is for management of hierarchy data in table format
 

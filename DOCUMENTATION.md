@@ -1,9 +1,9 @@
-# TK-TREES DOCUMENTATION
+# TKTREES DOCUMENTATION
 
-Tk-Trees is an app for management of hierarchy data in table format. It was written in the Python programming language and utilizes the following libraries:
+TkTrees is an app for management of hierarchy data in table format. It was written in the Python programming language and utilizes the following libraries:
  - tkinter, tksheet, openpyxl
 
-Tk-Trees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
+TkTrees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
 - github.com/ragardner
 - github@ragardner.simplelogin.com
 
@@ -547,11 +547,11 @@ Some examples:
 
 Flatten xlsx files which would flatten the hierarchy at column index 2, column C with the output order top-base:
 ```
-python TK-TREES.pyw flatten "input filepath here.xlsx" "output filepath here.xlsx" -all-parent-columns-2,3 -id-0 -parent-2 -input-sheet-Sheet1 "-output-sheet-New Sheet" -odjr
+python TKTREES.pyw flatten "input filepath here.xlsx" "output filepath here.xlsx" -all-parent-columns-2,3 -id-0 -parent-2 -input-sheet-Sheet1 "-output-sheet-New Sheet" -odjr
 ```
 
 Unflatten a file where the flattened id columns are in the order of right to left is top to base:
 ```
-python TK-TREES.pyw unflatten-top-base "input filepath here.csv" "output filepath here.csv" -all-parent-columns-0,2,4,6 -delim-tab -o
+python TKTREES.pyw unflatten-top-base "input filepath here.csv" "output filepath here.csv" -all-parent-columns-0,2,4,6 -delim-tab -o
 ```
 
