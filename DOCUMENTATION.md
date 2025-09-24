@@ -46,7 +46,7 @@ The following six data formats are supported for loading:
 |--------|-----------------|--------|-----------------|--------|------------------|
 | Top    | Top Description | Mid    | Mid Description | Base   | Base Description |
 
-**Output with normal Mode →**
+**Output Example: Top → Base with normal Mode →**
 
 | ID    | Parent    | Description0     |
 |-------|-----------|------------------|
@@ -54,7 +54,7 @@ The following six data formats are supported for loading:
 | Mid   | Top       | Mid Description  |
 | Base  | Mid       | Base Description |
 
-**Output with Unique Details Mode →**
+**Output Example: Top → Base with Unique Details Mode →**
 
 | ID    | Parent    | Description0     | Description1    | Description2     |
 |-------|-----------|------------------|-----------------|------------------|
