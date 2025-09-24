@@ -19,7 +19,7 @@ This program is for management of hierarchy based master data which is stored in
 - .json Javascript object notation where the full table is under the key 'records'
 - .csv/.tsv (comma or tab delimited)
 
-The following six data formats are supported for loading:
+The following data formats are supported for loading:
 
 | Data Structure                    | Header Requirement   | Details Requirement |
 |-----------------------------------|----------------------|---------------------|
@@ -501,10 +501,12 @@ It must be run with the following arguments with a space in-between each:
 
 #### Required parameters:
 
-1. API Action, one of the following:
+1. API Action, one of the following (u suffix stands for unique details modes):
     - flatten
     - unflatten-top-base
+    - unflatten-top-baseu
     - unflatten-base-top
+    - unflatten-base-topu
 2. Input filepath, usually the full filepath including the filename
 3. Output filepath
 4. All the parent column indexes, 0 being the lowest number e.g:

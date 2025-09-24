@@ -327,7 +327,7 @@
 <li>.json Javascript object notation where the full table is under the key 'records'</li>
 <li>.csv/.tsv (comma or tab delimited)</li>
 </ul>
-<p>The following six data formats are supported for loading:</p>
+<p>The following data formats are supported for loading:</p>
 <table>
 <thead>
 <tr>
@@ -960,10 +960,12 @@ typical so only use it if you really need to.</p>
 <p>It must be run with the following arguments with a space in-between each:</p>
 <h4 id="required-parameters">Required parameters:</h4>
 <ol>
-<li>API Action, one of the following:<ul>
+<li>API Action, one of the following (u suffix stands for unique details modes):<ul>
 <li>flatten</li>
 <li>unflatten-top-base</li>
+<li>unflatten-top-baseu</li>
 <li>unflatten-base-top</li>
+<li>unflatten-base-topu</li>
 </ul>
 </li>
 <li>Input filepath, usually the full filepath including the filename</li>
