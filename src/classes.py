@@ -298,6 +298,27 @@ class TreeBuilder:
             return [["Index"] + output_headers] + [[f"{rn}"] + r for rn, r in enumerate(output_sheet)]
         return [output_headers] + output_sheet
 
+    def _process_detail_columns(
+        self, fmt: int, hier_cols_detail_cols: dict, ids_details_tally: dict, idx: int, r: list[str]
+    ) -> None:
+        ik = r[idx].lower()
+        if ik not in ids_details_tally:
+            ids_details_tally[ik] = {}
+        if fmt in (1, 3):
+            for det_col_enum, det_col in enumerate(hier_cols_detail_cols[idx]):
+                if det_col_enum not in ids_details_tally[ik]:
+                    ids_details_tally[ik][det_col_enum] = defaultdict(int)
+                ids_details_tally[ik][det_col_enum][r[det_col]] += 1
+        elif fmt in (2, 4):
+            for hcol, det_cols in hier_cols_detail_cols.items():
+                for det_col in det_cols:
+                    if det_col not in ids_details_tally[ik]:
+                        ids_details_tally[ik][det_col] = defaultdict(int)
+                    if hcol != idx:
+                        ids_details_tally[ik][det_col][""] += 1
+                    else:
+                        ids_details_tally[ik][det_col][r[det_col]] += 1
+
     def convert_flattened_to_normal(
         self,
         data: list[list[str]] | None = None,
@@ -383,23 +404,8 @@ class TreeBuilder:
                     # details
                     for idx in reversed(hier_cols):
                         if r[idx]:
-                            ik = r[idx].lower()
-                            if ik not in ids_details_tally:
-                                ids_details_tally[ik] = {}
-                            if fmt == 1:
-                                for det_col_enum, det_col in enumerate(hier_cols_detail_cols[idx]):
-                                    if det_col_enum not in ids_details_tally[ik]:
-                                        ids_details_tally[ik][det_col_enum] = defaultdict(int)
-                                    ids_details_tally[ik][det_col_enum][r[det_col]] += 1
-                            elif fmt == 2:
-                                for hcol, det_cols in hier_cols_detail_cols.items():
-                                    for det_col in det_cols:
-                                        if det_col not in ids_details_tally[ik]:
-                                            ids_details_tally[ik][det_col] = defaultdict(int)
-                                        if hcol != idx:
-                                            ids_details_tally[ik][det_col][""] += 1
-                                        else:
-                                            ids_details_tally[ik][det_col][r[det_col]] += 1
+                            self._process_detail_columns(fmt, hier_cols_detail_cols, ids_details_tally, idx, r)
+
                     # ids
                     for idx, (idcol, pcol) in enumerate(zip(reversed(hier_cols), islice(reversed(hier_cols), 1, None))):
                         ID = r[idcol]
@@ -428,23 +434,8 @@ class TreeBuilder:
                     # details
                     for idx in hier_cols:
                         if r[idx]:
-                            ik = r[idx].lower()
-                            if ik not in ids_details_tally:
-                                ids_details_tally[ik] = {}
-                            if fmt == 3:
-                                for det_col_enum, det_col in enumerate(hier_cols_detail_cols[idx]):
-                                    if det_col_enum not in ids_details_tally[ik]:
-                                        ids_details_tally[ik][det_col_enum] = defaultdict(int)
-                                    ids_details_tally[ik][det_col_enum][r[det_col]] += 1
-                            elif fmt == 4:
-                                for hcol, det_cols in hier_cols_detail_cols.items():
-                                    for det_col in det_cols:
-                                        if det_col not in ids_details_tally[ik]:
-                                            ids_details_tally[ik][det_col] = defaultdict(int)
-                                        if hcol != idx:
-                                            ids_details_tally[ik][det_col][""] += 1
-                                        else:
-                                            ids_details_tally[ik][det_col][r[det_col]] += 1
+                            self._process_detail_columns(fmt, hier_cols_detail_cols, ids_details_tally, idx, r)
+
                     # ids
                     for idx, (idcol, pcol) in enumerate(zip(hier_cols, islice(hier_cols, 1, None))):
                         ID = r[idcol]
@@ -467,16 +458,15 @@ class TreeBuilder:
                         if pcol == hier_cols[-1] and pk not in to_add and par:
                             to_add[pk] = (par, "")
             # details
-            if fmt in (1, 3):
-                for ik, dct in ids_details_tally.items():
-                    for det_col, detail_dct in dct.items():
-                        if len(detail_dct) > 1:
-                            tallies = "\n\t".join(f"{det}: {tally}" for det, tally in detail_dct.items())
-                            warnings.append(
-                                f" - {to_add[ik][0]} has multiple details in column '{detail_col_names[det_col]}', "
-                                f"using detail with highest tally '{max(detail_dct.items(), key=itemgetter(1))[0]}':\n\t"
-                                f"{tallies}"
-                            )
+            for ik, dct in ids_details_tally.items():
+                for det_col, detail_dct in dct.items():
+                    if len(detail_dct) > 1:
+                        tallies = "\n\t".join(f"{det}: {tally}" for det, tally in detail_dct.items())
+                        warnings.append(
+                            f" - {to_add[ik][0]} has multiple details in column '{data[0][det_col]}', "
+                            f"using detail with highest tally '{max(detail_dct.items(), key=itemgetter(1))[0]}':\n\t"
+                            f"{tallies}"
+                        )
             # ids
             for ik, dct in ids_parents_tally.items():
                 if len(dct) > 1:
