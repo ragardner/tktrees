@@ -9952,7 +9952,7 @@ class Tree_Editor(tk.Frame):
                 self.new_sheet, ns_row_len, ns_ic, ns_hiers = TreeBuilder().convert_flattened_to_normal(
                     data=self.new_sheet,
                     hier_cols=popup.flattened_pcols,
-                    rowlen=ns_row_len,
+                    rowlen=popup.row_len,
                     fmt=fmt,
                     warnings=self.warnings,
                 )

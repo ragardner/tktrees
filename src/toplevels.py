@@ -2175,6 +2175,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
                 redraw=True,
             )
         self.selector.set_columns(cols)
+        self.flattened_selector.set_columns(cols)
         if idcol is not None and parcols is not None:
             self.selector.set_id_col(idcol)
             self.selector.set_par_cols(parcols)
@@ -2265,7 +2266,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         ):
             self.status.change_text("Select at least one option")
             return
-        if self.format == 0:
+        if self.format_selector_current == 0:
             if self.ic in set(self.pcols):
                 self.status.change_text("ID column must be different to all parent columns")
                 return
@@ -2401,7 +2402,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
             if not self.flattened_pcols:
                 self.status.change_text("Select hierarchy columns")
                 return
-        elif self.format == 0:
+        elif self.format_selector_current == 0:
             if self.ic in set(self.pcols):
                 self.status.change_text("ID column must be different to all parent columns")
                 return
