@@ -9,6 +9,7 @@ TkTrees is an app for management of hierarchy data in table format. It was writt
 TkTrees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
 
 - github.com/ragardner
+- github.com/ragardner/tktrees
 - github@ragardner.simplelogin.com
 
 ---
