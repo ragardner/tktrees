@@ -263,7 +263,7 @@
     <div class="side-panel" role="navigation" aria-label="Table of Contents">
 <div class="toc">
 <ul>
-<li><a href="#tk-trees-documentation">TK-TREES DOCUMENTATION</a></li>
+<li><a href="#tktrees-documentation">TKTREES DOCUMENTATION</a></li>
 <li><a href="#program-basics">PROGRAM BASICS</a></li>
 <li><a href="#helpful-tips-and-tutorials">HELPFUL TIPS AND TUTORIALS</a><ul>
 <li><a href="#moving-ids-between-hierarchies">Moving IDs between hierarchies</a></li>
@@ -301,6 +301,7 @@
 <li><a href="#optional-but-important-parameters">Optional (but important) parameters:</a></li>
 </ul>
 </li>
+<li><a href="#bundled-libraries">BUNDLED LIBRARIES</a></li>
 </ul>
 </div>
 </div>
@@ -312,12 +313,18 @@
         </div>
         <div class="content" role="main">
             <a id="top"></a>
-            <h1 id="tk-trees-documentation">TK-TREES DOCUMENTATION</h1>
-<p>Tk-Trees is an app for management of hierarchy data in table format. It was written in the Python programming language and utilizes the following libraries:
- - tkinter, tksheet, openpyxl</p>
-<p>Tk-Trees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
-- github.com/ragardner
-- github@ragardner.simplelogin.com</p>
+            <h1 id="tktrees-documentation">TKTREES DOCUMENTATION</h1>
+<p>TkTrees is an app for management of hierarchy data in table format. It was written in the Python programming language and utilizes the following libraries:</p>
+<ul>
+<li>tksheet</li>
+<li>openpyxl</li>
+<li>defusedxml</li>
+</ul>
+<p>TkTrees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.</p>
+<ul>
+<li>github.com/ragardner</li>
+<li>github@ragardner.simplelogin.com</li>
+</ul>
 <hr />
 <h1 id="program-basics">PROGRAM BASICS</h1>
 <p>If using the program for the first time you can go to the "File" menu or right click in the in the empty space to get started.</p>
@@ -514,7 +521,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Example: Level-Based Columns</strong></p>
+<p><strong>Example: Level-Indent Columns</strong></p>
 <table>
 <thead>
 <tr>
@@ -545,7 +552,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Example: Level-Based Columns Multi-Detail</strong></p>
+<p><strong>Example: Level-Indent Columns Multi-Detail</strong></p>
 <table>
 <thead>
 <tr>
@@ -580,7 +587,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Example: Level-Based Columns with Header</strong></p>
+<p><strong>Example: Level-Indent Columns with Header</strong></p>
 <table>
 <thead>
 <tr>
@@ -1048,11 +1055,38 @@ typical so only use it if you really need to.</p>
 </table>
 <p>Some examples:</p>
 <p>Flatten xlsx files which would flatten the hierarchy at column index 2, column C with the output order top-base:</p>
-<pre><code>python TK-TREES.pyw flatten &quot;input filepath here.xlsx&quot; &quot;output filepath here.xlsx&quot; -all-parent-columns-2,3 -id-0 -parent-2 -input-sheet-Sheet1 &quot;-output-sheet-New Sheet&quot; -odjr
+<pre><code>python TKTREES.pyw flatten &quot;input filepath here.xlsx&quot; &quot;output filepath here.xlsx&quot; -all-parent-columns-2,3 -id-0 -parent-2 -input-sheet-Sheet1 &quot;-output-sheet-New Sheet&quot; -odjr
 </code></pre>
 <p>Unflatten a file where the flattened id columns are in the order of right to left is top to base:</p>
-<pre><code>python TK-TREES.pyw unflatten-top-base &quot;input filepath here.csv&quot; &quot;output filepath here.csv&quot; -all-parent-columns-0,2,4,6 -delim-tab -o
-</code></pre></div>
+<pre><code>python TKTREES.pyw unflatten-top-base &quot;input filepath here.csv&quot; &quot;output filepath here.csv&quot; -all-parent-columns-0,2,4,6 -delim-tab -o
+</code></pre>
+<h1 id="bundled-libraries">BUNDLED LIBRARIES</h1>
+<p><strong>openpyxl</strong></p>
+<ul>
+<li>Version: 3.1.5</li>
+<li>Original source: https://foss.heptapod.net/openpyxl</li>
+<li>License: MIT License</li>
+<li>Full license text and conditions: See <code>openpyxl/LICENCE.rst</code></li>
+<li>Authors and copyright holders: See <code>openpyxl/AUTHORS.rst</code></li>
+<li>Note: This library is bundled to handle Excel file operations.</li>
+</ul>
+<p><strong>defusedxml</strong></p>
+<ul>
+<li>Version: 0.7.1</li>
+<li>Original source: https://github.com/tiran/defusedxml</li>
+<li>License: Python Software Foundation License (PSFL)</li>
+<li>Full license text and conditions: See <code>defusedxml/LICENSE</code></li>
+<li>Copyright: Copyright (c) 2013-2023 by Christian Heimes</li>
+<li>Note: This library is bundled for secure XML parsing.</li>
+</ul>
+<p><strong>tksheet</strong></p>
+<ul>
+<li>Original source: https://github.com/ragardner/tksheet</li>
+<li>License: MIT License</li>
+<li>Full license text and conditions: See <code>tksheet/LICENSE.txt</code></li>
+<li>Copyright: Copyright (c) ragardner</li>
+<li>Note: This library is bundled for tkinter sheet/table functionality.</li>
+</ul></div>
     </div>
 </body>
 </html>

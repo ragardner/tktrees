@@ -4443,6 +4443,14 @@ class Help_Popup(tk.Toplevel):
         )
         self.api.pack(side="top", pady=2, fill="x")
 
+        self.lib = Button(
+            self.buttonframe,
+            text="Bundled Libraries",
+            style="EF.Std.TButton",
+            command=lambda: self.scrollto("lib"),
+        )
+        self.lib.pack(side="top", pady=2, fill="x")
+
         self.textbox = Working_Text(
             self,
             font=("Mono", std_font_size, "normal"),
@@ -4489,6 +4497,8 @@ class Help_Popup(tk.Toplevel):
             self.textbox.see(self.textbox.search("# JSON FILES", "1.0").split(".")[0] + ".0")
         elif option == "api":
             self.textbox.see(self.textbox.search("# USING THE API", "1.0").split(".")[0] + ".0")
+        elif option == "lib":
+            self.textbox.see(self.textbox.search("# BUNDLED LIBRARIES", "1.0").split(".")[0] + ".0")
 
     def find(self, event=None):
         self.find_reset(True)

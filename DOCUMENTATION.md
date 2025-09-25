@@ -1,9 +1,13 @@
 # TKTREES DOCUMENTATION
 
 TkTrees is an app for management of hierarchy data in table format. It was written in the Python programming language and utilizes the following libraries:
- - tkinter, tksheet, openpyxl
+
+- tksheet
+- openpyxl
+- defusedxml
 
 TkTrees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
+
 - github.com/ragardner
 - github@ragardner.simplelogin.com
 
@@ -68,7 +72,7 @@ The following data formats are supported for loading:
 |--------|------------------|--------|-----------------|--------|-----------------|
 | Base   | Base Description | Mid    | Mid Description | Top    | Top Description |
 
-**Example: Level-Based Columns**
+**Example: Level-Indent Columns**
 
 |     |                 |                 |                  |
 |-----|-----------------|-----------------|------------------|
@@ -76,7 +80,7 @@ The following data formats are supported for loading:
 |     | Mid             | Mid Description |                  |
 |     |                 | Base            | Base Description |
 
-**Example: Level-Based Columns Multi-Detail**
+**Example: Level-Indent Columns Multi-Detail**
 
 |     |                   |                   |                    |                    |
 |-----|-------------------|-------------------|--------------------|--------------------|
@@ -84,7 +88,7 @@ The following data formats are supported for loading:
 |     | Mid               | Mid Description 1 | Mid Description 2  |                    |
 |     |                   | Base              | Base Description 1 | Base Description 2 |
 
-**Example: Level-Based Columns with Header**
+**Example: Level-Indent Columns with Header**
 
 | Level0 | Level1 | Level2 | Description 1      | Description 2      |
 |--------|--------|--------|--------------------|--------------------|
@@ -555,3 +559,30 @@ Unflatten a file where the flattened id columns are in the order of right to lef
 python TKTREES.pyw unflatten-top-base "input filepath here.csv" "output filepath here.csv" -all-parent-columns-0,2,4,6 -delim-tab -o
 ```
 
+# BUNDLED LIBRARIES
+
+**openpyxl**
+
+- Version: 3.1.5
+- Original source: https://foss.heptapod.net/openpyxl
+- License: MIT License
+- Full license text and conditions: See `openpyxl/LICENCE.rst`
+- Authors and copyright holders: See `openpyxl/AUTHORS.rst`
+- Note: This library is bundled to handle Excel file operations.
+
+**defusedxml**
+
+- Version: 0.7.1
+- Original source: https://github.com/tiran/defusedxml
+- License: Python Software Foundation License (PSFL)
+- Full license text and conditions: See `defusedxml/LICENSE`
+- Copyright: Copyright (c) 2013-2023 by Christian Heimes
+- Note: This library is bundled for secure XML parsing.
+
+**tksheet**
+
+- Original source: https://github.com/ragardner/tksheet
+- License: MIT License
+- Full license text and conditions: See `tksheet/LICENSE.txt`
+- Copyright: Copyright (c) ragardner
+- Note: This library is bundled for tkinter sheet/table functionality.
