@@ -2311,12 +2311,18 @@ class Tree_Editor(tk.Frame):
 
     def del_key(self, event: object = None) -> None:
         if self.tree.has_focus():
-            if iids := tuple(
-                self.tree.rowitem(row)
-                for box in self.tree.boxes
-                for row in range(box.coords.from_r, box.coords.upto_r)
-                if box[1] == "rows"
-            ):
+            iids = [
+                self.tree.rowitem(rn)
+                for rn in sorted(
+                    {
+                        row
+                        for box in self.tree.boxes
+                        for row in range(box.coords.from_r, box.coords.upto_r)
+                        if box[1] == "rows"
+                    }
+                )
+            ]
+            if iids:
                 self.del_id(iids=iids)
             elif self.tree.boxes:
                 self.tree.delete()
@@ -5553,12 +5559,14 @@ class Tree_Editor(tk.Frame):
             self.refresh_formatting(rows=rows, columns=cols)
 
         elif new_vs["type"] == "delete ids":
-            for obj in reversed(new_vs["rows"]):
-                if obj.t == 1:
-                    self.sheet.MT.data.insert(obj.rn, obj.row)
-                else:
-                    for h, par in zip(self.hiers, pickle.loads(zlib.decompress(obj.row))):
-                        self.sheet.MT.data[obj.rn][h] = par
+            inserts = [obj for obj in new_vs["rows"] if obj.t == 1]
+            inserts.sort(key=lambda o: o.rn)
+            for obj in inserts:
+                self.sheet.MT.data.insert(obj.rn, obj.row)
+            mods = [obj for obj in new_vs["rows"] if obj.t == 0]
+            for obj in mods:
+                for h, par in zip(self.hiers, pickle.loads(zlib.decompress(obj.row))):
+                    self.sheet.MT.data[obj.rn][h] = par
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
 
