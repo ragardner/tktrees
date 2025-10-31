@@ -2069,7 +2069,13 @@ class Date_Entry(tk.Frame):
 
 class Frame(tk.Frame):
     def __init__(
-        self, parent, background="white", highlightbackground="white", highlightthickness=0, theme="dark", width=1
+        self,
+        parent,
+        background="white",
+        highlightbackground="white",
+        highlightthickness=0,
+        theme="dark",
+        width=0,
     ):
         tk.Frame.__init__(
             self,
