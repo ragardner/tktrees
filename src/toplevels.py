@@ -148,7 +148,7 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.menubar.add_cascade(label="File", menu=self.file_menu, **menu_kwargs)
         self.file_menu.add_command(label="Save As", command=self.save_as, **menu_kwargs)
         self.file_menu.add_separator()
-        self.file_menu.add_command(label="Exit", command=self.cancel, **menu_kwargs)
+        self.file_menu.add_command(label="Exit", command=self.USER_HAS_CLOSED_WINDOW, **menu_kwargs)
 
         self.edit_menu = tk.Menu(self.menubar, tearoff=0, **menu_kwargs)
         self.menubar.add_cascade(label="Edit", menu=self.edit_menu, **menu_kwargs)
@@ -549,13 +549,7 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.stop_work("Success! Flattened sheet saved")
 
     def cancel(self, event=None):
-        confirm = Ask_Confirm(
-            self,
-            "Exit Export?",
-            theme=self.theme,
-        )
-        if confirm.boolean:
-            self.USER_HAS_CLOSED_WINDOW()
+        self.USER_HAS_CLOSED_WINDOW()
 
 
 class Post_Import_Changes_Popup(tk.Toplevel):
