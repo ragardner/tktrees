@@ -810,6 +810,74 @@ class Single_Column_Selector(tk.Frame):
         return int(self.col)
 
 
+class Fast_Selector(Sheet):
+    def __init__(self, parent, theme):
+        super().__init__(
+            parent=parent,
+            name="!SheetDropdown",
+            theme=theme,
+            show_horizontal_grid=True,
+            show_vertical_grid=False,
+            show_header=False,
+            show_row_index=False,
+            show_top_left=False,
+            empty_horizontal=0,
+            empty_vertical=0,
+            horizontal_grid_to_end_of_window=True,
+            show_selected_cells_border=False,
+            set_cell_sizes_on_zoom=True,
+            scrollbar_show_arrows=False,
+            rounded_boxes=False,
+            table_selected_rows_bg="#648748",
+            table_selected_rows_fg="#FFFFFF",
+        )
+        self.bind("<ButtonPress-1>", self.b1_press)
+        self.bind("<B1-Motion>", self.b1_motion)
+        self.bind("<ButtonRelease-1>", self.b1_release)
+        self.current_row = None
+
+    def load_cols(self, cols: list[str]):
+        self.deselect()
+        self.set_sheet_data([[e] for e in cols])
+        for i in range(len(cols)):
+            self.add_row_selection(i, redraw=False)
+
+    def update_display(self):
+        self.update_idletasks()
+        if self.yscroll_showing:
+            self.set_all_cell_sizes_to_text(
+                redraw=True,
+                width=self.winfo_width() - self.yscroll.winfo_width() - 4,
+                slim=True,
+            )
+        else:
+            self.set_all_cell_sizes_to_text(
+                redraw=True,
+                width=self.winfo_width() - 4,
+                slim=True,
+            )
+
+    def b1_press(self, event=None):
+        self.current_row = self.identify_row(event, allow_end=False)
+        if isinstance(self.current_row, int):
+            if self.row_selected(self.current_row):
+                self.deselect(row=self.current_row)
+            else:
+                self.add_row_selection(self.current_row)
+
+    def b1_motion(self, event=None):
+        row = self.identify_row(event, allow_end=False)
+        if isinstance(row, int) and row != self.current_row:
+            self.current_row = row
+            if self.row_selected(row):
+                self.deselect(row=row)
+            else:
+                self.add_row_selection(row)
+
+    def b1_release(self, event=None):
+        pass
+
+
 class X_Checkbutton(ttk.Button):
     def __init__(
         self, parent, text="", style="Std.TButton", command=None, state="normal", checked=False, compound="right"
@@ -2000,13 +2068,16 @@ class Date_Entry(tk.Frame):
 
 
 class Frame(tk.Frame):
-    def __init__(self, parent, background="white", highlightbackground="white", highlightthickness=0, theme="dark"):
+    def __init__(
+        self, parent, background="white", highlightbackground="white", highlightthickness=0, theme="dark", width=1
+    ):
         tk.Frame.__init__(
             self,
             parent,
             background=themes[theme].top_left_bg,
             highlightbackground=highlightbackground,
             highlightthickness=highlightthickness,
+            width=width,
         )
 
 

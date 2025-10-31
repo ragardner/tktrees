@@ -201,11 +201,14 @@ class TreeBuilder:
         reverse: bool,
         add_index: bool,
         empty_cells_to_none: bool = False,
+        detail_cols_indices: None | list[int] = None,
     ) -> list[list[str]]:
         output_headers = []
         detail_columns = detail_columns and len(hiers) + 1 < len(headers)
         ic_plus_hiers = {ic} | set(hiers)
         detail_cols_idxs_names = {i: headers[i] for i in [i for i in range(len(headers)) if i not in ic_plus_hiers]}
+        if detail_columns and detail_cols_indices is not None:
+            detail_cols_idxs_names = {i: v for i, v in detail_cols_idxs_names.items() if i in detail_cols_indices}
         pc_name = headers[pc]
         self.n_lvls = 1
         rns = {r[ic].lower(): rn for rn, r in enumerate(input_sheet) if r[ic]}

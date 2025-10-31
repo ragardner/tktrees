@@ -36,6 +36,7 @@ from .constants import (
     ctrl_button,
     green_fill,
     lge_font_size,
+    menu_kwargs,
     sheet_header_font,
     std_font_size,
     themes,
@@ -71,6 +72,7 @@ from .widgets import (
     Entry_With_Scrollbar,
     Error_Frame,
     Ez_Dropdown,
+    Fast_Selector,
     Flattened_Column_Selector,
     Frame,
     Id_Parent_Column_Selector,
@@ -128,21 +130,139 @@ def show_toplevel_chores(
 class Export_Flattened_Popup(tk.Toplevel):
     def __init__(self, C, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
+        self.theme = theme
         self.C = new_toplevel_chores(toplevel=self, parent=C, title=f"{app_title} - Flatten sheet", resizable=True)
+
+        self.sheetdisplay = Sheet(
+            self,
+            theme=theme,
+            header_font=sheet_header_font,
+            outline_thickness=0,
+        )
+
+        # Menubar
+        self.menubar = tk.Menu(self, **menu_kwargs)
+        self.config(menu=self.menubar)
+
+        self.file_menu = tk.Menu(self.menubar, tearoff=0, **menu_kwargs)
+        self.menubar.add_cascade(label="File", menu=self.file_menu, **menu_kwargs)
+        self.file_menu.add_command(label="Save As", command=self.save_as, **menu_kwargs)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exit", command=self.cancel, **menu_kwargs)
+
+        self.edit_menu = tk.Menu(self.menubar, tearoff=0, **menu_kwargs)
+        self.menubar.add_cascade(label="Edit", menu=self.edit_menu, **menu_kwargs)
+        self.edit_menu.add_command(
+            label="Undo",
+            command=self.sheetdisplay.undo,
+            image=self.C.icons["ICON_UNDO"],
+            accelerator="Ctrl+Z",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Redo",
+            command=self.sheetdisplay.redo,
+            image=self.C.icons["ICON_REDO"],
+            accelerator="Ctrl+Shift+Z",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Copy",
+            command=self.sheetdisplay.copy,
+            image=self.C.icons["ICON_COPY"],
+            accelerator="Ctrl+C",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Cut",
+            command=self.sheetdisplay.cut,
+            image=self.C.icons["ICON_CUT"],
+            accelerator="Ctrl+X",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Copy",
+            command=self.sheetdisplay.copy,
+            image=self.C.icons["ICON_COPY"],
+            accelerator="Ctrl+C",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Paste",
+            command=self.sheetdisplay.paste,
+            image=self.C.icons["ICON_PASTE"],
+            accelerator="Ctrl+V",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Delete",
+            command=self.sheetdisplay.delete,
+            image=self.C.icons["ICON_DEL"],
+            accelerator="Del",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_separator()
+        self.edit_menu.add_command(
+            label="Copy Table as Tab-Separated CSV",
+            command=self.clipboard_indent,
+            image=self.C.icons["ICON_COPY"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Copy Table as Comma-Separated CSV",
+            command=self.clipboard_comma,
+            image=self.C.icons["ICON_COPY"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Copy Table as JSON",
+            command=self.clipboard_json,
+            image=self.C.icons["ICON_COPY"],
+            compound="left",
+            **menu_kwargs,
+        )
+
+        self.view_menu = tk.Menu(self.menubar, tearoff=0, **menu_kwargs)
+        self.menubar.add_cascade(label="View", menu=self.view_menu, **menu_kwargs)
+
+        self.show_controls_var = tk.BooleanVar(value=True)
+        self.view_menu.add_checkbutton(
+            label="Show Controls", variable=self.show_controls_var, command=self.reconfigure_panels, **menu_kwargs
+        )
+
+        self.show_detail_var = tk.BooleanVar(value=False)
+        self.view_menu.add_checkbutton(
+            label="Show Detail Excluder", variable=self.show_detail_var, command=self.reconfigure_panels, **menu_kwargs
+        )
 
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.USER_HAS_QUIT = False
         self.wb_ = None
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=0)
+        self.grid_columnconfigure(2, weight=0)
         self.grid_rowconfigure(0, weight=1)
-        self.selector = Single_Column_Selector(self, command=self.build_flattened, theme=theme)
+
+        self.left_frame = tk.Frame(self, bg=themes[theme].top_left_bg)
+        self.left_frame.grid_columnconfigure(0, weight=1)
+
+        self.selector = Single_Column_Selector(self.left_frame, command=self.build_flattened, theme=theme)
         self.selector.enable_me()
 
         self.selector.set_columns([self.C.headers[h].name for h in self.C.hiers])
         self.selector.grid(row=0, column=0, sticky="nwe", pady=(10, 20), padx=10)
 
         self.include_details_button = X_Checkbutton(
-            self,
+            self.left_frame,
             text="Include detail columns  ",
             style="x_button.Std.TButton",
             compound="right",
@@ -152,7 +272,7 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.include_details_button.grid(row=1, column=0, sticky="new", pady=(10, 5), padx=10)
 
         self.justify_left_button = X_Checkbutton(
-            self,
+            self.left_frame,
             text="Justify left  ",
             style="x_button.Std.TButton",
             compound="right",
@@ -162,7 +282,7 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.justify_left_button.grid(row=3, column=0, sticky="new", pady=5, padx=10)
 
         self.order_button = X_Checkbutton(
-            self,
+            self.left_frame,
             text="Reverse Order  ",
             style="x_button.Std.TButton",
             compound="right",
@@ -172,7 +292,7 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.order_button.grid(row=4, column=0, sticky="new", pady=5, padx=10)
 
         self.add_index_button = X_Checkbutton(
-            self,
+            self.left_frame,
             text="Add index column  ",
             style="x_button.Std.TButton",
             compound="right",
@@ -181,59 +301,89 @@ class Export_Flattened_Popup(tk.Toplevel):
         )
         self.add_index_button.grid(row=5, column=0, sticky="new", pady=(10, 5), padx=10)
 
-        self.build_button = Button(self, text=" Flatten sheet ", style="EF.Std.TButton", command=self.build_flattened)
-        self.build_button.grid(row=7, column=0, pady=10, padx=10, sticky="nsew")
-
-        self.sheetdisplay = Sheet(
-            self,
-            theme=theme,
-            header_font=sheet_header_font,
-            outline_thickness=0,
+        self.build_button = Button(
+            self.left_frame,
+            text=" Flatten sheet ",
+            style="EF.Std.TButton",
+            command=self.build_flattened,
         )
+        self.build_button.grid(row=6, column=0, pady=10, padx=10, sticky="nsew")
+
+        self.detail_frame = Frame(self, theme=theme)
+        self.detail_frame.grid_propagate(0)
+        self.detail_frame.grid_rowconfigure(1, weight=1)
+        self.detail_frame.grid_columnconfigure(0, weight=1)
+        self.detail_frame.grid_columnconfigure(1, weight=0)
+
+        self.detail_label = Label(
+            self.detail_frame,
+            text="Include Details:",
+            font=EFB,
+            theme=theme,
+        )
+        self.detail_label.grid(row=0, column=0, sticky="nsw", padx=10, pady=(10, 0))
+        self.detail_label.update_idletasks()
+
+        self.hide_detail_button = tk.Button(
+            self.detail_frame,
+            text="X",
+            command=lambda: (self.show_detail_var.set(False), self.reconfigure_panels()),
+            bg=themes[theme].top_left_bg,
+            fg=themes[theme].table_fg,
+            relief="flat",
+        )
+        self.hide_detail_button.grid(row=0, column=1, sticky="ne", padx=10, pady=(10, 0))
+        self.hide_detail_button.update_idletasks()
+
+        self.detail_col_selector = Fast_Selector(self.detail_frame, theme=theme)
+        self.detail_col_selector.grid(row=1, column=0, columnspan=2, sticky="nswe", padx=10, pady=(10, 0))
+        self.detail_col_selector.load_cols(
+            [
+                self.C.headers[h].name
+                for h in range(len(self.C.headers))
+                if self.C.headers[h].type_ not in ("ID", "Parent")
+            ]
+        )
+
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.extra_bindings("begin_edit_cell", self.begin_edit)
         self.sheetdisplay.extra_bindings("end_edit_cell", self.end_edit)
         self.sheetdisplay.headers(newheaders=0)
-        self.sheetdisplay.grid(row=0, column=1, rowspan=6, sticky="nswe")
+        self.sheetdisplay.grid(row=0, column=1, rowspan=7, sticky="nswe")
 
-        self.button_frame = Frame(self, theme=theme)
-        self.button_frame.grid_rowconfigure(0, weight=1)
-        self.button_frame.grid(row=7, column=1, sticky="e")
-        self.save_button = Button(self.button_frame, text="Save as", style="EF.Std.TButton", command=self.save_as)
-        self.save_button.grid(row=0, column=0, padx=10, pady=20, sticky="e")
-        self.clipboard_json_button = Button(
-            self.button_frame,
-            text=" Clipboard - json",
-            style="EF.Std.TButton",
-            command=self.clipboard_json,
-        )
-        self.clipboard_json_button.grid(row=0, column=1, padx=10, pady=20, sticky="e")
-        self.clipboard_indent_button = Button(
-            self.button_frame,
-            text=" Clipboard - indent",
-            style="EF.Std.TButton",
-            command=self.clipboard_indent,
-        )
-        self.clipboard_indent_button.grid(row=0, column=2, padx=10, pady=20, sticky="e")
-        self.clipboard_comma_button = Button(
-            self.button_frame,
-            text=" Clipboard - comma",
-            style="EF.Std.TButton",
-            command=self.clipboard_comma,
-        )
-        self.clipboard_comma_button.grid(row=0, column=3, padx=10, pady=20, sticky="e")
-        self.done_button = Button(self.button_frame, text="Done", style="EF.Std.TButton", command=self.cancel)
-        self.done_button.grid(row=0, column=4, padx=(10, 20), pady=20, sticky="e")
         self.status_bar = Status_Bar(
             self, text="Use the parent column selector to change hierarchy output", theme=theme
         )
-        self.status_bar.grid(row=9, column=0, columnspan=2, sticky="nswe")
+        self.status_bar.grid(row=7, column=0, columnspan=2, sticky="nswe")
         # self.build_flattened()
         self.bind("<Escape>", self.cancel)
 
-        show_toplevel_chores(self, wait_window=False)
+        show_toplevel_chores(self, width=1200, height=750, wait_window=False)
         self.selector.set_col(self.C.hiers.index(self.C.pc))
+        self.reconfigure_panels()
         self.wait_window()
+
+    def reconfigure_panels(self):
+        self.left_frame.grid_remove()
+        self.detail_frame.grid_remove()
+        current_col = 0
+        if self.show_controls_var.get():
+            self.left_frame.grid(row=0, column=current_col, rowspan=7, sticky="nsw")
+            current_col += 1
+        if self.show_detail_var.get():
+            self.detail_frame.grid(row=0, column=current_col, rowspan=7, sticky="ns")
+            current_col += 1
+        sheet_col = current_col
+        self.sheetdisplay.grid_configure(column=sheet_col)
+        current_col += 1
+        for c in range(3):
+            self.grid_columnconfigure(c, weight=0)
+        self.grid_columnconfigure(sheet_col, weight=1)
+        self.status_bar.grid_configure(column=0, columnspan=current_col)
+        if self.show_detail_var.get():
+            width = self.detail_label.winfo_reqwidth() + self.hide_detail_button.winfo_reqwidth() + 70
+            self.detail_frame.config(width=width)
+            self.detail_col_selector.update_display()
 
     def end_edit(self, event=None):
         self.bind("<Escape>", self.cancel)
@@ -251,27 +401,23 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.enable_widgets()
 
     def enable_widgets(self):
+        for i in range(self.menubar.index("end") + 1):
+            self.menubar.entryconfig(i, state="normal")
         self.sheetdisplay.enable_bindings("all", "ctrl_select")
         self.sheetdisplay.extra_bindings("begin_edit_cell", self.begin_edit)
         self.sheetdisplay.extra_bindings("end_edit_cell", self.end_edit)
         self.sheetdisplay.basic_bindings(True)
-        self.save_button.config(state="normal")
-        self.clipboard_indent_button.config(state="normal")
-        self.clipboard_json_button.config(state="normal")
-        self.clipboard_comma_button.config(state="normal")
         self.build_button.config(state="normal")
         self.selector.enable_me()
 
     def disable_widgets(self):
+        for i in range(self.menubar.index("end") + 1):
+            self.menubar.entryconfig(i, state="disabled")
         self.build_button.config(state="disabled")
         self.sheetdisplay.disable_bindings()
         self.sheetdisplay.extra_bindings("begin_edit_cell", None)
         self.sheetdisplay.extra_bindings("end_edit_cell", None)
         self.sheetdisplay.basic_bindings(False)
-        self.save_button.config(state="disabled")
-        self.clipboard_json_button.config(state="disabled")
-        self.clipboard_indent_button.config(state="disabled")
-        self.clipboard_comma_button.config(state="disabled")
         self.selector.disable_me()
         self.update()
 
@@ -320,6 +466,15 @@ class Export_Flattened_Popup(tk.Toplevel):
     def build_flattened(self, event=None):
         self.start_work("Flattening sheet...")
         self.sheetdisplay.deselect("all")
+
+        selected_cols = self.detail_col_selector.get_selected_rows()
+        finalized_cols = set()
+        ctr = 0
+        for i, h in enumerate(self.C.headers):
+            if h.type_ not in ("ID", "Parent"):
+                if ctr in selected_cols:
+                    finalized_cols.add(i)
+                ctr += 1
         self.sheetdisplay.set_sheet_data(
             data=TreeBuilder().build_flattened(
                 input_sheet=self.C.sheet.MT.data,
@@ -333,6 +488,8 @@ class Export_Flattened_Popup(tk.Toplevel):
                 justify_left=self.justify_left_button.get_checked(),
                 reverse=self.order_button.get_checked(),
                 add_index=self.add_index_button.get_checked(),
+                empty_cells_to_none=True,
+                detail_cols_indices=finalized_cols,
             ),
             verify=False,
         )
@@ -392,7 +549,13 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.stop_work("Success! Flattened sheet saved")
 
     def cancel(self, event=None):
-        self.USER_HAS_CLOSED_WINDOW()
+        confirm = Ask_Confirm(
+            self,
+            "Exit Export?",
+            theme=self.theme,
+        )
+        if confirm.boolean:
+            self.USER_HAS_CLOSED_WINDOW()
 
 
 class Post_Import_Changes_Popup(tk.Toplevel):
