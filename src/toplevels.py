@@ -147,8 +147,6 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.file_menu = tk.Menu(self.menubar, tearoff=0, **menu_kwargs)
         self.menubar.add_cascade(label="File", menu=self.file_menu, **menu_kwargs)
         self.file_menu.add_command(label="Save As", command=self.save_as, **menu_kwargs)
-        self.file_menu.add_separator()
-        self.file_menu.add_command(label="Exit", command=self.USER_HAS_CLOSED_WINDOW, **menu_kwargs)
 
         self.edit_menu = tk.Menu(self.menubar, tearoff=0, **menu_kwargs)
         self.menubar.add_cascade(label="Edit", menu=self.edit_menu, **menu_kwargs)
