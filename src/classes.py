@@ -173,18 +173,61 @@ class TreeBuilder:
                 return output_sheet, nodes, warnings
             return output_sheet, nodes
 
+    def gen_next_base_id(self, iid: str, pc: int, nodes: dict[str, Node], pos: int = 0) -> str:
+        last_iid = iid
+        for i, anc_iid in enumerate(self.check_ps(iid, pc, nodes)):
+            if anc_iid:
+                last_iid = anc_iid
+            else:
+                break
+            if i >= pos:
+                break
+        return last_iid
+
     def gen_pc_base_ids(
         self,
         sheet: list[list[str]],
         nodes: dict[str, Node],
         ic: int,
         pc: int,
+        remove_end_ids: int = 0,
     ) -> Generator[str]:
-        for row in sheet:
-            if row[ic]:
-                iid = row[ic].lower()
-                node = nodes[iid]
-                if node.ps[pc] is not None and not node.cn[pc]:
+        if not remove_end_ids:
+            for row in sheet:
+                if row[ic]:
+                    iid = row[ic].lower()
+                    node = nodes[iid]
+                    if node.ps[pc] is not None and not node.cn[pc]:
+                        yield iid
+        else:
+            saved_ids = set()
+            for row in sheet:
+                if row[ic]:
+                    iid = row[ic].lower()
+                    node = nodes[iid]
+                    if not node.cn[pc]:
+                        to_save = self.gen_next_base_id(iid, pc, nodes, remove_end_ids)
+                        if to_save in saved_ids:
+                            continue
+                        if any(ciid in saved_ids for ciid in self.check_cn(to_save, pc, nodes)):
+                            continue
+                        saved_ids.add(to_save)
+            """
+            the problem is that top is appearing as a base id from gen_next and mid2
+            then it appears as a parent of another base id
+            
+            we should check if top is appearing as a parent of something else
+            
+            """
+            for iid in saved_ids:
+                yield_ = True
+                for check_iid in saved_ids:
+                    if iid == check_iid:
+                        continue
+                    if any(iid == par_iid for par_iid in self.check_ps(check_iid, pc, nodes)):
+                        yield_ = False
+                        break
+                if yield_:
                     yield iid
 
     def build_flattened(
@@ -202,6 +245,7 @@ class TreeBuilder:
         add_index: bool,
         empty_cells_to_none: bool = False,
         detail_cols_indices: None | list[int] = None,
+        remove_end_ids: int = 0,
     ) -> list[list[str]]:
         output_headers = []
         detail_columns = detail_columns and len(hiers) + 1 < len(headers)
@@ -212,7 +256,7 @@ class TreeBuilder:
         pc_name = headers[pc]
         self.n_lvls = 1
         rns = {r[ic].lower(): rn for rn, r in enumerate(input_sheet) if r[ic]}
-        for iid in self.gen_pc_base_ids(sheet=input_sheet, nodes=nodes, ic=ic, pc=pc):
+        for iid in self.gen_pc_base_ids(sheet=input_sheet, nodes=nodes, ic=ic, pc=pc, remove_end_ids=remove_end_ids):
             node = nodes[iid]
             if justify_left and not reverse:
                 row = deque()
@@ -232,6 +276,7 @@ class TreeBuilder:
                 iid = node.ps[pc]
                 node = nodes[iid]
                 lvl = 2
+                self.n_lvls = 2
                 while iid:
                     if justify_left and not reverse:
                         if detail_columns:

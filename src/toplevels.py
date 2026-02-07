@@ -10,7 +10,7 @@ import tkinter as tk
 import webbrowser
 from contextlib import suppress
 from itertools import islice, repeat
-from tkinter import filedialog
+from tkinter import filedialog, ttk
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell import WriteOnlyCell
@@ -297,7 +297,45 @@ class Export_Flattened_Popup(tk.Toplevel):
             checked=self.C.xlsx_flattened_add_index,
             command=self.build_flattened,
         )
-        self.add_index_button.grid(row=5, column=0, sticky="new", pady=(10, 5), padx=10)
+        self.add_index_button.grid(row=5, column=0, sticky="new", pady=5, padx=10)
+
+        self.subtract_levels_var = tk.IntVar(value=0)
+        self.subtract_frame = tk.Frame(self.left_frame, bg=themes[theme].top_left_bg)
+        self.subtract_frame.grid(row=6, column=0, sticky="new", pady=(5, 10), padx=10)
+        tk.Label(
+            self.subtract_frame,
+            text="Remove End IDs:",
+            bg=themes[theme].top_left_bg,
+            fg=themes[theme].table_fg,
+            anchor="w",
+        ).pack(side="left")
+
+        def is_numeric(value):
+            if value == "":
+                return True
+            if not value.isdigit():
+                return False
+            try:
+                num = int(value)
+                return 0 <= num <= 99999
+            except ValueError:
+                return False
+
+        validate_cmd = self.register(is_numeric)
+
+        self.subtract_spinbox = ttk.Spinbox(
+            self.subtract_frame,
+            from_=0,
+            to=99999,
+            increment=1,
+            width=5,
+            command=self.build_flattened,
+            textvariable=self.subtract_levels_var,
+            validate="key",
+            validatecommand=(validate_cmd, "%P"),
+        )
+        self.subtract_spinbox.bind("<Return>", self.build_flattened)
+        self.subtract_spinbox.pack(side="left", padx=(5, 0), fill="x", expand=True)
 
         self.build_button = Button(
             self.left_frame,
@@ -305,7 +343,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             style="EF.Std.TButton",
             command=self.build_flattened,
         )
-        self.build_button.grid(row=6, column=0, pady=10, padx=10, sticky="nsew")
+        self.build_button.grid(row=7, column=0, pady=10, padx=10, sticky="nsew")
 
         self.detail_frame = Frame(self, theme=theme)
         self.detail_frame.grid_propagate(0)
@@ -347,12 +385,12 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.sheetdisplay.extra_bindings("begin_edit_cell", self.begin_edit)
         self.sheetdisplay.extra_bindings("end_edit_cell", self.end_edit)
         self.sheetdisplay.headers(newheaders=0)
-        self.sheetdisplay.grid(row=0, column=1, rowspan=7, sticky="nswe")
+        self.sheetdisplay.grid(row=0, column=1, rowspan=8, sticky="nswe")
 
         self.status_bar = Status_Bar(
             self, text="Use the parent column selector to change hierarchy output", theme=theme
         )
-        self.status_bar.grid(row=7, column=0, columnspan=2, sticky="nswe")
+        self.status_bar.grid(row=8, column=0, columnspan=2, sticky="nswe")
         # self.build_flattened()
         self.bind("<Escape>", self.cancel)
 
@@ -366,10 +404,10 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.detail_frame.grid_remove()
         current_col = 0
         if self.show_controls_var.get():
-            self.left_frame.grid(row=0, column=current_col, rowspan=7, sticky="nsw")
+            self.left_frame.grid(row=0, column=current_col, rowspan=8, sticky="nsw")
             current_col += 1
         if self.show_detail_var.get():
-            self.detail_frame.grid(row=0, column=current_col, rowspan=7, sticky="ns")
+            self.detail_frame.grid(row=0, column=current_col, rowspan=8, sticky="ns")
             current_col += 1
         sheet_col = current_col
         self.sheetdisplay.grid_configure(column=sheet_col)
@@ -488,6 +526,7 @@ class Export_Flattened_Popup(tk.Toplevel):
                 add_index=self.add_index_button.get_checked(),
                 empty_cells_to_none=True,
                 detail_cols_indices=finalized_cols,
+                remove_end_ids=self.subtract_levels_var.get(),
             ),
             verify=False,
         )
