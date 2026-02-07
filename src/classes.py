@@ -212,13 +212,7 @@ class TreeBuilder:
                         if any(ciid in saved_ids for ciid in self.check_cn(to_save, pc, nodes)):
                             continue
                         saved_ids.add(to_save)
-            """
-            the problem is that top is appearing as a base id from gen_next and mid2
-            then it appears as a parent of another base id
-            
-            we should check if top is appearing as a parent of something else
-            
-            """
+
             for iid in saved_ids:
                 yield_ = True
                 for check_iid in saved_ids:
