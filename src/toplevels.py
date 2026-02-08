@@ -323,16 +323,12 @@ class Export_Flattened_Popup(tk.Toplevel):
 
         validate_cmd = self.register(is_numeric)
 
-        self.subtract_spinbox = ttk.Spinbox(
+        self.subtract_spinbox = ttk.Entry(
             self.subtract_frame,
-            from_=0,
-            to=99999,
-            increment=1,
-            width=5,
-            command=self.build_flattened,
             textvariable=self.subtract_levels_var,
             validate="key",
             validatecommand=(validate_cmd, "%P"),
+            justify="right",
         )
         self.subtract_spinbox.bind("<Return>", self.build_flattened)
         self.subtract_spinbox.pack(side="left", padx=(5, 0), fill="x", expand=True)
