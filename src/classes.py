@@ -200,7 +200,7 @@ class TreeBuilder:
                     if node.ps[pc] is not None and not node.cn[pc]:
                         yield iid
         else:
-            saved_ids = set()
+            saved_ids = {}
             for row in sheet:
                 if row[ic]:
                     iid = row[ic].lower()
@@ -211,7 +211,7 @@ class TreeBuilder:
                             continue
                         if any(ciid in saved_ids for ciid in self.check_cn(to_save, pc, nodes)):
                             continue
-                        saved_ids.add(to_save)
+                        saved_ids[to_save] = None
 
             for iid in saved_ids:
                 yield_ = True
