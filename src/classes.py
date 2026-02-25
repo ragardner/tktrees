@@ -270,7 +270,8 @@ class TreeBuilder:
                 iid = node.ps[pc]
                 node = nodes[iid]
                 lvl = 2
-                self.n_lvls = 2
+                if self.n_lvls < 2:
+                    self.n_lvls = 2
                 while iid:
                     if justify_left and not reverse:
                         if detail_columns:
@@ -294,10 +295,7 @@ class TreeBuilder:
                     else:
                         break
 
-            if justify_left and not reverse:
-                output_sheet.append(list(row))
-            else:
-                output_sheet.append(row)
+            output_sheet.append(row if isinstance(row, list) else list(row))
 
         equalize_sublist_lens(output_sheet)
 
