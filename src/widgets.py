@@ -221,7 +221,7 @@ class Column_Selection(tk.Frame):
                 fmt=fmt,
                 warnings=self.C.frames.tree_edit.warnings,
             )
-        elif fmt == 3:
+        elif fmt == 5:
             (
                 self.C.frames.tree_edit.sheet.MT.data,
                 self.rowlen,
@@ -230,7 +230,7 @@ class Column_Selection(tk.Frame):
             ) = TreeBuilder().convert_indented_tree_detail_adjacent_to_normal(
                 data=self.C.frames.tree_edit.sheet.MT.data,
             )
-        elif fmt == 4:
+        elif fmt == 6:
             (
                 self.C.frames.tree_edit.sheet.MT.data,
                 self.rowlen,
@@ -239,7 +239,7 @@ class Column_Selection(tk.Frame):
             ) = TreeBuilder().convert_indented_tree_details_adjacent_to_normal(
                 data=self.C.frames.tree_edit.sheet.MT.data,
             )
-        elif fmt == 5:
+        elif fmt == 7:
             (
                 self.C.frames.tree_edit.sheet.MT.data,
                 self.rowlen,
