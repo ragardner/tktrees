@@ -4184,7 +4184,7 @@ class Tree_Editor(tk.Frame):
                         qvsapp(Del_stre(1, rn, self.sheet.MT.data[rn]))
                     del self.nodes[ik_]
                     to_del.append(rn)
-                    self.untag_id(ik)
+                    self.untag_id(ik_)
                 else:
                     if snapshot:
                         qvsapp(
@@ -4236,43 +4236,156 @@ class Tree_Editor(tk.Frame):
             qvsapp = self.vs[-1]["rows"].append
         ik = name.lower()
         to_del = []
+        self.refresh_rows = set()
         self.levels = defaultdict(list)
         self.get_lvls(ik)
+        del_set = {ik, *(descendant for lvl in self.levels.values() for descendant in lvl)}
+        to_sort = set()
         for lvl in sorted(((k, v) for k, v in self.levels.items()), key=itemgetter(0), reverse=True):
-            for ik_ in lvl[1]:
-                rn = self.rns[ik_]
+            for descendant in lvl[1]:
+                # deal with the parents in other hierarchies of the ids to be deleted
+                for h, p in self.nodes[descendant].ps.items():
+                    # skip self.pc cos we're deleting the descendants of descendant in there
+                    if h == self.pc:
+                        continue
+                    # if no parent then the descendant has to be removed from topnodes order
+                    if p is None:
+                        continue
+                    if p == "":
+                        if not self.auto_sort_nodes_bool:
+                            self.topnodes_order[h].remove(descendant)
+                        continue
+                    # if there is a parent but the parent is in del_set we continue
+                    if p in del_set:
+                        continue
+                    # otherwise we have to remove descendant from parents list of children
+                    self.nodes[p].cn[h].remove(descendant)
+                    # probably add to sort list in case children iteration doesnt cover it
+                    if self.auto_sort_nodes_bool:
+                        to_sort.add((p, h))
+
+                # deal with the children in other hierarchies of ids to be deleted
+                for h, cn in self.nodes[descendant].cn.items():
+                    # skip self.pc cos we're deleting the descendants of descendant in there
+                    if h == self.pc:
+                        continue
+                    for ciid in cn:
+                        if ciid not in self.nodes:
+                            continue
+                        # have to sort grandparents lists of children in other hierarchies
+                        if self.auto_sort_nodes_bool and self.nodes[ciid].ps[h]:
+                            gp = self.nodes[self.nodes[ciid].ps[h]].ps[h]
+                            if gp and gp not in del_set:
+                                to_sort.add((gp, h))
+
+                        # if it's in del_set we shouldn't bother saving/editing
+                        if ciid in del_set:
+                            continue
+
+                        # orphan child
+                        self.nodes[ciid].ps[h] = ""
+                        rn = self.rns[ciid]
+                        # backup the row
+                        if snapshot:
+                            self.vs[-1]["rows"].append(
+                                Del_stre(
+                                    0,
+                                    rn,
+                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
+                                )
+                            )
+                            self.refresh_rows.add(ciid)
+                        # orphan child in sheet
+                        self.sheet.MT.data[rn][h] = ""
+                        # append to topnodes order if not auto_sort
+                        if not self.auto_sort_nodes_bool:
+                            self.topnodes_order[h].append(ciid)
+
+                rn = self.rns[descendant]
                 if snapshot:
                     qvsapp(Del_stre(1, rn, self.sheet.MT.data[rn]))
                 to_del.append(rn)
-                self.untag_id(ik)
-                del self.nodes[ik_]
+                self.untag_id(descendant)
+                del self.nodes[descendant]
+
         pk = parent.lower()
         rn = self.rns[ik]
         if snapshot:
             qvsapp(Del_stre(1, rn, self.sheet.MT.data[rn]))
         to_del.append(rn)
         self.untag_id(ik)
-        if not self.auto_sort_nodes_bool:
-            for h, p in self.nodes[ik].ps.items():
-                if p == "":
+
+        # do the same thing that we did for the descendants but for the main id being deleted
+        for h, p in self.nodes[ik].ps.items():
+            # if no parent then the ik has to be removed from topnodes order
+            if p is None:
+                continue
+            if p == "":
+                if not self.auto_sort_nodes_bool:
                     self.topnodes_order[h].remove(ik)
-                elif p:
-                    self.nodes[p].cn[h].remove(ik)
-        else:
-            for h, p in self.nodes[ik].ps.items():
-                if p:
-                    self.nodes[p].cn[h].remove(ik)
-                    self.nodes[p].cn[h] = self.sort_node_cn(self.nodes[p].cn[h], h)
+                continue
+            # if there is a parent but the parent is in del_set we continue
+            if p in del_set:
+                continue
+            # otherwise we have to remove ik from parents list of children
+            self.nodes[p].cn[h].remove(ik)
+            # probably add to sort list in case children iteration doesnt cover it
+            if self.auto_sort_nodes_bool:
+                to_sort.add((p, h))
+                # have to sort grandparents of ik lists of children in other hierarchies
+                if h != self.pc and self.nodes[p].ps[h]:
+                    gp = self.nodes[p].ps[h]
+                    if gp and gp not in del_set:
+                        to_sort.add((gp, h))
+
+        # deal with the children in other hierarchies of ids to be deleted
+        for h, cn in self.nodes[ik].cn.items():
+            # skip self.pc cos we're deleting the descendants of ik in there
+            if h == self.pc:
+                continue
+            for ciid in cn:
+                if ciid not in self.nodes:
+                    continue
+                # have to sort grandparents lists of children in other hierarchies
+                if self.auto_sort_nodes_bool and self.nodes[ciid].ps[h]:
+                    gp = self.nodes[self.nodes[ciid].ps[h]].ps[h]
+                    if gp and gp not in del_set:
+                        to_sort.add((gp, h))
+
+                # if it's in del_set we shouldn't bother saving/editing
+                if ciid in del_set:
+                    continue
+
+                # orphan child
+                self.nodes[ciid].ps[h] = ""
+                rn = self.rns[ciid]
+                # backup the row
+                if snapshot:
+                    self.vs[-1]["rows"].append(
+                        Del_stre(
+                            0,
+                            rn,
+                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
+                        )
+                    )
+                    self.refresh_rows.add(ciid)
+                # orphan child in sheet
+                self.sheet.MT.data[rn][h] = ""
+                # append to topnodes order if not auto_sort
+                if not self.auto_sort_nodes_bool:
+                    self.topnodes_order[h].append(ciid)
+
         del self.nodes[ik]
         self.sheet.del_rows(to_del, redraw=False)
         self.levels = defaultdict(list)
-        with suppress(Exception):
-            if self.auto_sort_nodes_bool:
-                if pk and self.nodes[pk].ps[self.pc]:
-                    parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
-                    parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-            elif pk == "":
-                self.topnodes_order[self.pc].remove(ik)
+        if self.auto_sort_nodes_bool:
+            for iid, h in to_sort:
+                self.nodes[iid].cn[h] = self.sort_node_cn(self.nodes[iid].cn[h], h)
+            if pk and self.nodes[pk].ps[self.pc]:
+                parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
+                parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
+        elif not self.auto_sort_nodes_bool and pk == "":
+            try_remove(self.topnodes_order[self.pc], ik)
 
     def details(self, ik):
         allrows = []
@@ -7832,6 +7945,7 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self._del_id_children_all_core(self.selected_ID, self.selected_PAR if self.selected_PAR else "")
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.redo_tree_display()
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
