@@ -1,5 +1,11 @@
 # tktrees
 
+tktrees is a hierarchy management app written in pure python
+
+It requires Python version 3.9 or higher
+
+In order to run the app, use Python to run the file named "TKTREES.pyw"
+
 ## Bundled Dependencies
 
 For convenience in environments where pip is not available, this project includes copies of the following third-party libraries. These are unmodified and provided under their original licenses. Users are responsible for complying with these licenses.
