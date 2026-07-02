@@ -3975,8 +3975,8 @@ class Tree_Editor(tk.Frame):
         if to_del is None:
             to_del = []
         iid = name.lower()
-        piid = self.get_ids_parent(iid)
         self.untag_id(iid)
+        to_sort = set()
         if not self.auto_sort_nodes_bool:
             for h, pk in self.nodes[iid].ps.items():
                 if pk == "":
@@ -3997,6 +3997,7 @@ class Tree_Editor(tk.Frame):
                             self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = ""
                 elif pk:
+                    self.nodes[pk].cn[h].remove(iid)
                     for ciid in self.nodes[iid].cn[h]:
                         self.nodes[pk].cn[h].append(ciid)
                         child = self.nodes[ciid]
@@ -4012,28 +4013,9 @@ class Tree_Editor(tk.Frame):
                             )
                             self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = self.nodes[pk].name
-                    self.nodes[pk].cn[h].remove(iid)
         else:
             for h, pk in self.nodes[iid].ps.items():
-                if pk:
-                    for ciid in self.nodes[iid].cn[h]:
-                        self.nodes[pk].cn[h].append(ciid)
-                        child = self.nodes[ciid]
-                        child.ps[h] = pk
-                        rn = self.rns[ciid]
-                        if snapshot:
-                            self.vs[-1]["rows"].append(
-                                Del_stre(
-                                    0,
-                                    rn,
-                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                                )
-                            )
-                            self.refresh_rows.add(ciid)
-                        self.sheet.MT.data[rn][h] = self.nodes[pk].name
-                    self.nodes[pk].cn[h].remove(iid)
-                    self.nodes[pk].cn[h] = self.sort_node_cn(self.nodes[pk].cn[h], h)
-                elif pk == "":
+                if pk == "":
                     for ciid in self.nodes[iid].cn[h]:
                         child = self.nodes[ciid]
                         child.ps[h] = ""
@@ -4048,14 +4030,37 @@ class Tree_Editor(tk.Frame):
                             )
                             self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = ""
+                elif pk:
+                    self.nodes[pk].cn[h].remove(iid)
+                    for ciid in self.nodes[iid].cn[h]:
+                        self.nodes[pk].cn[h].append(ciid)
+                        child = self.nodes[ciid]
+                        child.ps[h] = pk
+                        rn = self.rns[ciid]
+                        if snapshot:
+                            self.vs[-1]["rows"].append(
+                                Del_stre(
+                                    0,
+                                    rn,
+                                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
+                                )
+                            )
+                            self.refresh_rows.add(ciid)
+                        self.sheet.MT.data[rn][h] = self.nodes[pk].name
+                    # sort parents children
+                    to_sort.add((pk, h))
+                    # sort grandparents children
+                    if self.nodes[pk].ps[h]:
+                        to_sort.add((self.nodes[pk].ps[h], h))
         rn = self.rns[iid]
         if snapshot:
             self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
         del self.nodes[iid]
         to_del.append(iid)
-        if self.auto_sort_nodes_bool and piid and self.nodes[piid].ps[self.pc]:
-            parent_parent_node = self.nodes[self.nodes[piid].ps[self.pc]]
-            parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
+        if self.auto_sort_nodes_bool:
+            for node_id, h in to_sort:
+                if node_id in self.nodes:
+                    self.nodes[node_id].cn[h] = self.sort_node_cn(self.nodes[node_id].cn[h], h)
         return to_del
 
     def _del_id_orphan_core(self, name: str, parent: str, snapshot: bool = True) -> None:
@@ -4109,8 +4114,8 @@ class Tree_Editor(tk.Frame):
 
     def _del_id_all_orphan_core(self, name: str, snapshot: bool = True) -> None:
         ik = name.lower()
-        pk = self.nodes[ik].ps[self.pc]
         self.refresh_rows = set()
+        to_sort = set()
         self.untag_id(ik)
         if not self.auto_sort_nodes_bool:
             for h, p in self.nodes[ik].ps.items():
@@ -4121,6 +4126,9 @@ class Tree_Editor(tk.Frame):
         for h, p in self.nodes[ik].ps.items():
             if p:
                 self.nodes[p].cn[h].remove(ik)
+                # sort grandparents children
+                if self.auto_sort_nodes_bool and self.nodes[p].ps[h]:
+                    to_sort.add((self.nodes[p].ps[h], h))
         for h, cn in self.nodes[ik].cn.items():
             for ciid in cn:
                 child = self.nodes[ciid]
@@ -4141,9 +4149,10 @@ class Tree_Editor(tk.Frame):
             self.vs[-1]["rows"].append(Del_stre(1, rn, self.sheet.MT.data[rn]))
         del self.nodes[ik]
         self.sheet.delete_row(rn, redraw=False)
-        if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
-            parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
-            parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
+        if self.auto_sort_nodes_bool:
+            for node_id, h in to_sort:
+                if node_id in self.nodes:
+                    self.nodes[node_id].cn[h] = self.sort_node_cn(self.nodes[node_id].cn[h], h)
 
     def get_lvls(self, iid: str, lvl=1):
         # Initialize stack with the initial node at lvl - 1
