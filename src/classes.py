@@ -789,12 +789,11 @@ class Header:
 
 
 # t = type, deleted (1) or changed (0)
-class Del_stre:
-    __slots__ = ("t", "rn", "row")
+class RowStorage:
+    __slots__ = ("t", "row")
 
-    def __init__(self, t, rn, r):
+    def __init__(self, t, r):
         self.t = t
-        self.rn = rn
         self.row = r
 
 
