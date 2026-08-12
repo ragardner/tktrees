@@ -30,6 +30,21 @@ classifiers = [
 
 [tool.ruff]
 line-length = 120
+extend-exclude = [
+    "defusedxml",
+    "et_xmlfile",
+    "openpyxl",
+    "tksheet",
+]
+
+[tool.ruff.lint]
 extend-select = ["I", "F", "C4", "E", "B", "SIM"]
-fix = true
-ignore = ["E501", "SIM401"]
+ignore = [
+    "E501",
+    "SIM401",
+    "BLE001",  # broad except Exception is intentional
+    "S110",    # try/except/pass — same reason
+    "S112",    # try/except/continue — same reason
+    "TRY002",
+    "DTZ",     # calendar dates, not timestamps — no timezone to attach
+]

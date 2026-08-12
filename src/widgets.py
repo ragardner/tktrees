@@ -1180,8 +1180,8 @@ class Working_Text(tk.Text):
         )
         self.config(
             bg=themes[theme].table_bg if use_entry_bg else themes[theme].top_left_bg,
-            fg=themes[theme].table_fg if use_entry_bg else themes[theme].table_fg,
-            insertbackground=themes[theme].table_fg if use_entry_bg else themes[theme].table_fg,
+            fg=themes[theme].table_fg,
+            insertbackground=themes[theme].table_fg,
         )
         if override_bg is not None:
             self.config(bg=override_bg)
@@ -1773,8 +1773,7 @@ class Number_Normal_Entry(tk.Entry):
         dotidx = [i for i, c in enumerate(x) if c == "."]
         if dotidx and len(dotidx) > 1:
             x = x[: dotidx[1]]
-        if x.startswith("."):
-            x = x[1:]
+        x = x.removeprefix(".")
         if x.startswith("-"):
             self.sv.set("-" + "".join([c for c in x if c in self.allowed_chars]))
         else:

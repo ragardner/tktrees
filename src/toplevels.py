@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (c) 2025 R. A. Gardner
 
+from __future__ import annotations
+
 import csv
 import datetime
 import json
@@ -787,7 +789,7 @@ class Changelog_Popup(tk.Toplevel):
                 ws = self.wb_.create_sheet(title="Changelog")
                 ws.append(xlsx_changelog_header(ws))
                 for row in self.C.changelog:
-                    ws.append((e if e else None for e in row))
+                    ws.append(e if e else None for e in row)
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
             elif newfile.lower().endswith((".csv", ".tsv")):
@@ -846,7 +848,7 @@ class Changelog_Popup(tk.Toplevel):
                 ws = self.wb_.create_sheet(title="Changelog")
                 ws.append(xlsx_changelog_header(ws))
                 for row in islice(self.C.changelog, from_row, to_row):
-                    ws.append((e if e else None for e in row))
+                    ws.append(e if e else None for e in row)
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
             elif newfile.lower().endswith((".csv", ".tsv")):
@@ -1026,10 +1028,10 @@ class Compare_Report_Popup(tk.Toplevel):
                             row.append(cell)
                         ws.append(row)
                         for row in islice(rows, 1, None):
-                            ws.append((e if e != "" else None for e in row))
+                            ws.append(e if e != "" else None for e in row)
                     else:
                         for row in rows:
-                            ws.append((e if e != "" else None for e in row))
+                            ws.append(e if e != "" else None for e in row)
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
         except Exception as error_msg:
@@ -1394,12 +1396,10 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                     s2 = datetime.datetime.strftime(v + step, DATE_FORM)
                     if not i % 20:
                         self.C.headers[self.column].formatting.append(
-                            ("".join((">= ", s1, " and <= ", s2)), self.scale_colors[i - 1])
+                            (f">= {s1} and <= {s2}", self.scale_colors[i - 1])
                         )
                     else:
-                        self.C.headers[self.column].formatting.append(
-                            ("".join((">= ", s1, " and < ", s2)), self.scale_colors[i - 1])
-                        )
+                        self.C.headers[self.column].formatting.append((f">= {s1} and < {s2}", self.scale_colors[i - 1]))
                         v = v + step
             elif self.new_frame.order == "DESCENDING":
                 v = max_v  # strptime
@@ -1408,12 +1408,10 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                     s2 = datetime.datetime.strftime(v - step, DATE_FORM)
                     if not i % 20:
                         self.C.headers[self.column].formatting.append(
-                            ("".join(("<= ", s1, " and >= ", s2)), self.scale_colors[i - 1])
+                            (f"<= {s1} and >= {s2}", self.scale_colors[i - 1])
                         )
                     else:
-                        self.C.headers[self.column].formatting.append(
-                            ("".join(("<= ", s1, " and > ", s2)), self.scale_colors[i - 1])
-                        )
+                        self.C.headers[self.column].formatting.append((f"<= {s1} and > {s2}", self.scale_colors[i - 1]))
                         v = v - step
         self.refresh_formatting_view()
 

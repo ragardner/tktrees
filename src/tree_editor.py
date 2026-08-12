@@ -24,7 +24,7 @@ from typing import Literal
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell import WriteOnlyCell
-from tksheet import (  # noqa: F401
+from tksheet import (
     ICON_ADD,
     ICON_CLEAR,
     ICON_COPY,
@@ -170,7 +170,7 @@ class Tree_Editor(tk.Frame):
         #     self.monitor_scale = self.C.call("tk", "scaling")
         # except Exception:
         #     self.monitor_scale = 1
-        self.l_frame_proportion = float(0.50)
+        self.l_frame_proportion = 0.50
         self.last_width = 0
         self.last_height = 0
         self.currently_adjusting_divider = False
@@ -2130,7 +2130,7 @@ class Tree_Editor(tk.Frame):
 
     def tree_sheet_edit_table(self, event=None):
         if not event:
-            return None
+            return
         if len(event.data) == 1:
             y1, x1 = next(iter(event.data))
             newtext = event.data[(y1, x1)]
@@ -2142,7 +2142,7 @@ class Tree_Editor(tk.Frame):
 
             if newtext == self.sheet.data[y1][x1]:
                 event.data = {}
-                return None
+                return
 
             ID = self.sheet.data[y1][self.ic]
             ik = ID.lower()
@@ -2154,7 +2154,7 @@ class Tree_Editor(tk.Frame):
                 if not self.change_ID_name(id_, newtext, errors=False):
                     self.edit_cell_rebuild(y1, x1, newtext)
                     event.data = {}
-                    return None
+                    return
 
                 self.changelog_append(
                     "Rename ID",
@@ -2370,7 +2370,6 @@ class Tree_Editor(tk.Frame):
             self.redraw_sheets()
         self.redo_tree_display()
         self.sheet.recreate_all_selection_boxes()
-        return
 
     def cut_key(self, event: object = None) -> None:
         if self.tree.has_focus():
@@ -4961,7 +4960,7 @@ class Tree_Editor(tk.Frame):
             cd = datetime.datetime.strptime(
                 datetime.datetime.today().strftime(self.DATE_FORM),
                 self.DATE_FORM,
-            )  # noqa: F841
+            )
         except Exception:
             cd = datetime.timedelta(days=0)  # noqa: F841
 
@@ -5246,7 +5245,7 @@ class Tree_Editor(tk.Frame):
                 form for row in self.sheet.MT.data if len(row[col]) == 10 for form in self.detect_date_form(row[col])
             }
             if len(sheet_date_form) == 1:
-                sheet_date_form = tuple(sheet_date_form)[0]
+                sheet_date_form = next(iter(sheet_date_form))
                 quick_data = self.sheet.MT.data
                 for rn in range(len(quick_data)):
                     if quick_data[rn][col] and not isint(quick_data[rn][col]):
@@ -8489,33 +8488,25 @@ class Tree_Editor(tk.Frame):
         if filepath and sheetname:
             self.warnings_filepath = filepath
             self.warnings_sheet = sheetname
-        top = "".join(
-            (
-                "File opened: ",
-                self.warnings_filepath,
-                "\nSheet opened: ",
-                self.warnings_sheet,
-                "\n\n",
-            )
-        )
+        top = f"File opened: {self.warnings_filepath}\nSheet opened: {self.warnings_sheet}\n\n"
         if show_regardless:
             if self.warnings:
                 Text_Popup(
                     self,
-                    "".join((top, warnings_header, "\n", "\n".join(self.warnings))),
+                    f"{top}{warnings_header}\n" + "\n".join(self.warnings),
                     theme=self.C.theme,
                 )
             else:
                 Text_Popup(
                     self,
-                    "".join((top, warnings_header, "\n - NO WARNINGS TO DISPLAY - ")),
+                    f"{top}{warnings_header}\n - NO WARNINGS TO DISPLAY - ",
                     theme=self.C.theme,
                 )
         else:
             if self.warnings:
                 Text_Popup(
                     self,
-                    "".join((top, warnings_header, "\n", "\n".join(self.warnings))),
+                    f"{top}{warnings_header}\n" + "\n".join(self.warnings),
                     theme=self.C.theme,
                 )
 
@@ -8551,7 +8542,7 @@ class Tree_Editor(tk.Frame):
                         ws = self.C.wb.create_sheet(title="Changelog")
                         ws.append(xlsx_changelog_header(ws))
                         for row in self.changelog:
-                            ws.append((e if e else None for e in row))
+                            ws.append(e if e else None for e in row)
                         self.C.wb.save(newfile)
                         self.C.try_to_close_workbook()
                     elif newfile.lower().endswith((".csv", ".tsv")):
@@ -8591,7 +8582,7 @@ class Tree_Editor(tk.Frame):
                         ws.append(xlsx_changelog_header(ws))
                         if self.sheet_changes:
                             for row in islice(self.changelog, from_row, to_row):
-                                ws.append((e if e else None for e in row))
+                                ws.append(e if e else None for e in row)
                         self.C.wb.save(newfile)
                         self.C.try_to_close_workbook()
                     elif newfile.lower().endswith((".csv", ".tsv")):
@@ -10007,7 +9998,7 @@ class Tree_Editor(tk.Frame):
             self.new_sheet = []
             return
         self.merge_sheets(
-            insert_row=sorted(self.sheet.get_selected_rows())[0] if insert else len(self.sheet.MT.data),
+            insert_row=min(self.sheet.get_selected_rows()) if insert else len(self.sheet.MT.data),
             popup_=popup,
         )
 
@@ -10536,7 +10527,7 @@ class Tree_Editor(tk.Frame):
         }
 
     def xlsx_chunker(self, seq):
-        size = len(seq) if len(seq) <= 32000 else 32000
+        size = min(len(seq), 32000)
         return (seq[pos : pos + size] for pos in range(0, len(seq), size))
 
     def write_program_data_to_workbook(self, wb, sheetnames_):
@@ -10559,7 +10550,7 @@ class Tree_Editor(tk.Frame):
         ws = wb.create_sheet(title=new_title1)
         ws.append(xlsx_changelog_header(ws))
         for r in reversed(self.changelog):
-            ws.append((e if e else None for e in r))
+            ws.append(e if e else None for e in r)
 
     def write_flattened_to_workbook(self, wb, sheetnames_):
         sheetname = sheetnames_[1]
@@ -10585,7 +10576,7 @@ class Tree_Editor(tk.Frame):
             reverse=self.xlsx_flattened_reverse_order,
             add_index=self.xlsx_flattened_add_index,
         ):
-            ws.append((e if e else None for e in r))
+            ws.append(e if e else None for e in r)
         self.new_sheet = []
 
     def write_treeview_to_workbook(self, wb: Workbook, sheetnames_):

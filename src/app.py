@@ -59,7 +59,7 @@ from .toplevels import (
     Error,
     First_Start_Popup,
     Help_Popup,
-    License_Popup,  # noqa: F401
+    License_Popup,
     Text_Popup,
 )
 from .tree_compare import Tree_Compare
@@ -420,11 +420,11 @@ To get started once you have closed this popup, either:
 
     def change_app_title(self, title=None, star=None):
         if title:
-            self.title("".join((app_title, " - ", title)))
+            self.title(f"{app_title} - {title}")
         elif star == "add":
-            self.title("".join((app_title, " - ", os.path.basename(self.open_dict["filepath"]), "*")))
+            self.title(f"{app_title} - {os.path.basename(self.open_dict['filepath'])}*")
         elif star == "remove":
-            self.title("".join((app_title, " - ", os.path.basename(self.open_dict["filepath"]))))
+            self.title(f"{app_title} - {os.path.basename(self.open_dict['filepath'])}")
         else:
             self.title(app_title)
         self.update_idletasks()

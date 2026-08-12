@@ -179,7 +179,7 @@ def search_results_max_column_chars(results, limit):
     for result in results:
         for idx, string in enumerate(result.text):
             max_lengths[idx] = max(max_lengths[idx], len(string))
-    return [e if e <= limit else limit for e in max_lengths.values()]
+    return [min(e, limit) for e in max_lengths.values()]
     # return [max_lengths[i] for i in range(max(max_lengths, default=-1) + 1)]
 
 
@@ -246,7 +246,7 @@ def center(
     if y is None or y > h or y < 0:
         y = h / 2 - size[1] / 2
     if not get:
-        toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))
+        toplevel.geometry(f"{int(size[0])}x{int(size[1])}+{int(x)}+{int(y)}")
     return x, y
 
 
@@ -563,7 +563,7 @@ def increment_file_version(full_path):
 
 def convert_old_xl_to_xlsx(path_):
     if not path_.lower().endswith(".xlsx"):
-        filename, file_extension = os.path.splitext(path_)
+        filename, _file_extension = os.path.splitext(path_)
         return filename + ".xlsx"
     else:
         return path_

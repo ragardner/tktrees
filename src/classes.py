@@ -123,10 +123,8 @@ class TreeBuilder:
                             if pk == ck:
                                 if add_warnings:
                                     warnings.append(
-                                        (
-                                            f" - Infinite loop of children avoided by setting "
-                                            f"IDs ({ID}) parent ({parent}) to none at row #{rn}"
-                                        )
+                                        f" - Infinite loop of children avoided by setting "
+                                        f"IDs ({ID}) parent ({parent}) to none at row #{rn}"
                                     )
                                 r[h] = ""
                                 parent = ""
@@ -270,8 +268,7 @@ class TreeBuilder:
                 iid = node.ps[pc]
                 node = nodes[iid]
                 lvl = 2
-                if self.n_lvls < 2:
-                    self.n_lvls = 2
+                self.n_lvls = max(self.n_lvls, 2)
                 while iid:
                     if justify_left and not reverse:
                         if detail_columns:
@@ -288,8 +285,7 @@ class TreeBuilder:
 
                     if node.ps[pc]:
                         lvl += 1
-                        if lvl > self.n_lvls:
-                            self.n_lvls = lvl
+                        self.n_lvls = max(self.n_lvls, lvl)
                         iid = node.ps[pc]
                         node = nodes[iid]
                     else:
@@ -675,8 +671,7 @@ class TreeBuilder:
         for row in islice(data, 1, None):
             for col, value in enumerate(row):
                 if value:
-                    if col > details_start:
-                        details_start = col
+                    details_start = max(details_start, col)
                     break
         details_start += 1
         for row in islice(data, 1, None):
@@ -713,7 +708,7 @@ class TreeBuilder:
 
 
 class SearchResult:
-    __slots__ = ("hierarchy", "text", "iid", "column", "term", "type_", "exact")
+    __slots__ = ("column", "exact", "hierarchy", "iid", "term", "text", "type_")
 
     def __init__(
         self,
@@ -735,7 +730,7 @@ class SearchResult:
 
 
 class Node:
-    __slots__ = ("name", "cn", "ps")
+    __slots__ = ("cn", "name", "ps")
 
     def __init__(
         self,
@@ -751,9 +746,9 @@ class Node:
 
 class Header:
     __slots__ = (
+        "formatting",
         "name",
         "type_",
-        "formatting",
         "validation",
     )
 
@@ -790,7 +785,7 @@ class Header:
 
 # t = type, deleted (1) or changed (0)
 class RowStorage:
-    __slots__ = ("t", "row")
+    __slots__ = ("row", "t")
 
     def __init__(self, t, r):
         self.t = t
@@ -858,7 +853,7 @@ def tk_trees_api(
 
         if api_action == "flatten":
             headers_orig = sheet.pop(0)
-            sheet, nodes, warnings, _ = TreeBuilder().build(
+            sheet, nodes, _warnings, _ = TreeBuilder().build(
                 input_sheet=sheet,
                 output_sheet=[],
                 row_len=row_len,
