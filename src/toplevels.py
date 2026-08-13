@@ -92,16 +92,14 @@ from .widgets import (
 
 
 def new_toplevel_chores(toplevel, parent, title, grab=True, resizable=False):
-    toplevel.update()
+    toplevel.withdraw()
     if grab:
         toplevel.grab_set()
-    toplevel.withdraw()
     toplevel.resizable(True, True)
     toplevel.tk.call("wm", "iconphoto", toplevel._w, tk.PhotoImage(format="gif", data=top_left_icon))
     toplevel.title(title)
     if grab:
         toplevel.wm_transient(parent)
-    toplevel.focus_force()
     return parent
 
 
@@ -122,8 +120,9 @@ def show_toplevel_chores(
     elif isinstance(height, tk.Misc):
         height = height.winfo_reqheight()
 
-    toplevel.deiconify()
     center(toplevel, width, height)
+    toplevel.deiconify()
+    toplevel.focus_force()
 
     if wait_window:
         toplevel.wait_window()
