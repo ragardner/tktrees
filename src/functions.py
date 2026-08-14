@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-# Copyright (c) 2025 R. A. Gardner
+# Copyright (c) R. A. Gardner
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import io
 import json
@@ -17,6 +18,7 @@ from collections import defaultdict
 from contextlib import suppress
 from itertools import islice, repeat
 from math import ceil
+from sys import stderr
 from typing import Literal
 
 from openpyxl import Workbook
@@ -42,17 +44,26 @@ from .constants import (
 
 
 def try_write_error_log(error: str) -> bool:
-    try:
-        with open(upone_dir + "TKTREES-ERROR.txt", "w") as fh:
-            fh.write(f"{error}")
-    except Exception:
-        pass
+    with contextlib.suppress(Exception), open(upone_dir + "TKTREES-ERROR.txt", "w") as fh:
+        fh.write(f"{error}")
+    with contextlib.suppress(Exception):
+        print(error, file=stderr)
 
 
 def to_clipboard(widget: tk.Misc, s: str) -> None:
     widget.clipboard_clear()
     widget.clipboard_append(s)
     widget.update()
+
+
+def csv_dialect_from_delim(delimiter: str) -> type[csv.Dialect]:
+    if delimiter in ("tab", "\\t", "\t"):
+        return csv.excel_tab
+    if delimiter == ",":
+        return csv.excel
+    if len(delimiter) != 1:
+        raise ValueError(f"CSV delimiter must be a single character or 'tab', not '{delimiter}'")
+    return type("ApiCsvDialect", (csv.excel,), {"delimiter": delimiter})
 
 
 def to_csv(filepath: str, overwrite: Literal["w", "x"], dialect: csv.Dialect, data: list[list[str]]) -> None:

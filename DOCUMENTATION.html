@@ -1010,14 +1010,13 @@ typical so only use it if you really need to.</p>
 <li>Delimiter, a delimiter character for the output file if it's a csv or tsv, defaults to comma, examples below:<ul>
 <li>-delim-tab</li>
 <li>-delim-,</li>
-<li>-delim-|</li>
-</ul>
-</li>
-<li>Flags (can be used one after the other):<ul>
-<li>e.g. -odjr</li>
+<li>"-delim-|"</li>
 </ul>
 </li>
 </ol>
+<p>If the delimiter is a shell special character such as <code>|</code>, <code>;</code>, <code>&gt;</code> or <code>&amp;</code>, surround the whole parameter in double quotes e.g. <code>"-delim-|"</code>. Without quotes the shell treats those characters as operators and they never reach the program.
+8. Flags (can be used one after the other):
+    - e.g. -odjr</p>
 <table>
 <thead>
 <tr>

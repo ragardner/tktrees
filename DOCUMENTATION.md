@@ -536,7 +536,9 @@ It must be run with the following arguments with a space in-between each:
 7. Delimiter, a delimiter character for the output file if it's a csv or tsv, defaults to comma, examples below:
     - -delim-tab
     - -delim-,
-    - -delim-|
+    - "-delim-|"
+
+If the delimiter is a shell special character such as `|`, `;`, `>` or `&`, surround the whole parameter in double quotes e.g. `"-delim-|"`. Without quotes the shell treats those characters as operators and they never reach the program.
 8. Flags (can be used one after the other):
     - e.g. -odjr
 

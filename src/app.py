@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-# Copyright (c) 2025 R. A. Gardner
+# Copyright (c) R. A. Gardner
 
 from __future__ import annotations
 
@@ -671,91 +671,83 @@ To get started once you have closed this popup, either:
             self.enable_at_start()
 
 
+def _api_column_index(token: str, kind: str) -> int:
+    i = int(token) if token.isdigit() else alpha2idx(token)
+    if not isinstance(i, int) or i < 0:
+        raise ValueError(f"{kind} column index must be a number or letter representing a column, not '{token}'")
+    return i
+
+
+def parse_api_argv(argv: list[str]) -> dict:
+    kwargs = DotDict(
+        api_action=argv[1],
+        input_filepath=os.path.normpath(argv[2]),
+        output_filepath=os.path.normpath(argv[3]),
+    )
+    all_parent_column_indexes = None
+    for arg in argv[4:]:
+        # -id-<int> and -parent-<int> required for flatten operations
+        if arg.startswith("-all-parent-columns-"):
+            tokens = [c for c in arg.split("-all-parent-columns-")[1].split(",") if c]
+            if not tokens:
+                raise ValueError("Missing required parameter -all-parent-columns-")
+            all_parent_column_indexes = sorted(_api_column_index(c, "Parent") for c in tokens)
+
+        # defaults to first sheet
+        elif arg.startswith("-input-sheet-"):
+            kwargs["input_sheet"] = arg.split("-input-sheet-")[1]
+
+        # defaults to input-sheet name
+        elif arg.startswith("-output-sheet-"):
+            kwargs["output_sheet"] = arg.split("-output-sheet-")[1]
+
+        # defaults to comma
+        elif arg.startswith("-delim-"):
+            kwargs["csv_delimiter"] = arg.split("-delim-")[1]
+
+        # -id- and -parent- required for flatten, not for unflatten
+        elif arg.startswith("-id-"):
+            kwargs["flatten_id_column"] = _api_column_index(arg.split("-id-")[1], "ID")
+
+        elif arg.startswith("-parent-"):
+            kwargs["flatten_parent_column"] = _api_column_index(arg.split("-parent-")[1], "Parent")
+
+        # optional flags, e.g. -odjr
+        elif arg.startswith("-"):
+            # flags
+            # o overwrite
+            # d detail_columns
+            # j justify_left
+            # r reverse
+            # i add index
+            flags = arg.split("-")[1]
+            for c in flags:
+                if c == "o":
+                    kwargs["overwrite_file"] = True
+                elif c == "d":
+                    kwargs["detail_columns"] = True
+                elif c == "j":
+                    kwargs["justify_left"] = True
+                elif c == "r":
+                    kwargs["reverse"] = True
+                elif c == "i":
+                    kwargs["add_index"] = True
+                else:
+                    break
+
+    if all_parent_column_indexes is None:
+        raise ValueError("Missing required parameter -all-parent-columns-")
+    kwargs["all_parent_column_indexes"] = all_parent_column_indexes
+    return kwargs
+
+
 def run_app(startup_args):
     if len(startup_args) > 4 and allow_api_use:
         try:
-            kwargs = DotDict()
-            for ctr, arg in enumerate(startup_args):
-                # 1, 2, 3, 4 are required
-                # -id-<int> and -parent-<int> required for flatten operations
-                if ctr == 1:
-                    api_action = arg
-
-                elif ctr == 2:
-                    input_filepath = os.path.normpath(arg)
-
-                elif ctr == 3:
-                    output_filepath = os.path.normpath(arg)
-
-                elif arg.startswith("-all-parent-columns-"):
-                    all_parent_column_indexes = sorted(
-                        int(c) if c.isdigit() else alpha2idx(c) for c in arg.split("-all-parent-columns-")[1].split(",")
-                    )
-                    for i in all_parent_column_indexes:
-                        if i < 0:
-                            raise ValueError(
-                                f"Parent column index must be number of letter representing column, not '{i}'"
-                            )
-
-                # defaults to first sheet
-                elif arg.startswith("-input-sheet-"):
-                    kwargs["input_sheet"] = arg.split("-input-sheet-")[1]
-
-                # defaults to input-sheet name
-                elif arg.startswith("-output-sheet-"):
-                    kwargs["output_sheet"] = arg.split("-output-sheet-")[1]
-
-                # defaults to comma
-                elif arg.startswith("-delim-"):
-                    kwargs["csv_delimiter"] = arg.split("-delim-")[1]
-
-                # -id- and -parent- required for flatten, not for unflatten
-                elif arg.startswith("-id-"):
-                    _arg = arg.split("-id-")[1]
-                    if _arg.isdigit():
-                        kwargs["flatten_id_column"] = int(_arg)
-                    else:
-                        kwargs["flatten_id_column"] = alpha2idx(_arg)
-
-                elif arg.startswith("-parent-"):
-                    _arg = arg.split("-parent-")[1]
-                    if _arg.isdigit():
-                        kwargs["flatten_parent_column"] = int(_arg)
-                    else:
-                        kwargs["flatten_parent_column"] = alpha2idx(_arg)
-
-                # optional flags, e.g. -odjr
-                elif arg.startswith("-"):
-                    # flags
-                    # o overwrite
-                    # d detail_columns
-                    # j justify_left
-                    # r reverse
-                    # i add index
-                    flags = arg.split("-")[1]
-                    for c in flags:
-                        if c == "o":
-                            kwargs["overwrite_file"] = True
-                        elif c == "d":
-                            kwargs["detail_columns"] = True
-                        elif c == "j":
-                            kwargs["justify_left"] = True
-                        elif c == "r":
-                            kwargs["reverse"] = True
-                        elif c == "i":
-                            kwargs["add_index"] = True
-                        else:
-                            break
+            tk_trees_api(**parse_api_argv(startup_args))
         except Exception as error_msg:
             try_write_error_log(f"{error_msg}")
-
-        tk_trees_api(
-            api_action=api_action,
-            input_filepath=input_filepath,
-            output_filepath=output_filepath,
-            all_parent_column_indexes=all_parent_column_indexes,
-            **kwargs,
-        )
+            raise SystemExit(1) from None
     else:
         app = AppGUI(startup_args)
         app.mainloop()

@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-# Copyright (c) 2025 R. A. Gardner
+# Copyright (c) R. A. Gardner
 
 from __future__ import annotations
 
 import contextlib
-import csv
 import io
 from collections import defaultdict, deque
 from collections.abc import Generator
@@ -15,6 +14,7 @@ from typing import Literal
 from openpyxl import load_workbook
 
 from .functions import (
+    csv_dialect_from_delim,
     csv_str_x_data,
     equalize_sublist_lens,
     get_json_format,
@@ -375,7 +375,9 @@ class TreeBuilder:
             hier_cols = []
         if warnings is None:
             warnings = []
-        rowlen = max(map(len, data), default=0) if rowlen is None else rowlen
+        # xlsx/csv loaders drop trailing empty cells, so shallower tree rows
+        # are shorter than the hierarchy column indexes unless we pad first
+        rowlen = equalize_sublist_lens(data, len_=rowlen)
         to_add, ids_parents_tally = {}, {}
         detail_cols = sorted(set(range(rowlen)).difference(hier_cols))
         # justify left means the detail columns are on the right hand side of
@@ -801,7 +803,7 @@ def tk_trees_api(
     output_sheet: str | None = None,
     csv_delimiter: str | Literal["tab"] = ",",
     justify_left: bool = True,
-    reverse: bool = True,
+    reverse: bool = False,
     detail_columns: bool = True,
     add_index: bool = False,
     overwrite_file: bool = True,
@@ -809,7 +811,7 @@ def tk_trees_api(
     flatten_parent_column: int = 1,
 ) -> None:
     try:
-        dialect = csv.excel_tab if csv_delimiter == "tab" else csv.excel
+        dialect = csv_dialect_from_delim(csv_delimiter)
 
         overwrite_file = "w" if overwrite_file else "x"
 
@@ -888,12 +890,22 @@ def tk_trees_api(
                 fmt = 3
             elif api_action.endswith("baseu"):
                 fmt = 4
+            else:
+                raise Exception(
+                    "API action must be flatten, unflatten-top-base, unflatten-top-baseu, "
+                    f"unflatten-base-top or unflatten-base-topu, not '{api_action}'"
+                )
             data = TreeBuilder().convert_flattened_to_normal(
                 data=sheet,
                 hier_cols=all_parent_column_indexes,
                 rowlen=row_len,
                 fmt=fmt,
             )[0]
+        else:
+            raise Exception(
+                "API action must be flatten, unflatten-top-base, unflatten-top-baseu, "
+                f"unflatten-base-top or unflatten-base-topu, not '{api_action}'"
+            )
         if output_filepath.endswith((".csv", ".tsv")):
             to_csv(
                 filepath=output_filepath,
@@ -919,3 +931,4 @@ def tk_trees_api(
 
     except Exception as error:
         try_write_error_log(f"{error}")
+        raise SystemExit(1) from None
