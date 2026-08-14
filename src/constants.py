@@ -49,6 +49,7 @@ from_clipboard_delimiters = "\t,|"
 software_version_number = "1.14.17"
 software_version_full = "Version: " + software_version_number
 app_title = "tktrees"
+app_license = "AGPL-3.0-only"
 contact_email = "github@ragardner.simplelogin.com"
 website1 = "github.com/ragardner"
 current_year = f"{datetime.datetime.now().year}"

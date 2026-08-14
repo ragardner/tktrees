@@ -29,6 +29,7 @@ from .constants import (
     USER_OS,
     about_system,
     app_copyright,
+    app_license,
     app_title,
     contact_email,
     ctrl_button,
@@ -230,7 +231,7 @@ Welcome to TkTrees!
 
 This program is for management of tree/hierarchy data which is in table format.
 
-It is licensed under GPL-3.0.
+It is licensed under {app_license}.
 {app_copyright}
 Contact: {contact_email}
 Visit: {website1}

@@ -10,6 +10,7 @@ import os
 import re
 import tkinter as tk
 import webbrowser
+from collections.abc import Callable
 from contextlib import suppress
 from itertools import islice, repeat
 from tkinter import filedialog, ttk
@@ -108,6 +109,7 @@ def show_toplevel_chores(
     width: None | int | tk.Misc = None,
     height: None | int | tk.Misc = None,
     wait_window: bool = True,
+    focus: None | tk.Misc | Callable = None,
 ) -> None:
     toplevel.update_idletasks()
     if width is None:
@@ -123,6 +125,8 @@ def show_toplevel_chores(
     center(toplevel, width, height)
     toplevel.deiconify()
     toplevel.focus_force()
+    if focus is not None:
+        focus() if callable(focus) else focus.focus_set()
 
     if wait_window:
         toplevel.wait_window()
@@ -2918,9 +2922,11 @@ class Edit_Detail_Date_Popup(tk.Toplevel):
 
         self.result = False
         self.bind("<Escape>", self.cancel)
-        if not validation_values:
-            self.date_entry_widget.place_cursor()
-        show_toplevel_chores(self, width=width_)
+        show_toplevel_chores(
+            self,
+            width=width_,
+            focus=None if validation_values else self.date_entry_widget.place_cursor,
+        )
 
     def confirm_normal(self, event=None):
         self.result = True
@@ -2994,9 +3000,11 @@ class Edit_Detail_Number_Popup(tk.Toplevel):
 
         self.result = False
         self.bind("<Escape>", self.cancel)
-        if not validation_values:
-            self.entry_widget.place_cursor()
-        show_toplevel_chores(self, width=width_)
+        show_toplevel_chores(
+            self,
+            width=width_,
+            focus=None if validation_values else self.entry_widget.place_cursor,
+        )
 
     def confirm_normal(self, event=None):
         self.result = True
@@ -3055,9 +3063,11 @@ class Edit_Detail_Text_Popup(tk.Toplevel):
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=20)
         self.result = False
         self.bind("<Escape>", self.cancel)
-        if not validation_values:
-            self.text_widget.place_cursor()
-        show_toplevel_chores(self, width=width_)
+        show_toplevel_chores(
+            self,
+            width=width_,
+            focus=None if validation_values else self.text_widget.place_cursor,
+        )
 
     def confirm_normal(self, event=None):
         self.result = True
@@ -3110,8 +3120,7 @@ class Add_Top_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.id_name_display.place_cursor()
-        show_toplevel_chores(self, width=600)
+        show_toplevel_chores(self, width=600, focus=self.id_name_display.place_cursor)
 
     def confirm(self, event=None):
         if self.C.allow_spaces_ids_var:
@@ -3189,8 +3198,7 @@ class Add_Child_Or_Sibling_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.id_name_display.place_cursor()
-        show_toplevel_chores(self, width=600)
+        show_toplevel_chores(self, width=600, focus=self.id_name_display.place_cursor)
 
     def confirm(self, event=None):
         if self.C.allow_spaces_ids_var:
@@ -3308,8 +3316,7 @@ class Rename_Column_Popup(tk.Toplevel):
         self.result = False
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        self.new_name_display.place_cursor()
-        show_toplevel_chores(self, width=600)
+        show_toplevel_chores(self, width=600, focus=self.new_name_display.place_cursor)
 
     def confirm(self, event=None):
         if self.C.allow_spaces_columns_var:
@@ -3347,8 +3354,7 @@ class Add_Hierarchy_Column_Popup(tk.Toplevel):
         self.result = False
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        self.hier_name_display.place_cursor()
-        show_toplevel_chores(self, width=600)
+        show_toplevel_chores(self, width=600, focus=self.hier_name_display.place_cursor)
 
     def confirm(self, event=None):
         if self.C.allow_spaces_columns_var:
@@ -3392,8 +3398,7 @@ class Add_Detail_Column_Popup(tk.Toplevel):
         self.type_ = "Text"
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
-        self.detail_name_display.place_cursor()
-        show_toplevel_chores(self, width=600)
+        show_toplevel_chores(self, width=600, focus=self.detail_name_display.place_cursor)
 
     def confirm(self, event=None):
         if self.C.allow_spaces_columns_var:
@@ -3434,8 +3439,7 @@ class Rename_Id_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.new_name_display.place_cursor()
-        show_toplevel_chores(self, width=600)
+        show_toplevel_chores(self, width=600, focus=self.new_name_display.place_cursor)
 
     def confirm(self, event=None):
         if self.C.allow_spaces_ids_var:
@@ -3469,8 +3473,7 @@ class Enter_Sheet_Name_Popup(tk.Toplevel):
         self.bind("<Return>", self.confirm)
         self.bind("<Escape>", self.cancel)
         self.result = False
-        self.sheet_entry.place_cursor()
-        show_toplevel_chores(self, width=600)
+        show_toplevel_chores(self, width=600, focus=self.sheet_entry.place_cursor)
 
     def confirm(self, event=None):
         self.result = self.sheet_entry.get_my_value()
