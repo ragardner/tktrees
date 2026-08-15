@@ -1,10 +1,37 @@
 # tktrees
 
-tktrees is a hierarchy management app written in pure python
+TkTrees is a hierarchy management app written in Python.
 
-It requires Python version 3.9 or higher
+## Download
 
-In order to run the app, use Python to run the file named "TKTREES.pyw"
+Download a release from:
+
+https://github.com/ragardner/tktrees/releases
+
+Unzip the folder somewhere you can find it again.
+
+## How to run
+
+Requirements:
+
+- Python 3.9 or newer.
+- tkinter is required (it usually comes with Python on Windows).
+
+On Windows you can double-click the file named `TKTREES.pyw`.
+
+Otherwise open a terminal in the unzipped folder and run:
+
+```
+python3 TKTREES.pyw
+```
+
+On Windows that command is often `python TKTREES.pyw` instead.
+
+## Getting started
+
+After the app opens, use the File menu or right-click the empty space. File -> Open loads an existing file.
+
+Help is under Help -> View Help in the app, or in `DOCUMENTATION.md` in the same folder.
 
 ## Bundled Dependencies
 
@@ -32,3 +59,11 @@ For convenience in environments where pip is not available, this project include
 - Full license text and conditions: See `tksheet/LICENSE.txt`
 - Copyright: Copyright (c) ragardner
 - Note: This library is bundled for tkinter sheet/table functionality.
+
+## License
+
+TkTrees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
+
+- Author: github.com/ragardner
+- Source: github.com/ragardner/tktrees
+- Email: github@ragardner.simplelogin.com
