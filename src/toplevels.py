@@ -4571,7 +4571,7 @@ class Help_Popup(tk.Toplevel):
 
         self.menubar = Button(
             self.buttonframe,
-            text="Tree Menu",
+            text="Guides",
             style="EF.Std.TButton",
             command=lambda: self.scrollto("treeviewmenu"),
         )
@@ -4625,14 +4625,6 @@ class Help_Popup(tk.Toplevel):
         )
         self.program_data.pack(side="top", pady=2, fill="x")
 
-        self.api = Button(
-            self.buttonframe,
-            text="API",
-            style="EF.Std.TButton",
-            command=lambda: self.scrollto("api"),
-        )
-        self.api.pack(side="top", pady=2, fill="x")
-
         self.lib = Button(
             self.buttonframe,
             text="Bundled Libraries",
@@ -4640,6 +4632,14 @@ class Help_Popup(tk.Toplevel):
             command=lambda: self.scrollto("lib"),
         )
         self.lib.pack(side="top", pady=2, fill="x")
+
+        self.api = Button(
+            self.buttonframe,
+            text="API",
+            style="EF.Std.TButton",
+            command=lambda: self.scrollto("api"),
+        )
+        self.api.pack(side="top", pady=2, fill="x")
 
         self.textbox = Working_Text(
             self,
@@ -4674,7 +4674,7 @@ class Help_Popup(tk.Toplevel):
         elif option == "columns":
             self.textbox.see(self.textbox.search("# MANAGING COLUMNS", "1.0").split(".")[0] + ".0")
         elif option == "treeviewmenu":
-            self.textbox.see(self.textbox.search("# MENU BAR", "1.0").split(".")[0] + ".0")
+            self.textbox.see(self.textbox.search("# GUIDES", "1.0").split(".")[0] + ".0")
         elif option == "treeviewbuttons":
             self.textbox.see(self.textbox.search("# TREE BUTTONS", "1.0").split(".")[0] + ".0")
         elif option == "treeviewfunctions":

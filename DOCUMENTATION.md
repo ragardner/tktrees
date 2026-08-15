@@ -1,34 +1,60 @@
 # TKTREES DOCUMENTATION
 
-TkTrees is an app for management of hierarchy data in table format. It was written in the Python programming language and utilizes the following libraries:
+TkTrees is an app for managing hierarchy data.
 
-- tksheet
-- openpyxl
-- defusedxml
+To start the app, use Python 3.9 or newer to run the file named "TKTREES.pyw". tkinter (which usually comes with Python installations on Windows) is required.
+
+After starting the app or opening a file, a treeview shows the items (IDs) on the left, and their respective rows to their right. To change the view, such as to view the underlying table, go to View -> Layout or the File menu then Settings.
 
 TkTrees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
 
-- github.com/ragardner
-- github.com/ragardner/tktrees
-- github@ragardner.simplelogin.com
+- Author: github.com/ragardner
+- Source Code: github.com/ragardner/tktrees
+- Contact Email: github@ragardner.simplelogin.com
 
 ---
 
 # PROGRAM BASICS
 
-If using the program for the first time you can go to the "File" menu or right click in the in the empty space to get started.
+If using the program for the first time you can go to the "File" menu or right click in the empty space to get started. File -> Open loads an existing file.
 
-This program is for management of hierarchy based master data which is stored in table format. Supported file formats are:
+Words used here:
+
+- ID: the item itself (a name or code)
+- Parent: the ID it sits under
+- Hierarchy: one parent column. Extra parent columns are extra hierarchies for the same IDs
+- Detail: extra info on an ID, such as a name, note, number or date
+- Flattened: levels spread across columns, usually one row per path from top to bottom
+
+A tree is just items nested under other items. For example:
+
+| ID      | Parent  | Name        |
+|---------|---------|-------------|
+| Animals |         | All animals |
+| Cats    | Animals | Cat family  |
+| Lion    | Cats    | Lion        |
+
+The examples below use Top, Mid and Base for the same idea, so the file shapes are easy to compare.
+
+Please note:
+
+- Save writes a new file. It does not update the old file in place. If you save over an existing file, that file is replaced. Other sheets, charts, macros, pictures and anything else that was in it are gone. Only what TkTrees writes remains.
+- Delete in this hierarchy removes the ID from the hierarchy you are viewing. If that was its last appearance, the ID is removed completely.
+- Delete in all hierarchies removes the ID everywhere.
+- If you save with app data, the hidden app sheet is what loads next time, not later edits you make in the visible Excel sheet.
+- Undo does not survive closing the file. The changelog can be saved; the undo history cannot.
+
+Supported file formats are:
 
 - .xlsx, .xls, .xlsm
-- .json Javascript object notation where the full table is under the key 'records'
+- .json JavaScript object notation where the full table is under the key 'records'
 - .csv/.tsv (comma or tab delimited)
 
 The following data formats are supported for loading:
 
 | Data Structure                    | Header Requirement   | Details Requirement |
 |-----------------------------------|----------------------|---------------------|
-| ID, Parent - Adjacency List       | Must have header     | Optional, Unlimited |
+| ID, Parent                        | Must have header     | Optional, Unlimited |
 | Top → Base                        | Must have header     | Optional, Unlimited |
 | Top → Base (Unique Details)       | Must have header     | Optional, Unlimited |
 | Base → Top                        | Must have header     | Optional, Unlimited |
@@ -37,7 +63,9 @@ The following data formats are supported for loading:
 | Level-Indent Columns Multi-Detail | Must NOT have header | Optional, Unlimited |
 | Level-Indent Columns with Header  | Must have header     | Optional, Unlimited |
 
-**Example: ID, Parent - Adjacency List**
+Unique details means each level keeps its own detail columns, instead of one shared detail column.
+
+**Example: ID, Parent**
 
 | ID    | Parent    | Detail           |
 |-------|-----------|------------------|
@@ -103,20 +131,60 @@ The following data formats are supported for loading:
 - There is no limit to the number of characters allowed for headers, details or ID names. To allow spaces in ID/Header names go to File -> Settings on the main menubar while in the Treeview. Details are exempt from this rule.
 - Any mistakes in the sheet such as infinite loops of children, IDs appearing in a parent column but not in the ID column and duplications will be corrected upon creating the tree.
 - The corrections will not be made to the original sheet unless you choose to save the sheet. Such corrections will appear as warnings when you first view the treeview window.
-- To display the actual sheet go to View -> Layout.
 - Upon opening a file if an ID has no parents or children in any hierarchy it will be placed in the first hierarchy (in order of the columns).
 
 ---
 
 # HELPFUL TIPS AND TUTORIALS
 
+#### Adding an ID
+
+To add a single ID in the treeview:
+
+1. Right click an existing ID.
+2. Go to Add and choose Add child (under that ID), Add sibling (next to it), or Add top ID (at the top, with no parent).
+3. Type the new ID name and confirm.
+
+On the sheet you can also right click a row and choose Add top ID.
+
+To add many IDs at once, see Guides -> Merge sheets.
+
+#### Adding a column
+
+Right click a column header and choose Add detail or Add hierarchy.
+
+- Add detail: extra information such as a name or date. You pick a name and a type (Text, Number or Date).
+- Add hierarchy: another parent column, so the same IDs can sit in a second tree.
+
+The new column is inserted where you right clicked, or at the end if you did not right click a header.
+
+Column types and formatting are under Managing Columns.
+
+#### Renaming an ID
+
+Right click the ID in the tree or sheet and choose Rename ID, then type the new name. This changes the ID everywhere it appears.
+
+#### Editing a detail
+
+Double click a cell to edit it. Confirm with the cell empty to clear it. Right click and choose Edit if you want a larger window.
+
+#### Looking at a different hierarchy
+
+Use the Hierarchy dropdown at the top of the tree. Each parent column is a different hierarchy.
+
+#### Finding an ID or detail
+
+Use the Find box at the top of the tree or the sheet. Choose whether to search for an ID or a detail. Tree results are only for the hierarchy you are viewing. Search is not case sensitive.
+
+When the tree or sheet has focus, Ctrl + F opens a find and replace window. This searches the cells you can see, and can also replace text. Ctrl + H shows the replace box if it is hidden.
+
 #### Moving IDs between hierarchies
 
 To move an ID to another hierarchy or add an ID to another hierarchy:
 
-1. Right click on the ID in the treeview panel and go to Cut or Copy and then either Cut ID or Copy ID. 
-2. Then using the dropdown box labeled "Hierarchy" at the top of the treeview panel select the hierarchy you would like to move / add the ID to. 
-3. Go to the position or ID where you would like to place the Cut / Copied ID and right click and select a paste option.
+1. Right click on the ID in the treeview panel and go to Cut or Copy and then either Detach ID or Copy ID.
+2. Then using the dropdown box labeled "Hierarchy" at the top of the treeview panel select the hierarchy you would like to move / add the ID to.
+3. Go to the position or ID where you would like to place the Detached / Copied ID and right click and select a paste option.
 
 To move multiple IDs in one go you can use Shift + Left Click or Ctrl + Left Click to select multiple IDs then use Ctrl + X (Cut) or Ctrl + C (Copy) or Right Click on one of the selected IDs.
 
@@ -132,31 +200,16 @@ If any dragged IDs are on different levels from one another then they will not b
 
 #### Deleting IDs
 
-- When using Delete on an ID in the sheet panel or Delete in all hierarchies in the treeview panel it will Delete an ID completely; across all hierarchies.
+- When using Delete on an ID in the sheet panel or Delete in all hierarchies in the treeview panel it will delete an ID completely; across all hierarchies.
 - When using any other delete option it will only delete an ID in the currently selected hierarchy. However, if that ID is the last appearance of the ID across all hierarchies then it will completely delete it, just like with Delete in all hierarchies.
 
 #### Deleting a column
 
-- To delete a column right click on the column you wish to delete and select Delete column. Note you cannot delete a parent column if it is the only parent column in the sheet and you cannot a delete a parent column if you are currently viewing it.
-
-#### Find and replace using multiple values in a table
-
-- Replace all using a table of values can be accessed through the Edit menu.
-- This allows a large scale find and replace using a 2 column table, column 1 is the values to find and column 2 the corresponding values to replace them with.
-- You can load a .csv, .tsv, excel file or allowed json formats, you can also paste into the mini table from the clipboard.
-
-#### Adding multiple new rows
-
-To add multiple new rows you can use:
-
-1. Go to the Import menu then Merge sheets.
-2. Then **either** opening a file, using the clipboard or just using the table in the popup to paste / insert new rows.
-
-Right clicking in the header or index will result in a popup box where you can insert a new row. You can use Ctrl + V to paste data in, as long as it's in the form of tab delimited text.
+- To delete a column right click on the column you wish to delete and select Delete column. Note you cannot delete a parent column if it is the only parent column in the sheet and you cannot delete a parent column if you are currently viewing it.
 
 #### Getting all information on an ID
 
-- An easy way to get an IDs complete information within the sheet, including parents and children across all hierarchies and all details is to select an ID in the treeview or sheet panel and then go to View -> IDs details.
+- An easy way to get an ID's complete information within the sheet, including parents and children across all hierarchies and all details is to select an ID in the treeview or sheet panel and then go to View -> Treeview IDs information or View -> Sheet IDs information.
 - You can also get a more concise view of an ID by right clicking on it and selecting ID concise view.
 
 #### Date column conditional formatting
@@ -169,9 +222,9 @@ Right clicking in the header or index will result in a popup box where you can i
 To disable automatic ordering of IDs in the treeview go to:
 
 1. The File menu then Settings.
-2. Select Auto-sort treeview IDs.
+2. Select Auto-sort tree IDs.
 
-You can re-order children by selecting a single row in the tree and dragging using the left mouse button. To move an ID between parents see the above section on "Moving IDs by drag and drop".
+You can re-order children by selecting a single row in the tree and dragging using the left mouse button. To move an ID between parents see the above section on "Moving IDs between hierarchies".
 
 ---
 
@@ -187,9 +240,9 @@ A detail column can have one of three different types:
 - Number
 - Date
 
-Text details can be any text, Number details can be any number and Date details can be either a date one of three formats (YYYY/MM/DD, DD/MM/YYYY, MM/DD/YYYY) or a whole number (integer).
+Text details can be any text, Number details can be any number and Date details can be either a date in one of three formats (YYYY/MM/DD, DD/MM/YYYY, MM/DD/YYYY) or a whole number (integer).
 
-Changing a column type will result in any details, formatting or validation being evaluated and potentially deleted if they do not meet the column types requirements.
+Changing a column type will result in any details, formatting or validation being evaluated and potentially deleted if they do not meet the column type's requirements.
 
 #### Conditional Formatting:
 
@@ -238,92 +291,108 @@ Conditions must have spaces in between statements.
 
 ---
 
-# MENU BAR
+# GUIDES
 
-#### File Menu
+#### Changelog
 
-- New: Create a new sheet.
-- Open: Open a file.
-- Compare sheets: This option takes you to a tree comparison window. For more information find the help section "Tree Compare".
-- Save: Options are Save (Ctrl + S), Save as, and Save new version (adds one to any detected file of the same name found in the chosen folder).
-- Settings: Opens a settings panel.
-- Quit: Quits the program.
+Every change you make is recorded. Open the list with View -> View changelog, Export -> Export specific changes, or Ctrl + L.
 
-#### Edit Menu
+The list has five columns: date, type, what was changed, old value (red), new value (green).
 
-- Undo (Ctrl + Z). Note that although the changelog can be saved with program data the changes cannot be undone across saves.
-- Sort sheet gives you two options for sorting the sheet:
-    - Sort by tree: This button sorts the sheet in the order that the IDs occur in the tree.
-    - Sort by column: Using this button and the two drop-down boxes to its right you can sort the sheet using a basic natrual sorting order, numbers taking priority.
-- Copy to clipboard copies the underlying sheet to your computers clipboard to be pasted as a string, Copy as json will use the json format you have selected under the Options menu.
-- Tag/Untag IDs tags the selected IDs, tagged IDs will be displayed in a dropdown box at the top of the window so you can find them later.
-- Replace using mapping.
-- Clear copied/cut clears any copied/cut IDs
-- Clear panel selections deselects both the treeview and sheet selections.
-- Clear all tagged IDs clears all tagged IDs and the associated drop-down boxes. This is not an Undo-able action.
+From that window you can:
 
-Please note that when you undo a change not related to details such as copying or deleting an ID any IDs without parents and children in any hierarchy will be placed into the FIRST hierarchy.
+- Export all: save the whole list as .csv, .tsv, .xlsx or .json
+- Export selected as: save only the rows you have selected
+- Prune up to selected: delete from the start of the list through the selected row. If that row is part of a grouped change (the type ends with |), pruning continues to the end of the group. This can be undone.
 
-#### View Menu
+Two other export menu items skip the window:
 
-- View changelog shows an enumerated view of all changes made to the sheet, it is bound to Ctrl + L.
-- View build warnings shows all warnings and issues that occurred and were fixed during first construction of the tree.
-- Treeview IDs information shows the tree's currently selected IDs full information.
-- Sheet IDs information shows the sheet's currently selected IDs full information.
-- Expand all opens all IDs in the tree panel so that all children are visible. It is bound to the E key.
-- Collapse all closes all IDs in the tree panel so that only the top IDs are visible. It is bound to the R key.
-- Zoom in zooms in on both the tree and sheet.
-- Zoom out zooms out on both the tree and sheet.
-- Layout gives four choices for viewing the treeview/sheet.
-- Set all column widths changes the size of the columns in the tree and sheet panels to be wide enough to show the whole of the widest cell.
+- Export file session changes: only changes made since this file was opened
+- Export all changes: the whole list, straight to a file
 
-#### Import Menu
+The changelog can be stored with app data, and you can also save a viewable changelog sheet (see XLSX Files). Undo does not survive closing the file, but the changelog can be saved.
 
-- Import changes allows an exported/saved changelog to be imported and the individual changes are then attempted on the currently open sheet. Supported changes are:
+#### Import changes
 
-```
-    Edit cell
-    Edit cell |
-    Move rows
-    Move columns
-    Add new hierarchy column
-    Add new detail column
-    Delete hierarchy column
-    Delete detail column
-    Column rename
-    Edit validation
-    Change detail column type
-    Date format change
-    Cut and paste ID
-    Cut and paste ID |
-    Cut and paste ID + children
-    Cut and paste ID + children |
-    Cut and paste children
-    Copy and paste ID
-    Copy and paste ID |
-    Copy and paste ID + children
-    Copy and paste ID + children |
-    Add ID
-    Rename ID
-    Delete ID
-    Delete ID |
-    Delete ID, orphan children
-    Delete ID + all children
-    Delete ID from all hierarchies
-    Delete ID from all hierarchies |
-    Delete ID from all hierarchies, orphan children
-    Sort sheet
-```
+Import -> Import changes replays a saved changelog on the file you have open. Use this to apply the same edits to another file, or to replay an exported list.
 
-You can also recycle the imported changes, importing them again into another file. There are certain things that may stop a change from being imported, for example if the change was made to a column with a different name or number than the column in the open sheet or if an IDs parent is different. Unfortunately at this time it does not tell you why a change has not been imported successfully, this may be improved in a future version.
+The file must be .csv, .tsv, .xlsx, .xlsm, .xls or .json. For Excel, only the first sheet is read. The table must have exactly five columns, the same as an exported changelog.
 
-- Paste Clipboard & Overwrite Sheet allows you to get copied data from your devices clipboard and overwrite all current data. This action can be undone.
-- Merge sheets allows you to merge one sheet with another, you have options to overwrite details, parents, add new ids etc. You also can simply add multiple additional rows by pasting into the sheet on the right hand side of the pop-up.
+Lines that already start with "Imported change |" or "Merge |" are treated as the action after that prefix, so you can export and import the same list again.
 
-#### Export Menu
+Each row is tried on its own. A change is applied only if the sheet still matches what the row expects, for example:
 
-- Export changes gives a view of the changelog and allows saving/exporting of changes.
-- Export flattened sheet allows you to add all IDs flattened levels for any hierarchies to a sheet and then gives options for saving as .xlsx or .csv or copying to clipboard.
+- The column still exists, with the same name and type
+- The ID still exists
+- For a cell edit, the current value is still the old value in the row
+- For a move or delete, the parent is still the parent recorded in the row
+- Detail values still pass that column's validation
+
+If the new value is already what the sheet has, that row is counted as unnecessary, not as a failure.
+
+When it finishes, a window lists the rows that were tried. Green applied, red did not. The status line shows how many succeeded. It does not say why a row failed.
+
+The whole import can be undone as one step.
+
+#### Merge sheets
+
+Import -> Merge Sheets / Add rows combines another table with the open file.
+
+You can open a file, paste from the clipboard, or type in the sheet on the right. Pick the same kind of file shape you would when opening a file, and set the ID and parent columns if asked. Opening a file resets the merge sheet.
+
+Options (on unless you turn them off):
+
+- Add new IDs: IDs that are not in the open file are added
+- Add new detail columns / Add new parent columns: columns whose names are not already in the open file are added. New detail columns are Text.
+- Overwrite details / Overwrite parents: for IDs that exist in both, copy values from columns with the same name
+
+IDs and column names are matched without caring about case. A detail is only written if it is valid for that column's type. After the merge the tree is rebuilt, so parent values on new IDs are applied then.
+
+If nothing applies you get "No applicable changes were made". The merge can be undone.
+
+Right-click insert row uses the same window, already showing the sheet so you can paste extra rows.
+
+Import -> Paste Clipboard & Overwrite Sheet replaces the whole open sheet with clipboard data. That can be undone. It is not a merge.
+
+#### Export flattened sheet
+
+Export -> Export flattened sheet opens a window with levels across columns. The open file is not changed.
+
+Pick which hierarchy (parent column) to flatten. Then:
+
+- Include detail columns
+- Justify left
+- Reverse order: bottom of the tree on the left, top on the right
+- Add index column
+- Remove End IDs: drop that many levels from the end of each path
+
+View -> Show Detail Excluder lets you leave some detail columns out.
+
+File -> Save As writes .xlsx, .csv, .tsv or .json. Edit has copy as tab-separated, comma-separated or json.
+
+Saving the main file can also add a flattened sheet. That uses File -> Settings -> xlsx Flatten Settings, not this window. If you are viewing all hierarchies when you save, the first hierarchy is the one written.
+
+#### Tag IDs
+
+Edit -> Tag/Untag IDs, Ctrl + T, or the Tag ID button. Works on the current selection in the tree or the sheet. Tagging the same ID again removes the tag.
+
+Tagged IDs get an orange mark on the row index and appear in the dropdowns at the top. Pick one to jump to it. If that ID is in more than one hierarchy, you choose which.
+
+Tags are stored with app data when you save .xlsx or .json.
+
+Edit -> Clear all tagged IDs cannot be undone.
+
+#### Replace using mapping
+
+Edit -> Replace using mapping. Two columns: find (not case sensitive) and replace with. It runs on the whole sheet.
+
+Load a file, paste from the clipboard, or type in the mini table. After you click Replace, the status line says how many cells changed.
+
+#### Save new version
+
+File -> Save new version writes a new file next to the current one (you pick the folder). It looks for other files with the same name and a number on the end, then uses a higher number. If the name has no number, one is added.
+
+This still writes a new file. It does not update an old Excel workbook in place. See XLSX Files.
 
 ---
 
@@ -333,13 +402,15 @@ In the tree panel:
 
 1. Find: Clicking the find button will attempt to find either an ID or detail.
     - This depends on which is selected in the drop-down box on the right of "Find".
-    - The drop-down box below the Find button will display any results found within the CURRENTLY viewed hierarchy. 
-    - All finds are **not** case sensitive, including "exact match".
+    - The drop-down box below the Find button will display any results found within the CURRENTLY viewed hierarchy.
+    - All finds are not case sensitive, including "exact match".
 2. Hierarchy: This is the drop-down box where you can select which parent column/hierarchy to view.
+3. Tag ID: tags the selection. Tagged IDs show up in the dropdown next to the button. See Guides -> Tag IDs.
 
-1. In the sheet panel:
-    - Tagged IDs (Ctrl + T): Allows you to tag IDs, tagged IDs show up in the dropdown box next to the button and persist through saving as .json and .xlsx.
-    - Find: Works the same way that the Find button for the Tree panel works except it searches the sheet instead.
+In the sheet panel:
+
+- Tagged IDs (Ctrl + T): same tagging as in the tree. See Guides -> Tag IDs.
+- Find: Works the same way that the Find button for the Tree panel works except it searches the sheet instead.
 
 ---
 
@@ -347,19 +418,19 @@ In the tree panel:
 
 By right clicking on an ID in the tree panel you can select various functions. The main functions are Detach, Copy and Delete.
 
-To cut or copy an ID between different hierarchies:
+To detach or copy an ID between different hierarchies:
 
-- Right click on the ID and select whichever option you want then switch hierarchy and right click in empty space or on the ID you want to paste the cut/copied ID to as a sibling or child. 
+- Right click on the ID and select whichever option you want then switch hierarchy and right click in empty space or on the ID you want to paste the detached/copied ID to as a sibling or child.
 - If you want to paste an ID as an ID without a parent right click on a top ID and choose paste as sibling.
-- You can also cut all of an IDs children, including grandchildren and so on, and paste them under where you right click.
+- You can also detach all of an ID's children, including grandchildren and so on, and paste them under where you right click.
 - Using shift click you can select multiple up or down of an existing selection. Using Ctrl click you can make multiple selections.
 - When using the Ctrl X, C and V keys to cut/copy and paste they will work on the selected ID, not on the position where the mouse is hovering (unless pasting over empty space using Ctrl V).
-- Cutting and copying using this method will only perform on IDs that are on the same level as the top most (index-wise) ID, after pressing Ctrl X or C it will deselect any selections that were not cut or copied. 
+- Cutting and copying using this method will only perform on IDs that are on the same level as the top most (index-wise) ID, after pressing Ctrl X or C it will deselect any selections that were not cut or copied.
 
 ID Deletion:
 
 - Pressing the Delete key on multiple selections will work the same way, except performing a Delete immediately. The delete key uses the typical Delete ID function, not deleting its children.
-- In the tree panel there are 5 delete ID options. Delete ID only removes the ID from the hierarchy you're currently viewing IF the ID occurs in another hierarchy, if it does not then it totally removes the ID. 
+- In the tree panel there are 5 delete ID options. Delete ID only removes the ID from the hierarchy you're currently viewing IF the ID occurs in another hierarchy, if it does not then it totally removes the ID.
 - Del all of ID totally removes the ID. Del ID+children is the same as Delete ID but for every child and child of that child and so on recursively under the selected ID.
 
 Editing cells:
@@ -373,11 +444,22 @@ Editing cells:
 
 # TREE COMPARE
 
-Accessible from the "File" menu, this window allows comparison of trees and sheets.
+File -> Compare sheets. Two panels, left and right. You can mix file types.
 
-- Once a file has been opened using the open file button, the file name or path will be displayed and if the file is an excel file and was opened from the file dialog then you will have to select a sheet from the drop down box next to "Load sheet". 
-- You can select your sheets ID column and parent column numbers and do the same with the 2nd panel on the right. After you are happy with your selections click the "Create Report" button to compare. A report will be generated and you have the option to save it as an .xlsx file.
-- You can mix different file types when comparing.
+1. Open a file on each side. Opening another file on that side resets it.
+2. For Excel without app data, pick the sheet and click Load sheet. If the workbook has a program_data sheet, that is used and you skip the sheet picker.
+3. Set the ID column and at least one parent column on each side. An ID column cannot also be a parent column.
+4. Create Report. You can save the report as .xlsx.
+
+The report can include:
+
+- Warnings from building each tree
+- Different ID column index or name
+- Parent or detail columns that exist on only one side, or in different positions
+- IDs that exist on only one side
+- Different parents or details on IDs that exist on both sides
+
+IDs are matched without caring about case. If nothing differs, the header says the sheets are identical.
 
 ---
 
@@ -385,19 +467,17 @@ Accessible from the "File" menu, this window allows comparison of trees and shee
 
 The default save format is .xlsx.
 
-When saving .xlsx files you can also save program data to keep your changelog, row heights, column widths, formatting, validation, treeview ID order and more.
+Save writes a new workbook. It does not open the old Excel file and update it. If you save over an existing .xlsx, the whole file is replaced. Other sheets, charts, macros, pictures and anything else that was in that file are gone. Only what TkTrees writes remains.
 
-When loading a file saved with program data the sheet and changelog in the program data, not the visible sheet, will take precedent. This means any edits in the viewable sheet will not be loaded.
+When saving .xlsx files you can also save program data to keep your changelog, row heights, column widths, formatting, validation, treeview ID order and more. That is stored on a sheet named program_data.
+
+When loading a file saved with program data the sheet and changelog in the program data, not the visible sheet, will take precedence. This means any edits in the viewable sheet will not be loaded.
 
 To disable saving with program data go to File -> Settings -> xlsx save options -> Save with app data.
 
-If choosing to save program data any sheet named "program_data" will be overwritten when saving a workbook.
+You can also add a viewable changelog sheet, a tree sheet, and a flattened sheet for the currently viewed hierarchy. If viewing all hierarchies when saving then the first hierarchy will be saved.
 
-You can also save a viewable changelog sheet. Sheets with "Changelog" in their name will be overwritten when this option is chosen.
-
-When saving .xlsx files you can also save the flattened format of the currently viewed hierarchy any sheets with "flattened" in their name will be overwritten. If viewing all hierarchies when saving then the first hierarchy will be saved.
-
-When comparing or merging if the workbook contains program data then it will take precedent, else a sheet will need to be selected to load data.
+When comparing or merging if the workbook contains program data then it will take precedence, else a sheet will need to be selected to load data.
 
 ---
 
@@ -494,6 +574,34 @@ Program data is only included if Save is used as opposed to Copy to clipboard. I
 
 ---
 
+# BUNDLED LIBRARIES
+
+**openpyxl**
+
+- Version: 3.1.5
+- Original source: https://foss.heptapod.net/openpyxl
+- License: MIT License
+- Full license text and conditions: See `openpyxl/LICENCE.rst`
+- Authors and copyright holders: See `openpyxl/AUTHORS.rst`
+- Note: This library is bundled to handle Excel file operations.
+
+**defusedxml**
+
+- Version: 0.7.1
+- Original source: https://github.com/tiran/defusedxml
+- License: Python Software Foundation License (PSFL)
+- Full license text and conditions: See `defusedxml/LICENSE`
+- Copyright: Copyright (c) 2013-2023 by Christian Heimes
+- Note: This library is bundled for secure XML parsing.
+
+**tksheet**
+
+- Original source: https://github.com/ragardner/tksheet
+- License: MIT License
+- Full license text and conditions: See `tksheet/LICENSE.txt`
+- Copyright: Copyright (c) ragardner
+- Note: This library is bundled for tkinter sheet/table functionality.
+
 # USING THE API
 
 The app can be run using the command line without triggering a user interface to get different outputs and file conversions.
@@ -561,31 +669,3 @@ Unflatten a file where the flattened id columns are in the order of right to lef
 ```
 python TKTREES.pyw unflatten-top-base "input filepath here.csv" "output filepath here.csv" -all-parent-columns-0,2,4,6 -delim-tab -o
 ```
-
-# BUNDLED LIBRARIES
-
-**openpyxl**
-
-- Version: 3.1.5
-- Original source: https://foss.heptapod.net/openpyxl
-- License: MIT License
-- Full license text and conditions: See `openpyxl/LICENCE.rst`
-- Authors and copyright holders: See `openpyxl/AUTHORS.rst`
-- Note: This library is bundled to handle Excel file operations.
-
-**defusedxml**
-
-- Version: 0.7.1
-- Original source: https://github.com/tiran/defusedxml
-- License: Python Software Foundation License (PSFL)
-- Full license text and conditions: See `defusedxml/LICENSE`
-- Copyright: Copyright (c) 2013-2023 by Christian Heimes
-- Note: This library is bundled for secure XML parsing.
-
-**tksheet**
-
-- Original source: https://github.com/ragardner/tksheet
-- License: MIT License
-- Full license text and conditions: See `tksheet/LICENSE.txt`
-- Copyright: Copyright (c) ragardner
-- Note: This library is bundled for tkinter sheet/table functionality.
