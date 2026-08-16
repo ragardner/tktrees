@@ -55,10 +55,10 @@ The following data formats are supported for loading:
 | Data Structure                    | Header Requirement   | Details Requirement |
 |-----------------------------------|----------------------|---------------------|
 | ID, Parent                        | Must have header     | Optional, Unlimited |
-| Top → Base                        | Must have header     | Optional, Unlimited |
-| Top → Base (Unique Details)       | Must have header     | Optional, Unlimited |
-| Base → Top                        | Must have header     | Optional, Unlimited |
-| Base → Top (Unique Details)       | Must have header     | Optional, Unlimited |
+| Top -> Base                       | Must have header     | Optional, Unlimited |
+| Top -> Base (Unique Details)      | Must have header     | Optional, Unlimited |
+| Base -> Top                       | Must have header     | Optional, Unlimited |
+| Base -> Top (Unique Details)      | Must have header     | Optional, Unlimited |
 | Level-Indent Columns              | Must NOT have header | Optional, Max. 1    |
 | Level-Indent Columns Multi-Detail | Must NOT have header | Optional, Unlimited |
 | Level-Indent Columns with Header  | Must have header     | Optional, Unlimited |
@@ -73,13 +73,13 @@ Unique details means each level keeps its own detail columns, instead of one sha
 | Mid   | Top       | Mid Description  |
 | Base  | Mid       | Base Description |
 
-**Example: Top → Base**
+**Example: Top -> Base**
 
 | Level0 | Description0    | Level1 | Description1    | Level2 | Description2     |
 |--------|-----------------|--------|-----------------|--------|------------------|
 | Top    | Top Description | Mid    | Mid Description | Base   | Base Description |
 
-**Output Example: Top → Base with normal Mode →**
+**Output Example: Top -> Base with normal Mode ->**
 
 | ID    | Parent    | Description0     |
 |-------|-----------|------------------|
@@ -87,7 +87,7 @@ Unique details means each level keeps its own detail columns, instead of one sha
 | Mid   | Top       | Mid Description  |
 | Base  | Mid       | Base Description |
 
-**Output Example: Top → Base with Unique Details Mode →**
+**Output Example: Top -> Base with Unique Details Mode ->**
 
 | ID    | Parent    | Description0     | Description1    | Description2     |
 |-------|-----------|------------------|-----------------|------------------|
@@ -95,7 +95,7 @@ Unique details means each level keeps its own detail columns, instead of one sha
 | Mid   | Top       |                  | Mid Description |                  |
 | Base  | Mid       |                  |                 | Base Description |
 
-**Example: Base → Top**
+**Example: Base -> Top**
 
 | Level2 | Description2     | Level1 | Description1    | Level0 | Description0    |
 |--------|------------------|--------|-----------------|--------|-----------------|
