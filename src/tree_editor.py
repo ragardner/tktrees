@@ -3915,6 +3915,8 @@ class Tree_Editor(tk.Frame):
         if to_del is None:
             to_del = []
         iid = name.lower()
+        if iid not in self.nodes or self.nodes[iid].ps[self.pc] is None:
+            return to_del
         pk = self.get_ids_parent(iid)
         if pk:
             self.nodes[pk].cn[self.pc].remove(iid)
@@ -3980,6 +3982,8 @@ class Tree_Editor(tk.Frame):
         if to_del is None:
             to_del = []
         iid = name.lower()
+        if iid not in self.nodes:
+            return to_del
         self.untag_id(iid)
         to_sort = set()
         if not self.auto_sort_nodes_bool:
@@ -4059,6 +4063,8 @@ class Tree_Editor(tk.Frame):
 
     def _del_id_orphan_core(self, name: str, parent: str, snapshot: bool = True) -> None:
         ik = name.lower()
+        if ik not in self.nodes or self.nodes[ik].ps[self.pc] is None:
+            return
         pk = parent.lower()
         self.refresh_rows = set()
         if pk:
@@ -4102,6 +4108,8 @@ class Tree_Editor(tk.Frame):
 
     def _del_id_all_orphan_core(self, name: str, snapshot: bool = True) -> None:
         ik = name.lower()
+        if ik not in self.nodes:
+            return
         self.refresh_rows = set()
         to_sort = set()
         self.untag_id(ik)
@@ -7804,7 +7812,11 @@ class Tree_Editor(tk.Frame):
         self.snapshot_delete_ids()
         to_del = []
         self.refresh_rows = set()
+        processed = 0
         for iid in iids:
+            iid = iid.lower()
+            if iid not in self.nodes or self.nodes[iid].ps[self.pc] is None:
+                continue
             par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
             to_del = self._del_id_core(iid, to_del, snapshot=True)
             self.changelog_append_no_unsaved(
@@ -7813,14 +7825,15 @@ class Tree_Editor(tk.Frame):
                 "",
                 "",
             )
-        if len(iids) > 1:
+            processed += 1
+        if processed > 1:
             self.changelog_append(
-                f"Delete {len(iids)} IDs",
+                f"Delete {processed} IDs",
                 "",
                 "",
                 "",
             )
-        else:
+        elif processed == 1:
             self.changelog_singular("Delete ID")
         if to_del:
             self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
@@ -7844,6 +7857,9 @@ class Tree_Editor(tk.Frame):
         to_del = []
         self.refresh_rows = set()
         for iid in iids:
+            iid = iid.lower()
+            if iid not in self.nodes:
+                continue
             to_del = self._del_id_all_core(iid, to_del, snapshot=True)
             self.changelog_append_no_unsaved(
                 "Delete ID from all hierarchies |",
@@ -7858,7 +7874,7 @@ class Tree_Editor(tk.Frame):
                 "",
                 "",
             )
-        else:
+        elif to_del:
             self.changelog_singular("Delete ID from all hierarchies")
         if to_del:
             self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
