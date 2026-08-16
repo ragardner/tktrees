@@ -382,6 +382,12 @@ Tags are stored with app data when you save .xlsx or .json.
 
 Edit -> Clear all tagged IDs cannot be undone.
 
+#### Delete IDs using list
+
+Edit -> Delete IDs using list. One column of IDs. Empty cells are ignored.
+
+Load a file, paste from the clipboard, or type in the mini table. The four delete buttons match the tree multi-select delete options. Current-hierarchy deletes use the hierarchy you are viewing. After a delete, the status line says how many of the listed IDs were deleted, for example `5/10 ids deleted`.
+
 #### Replace using mapping
 
 Edit -> Replace using mapping. Two columns: find (not case sensitive) and replace with. It runs on the whole sheet.

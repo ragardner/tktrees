@@ -1439,7 +1439,176 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
             self.destroy()
 
 
-class Replace_Popup(tk.Toplevel):
+def _limit_sheet_columns(rows, n_cols):
+    return [r + list(repeat("", n_cols - len(r))) if len(r) < n_cols else r[:n_cols] for r in rows]
+
+
+class Sheet_File_Load_Mixin:
+    load_column_limit = 2
+
+    def get_clipboard_data(self, event=None):
+        self.start_work("Loading...")
+        self.reset()
+        try:
+            temp_data = self.C.clipboard_get()
+        except Exception as error_msg:
+            self.stop_work(f"Error: Error getting data from clipboard: {error_msg}")
+            return
+        try:
+            self.status_bar.change_text("Loading...")
+            if temp_data.startswith("{") and temp_data.endswith("}"):
+                self.C.new_sheet = json_to_sheet(json.loads(temp_data))
+            else:
+                self.C.new_sheet = csv_str_x_data(temp_data)
+        except Exception as error_msg:
+            self.stop_work(f"Error: Error transforming clipboard data: {error_msg}")
+            return
+        if not self.C.new_sheet:
+            self.stop_work("Error: No data found on clipboard")
+            return
+        self.sheetdisplay.deselect()
+        self.C.new_sheet = _limit_sheet_columns(self.C.new_sheet, self.load_column_limit)
+        self.sheetdisplay.data_reference(
+            newdataref=self.C.new_sheet,
+            reset_col_positions=False,
+        )
+        self.sheet_opened = "n/a"
+        self.C.new_sheet = []
+        self.stop_work("Data successfully loaded from clipboard")
+
+    def try_to_close_wb(self):
+        with suppress(Exception):
+            self.wb_.close()
+        with suppress(Exception):
+            self.wb_ = None
+
+    def USER_HAS_CLOSED_WINDOW(self, callback=None):
+        self.C.new_sheet = []
+        self.try_to_close_wb()
+        self.destroy()
+
+    def open_file(self):
+        self.start_work("Loading...   ")
+        self.reset()
+        filepath = filedialog.askopenfilename(parent=self, title="Select file")
+        if not filepath:
+            self.stop_work("Select a file")
+            return
+        try:
+            filepath = os.path.normpath(filepath)
+        except Exception:
+            self.stop_work("Error: filepath invalid")
+            return
+        if not filepath.lower().endswith((".json", ".xlsx", ".xls", ".xlsm", ".csv", ".tsv")):
+            self.stop_work("Error: select json/excel/csv   ")
+            return
+        check = os.path.isfile(filepath)
+        if not check:
+            self.stop_work("Error: filepath invalid")
+            return
+        try:
+            self.status_bar.change_text("Loading...")
+            if filepath.lower().endswith((".csv", ".tsv")):
+                with open(filepath, "r") as fh:
+                    temp_data = fh.read()
+                self.C.new_sheet = _limit_sheet_columns(csv_str_x_data(temp_data), self.load_column_limit)
+
+            elif filepath.lower().endswith(".json"):
+                j = get_json_from_file(filepath)
+                json_format = get_json_format(j)
+                if not json_format:
+                    self.C.new_sheet = []
+                    self.stop_work("Error opening file, could not find data of correct format")
+                    return
+                self.C.new_sheet = json_to_sheet(
+                    j,
+                    format_=json_format[0],
+                    key=json_format[1],
+                    get_format=False,
+                    return_rowlen=False,
+                )
+                if not self.C.new_sheet:
+                    self.stop_work("Error: File contained no data")
+                    self.select_sheet_button.config(state="disabled")
+                    return
+                self.C.new_sheet = _limit_sheet_columns(self.C.new_sheet, self.load_column_limit)
+
+            elif filepath.lower().endswith((".xlsx", ".xls", ".xlsm")):
+                in_mem = bytes_io_wb(filepath)
+                self.wb_ = load_workbook(in_mem, read_only=True, data_only=True)
+                wbsheets = self.wb_.sheetnames
+                if not wbsheets:
+                    self.stop_work("Error: File/sheet contained no data")
+                    return
+                self.sheet_dropdown["values"] = wbsheets
+                self.sheet_dropdown.set_my_value(wbsheets[0])
+                self.stop_work("Select a sheet to open")
+                self.select_sheet_button.config(state="normal")
+
+        except Exception as error_msg:
+            self.try_to_close_wb()
+            self.C.new_sheet = []
+            self.stop_work(f"Error: {error_msg}")
+            return
+        if not self.C.new_sheet and not filepath.lower().endswith((".xlsx", ".xls", ".xlsm")):
+            self.C.new_sheet = []
+            self.stop_work("Error: File/sheet contained no data")
+            return
+        if self.C.new_sheet:
+            self.sheetdisplay.data_reference(
+                newdataref=self.C.new_sheet,
+                reset_col_positions=False,
+            )
+        self.open_file_display.set_my_value(filepath)
+        self.C.new_sheet = []
+        self.stop_work(f"Data successfully loaded from {os.path.basename(self.open_file_display.get_my_value())}")
+
+    def select_sheet(self):
+        self.start_work("Loading...")
+        self.sheet_opened = self.sheet_dropdown.get_my_value()
+        ws = self.wb_[self.sheet_opened]
+        ws.reset_dimensions()
+        self.C.new_sheet = ws_x_data(ws)
+        self.try_to_close_wb()
+        if not self.C.new_sheet:
+            self.stop_work("Error: File/sheet contained no data")
+            self.select_sheet_button.config(state="disabled")
+            return
+        self.C.new_sheet = _limit_sheet_columns(self.C.new_sheet, self.load_column_limit)
+        self.select_sheet_button.config(state="disabled")
+        self.sheetdisplay.data_reference(
+            newdataref=self.C.new_sheet,
+            reset_col_positions=False,
+            redraw=True,
+        )
+        self.C.new_sheet = []
+        self.stop_work(f"Loaded sheet: {self.sheet_opened}")
+
+    def start_work(self, msg=""):
+        if msg is not None:
+            self.status_bar.change_text(msg)
+        self.C.start_work(self.C.get_tree_editor_status_bar_text())
+
+    def stop_work(self, msg=""):
+        if msg is not None:
+            self.status_bar.change_text(msg)
+        self.C.stop_work(self.C.get_tree_editor_status_bar_text())
+
+    def reset(self):
+        self.try_to_close_wb()
+        self.C.new_sheet = []
+        self.open_file_display.set_my_value("")
+        self.sheet_dropdown["values"] = []
+        self.sheet_dropdown.set("")
+        self.select_sheet_button.config(state="disabled")
+
+    def cancel(self, event=None):
+        self.USER_HAS_CLOSED_WINDOW()
+
+
+class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
+    load_column_limit = 2
+
     def __init__(self, C, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, "Replace using mapping")
@@ -1517,164 +1686,6 @@ class Replace_Popup(tk.Toplevel):
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
         show_toplevel_chores(self, self, self, wait_window=False)
 
-    def get_clipboard_data(self, event=None):
-        self.start_work("Loading...")
-        self.reset()
-        try:
-            temp_data = self.C.clipboard_get()
-        except Exception as error_msg:
-            self.stop_work(f"Error: Error getting data from clipboard: {error_msg}")
-            return
-        try:
-            self.status_bar.change_text("Loading...")
-            if temp_data.startswith("{") and temp_data.endswith("}"):
-                self.C.new_sheet = json_to_sheet(json.loads(temp_data))
-            else:
-                self.C.new_sheet = csv_str_x_data(temp_data)
-        except Exception as error_msg:
-            self.stop_work(f"Error: Error transforming clipboard data: {error_msg}")
-            return
-        if not self.C.new_sheet:
-            self.stop_work("Error: No data found on clipboard")
-            return
-        self.sheetdisplay.deselect()
-        self.C.new_sheet = [r + list(repeat("", 2 - len(r))) if len(r) < 2 else r[:2] for r in self.C.new_sheet]
-        self.sheetdisplay.data_reference(
-            newdataref=self.C.new_sheet,
-            reset_col_positions=False,
-        )
-        self.sheet_opened = "n/a"
-        self.C.new_sheet = []
-        self.stop_work("Data successfully loaded from clipboard")
-
-    def try_to_close_wb(self):
-        with suppress(Exception):
-            self.wb_.close()
-        with suppress(Exception):
-            self.wb_ = None
-
-    def USER_HAS_CLOSED_WINDOW(self, callback=None):
-        self.C.new_sheet = []
-        self.try_to_close_wb()
-        self.destroy()
-
-    def open_file(self):
-        self.start_work("Loading...   ")
-        self.reset()
-        filepath = filedialog.askopenfilename(parent=self, title="Select file")
-        if not filepath:
-            self.stop_work("Select a file")
-            return
-        try:
-            filepath = os.path.normpath(filepath)
-        except Exception:
-            self.stop_work("Error: filepath invalid")
-            return
-        if not filepath.lower().endswith((".json", ".xlsx", ".xls", ".xlsm", ".csv", ".tsv")):
-            self.stop_work("Error: select json/excel/csv   ")
-            return
-        check = os.path.isfile(filepath)
-        if not check:
-            self.stop_work("Error: filepath invalid")
-            return
-        try:
-            self.status_bar.change_text("Loading...")
-            if filepath.lower().endswith((".csv", ".tsv")):
-                with open(filepath, "r") as fh:
-                    temp_data = fh.read()
-                self.C.new_sheet = [
-                    r + list(repeat("", 2 - len(r))) if len(r) < 2 else r[:2] for r in csv_str_x_data(temp_data)
-                ]
-
-            elif filepath.lower().endswith(".json"):
-                j = get_json_from_file(filepath)
-                json_format = get_json_format(j)
-                if not json_format:
-                    self.C.new_sheet = []
-                    self.stop_work("Error opening file, could not find data of correct format")
-                    return
-                self.C.new_sheet = json_to_sheet(
-                    j,
-                    format_=json_format[0],
-                    key=json_format[1],
-                    get_format=False,
-                    return_rowlen=False,
-                )
-                if not self.C.new_sheet:
-                    self.stop_work("Error: File contained no data")
-                    self.select_sheet_button.config(state="disabled")
-                    return
-                self.C.new_sheet = [r + list(repeat("", 2 - len(r))) if len(r) < 2 else r[:2] for r in self.C.new_sheet]
-
-            elif filepath.lower().endswith((".xlsx", ".xls", ".xlsm")):
-                in_mem = bytes_io_wb(filepath)
-                self.wb_ = load_workbook(in_mem, read_only=True, data_only=True)
-                wbsheets = self.wb_.sheetnames
-                if not wbsheets:
-                    self.stop_work("Error: File/sheet contained no data")
-                    return
-                self.sheet_dropdown["values"] = wbsheets
-                self.sheet_dropdown.set_my_value(wbsheets[0])
-                self.stop_work("Select a sheet to open")
-                self.select_sheet_button.config(state="normal")
-
-        except Exception as error_msg:
-            self.try_to_close_wb()
-            self.C.new_sheet = []
-            self.stop_work(f"Error: {error_msg}")
-            return
-        if not self.C.new_sheet and not filepath.lower().endswith((".xlsx", ".xls", ".xlsm")):
-            self.C.new_sheet = []
-            self.stop_work("Error: File/sheet contained no data")
-            return
-        if self.C.new_sheet:
-            self.sheetdisplay.data_reference(
-                newdataref=self.C.new_sheet,
-                reset_col_positions=False,
-            )
-        self.open_file_display.set_my_value(filepath)
-        self.C.new_sheet = []
-        self.stop_work(f"Data successfully loaded from {os.path.basename(self.open_file_display.get_my_value())}")
-
-    def select_sheet(self):
-        self.start_work("Loading...")
-        self.sheet_opened = self.sheet_dropdown.get_my_value()
-        ws = self.wb_[self.sheet_opened]
-        ws.reset_dimensions()
-        self.C.new_sheet = ws_x_data(ws)
-        self.try_to_close_wb()
-        if not self.C.new_sheet:
-            self.stop_work("Error: File/sheet contained no data")
-            self.select_sheet_button.config(state="disabled")
-            return
-        self.C.new_sheet = [r + list(repeat("", 2 - len(r))) if len(r) < 2 else r[:2] for r in self.C.new_sheet]
-        self.select_sheet_button.config(state="disabled")
-        self.sheetdisplay.data_reference(
-            newdataref=self.C.new_sheet,
-            reset_col_positions=False,
-            redraw=True,
-        )
-        self.C.new_sheet = []
-        self.stop_work(f"Loaded sheet: {self.sheet_opened}")
-
-    def start_work(self, msg=""):
-        if msg is not None:
-            self.status_bar.change_text(msg)
-        self.C.start_work(self.C.get_tree_editor_status_bar_text())
-
-    def stop_work(self, msg=""):
-        if msg is not None:
-            self.status_bar.change_text(msg)
-        self.C.stop_work(self.C.get_tree_editor_status_bar_text())
-
-    def reset(self):
-        self.try_to_close_wb()
-        self.C.new_sheet = []
-        self.open_file_display.set_my_value("")
-        self.sheet_dropdown["values"] = []
-        self.sheet_dropdown.set("")
-        self.select_sheet_button.config(state="disabled")
-
     def replace(self):
         self.status_bar.change_text("Loading...")
         self.confirm_button.grid_remove()
@@ -1692,8 +1703,169 @@ class Replace_Popup(tk.Toplevel):
             self.status_bar.change_text("Could not find anything to replace.")
         self.confirm_button.grid()
 
-    def cancel(self, event=None):
-        self.USER_HAS_CLOSED_WINDOW()
+
+class Delete_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
+    load_column_limit = 1
+
+    def __init__(self, C, theme="dark"):
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
+        self.C = new_toplevel_chores(self, C, "Delete IDs using list")
+        self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
+        self.theme = theme
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
+
+        self.status_bar = Readonly_Entry_With_Scrollbar(self, theme=theme, use_status_fg=True)
+        self.status_bar.change_text(text="Delete listed IDs. Empty cells are ignored.")
+        self.status_bar.my_entry.config(relief="flat", font=("Calibri", std_font_size))
+        self.status_bar.grid(row=4, column=0, columnspan=2, sticky="we")
+
+        self.open_file_display = Readonly_Entry_With_Scrollbar(self, font=EF, theme=theme)
+        self.open_file_display.grid(row=0, column=0, padx=(10, 10), pady=(10, 5), sticky="nswe")
+        self.open_file_button = Button(
+            self,
+            text="⯇ Open file",
+            style="wx_button.Std.TButton",
+            command=self.open_file,
+        )
+        self.open_file_button.grid(row=0, column=1, padx=10, pady=10, sticky="nswe")
+        self.sheet_dropdown = Ez_Dropdown(self, font=EF)
+        self.sheet_dropdown.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
+        self.sheet_dropdown.grid(row=1, column=0, padx=10, pady=10, sticky="nswe")
+        self.select_sheet_button = Button(
+            self,
+            text="⯇ Load sheet",
+            style="wx_button.Std.TButton",
+            state="disabled",
+            command=self.select_sheet,
+        )
+        self.select_sheet_button.grid(row=1, column=1, padx=10, pady=10, sticky="nswe")
+
+        self.sheetdisplay = Sheet(
+            self,
+            theme=theme,
+            headers=["ID"],
+            header_font=sheet_header_font,
+            paste_can_expand_y=True,
+            paste_insert_column_limit=1,
+            data=[[""] for _ in range(20)],
+        )
+        self.sheetdisplay.column_width(0, 200)
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.disable_bindings("rc_delete_column", "rc_insert_column")
+        self.sheetdisplay.grid(row=2, column=0, sticky="ns")
+
+        self.options_frame = Frame(self, theme=theme)
+        self.options_frame.grid(row=2, column=1, sticky="nswe")
+        self.options_frame.grid_columnconfigure(0, weight=1)
+
+        self.clipboard_button = Button(
+            self.options_frame,
+            text=" Get data from clipboard ",
+            style="wx_button.Std.TButton",
+            state="normal",
+            command=self.get_clipboard_data,
+        )
+        self.clipboard_button.grid(row=0, column=0, padx=10, pady=(10, 20), sticky="nswe")
+
+        self.current_hier_label = Label(
+            self.options_frame,
+            text="Current hierarchy",
+            font=EFB,
+            theme=theme,
+            anchor="w",
+        )
+        self.current_hier_label.grid(row=1, column=0, padx=10, pady=(0, 5), sticky="we")
+
+        self.del_id_button = Button(
+            self.options_frame,
+            text="Delete IDs",
+            style="wx_button.Std.TButton",
+            command=lambda: self.delete_listed("id"),
+        )
+        self.del_id_button.grid(row=2, column=0, padx=10, pady=5, sticky="nswe")
+
+        self.del_id_children_button = Button(
+            self.options_frame,
+            text="Delete IDs + children",
+            style="wx_button.Std.TButton",
+            command=lambda: self.delete_listed("children"),
+        )
+        self.del_id_children_button.grid(row=3, column=0, padx=10, pady=5, sticky="nswe")
+
+        self.all_hiers_label = Label(
+            self.options_frame,
+            text="All hierarchies",
+            font=EFB,
+            theme=theme,
+            anchor="w",
+        )
+        self.all_hiers_label.grid(row=4, column=0, padx=10, pady=(15, 5), sticky="we")
+
+        self.del_id_all_button = Button(
+            self.options_frame,
+            text="Delete IDs all hierarchies",
+            style="wx_button.Std.TButton",
+            command=lambda: self.delete_listed("all"),
+        )
+        self.del_id_all_button.grid(row=5, column=0, padx=10, pady=5, sticky="nswe")
+
+        self.del_id_children_all_button = Button(
+            self.options_frame,
+            text="Delete IDs + children, all hierarchies",
+            style="wx_button.Std.TButton",
+            command=lambda: self.delete_listed("children_all"),
+        )
+        self.del_id_children_all_button.grid(row=6, column=0, padx=10, pady=5, sticky="nswe")
+
+        self.done_button = Button(
+            self.options_frame,
+            text="Done",
+            style="EF.Std.TButton",
+            command=self.cancel,
+        )
+        self.done_button.grid(row=7, column=0, padx=50, pady=(40, 20), sticky="we")
+
+        self.bind("<Escape>", self.cancel)
+        self.bind(f"<{ctrl_button}-z>", self.C.undo)
+        self.bind(f"<{ctrl_button}-Z>", self.C.undo)
+        show_toplevel_chores(self, width=self, wait_window=False)
+
+    def _collect_ids(self) -> list[str]:
+        seen = set()
+        ids = []
+        for row in self.sheetdisplay.get_sheet_data():
+            if not row:
+                continue
+            text = "" if row[0] is None else str(row[0])
+            text = re.sub(r"[\n\t\s]*", "", text) if not self.C.allow_spaces_ids_var else text.strip()
+            if not text:
+                continue
+            ik = text.lower()
+            if ik not in seen:
+                seen.add(ik)
+                ids.append(ik)
+        return ids
+
+    def delete_listed(self, kind: str) -> None:
+        requested = self._collect_ids()
+        if kind == "all":
+            valid = [iid for iid in requested if iid in self.C.nodes]
+            fn = self.C.del_id_all
+        else:
+            valid = [iid for iid in requested if iid in self.C.nodes and self.C.nodes[iid].ps[self.C.pc] is not None]
+            fn = {
+                "children": self.C.del_id_children,
+                "children_all": self.C.del_id_children_all,
+            }.get(kind, self.C.del_id)
+        self.status_bar.change_text("Deleting...")
+        self.update()
+        if valid:
+            fn(valid)
+        self.status_bar.change_text(f"{len(valid)}/{len(requested)} ids deleted")
+        self.focus_force()
 
 
 class View_Id_Popup(tk.Toplevel):

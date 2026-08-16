@@ -125,6 +125,7 @@ from .toplevels import (
     Add_Top_Id_Popup,
     Ask_Confirm,
     Changelog_Popup,
+    Delete_Ids_Using_List_Popup,
     Edit_Conditional_Formatting_Popup,
     Edit_Detail_Date_Popup,
     Edit_Detail_Number_Popup,
@@ -331,6 +332,13 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.edit_menu.add_separator()
+        self.edit_menu.add_command(
+            label="Delete IDs using list",
+            command=self.delete_ids_using_list,
+            image=self.icons["ICON_DEL"],
+            compound="left",
+            **menu_kwargs,
+        )
         self.edit_menu.add_command(
             label="Replace using mapping",
             command=self.replace_using_mapping,
@@ -2304,6 +2312,9 @@ class Tree_Editor(tk.Frame):
                 sheet_c,
                 only_set_if_too_small=True,
             )
+
+    def delete_ids_using_list(self, event=None) -> None:
+        Delete_Ids_Using_List_Popup(self, theme=self.C.theme)
 
     def replace_using_mapping(self, event=None) -> None:
         Replace_Popup(self, theme=self.C.theme)
