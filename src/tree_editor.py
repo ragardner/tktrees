@@ -1091,6 +1091,20 @@ class Tree_Editor(tk.Frame):
             compound="left",
             **menu_kwargs,
         )
+        self.tree_rc_menu_multi_row.add_command(
+            label="Delete IDs + children",
+            command=self.del_id_children,
+            image=self.icons["ICON_DEL"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_multi_row.add_command(
+            label="Delete IDs + children, all hierarchies",
+            command=self.del_id_children_all,
+            image=self.icons["ICON_DEL"],
+            compound="left",
+            **menu_kwargs,
+        )
 
         # SINGLE ROW MENU - TREE
         self.tree_rc_menu_single_row = tk.Menu(self.treeframe, tearoff=0, **menu_kwargs)
@@ -4146,20 +4160,26 @@ class Tree_Editor(tk.Frame):
                 self.levels[next_lvl].append(child)
                 stack.append((child, next_lvl))
 
-    def _del_id_children_core(self, name: str, parent: str, snapshot: bool = True) -> None:
+    def _del_id_children_core(
+        self, name: str, to_del: list[str] | None = None, snapshot: bool = True
+    ) -> list[str]:
+        if to_del is None:
+            to_del = []
         ik = name.lower()
-        to_del = []
-        self.refresh_rows = set()
+        if ik not in self.nodes or self.nodes[ik].ps[self.pc] is None:
+            return to_del
         self.levels = defaultdict(list)
         self.get_lvls(ik)
         for lvl in sorted(((k, v) for k, v in self.levels.items()), key=itemgetter(0), reverse=True):
             for ik_ in lvl[1]:
+                if ik_ not in self.nodes:
+                    continue
                 rn = self.rns[ik_]
                 if sum(1 for v in self.nodes[ik_].ps.values() if v is not None) < 2:
                     if snapshot:
                         self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
                     del self.nodes[ik_]
-                    to_del.append(rn)
+                    to_del.append(ik_)
                     self.untag_id(ik_)
                 else:
                     if snapshot and rn not in self.vs[-1]["rows"]:
@@ -4171,7 +4191,7 @@ class Tree_Editor(tk.Frame):
                     self.nodes[ik_].cn[self.pc] = []
                     self.nodes[ik_].ps[self.pc] = None
                     self.sheet.MT.data[rn][self.pc] = ""
-        pk = parent.lower()
+        pk = self.get_ids_parent(ik)
         rn = self.rns[ik]
         if pk:
             self.nodes[pk].cn[self.pc].remove(ik)
@@ -4179,7 +4199,7 @@ class Tree_Editor(tk.Frame):
             if snapshot:
                 self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
             del self.nodes[ik]
-            to_del.append(rn)
+            to_del.append(ik)
             self.untag_id(ik)
         else:
             if snapshot and rn not in self.vs[-1]["rows"]:
@@ -4191,20 +4211,23 @@ class Tree_Editor(tk.Frame):
             self.nodes[ik].cn[self.pc] = []
             self.nodes[ik].ps[self.pc] = None
             self.sheet.MT.data[rn][self.pc] = ""
-        if to_del:
-            self.sheet.del_rows(to_del)
         self.levels = defaultdict(list)
         if self.auto_sort_nodes_bool:
-            if pk and self.nodes[pk].ps[self.pc]:
+            if pk and pk in self.nodes and self.nodes[pk].ps[self.pc]:
                 parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
                 parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
         elif not self.auto_sort_nodes_bool and pk == "":
             try_remove(self.topnodes_order[self.pc], ik)
+        return to_del
 
-    def _del_id_children_all_core(self, name: str, parent: str, snapshot: bool = True) -> None:
+    def _del_id_children_all_core(
+        self, name: str, to_del: list[str] | None = None, snapshot: bool = True
+    ) -> list[str]:
+        if to_del is None:
+            to_del = []
         ik = name.lower()
-        to_del = []
-        self.refresh_rows = set()
+        if ik not in self.nodes or self.nodes[ik].ps[self.pc] is None:
+            return to_del
         self.levels = defaultdict(list)
         # the selected id and its descendants are the things being deleted
         # so descendants in self.pc works
@@ -4226,7 +4249,7 @@ class Tree_Editor(tk.Frame):
                     if p == "":
                         if not self.auto_sort_nodes_bool:
                             self.topnodes_order[h].remove(descendant)
-                    elif p not in del_set:
+                    elif p not in del_set and p in self.nodes:
                         # otherwise we have to remove descendant from parents list of children
                         self.nodes[p].cn[h].remove(descendant)
                         # add parent to sort list
@@ -4234,7 +4257,7 @@ class Tree_Editor(tk.Frame):
                             to_sort.add((p, h))
 
                     # add grandparent to sort list
-                    if self.auto_sort_nodes_bool and p and self.nodes[p].ps[h]:
+                    if self.auto_sort_nodes_bool and p and p in self.nodes and self.nodes[p].ps[h]:
                         gp = self.nodes[p].ps[h]
                         if gp and gp not in del_set:
                             to_sort.add((gp, h))
@@ -4254,7 +4277,7 @@ class Tree_Editor(tk.Frame):
                             )
                             self.refresh_rows.add(ciid)
 
-                        if p == "" or p in del_set:
+                        if p == "" or p in del_set or p not in self.nodes:
                             # orphan child
                             self.nodes[ciid].ps[h] = ""
                             # orphan child in sheet
@@ -4272,15 +4295,15 @@ class Tree_Editor(tk.Frame):
                 rn = self.rns[descendant]
                 if snapshot:
                     self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
-                to_del.append(rn)
+                to_del.append(descendant)
                 self.untag_id(descendant)
                 del self.nodes[descendant]
 
-        pk = parent.lower()
+        pk = self.get_ids_parent(ik)
         rn = self.rns[ik]
         if snapshot:
             self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
-        to_del.append(rn)
+        to_del.append(ik)
         self.untag_id(ik)
 
         # do the same thing that we did for the descendants but for the main id being deleted
@@ -4291,7 +4314,7 @@ class Tree_Editor(tk.Frame):
             if p == "":
                 if not self.auto_sort_nodes_bool:
                     self.topnodes_order[h].remove(ik)
-            elif p not in del_set:
+            elif p not in del_set and p in self.nodes:
                 # otherwise we have to remove ik from parents list of children
                 self.nodes[p].cn[h].remove(ik)
                 # add parent to sort list
@@ -4299,7 +4322,7 @@ class Tree_Editor(tk.Frame):
                     to_sort.add((p, h))
 
             # add grandparent to sort list
-            if self.auto_sort_nodes_bool and p and self.nodes[p].ps[h]:
+            if self.auto_sort_nodes_bool and p and p in self.nodes and self.nodes[p].ps[h]:
                 gp = self.nodes[p].ps[h]
                 if gp and gp not in del_set:
                     to_sort.add((gp, h))
@@ -4323,7 +4346,7 @@ class Tree_Editor(tk.Frame):
                     )
                     self.refresh_rows.add(ciid)
 
-                if p == "" or p in del_set:
+                if p == "" or p in del_set or p not in self.nodes:
                     # orphan child
                     self.nodes[ciid].ps[h] = ""
                     # orphan child in sheet
@@ -4339,16 +4362,17 @@ class Tree_Editor(tk.Frame):
                     self.sheet.MT.data[rn][h] = self.nodes[p].name
 
         del self.nodes[ik]
-        self.sheet.del_rows(to_del, redraw=False)
         self.levels = defaultdict(list)
         if self.auto_sort_nodes_bool:
             for iid, h in to_sort:
-                self.nodes[iid].cn[h] = self.sort_node_cn(self.nodes[iid].cn[h], h)
-            if pk and self.nodes[pk].ps[self.pc]:
+                if iid in self.nodes:
+                    self.nodes[iid].cn[h] = self.sort_node_cn(self.nodes[iid].cn[h], h)
+            if pk and pk in self.nodes and self.nodes[pk].ps[self.pc]:
                 parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
                 parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
         elif not self.auto_sort_nodes_bool and pk == "":
             try_remove(self.topnodes_order[self.pc], ik)
+        return to_del
 
     def details(self, ik):
         allrows = []
@@ -7865,22 +7889,65 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.focus_tree()
 
-    def del_id_children(self):
-        if not self.selected_ID:
+    def _del_id_selection_roots(self, iids: Sequence[str]) -> list[str]:
+        selected = []
+        seen = set()
+        for iid in iids:
+            ik = iid.lower()
+            if ik in self.nodes and ik not in seen:
+                selected.append(ik)
+                seen.add(ik)
+        selected_set = set(selected)
+        roots = []
+        for ik in selected:
+            p = self.nodes[ik].ps[self.pc]
+            while p:
+                if p in selected_set:
+                    break
+                p = self.nodes[p].ps[self.pc] if p in self.nodes else ""
+            else:
+                roots.append(ik)
+        return roots
+
+    def del_id_children(self, iids: Sequence[str] | None = None) -> None:
+        if not iids:
+            iids = self.tree.selection()
+        if not iids and self.selected_ID:
+            iids = (self.selected_ID,)
+        iids = self._del_id_selection_roots(iids)
+        if not iids:
             return
-        ik = self.selected_ID.lower()
-        self.start_work(f"Deleting {ik} and all children...")
-        self.changelog_append(
-            "Delete ID + all children",
-            f"ID: {self.selected_ID} parent: {self.selected_PAR if self.selected_PAR else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
-            "",
-            "",
-        )
+        self.start_work(f"Deleting {len(iids)} IDs and all children...")
         self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        self._del_id_children_core(self.selected_ID, self.selected_PAR if self.selected_PAR else "")
-        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        to_del = []
+        self.refresh_rows = set()
+        processed = 0
+        for iid in iids:
+            if iid not in self.nodes or self.nodes[iid].ps[self.pc] is None:
+                continue
+            par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
+            to_del = self._del_id_children_core(iid, to_del, snapshot=True)
+            self.changelog_append_no_unsaved(
+                "Delete ID + all children",
+                f"ID: {self.sheet.data[self.rns[iid]][self.ic]} parent: {par if par else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
+                "",
+                "",
+            )
+            processed += 1
+        if processed > 1:
+            self.changelog_append(
+                f"Delete {processed} IDs + all children",
+                "",
+                "",
+                "",
+            )
+        elif processed == 1:
+            self.changelog_singular("Delete ID + all children")
+        if to_del:
+            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.redo_tree_display()
         self.move_tree_pos()
@@ -7890,22 +7957,45 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
         self.focus_tree()
 
-    def del_id_children_all(self):
-        if not self.selected_ID:
+    def del_id_children_all(self, iids: Sequence[str] | None = None) -> None:
+        if not iids:
+            iids = self.tree.selection()
+        if not iids and self.selected_ID:
+            iids = (self.selected_ID,)
+        iids = self._del_id_selection_roots(iids)
+        if not iids:
             return
-        ik = self.selected_ID.lower()
-        self.start_work(f"Deleting {ik} and all children...")
-        self.changelog_append(
-            "Delete ID + all children from all hierarchies",
-            f"ID: {self.selected_ID} parent: {self.selected_PAR if self.selected_PAR else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
-            "",
-            "",
-        )
+        self.start_work(f"Deleting {len(iids)} IDs and all children...")
         self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        self._del_id_children_all_core(self.selected_ID, self.selected_PAR if self.selected_PAR else "")
-        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        to_del = []
+        self.refresh_rows = set()
+        processed = 0
+        for iid in iids:
+            if iid not in self.nodes or self.nodes[iid].ps[self.pc] is None:
+                continue
+            par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
+            to_del = self._del_id_children_all_core(iid, to_del, snapshot=True)
+            self.changelog_append_no_unsaved(
+                "Delete ID + all children from all hierarchies",
+                f"ID: {self.sheet.data[self.rns[iid]][self.ic]} parent: {par if par else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
+                "",
+                "",
+            )
+            processed += 1
+        if processed > 1:
+            self.changelog_append(
+                f"Delete {processed} IDs + all children from all hierarchies",
+                "",
+                "",
+                "",
+            )
+        elif processed == 1:
+            self.changelog_singular("Delete ID + all children from all hierarchies")
+        if to_del:
+            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
         self.redo_tree_display()
         self.move_tree_pos()
@@ -9807,7 +9897,9 @@ class Tree_Editor(tk.Frame):
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
                         oldpc = int(self.pc)
                         self.pc = colnum
-                        self._del_id_children_core(cid.lower(), cpar.lower(), snapshot=False)
+                        to_del = self._del_id_children_core(cid.lower(), snapshot=False)
+                        if to_del:
+                            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
                         self.pc = int(oldpc)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
@@ -9841,7 +9933,9 @@ class Tree_Editor(tk.Frame):
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
                         oldpc = int(self.pc)
                         self.pc = colnum
-                        self._del_id_children_all_core(cid.lower(), cpar.lower(), snapshot=False)
+                        to_del = self._del_id_children_all_core(cid.lower(), snapshot=False)
+                        if to_del:
+                            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
                         self.pc = int(oldpc)
                         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                         self.changelog_append_no_unsaved(
