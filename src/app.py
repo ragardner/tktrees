@@ -6,7 +6,6 @@ from __future__ import annotations
 import os
 import tkinter as tk
 from contextlib import suppress
-from sys import argv
 from tkinter import filedialog, ttk
 
 from openpyxl import load_workbook
@@ -770,7 +769,3 @@ def run_app(startup_args):
     else:
         app = AppGUI(startup_args)
         app.mainloop()
-
-
-if __name__ == "__main__":
-    run_app(argv)
