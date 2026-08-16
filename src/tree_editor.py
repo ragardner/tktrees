@@ -3960,6 +3960,7 @@ class Tree_Editor(tk.Frame):
             del self.nodes[iid]
             self.untag_id(iid)
             to_del.append(iid)
+            self.refresh_rows.discard(iid)
         else:
             if snapshot and rn not in self.vs[-1]["rows"]:
                 self.vs[-1]["rows"][rn] = RowStorage(
@@ -4049,6 +4050,7 @@ class Tree_Editor(tk.Frame):
             self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
         del self.nodes[iid]
         to_del.append(iid)
+        self.refresh_rows.discard(iid)
         if self.auto_sort_nodes_bool:
             for node_id, h in to_sort:
                 if node_id in self.nodes:
@@ -4180,6 +4182,7 @@ class Tree_Editor(tk.Frame):
                         self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
                     del self.nodes[ik_]
                     to_del.append(ik_)
+                    self.refresh_rows.discard(ik_)
                     self.untag_id(ik_)
                 else:
                     if snapshot and rn not in self.vs[-1]["rows"]:
@@ -4200,6 +4203,7 @@ class Tree_Editor(tk.Frame):
                 self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
             del self.nodes[ik]
             to_del.append(ik)
+            self.refresh_rows.discard(ik)
             self.untag_id(ik)
         else:
             if snapshot and rn not in self.vs[-1]["rows"]:
@@ -4296,6 +4300,7 @@ class Tree_Editor(tk.Frame):
                 if snapshot:
                     self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
                 to_del.append(descendant)
+                self.refresh_rows.discard(descendant)
                 self.untag_id(descendant)
                 del self.nodes[descendant]
 
@@ -4304,6 +4309,7 @@ class Tree_Editor(tk.Frame):
         if snapshot:
             self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
         to_del.append(ik)
+        self.refresh_rows.discard(ik)
         self.untag_id(ik)
 
         # do the same thing that we did for the descendants but for the main id being deleted
@@ -5567,6 +5573,8 @@ class Tree_Editor(tk.Frame):
             "Edit cell |",
             "Delete ID from all hierarchies |",
             "Delete ID |",
+            "Delete ID + all children |",
+            "Delete ID + all children from all hierarchies |",
             "Cut and paste ID + children |",
             "Copy and paste ID |",
             "Copy and paste ID + children |",
@@ -7818,7 +7826,7 @@ class Tree_Editor(tk.Frame):
             self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
             self.sheet.deselect("all", redraw=False)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
+            self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
         self.disable_paste()
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
@@ -7856,7 +7864,7 @@ class Tree_Editor(tk.Frame):
             self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
             self.sheet.deselect("all", redraw=False)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
+            self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
         self.disable_paste()
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
@@ -7930,7 +7938,7 @@ class Tree_Editor(tk.Frame):
             par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
             to_del = self._del_id_children_core(iid, to_del, snapshot=True)
             self.changelog_append_no_unsaved(
-                "Delete ID + all children",
+                "Delete ID + all children |",
                 f"ID: {self.sheet.data[self.rns[iid]][self.ic]} parent: {par if par else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
                 "",
                 "",
@@ -7948,7 +7956,7 @@ class Tree_Editor(tk.Frame):
         if to_del:
             self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
+        self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
         self.redo_tree_display()
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
@@ -7978,7 +7986,7 @@ class Tree_Editor(tk.Frame):
             par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
             to_del = self._del_id_children_all_core(iid, to_del, snapshot=True)
             self.changelog_append_no_unsaved(
-                "Delete ID + all children from all hierarchies",
+                "Delete ID + all children from all hierarchies |",
                 f"ID: {self.sheet.data[self.rns[iid]][self.ic]} parent: {par if par else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
                 "",
                 "",
@@ -7996,7 +8004,7 @@ class Tree_Editor(tk.Frame):
         if to_del:
             self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
+        self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
         self.redo_tree_display()
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
@@ -9878,7 +9886,7 @@ class Tree_Editor(tk.Frame):
 
                 #  "Delete ID + all children"
 
-                elif ctyp == "Delete ID + all children":
+                elif ctyp == "Delete ID + all children |" or ctyp == "Delete ID + all children":
                     info = change[2].split(" ")
                     colname = info[-1]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
@@ -9914,7 +9922,10 @@ class Tree_Editor(tk.Frame):
 
                 #  "Delete ID + all children from all hierarchies"
 
-                elif ctyp == "Delete ID + all children from all hierarchies":
+                elif (
+                    ctyp == "Delete ID + all children from all hierarchies |"
+                    or ctyp == "Delete ID + all children from all hierarchies"
+                ):
                     info = change[2].split(" ")
                     colname = info[-1]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
@@ -10070,7 +10081,9 @@ class Tree_Editor(tk.Frame):
             "Delete ID |",
             "Delete ID, orphan children",
             "Delete ID + all children",
+            "Delete ID + all children |",
             "Delete ID + all children from all hierarchies",
+            "Delete ID + all children from all hierarchies |",
             "Delete ID from all hierarchies",
             "Delete ID from all hierarchies |",
             "Delete ID from all hierarchies, orphan children",
