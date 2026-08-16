@@ -50,7 +50,9 @@ from .functions import (
     get_json_from_file,
     json_to_sheet,
     load_cfg,
+    set_window_zoomed,
     try_write_error_log,
+    window_is_zoomed,
     write_cfg,
     ws_x_data,
     ws_x_program_data_str,
@@ -223,6 +225,7 @@ class AppGUI(tk.Tk):
 
         self.bind("<Configure>", self.frames["tree_edit"].WINDOW_DIMENSIONS_CHANGED)
         self.deiconify()
+        self.restore_window_state()
         if self.configsettings["First GUI start"]:
             First_Start_Popup(
                 self,
@@ -251,12 +254,12 @@ To get started once you have closed this popup, either:
         if self.working:
             return
         try:
-            self.configsettings["Window state"] = self.state()
-            if self.configsettings["Window state"] == "normal":
-                self.configsettings["Window size"] = (self.winfo_width(), self.winfo_height())
+            if window_is_zoomed(self):
+                self.configsettings["Window state"] = "zoomed"
             else:
-                self.configsettings["Window size"] = default_app_window_size
-            self.configsettings["Window coords"] = self.geometry().split("+")[1:]
+                self.configsettings["Window state"] = "normal"
+                self.configsettings["Window size"] = (self.winfo_width(), self.winfo_height())
+                self.configsettings["Window coords"] = self.geometry().split("+")[1:]
         except Exception:
             pass
         self.check_window_size_settings()
@@ -388,6 +391,17 @@ To get started once you have closed this popup, either:
         self.theme = self.configsettings["Theme"]
         self.frames["tree_edit"].set_display_option(self.configsettings["Editor display option"])
         self.frames["tree_edit"].change_theme(self.theme, write=False)
+        if self.configsettings.get("Window state") not in ("zoomed", "normal"):
+            self.configsettings["Window state"] = "zoomed"
+        # Older Linux saves stored the maximized client size as "normal".
+        try:
+            ww, wh = self.configsettings["Window size"]
+            sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+            if ww >= sw - 50 and wh >= sh * 0.85:
+                self.configsettings["Window state"] = "zoomed"
+                self.configsettings["Window size"] = default_app_window_size
+        except Exception:
+            pass
         center(
             toplevel=self,
             desired_width=self.configsettings["Window size"][0],
@@ -395,10 +409,15 @@ To get started once you have closed this popup, either:
             x=int(self.configsettings["Window coords"][0]),
             y=int(self.configsettings["Window coords"][1]),
         )
-        if self.configsettings["Window state"] not in ("zoomed", "normal"):
-            self.configsettings["Window state"] = "zoomed"
-        with suppress(Exception):
-            self.state(self.configsettings["Window state"])
+
+    def restore_window_state(self, attempt: int = 0) -> None:
+        if self.configsettings.get("Window state") != "zoomed":
+            return
+        set_window_zoomed(self, True)
+        if window_is_zoomed(self) or attempt >= 20:
+            return
+        # KDE/Wayland ignores -zoomed until after the window has been mapped.
+        self.after(25, self.restore_window_state, attempt + 1)
 
     def menubar_state(self, state="normal", start=False):
         if state == "disabled":

@@ -223,6 +223,30 @@ def level_to_color(level):
         return 4
 
 
+def window_is_zoomed(toplevel) -> bool:
+    with suppress(Exception):
+        if int(toplevel.attributes("-zoomed")):
+            return True
+    with suppress(Exception):
+        return toplevel.state() == "zoomed"
+    return False
+
+
+def set_window_zoomed(toplevel, zoomed: bool = True) -> None:
+    if zoomed:
+        with suppress(Exception):
+            toplevel.attributes("-zoomed", True)
+            return
+        with suppress(Exception):
+            toplevel.state("zoomed")
+        return
+    with suppress(Exception):
+        toplevel.attributes("-zoomed", False)
+    with suppress(Exception):
+        if toplevel.state() == "zoomed":
+            toplevel.state("normal")
+
+
 def center(
     toplevel,
     desired_width=None,
