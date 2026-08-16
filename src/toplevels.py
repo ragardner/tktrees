@@ -40,6 +40,7 @@ from .constants import (
     green_fill,
     lge_font_size,
     menu_kwargs,
+    mono_font,
     sheet_header_font,
     std_font_size,
     themes,
@@ -4643,7 +4644,7 @@ class Help_Popup(tk.Toplevel):
 
         self.textbox = Working_Text(
             self,
-            font=("Mono", std_font_size, "normal"),
+            font=mono_font,
             wrap="word",
             theme=theme,
             use_entry_bg=False,

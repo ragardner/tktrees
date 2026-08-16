@@ -92,6 +92,12 @@ else:
     sheet_header_font = ("Calibri", std_font_size, "normal")
 dropdown_font = "TkFixedFont"
 lge_font = ("Calibri", lge_font_size, "normal")
+if USER_OS == "windows":
+    mono_font = ("Consolas", std_font_size, "normal")
+elif USER_OS == "darwin":
+    mono_font = ("Menlo", std_font_size, "normal")
+else:
+    mono_font = ("Mono", std_font_size, "normal")
 
 tree_bindings = (
     "single",
