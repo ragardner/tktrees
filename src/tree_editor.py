@@ -191,6 +191,7 @@ class Tree_Editor(tk.Frame):
         self.hiers = []
         self.warnings = []
         self.reset_tree_drag_vars()
+        self.rc_iid = None
         self.row_cut_updated = False
         self.mirror_sels_disabler = False
         self.tagged_ids = set()
@@ -1021,6 +1022,12 @@ class Tree_Editor(tk.Frame):
 
         # MULTI ROW MENU - TREE
         self.tree_rc_menu_multi_row = tk.Menu(self.treeframe, tearoff=0, **menu_kwargs)
+        self.tree_rc_menu_multi_row_select = self._create_tree_select_menu(self.tree_rc_menu_multi_row)
+        self.tree_rc_menu_multi_row.add_cascade(
+            label="Select",
+            menu=self.tree_rc_menu_multi_row_select,
+            **menu_kwargs,
+        )
         self.tree_rc_menu_multi_row.add_command(
             label="Cut",
             accelerator="Ctrl+X",
@@ -1127,6 +1134,12 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_single_row = tk.Menu(self.treeframe, tearoff=0, **menu_kwargs)
         self.tree_rc_menu_single_row_add = tk.Menu(self.tree_rc_menu_single_row, tearoff=0, **menu_kwargs)
         self.tree_rc_menu_single_row.add_cascade(label="Add", menu=self.tree_rc_menu_single_row_add, **menu_kwargs)
+        self.tree_rc_menu_single_row_select = self._create_tree_select_menu(self.tree_rc_menu_single_row)
+        self.tree_rc_menu_single_row.add_cascade(
+            label="Select",
+            menu=self.tree_rc_menu_single_row_select,
+            **menu_kwargs,
+        )
         self.tree_rc_menu_single_row_add.add_command(
             label="Add child",
             command=self.add_child_node,
@@ -1825,6 +1838,7 @@ class Tree_Editor(tk.Frame):
         self.tv_label_col = 0
         self.selected_ID = ""
         self.selected_PAR = ""
+        self.rc_iid = None
         self.disable_paste()
         self.changelog = []
         self.search_results = []
@@ -2874,6 +2888,85 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.C.selection_info.set_my_value(self.get_tree_selection_info())
 
+    def _create_tree_select_menu(self, parent: tk.Menu) -> tk.Menu:
+        menu = tk.Menu(parent, tearoff=0, **menu_kwargs)
+        for label, command, icon in (
+            ("Siblings", self.tree_select_siblings, "ICON_SELECT_ALL"),
+            ("Children", self.tree_select_children, "ICON_SELECT_ALL"),
+            ("Descendants", self.tree_select_descendants, "ICON_SELECT_ALL"),
+            ("Ancestors", self.tree_select_ancestors, "ICON_SELECT_ALL"),
+            ("All at this level", self.tree_select_same_level, "ICON_SELECT_ALL"),
+            ("Tagged IDs", self.tree_select_tagged, "tag"),
+        ):
+            menu.add_command(
+                label=label,
+                command=command,
+                image=self.icons[icon],
+                compound="left",
+                **menu_kwargs,
+            )
+        return menu
+
+    def _tree_rc_iid(self) -> str | None:
+        iid = self.rc_iid
+        if isinstance(iid, str) and self.tree.exists(iid):
+            return iid
+        return None
+
+    def _tree_select_add(self, iids: Iterator[str] | Sequence[str]) -> None:
+        iids = list(iids)
+        if not iids:
+            return
+        self.tree.selection_add(iids)
+
+    def tree_select_siblings(self, event=None):
+        iid = self._tree_rc_iid()
+        if iid is None:
+            return
+        self._tree_select_add(s for s in self.tree.get_children(self.tree.parent(iid)) if s != iid)
+
+    def tree_select_children(self, event=None):
+        iid = self._tree_rc_iid()
+        if iid is None:
+            return
+        self._tree_select_add(self.tree.get_children(iid))
+
+    def tree_select_descendants(self, event=None):
+        iid = self._tree_rc_iid()
+        if iid is None:
+            return
+        self._tree_select_add(self.tree.descendants(iid))
+
+    def tree_select_ancestors(self, event=None):
+        iid = self._tree_rc_iid()
+        if iid is None:
+            return
+        ancestors = []
+        parent = self.tree.parent(iid)
+        while parent:
+            ancestors.append(parent)
+            parent = self.tree.parent(parent)
+        self._tree_select_add(ancestors)
+
+    def tree_select_same_level(self, event=None):
+        iid = self._tree_rc_iid()
+        if iid is None:
+            return
+        target = self.get_node_level(self.nodes[iid])
+        found = []
+        stack = [(top, 1) for top in self.top_iids()]
+        while stack:
+            current, level = stack.pop()
+            if level == target:
+                if current != iid:
+                    found.append(current)
+            elif level < target:
+                stack.extend((child, level + 1) for child in self.nodes[current].cn[self.pc])
+        self._tree_select_add(found)
+
+    def tree_select_tagged(self, event=None):
+        self._tree_select_add(ik for ik in self.tagged_ids if self.tree.exists(ik))
+
     def sheet_select_event(self, event=None):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.C.selection_info.set_my_value(self.get_sheet_selection_info())
@@ -2972,6 +3065,7 @@ class Tree_Editor(tk.Frame):
             ):
                 self.tree.select_cell(row, col)
         elif region == "index" and isinstance(row, int):
+            self.rc_iid = self.tree.rowitem(row)
             rows = self.tree.get_selected_rows()
             if row not in rows:
                 self.tree.select_row(row)
@@ -8842,6 +8936,22 @@ class Tree_Editor(tk.Frame):
     def move_sheet_pos(self):
         self.sheet.set_yview(self.saved_info[self.pc].scrolls.sheety)
         self.sheet.set_xview(self.saved_info[self.pc].scrolls.sheetx)
+
+    def refresh_tree_labels(self):
+        if not self.tree.data:
+            return
+        row_index = self.tree.MT._row_index
+        sheet = self.sheet.MT.data
+        label_col = self.tv_label_col
+        if self.tv_lvls_bool:
+            nodes = self.nodes
+            for node in row_index:
+                label = sheet[self.rns[node.iid]][label_col]
+                node.text = f"{self.get_node_level(nodes[node.iid])}. {label}"
+        else:
+            for node in row_index:
+                node.text = sheet[self.rns[node.iid]][label_col]
+        self.tree.set_refresh_timer(redraw=True)
 
     def refresh_tree_item(self, ID):
         iid = ID.lower()

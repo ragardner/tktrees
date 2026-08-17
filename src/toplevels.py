@@ -4540,7 +4540,7 @@ class Settings_Popup(tk.Toplevel):
 
     def toggle_show_tv_lvls(self):
         self.C.tv_lvls_bool = self.show_tv_lvls_button.get_checked()
-        self.C.redo_tree_display()
+        self.C.refresh_tree_labels()
 
     def set_layout(self, event=None):
         layout = self.layout_dropdown.get_my_value()
