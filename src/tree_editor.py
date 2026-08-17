@@ -1077,14 +1077,21 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.tree_rc_menu_multi_row.add_separator()
-        self.tree_rc_menu_multi_row.add_command(
+        self.tree_rc_menu_multi_row_del = tk.Menu(self.tree_rc_menu_multi_row, tearoff=0, **menu_kwargs)
+        self.tree_rc_menu_multi_row.add_cascade(
+            label="Delete",
+            menu=self.tree_rc_menu_multi_row_del,
+            **menu_kwargs,
+        )
+        self.tree_rc_menu_multi_row_del.add_command(
             label="Clear IDs details",
             command=self.del_all_details,
             image=self.icons["ICON_CLEAR"],
             compound="left",
             **menu_kwargs,
         )
-        self.tree_rc_menu_multi_row.add_command(
+        self.tree_rc_menu_multi_row_del.add_separator()
+        self.tree_rc_menu_multi_row_del.add_command(
             label="Delete IDs",
             accelerator="Del",
             command=self.del_key,
@@ -1092,21 +1099,23 @@ class Tree_Editor(tk.Frame):
             compound="left",
             **menu_kwargs,
         )
-        self.tree_rc_menu_multi_row.add_command(
+        self.tree_rc_menu_multi_row_del.add_separator()
+        self.tree_rc_menu_multi_row_del.add_command(
             label="Delete IDs all hierarchies",
             command=self.del_id_all,
             image=self.icons["ICON_DEL"],
             compound="left",
             **menu_kwargs,
         )
-        self.tree_rc_menu_multi_row.add_command(
+        self.tree_rc_menu_multi_row_del.add_separator()
+        self.tree_rc_menu_multi_row_del.add_command(
             label="Delete IDs + children",
             command=self.del_id_children,
             image=self.icons["ICON_DEL"],
             compound="left",
             **menu_kwargs,
         )
-        self.tree_rc_menu_multi_row.add_command(
+        self.tree_rc_menu_multi_row_del.add_command(
             label="Delete IDs + children, all hierarchies",
             command=self.del_id_children_all,
             image=self.icons["ICON_DEL"],
