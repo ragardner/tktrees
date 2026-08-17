@@ -39,7 +39,7 @@ For convenience in environments where pip is not available, this project include
 
 **openpyxl**
 - Version: 3.1.5
-- Original source: https://foss.heptapod.net/openpyxl
+- Original source: https://foss.heptapod.net/openpyxl/openpyxl
 - License: MIT License
 - Full license text and conditions: See `openpyxl/LICENCE.rst`
 - Authors and copyright holders: See `openpyxl/AUTHORS.rst`
