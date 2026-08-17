@@ -1542,8 +1542,13 @@ class Sheet_File_Load_Mixin:
                     return
                 self.sheet_dropdown["values"] = wbsheets
                 self.sheet_dropdown.set_my_value(wbsheets[0])
-                self.stop_work("Select a sheet to open")
+                self.open_file_display.set_my_value(filepath)
                 self.select_sheet_button.config(state="normal")
+                self.select_sheet()
+                self.stop_work(
+                    f"Opened {os.path.basename(self.open_file_display.get_my_value())}, {self.sheet_opened} loaded"
+                )
+                return
 
         except Exception as error_msg:
             self.try_to_close_wb()
@@ -1561,21 +1566,29 @@ class Sheet_File_Load_Mixin:
             )
         self.open_file_display.set_my_value(filepath)
         self.C.new_sheet = []
-        self.stop_work(f"Data successfully loaded from {os.path.basename(self.open_file_display.get_my_value())}")
+        self.stop_work(f"Opened {os.path.basename(self.open_file_display.get_my_value())}")
 
-    def select_sheet(self):
+    def select_sheet(self, event=None):
+        if getattr(self, "wb_", None) is None:
+            self.stop_work("Select a file")
+            return
         self.start_work("Loading...")
         self.sheet_opened = self.sheet_dropdown.get_my_value()
-        ws = self.wb_[self.sheet_opened]
-        ws.reset_dimensions()
-        self.C.new_sheet = ws_x_data(ws)
-        self.try_to_close_wb()
+        if not self.sheet_opened:
+            self.stop_work("Select a sheet to open")
+            return
+        try:
+            ws = self.wb_[self.sheet_opened]
+            ws.reset_dimensions()
+            self.C.new_sheet = ws_x_data(ws)
+        except Exception as error_msg:
+            self.C.new_sheet = []
+            self.stop_work(f"Error: {error_msg}")
+            return
         if not self.C.new_sheet:
             self.stop_work("Error: File/sheet contained no data")
-            self.select_sheet_button.config(state="disabled")
             return
         self.C.new_sheet = _limit_sheet_columns(self.C.new_sheet, self.load_column_limit)
-        self.select_sheet_button.config(state="disabled")
         self.sheetdisplay.data_reference(
             newdataref=self.C.new_sheet,
             reset_col_positions=False,
@@ -1583,6 +1596,7 @@ class Sheet_File_Load_Mixin:
         )
         self.C.new_sheet = []
         self.stop_work(f"Loaded sheet: {self.sheet_opened}")
+        self.focus_set()
 
     def start_work(self, msg=""):
         if msg is not None:
@@ -1634,7 +1648,7 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         )
         self.open_file_button.grid(row=0, column=1, padx=10, pady=10, sticky="nswe")
         self.sheet_dropdown = Ez_Dropdown(self, font=EF)
-        self.sheet_dropdown.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
+        self.sheet_dropdown.bind("<<ComboboxSelected>>", self.select_sheet)
         self.sheet_dropdown.grid(row=1, column=0, padx=10, pady=10, sticky="nswe")
         self.select_sheet_button = Button(
             self,
@@ -1732,7 +1746,7 @@ class Delete_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         )
         self.open_file_button.grid(row=0, column=1, padx=10, pady=10, sticky="nswe")
         self.sheet_dropdown = Ez_Dropdown(self, font=EF)
-        self.sheet_dropdown.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
+        self.sheet_dropdown.bind("<<ComboboxSelected>>", self.select_sheet)
         self.sheet_dropdown.grid(row=1, column=0, padx=10, pady=10, sticky="nswe")
         self.select_sheet_button = Button(
             self,
@@ -1812,21 +1826,13 @@ class Delete_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         )
         self.del_id_all_button.grid(row=5, column=0, padx=10, pady=5, sticky="nswe")
 
-        self.del_id_children_all_button = Button(
-            self.options_frame,
-            text="Delete IDs + children, all hierarchies",
-            style="wx_button.Std.TButton",
-            command=lambda: self.delete_listed("children_all"),
-        )
-        self.del_id_children_all_button.grid(row=6, column=0, padx=10, pady=5, sticky="nswe")
-
         self.done_button = Button(
             self.options_frame,
             text="Done",
             style="EF.Std.TButton",
             command=self.cancel,
         )
-        self.done_button.grid(row=7, column=0, padx=50, pady=(40, 20), sticky="we")
+        self.done_button.grid(row=6, column=0, padx=50, pady=(40, 20), sticky="we")
 
         self.bind("<Escape>", self.cancel)
         self.bind(f"<{ctrl_button}-z>", self.C.undo)
@@ -1856,10 +1862,7 @@ class Delete_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
             fn = self.C.del_id_all
         else:
             valid = [iid for iid in requested if iid in self.C.nodes and self.C.nodes[iid].ps[self.C.pc] is not None]
-            fn = {
-                "children": self.C.del_id_children,
-                "children_all": self.C.del_id_children_all,
-            }.get(kind, self.C.del_id)
+            fn = self.C.del_id_children if kind == "children" else self.C.del_id
         self.status_bar.change_text("Deleting...")
         self.update()
         if valid:

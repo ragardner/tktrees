@@ -386,7 +386,7 @@ Edit -> Clear all tagged IDs cannot be undone.
 
 Edit -> Delete IDs using list. One column of IDs. Empty cells are ignored.
 
-Load a file, paste from the clipboard, or type in the mini table. The four delete buttons match the tree multi-select delete options. Current-hierarchy deletes use the hierarchy you are viewing. After a delete, the status line says how many of the listed IDs were deleted, for example `5/10 ids deleted`.
+Load a file, paste from the clipboard, or type in the mini table. Delete IDs and Delete IDs + children use the hierarchy you are viewing. Delete IDs all hierarchies removes the listed IDs everywhere. There is no list version of delete IDs + children from all hierarchies; that stays on the tree right-click menu, where you can see which descendants you are removing. After a delete, the status line says how many of the listed IDs were deleted, for example `5/10 ids deleted`.
 
 #### Replace using mapping
 
