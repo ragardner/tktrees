@@ -4296,9 +4296,7 @@ class Tree_Editor(tk.Frame):
                 self.levels[next_lvl].append(child)
                 stack.append((child, next_lvl))
 
-    def _del_id_children_core(
-        self, name: str, to_del: list[str] | None = None, snapshot: bool = True
-    ) -> list[str]:
+    def _del_id_children_core(self, name: str, to_del: list[str] | None = None, snapshot: bool = True) -> list[str]:
         if to_del is None:
             to_del = []
         ik = name.lower()
@@ -4358,9 +4356,7 @@ class Tree_Editor(tk.Frame):
             try_remove(self.topnodes_order[self.pc], ik)
         return to_del
 
-    def _del_id_children_all_core(
-        self, name: str, to_del: list[str] | None = None, snapshot: bool = True
-    ) -> list[str]:
+    def _del_id_children_all_core(self, name: str, to_del: list[str] | None = None, snapshot: bool = True) -> list[str]:
         if to_del is None:
             to_del = []
         ik = name.lower()
@@ -5496,8 +5492,7 @@ class Tree_Editor(tk.Frame):
         self.adjust_hiers_add_cols(cols=[col])
         self.hiers = sorted([col] + self.hiers)
         self.headers.insert(col, Header(name, "Parent"))
-        self.tree.insert_columns(idx=col, add_row_heights=False)
-        self.sheet.insert_columns(idx=col, add_row_heights=False)
+        self.insert_columns_no_blank_row(idx=col, add_row_heights=False)
         for node in self.nodes.values():
             node.ps[col] = None
             node.cn[col] = []
@@ -5545,6 +5540,21 @@ class Tree_Editor(tk.Frame):
         self.disable_paste()
         self.set_headers()
 
+    def insert_columns_no_blank_row(self, columns=1, **kwargs):
+        if isinstance(columns, int) and columns < 1:
+            return
+        if self.sheet.MT.data:
+            self.tree.insert_columns(columns, **kwargs)
+            self.sheet.insert_columns(columns, **kwargs)
+            return
+        # insert_columns() fabricates a row when there is no data; only add column positions
+        n = columns if isinstance(columns, int) else len(columns)
+        idx = kwargs.get("idx")
+        if idx is None:
+            idx = "end"
+        self.tree.insert_column_positions(idx=idx, widths=n)
+        self.sheet.insert_column_positions(idx=idx, widths=n)
+
     def add_col(self, col, name, type_, snapshot=True):
         if snapshot:
             self.snapshot_add_col(col)
@@ -5553,8 +5563,7 @@ class Tree_Editor(tk.Frame):
         self.tv_label_col = push_n(self.tv_label_col, [col])
         self.row_len += 1
         self.headers.insert(col, Header(name, type_))
-        self.tree.insert_columns(idx=col, add_row_heights=False)
-        self.sheet.insert_columns(idx=col, add_row_heights=False)
+        self.insert_columns_no_blank_row(idx=col, add_row_heights=False)
         self.adjust_hiers_add_cols(cols=[col])
         if snapshot:
             self.changelog_append(
@@ -10333,8 +10342,7 @@ class Tree_Editor(tk.Frame):
                 num_new_dcols = len(new_dcols)
                 self.headers.extend([Header(ns_headers[idx], "Text") for idx in new_dcols])
                 if num_new_dcols:
-                    self.tree.insert_columns(num_new_dcols)
-                    self.sheet.insert_columns(num_new_dcols)
+                    self.insert_columns_no_blank_row(num_new_dcols)
                 for num, idx in enumerate(new_dcols, 1):
                     self.changelog_append_no_unsaved(
                         "Merge | Add new detail column",
@@ -10366,8 +10374,7 @@ class Tree_Editor(tk.Frame):
                 num_new_pcols = len(new_pcols)
                 self.headers.extend([Header(ns_headers[idx], "Parent") for idx in new_pcols])
                 if num_new_pcols:
-                    self.tree.insert_columns(num_new_pcols)
-                    self.sheet.insert_columns(num_new_pcols)
+                    self.insert_columns_no_blank_row(num_new_pcols)
                 for num, idx in enumerate(new_pcols, 1):
                     self.changelog_append_no_unsaved(
                         "Merge | Add new hierarchy column",
