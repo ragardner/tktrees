@@ -63,6 +63,7 @@ from .constants import (
     align_w_icon,
     changelog_header,
     ctrl_button,
+    ctrl_rc_press,
     date_formats_usable,
     date_icon,
     detail_column_types,
@@ -1940,6 +1941,7 @@ class Tree_Editor(tk.Frame):
         self.sheet.bind("<<SheetSelect>>", self.sheet_select_event)
         self.tree.bind("<<SheetSelect>>", self.tree_select_event)
         self.tree.bind(rc_press, self.tree_rc_press)
+        self.tree.bind(ctrl_rc_press, lambda e: self.tree_rc_press(e, True))
         # self.tree.bind(rc_motion, self.tree_rc_motion)
         # self.tree.bind(rc_release, self.tree_rc_release)
         self.tree.bind("<FocusIn>", self.tree_focus_enter).bind("<FocusOut>", self.tree_focus_leave)
@@ -2010,6 +2012,7 @@ class Tree_Editor(tk.Frame):
             ]
         )
         self.tree.unbind(rc_press)
+        self.tree.unbind(ctrl_rc_press)
         self.tree.unbind(rc_motion)
         self.tree.unbind(rc_release)
         self.sheet_tag_id_button.config(state="disabled")
@@ -3048,14 +3051,17 @@ class Tree_Editor(tk.Frame):
             end = f"|   No Changes Made   {cc_add}"
         return f"{len(self.sheet.MT.data)} IDs   {tree_addition}{sheet_addition}{end}"
 
-    def tree_rc_press(self, event):
+    def tree_rc_press(self, event, ctrl=False):
         self.focus_tree()
         row = self.tree.identify_row(event, allow_end=False)
         col = self.tree.identify_column(event, allow_end=False)
         region = self.tree.identify_region(event)
         if region == "header" and isinstance(col, int):
             if not self.tree.column_selected(col):
-                self.tree.select_column(col)
+                if ctrl:
+                    self.tree.add_column_selection(col)
+                else:
+                    self.tree.select_column(col)
         elif region == "table" and isinstance(row, int) and isinstance(col, int):
             if not self.tree.cell_selected(
                 row,
@@ -3063,21 +3069,27 @@ class Tree_Editor(tk.Frame):
                 rows=True,
                 columns=True,
             ):
-                self.tree.select_cell(row, col)
+                if ctrl:
+                    self.tree.add_cell_selection(row, col)
+                else:
+                    self.tree.select_cell(row, col)
         elif region == "index" and isinstance(row, int):
             self.rc_iid = self.tree.rowitem(row)
             rows = self.tree.get_selected_rows()
             if row not in rows:
-                self.tree.select_row(row)
-                rows = {row}
+                if ctrl:
+                    self.tree.add_row_selection(row)
+                else:
+                    self.tree.select_row(row)
+                rows = self.tree.get_selected_rows()
             if len(rows) == 1:
-                iid = self.tree.rowitem(rows.pop())
+                iid = self.tree.rowitem(next(iter(rows)))
                 self.drag_pc = int(self.pc)
                 self.drag_iid = iid
                 self.drag_pariid = self.tree.parent(iid)
                 self.last_rced = iid
                 self.drag_start_index = self.tree.index(iid)
-        else:
+        elif not ctrl:
             self.tree.deselect()
         self.tree_rc_release(event)
 
