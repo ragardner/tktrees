@@ -47,7 +47,7 @@ ctrl_button = "Command" if USER_OS == "darwin" else "Control"
 ctrl_rc_press = f"<{ctrl_button}-{rc_press[1:]}"
 from_clipboard_delimiters = "\t,|"
 
-software_version_number = "1.14.20"
+software_version_number = "1.14.21"
 software_version_full = "Version: " + software_version_number
 app_title = "tktrees"
 app_license = "AGPL-3.0-only"
