@@ -1634,6 +1634,252 @@ class Delete_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         self.focus_force()
 
 
+class Tag_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
+    load_column_limit = 1
+    green_bg = "#40bd59"
+    red_bg = "#db7463"
+    result_fg = "black"
+
+    def __init__(self, C, theme="dark"):
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
+        self.C = new_toplevel_chores(self, C, "Tag IDs using list")
+        self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
+        self.theme = theme
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
+
+        self.status_bar = Readonly_Entry_With_Scrollbar(self, theme=theme, use_status_fg=True)
+        self.status_bar.change_text(text="Tag listed terms. Empty cells are ignored.")
+        self.status_bar.my_entry.config(relief="flat", font=("Calibri", std_font_size))
+        self.status_bar.grid(row=4, column=0, columnspan=2, sticky="we")
+
+        self.open_file_display = Readonly_Entry_With_Scrollbar(self, font=EF, theme=theme)
+        self.open_file_display.grid(row=0, column=0, padx=(10, 10), pady=(10, 5), sticky="nswe")
+        self.open_file_button = Button(
+            self,
+            text="⯇ Open file",
+            style="wx_button.Std.TButton",
+            command=self.open_file,
+        )
+        self.open_file_button.grid(row=0, column=1, padx=10, pady=10, sticky="nswe")
+        self.sheet_dropdown = Ez_Dropdown(self, font=EF)
+        self.sheet_dropdown.bind("<<ComboboxSelected>>", self.select_sheet)
+        self.sheet_dropdown.grid(row=1, column=0, padx=10, pady=10, sticky="nswe")
+        self.select_sheet_button = Button(
+            self,
+            text="⯇ Load sheet",
+            style="wx_button.Std.TButton",
+            state="disabled",
+            command=self.select_sheet,
+        )
+        self.select_sheet_button.grid(row=1, column=1, padx=10, pady=10, sticky="nswe")
+
+        self.sheetdisplay = Sheet(
+            self,
+            theme=theme,
+            headers=["Find"],
+            header_font=sheet_header_font,
+            paste_can_expand_y=True,
+            paste_insert_column_limit=1,
+            data=[[""] for _ in range(20)],
+        )
+        self.sheetdisplay.column_width(0, 200)
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.disable_bindings("rc_delete_column", "rc_insert_column")
+        self.sheetdisplay.grid(row=2, column=0, sticky="ns")
+
+        self.options_frame = Frame(self, theme=theme)
+        self.options_frame.grid(row=2, column=1, sticky="nswe")
+        self.options_frame.grid_columnconfigure(0, weight=1)
+
+        self.clipboard_button = Button(
+            self.options_frame,
+            text=" Get data from clipboard ",
+            style="wx_button.Std.TButton",
+            state="normal",
+            command=self.get_clipboard_data,
+        )
+        self.clipboard_button.grid(row=0, column=0, padx=10, pady=(10, 20), sticky="nswe")
+
+        self.find_ids_button = X_Checkbutton(
+            self.options_frame,
+            text="Find IDs",
+            style="x_button.Std.TButton",
+            compound="right",
+            checked=True,
+            command=lambda: self._ensure_find_mode("ids"),
+        )
+        self.find_ids_button.grid(row=1, column=0, padx=10, pady=5, sticky="we")
+        self.find_details_button = X_Checkbutton(
+            self.options_frame,
+            text="Find Details",
+            style="x_button.Std.TButton",
+            compound="right",
+            checked=False,
+            command=lambda: self._ensure_find_mode("details"),
+        )
+        self.find_details_button.grid(row=2, column=0, padx=10, pady=5, sticky="we")
+        self.exact_match_button = X_Checkbutton(
+            self.options_frame,
+            text="Exact Match",
+            style="x_button.Std.TButton",
+            compound="right",
+            checked=False,
+        )
+        self.exact_match_button.grid(row=3, column=0, padx=10, pady=5, sticky="we")
+
+        self.tag_button = Button(
+            self.options_frame,
+            text="Tag",
+            style="EF.Std.TButton",
+            command=self.tag,
+        )
+        self.tag_button.grid(row=4, column=0, padx=50, pady=(40, 5), sticky="we")
+
+        self.done_button = Button(
+            self.options_frame,
+            text="Done",
+            style="EF.Std.TButton",
+            command=self.cancel,
+        )
+        self.done_button.grid(row=5, column=0, padx=50, pady=(5, 20), sticky="we")
+
+        self.bind("<Escape>", self.cancel)
+        self.bind(f"<{ctrl_button}-z>", self.C.undo)
+        self.bind(f"<{ctrl_button}-Z>", self.C.undo)
+        show_toplevel_chores(self, width=self, wait_window=False)
+
+    def _ensure_find_mode(self, which: str) -> None:
+        ids_on = self.find_ids_button.get_checked()
+        details_on = self.find_details_button.get_checked()
+        if ids_on or details_on:
+            return
+        if which == "ids":
+            self.find_details_button.set_checked(True)
+        else:
+            self.find_ids_button.set_checked(True)
+
+    def get_clipboard_data(self, event=None):
+        super().get_clipboard_data(event)
+        self._clear_result_highlights()
+
+    def open_file(self):
+        super().open_file()
+        self._clear_result_highlights()
+
+    def select_sheet(self, event=None):
+        super().select_sheet(event)
+        self._clear_result_highlights()
+
+    def _clear_result_highlights(self) -> None:
+        self.sheetdisplay.dehighlight_rows("all", redraw=True)
+
+    @staticmethod
+    def _cell_text(row) -> str:
+        if not row:
+            return ""
+        val = row[0]
+        if val is None:
+            return ""
+        return str(val)
+
+    def tag(self) -> None:
+        self.start_work("Tagging...")
+        self.update()
+        data = self.sheetdisplay.get_sheet_data()
+        terms_set = set()
+        for row in data:
+            text = self._cell_text(row)
+            if text:
+                terms_set.add(text.lower())
+        if not terms_set:
+            self._clear_result_highlights()
+            self.stop_work("No terms to search")
+            self.focus_force()
+            return
+        find_ids = self.find_ids_button.get_checked()
+        find_details = self.find_details_button.get_checked()
+        if not find_ids and not find_details:
+            self.find_ids_button.set_checked(True)
+            find_ids = True
+        exact = self.exact_match_button.get_checked()
+        idcol_hiers = set(self.C.hiers) | {self.C.ic}
+        matched_lower = set()
+        ids_to_tag = set()
+        ic = self.C.ic
+        for r in self.C.sheet.MT.data:
+            row_matched = False
+            if find_ids:
+                cell = r[ic].lower()
+                if exact:
+                    if cell in terms_set:
+                        matched_lower.add(cell)
+                        row_matched = True
+                else:
+                    for term in terms_set:
+                        if term in cell:
+                            matched_lower.add(term)
+                            row_matched = True
+            if find_details:
+                for i, e in enumerate(r):
+                    if i in idcol_hiers:
+                        continue
+                    cell = e.lower()
+                    if exact:
+                        if cell in terms_set:
+                            matched_lower.add(cell)
+                            row_matched = True
+                    else:
+                        for term in terms_set:
+                            if term in cell:
+                                matched_lower.add(term)
+                                row_matched = True
+            if row_matched:
+                ik = r[ic].lower()
+                if ik in self.C.rns:
+                    ids_to_tag.add(ik)
+        if ids_to_tag:
+            self.C.tag_ids(selection=ids_to_tag, toggle=False)
+        success, fail, empty = [], [], []
+        for row in data:
+            text = self._cell_text(row)
+            if not text:
+                empty.append(row if row else [""])
+            elif text.lower() in matched_lower:
+                success.append(row)
+            else:
+                fail.append(row)
+        self.sheetdisplay.set_sheet_data(
+            success + fail + empty,
+            reset_col_positions=False,
+            reset_row_positions=False,
+            reset_highlights=True,
+            redraw=False,
+        )
+        n_ok = len(success)
+        n_fail = len(fail)
+        if n_ok:
+            self.sheetdisplay.highlight_rows(
+                rows=range(n_ok),
+                bg=self.green_bg,
+                fg=self.result_fg,
+                redraw=False,
+            )
+        if n_fail:
+            self.sheetdisplay.highlight_rows(
+                rows=range(n_ok, n_ok + n_fail),
+                bg=self.red_bg,
+                fg=self.result_fg,
+                redraw=False,
+            )
+        self.sheetdisplay.refresh()
+        n_terms = n_ok + n_fail
+        self.stop_work(f"{n_ok}/{n_terms} terms matched, {len(ids_to_tag)} IDs tagged")
+        self.focus_force()
+
+
 class View_Id_Popup(tk.Toplevel):
     def __init__(self, C, ids_row, width=800, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)

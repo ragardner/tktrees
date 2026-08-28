@@ -134,6 +134,7 @@ from .toplevels import (
     Save_New_Version_Presave_Popup,
     Settings_Popup,
     Sort_Sheet_Popup,
+    Tag_Ids_Using_List_Popup,
     Text_Popup,
     Treeview_Id_Finder,
     View_Id_Popup,
@@ -305,6 +306,13 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.edit_menu.add_separator()
+        self.edit_menu.add_command(
+            label="Tag IDs using list",
+            command=self.tag_ids_using_list,
+            image=self.icons["tag"],
+            compound="left",
+            **menu_kwargs,
+        )
         self.edit_menu.add_command(
             label="Delete IDs using list",
             command=self.delete_ids_using_list,
@@ -2268,6 +2276,9 @@ class Tree_Editor(tk.Frame):
                 sheet_c,
                 only_set_if_too_small=True,
             )
+
+    def tag_ids_using_list(self, event=None) -> None:
+        Tag_Ids_Using_List_Popup(self, theme=self.C.theme)
 
     def delete_ids_using_list(self, event=None) -> None:
         Delete_Ids_Using_List_Popup(self, theme=self.C.theme)
