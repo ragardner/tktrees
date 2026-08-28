@@ -746,6 +746,28 @@ class Node:
         self.ps = ps if ps else dict.fromkeys(hrs)
 
 
+def _canonical_header_type(type_: str) -> str:
+    if type_ == "Numerical Detail":
+        return "Number"
+    if type_.endswith(" Detail"):
+        return type_[:-7]
+    return type_
+
+
+def normalize_header_type(type_: str) -> str:
+    """Map stored column types onto ID, Parent, or Text.
+
+    Older files used Number, Date, and names like 'Numerical Detail'. Those
+    become Text so existing workbooks open with their cell values unchanged.
+    """
+    type_ = _canonical_header_type(type_)
+    if type_ in ("Number", "Date"):
+        return "Text"
+    if type_ in ("ID", "Parent", "Text"):
+        return type_
+    return "Text"
+
+
 class Header:
     __slots__ = (
         "formatting",
@@ -768,14 +790,10 @@ class Header:
         validation: None | list[str] = None,
     ):
         self.name = name
-        # backwards compatibility
-        if type_ == "Numerical Detail":
-            type_ = "Number"
-        elif type_.endswith(" Detail"):
-            type_ = type_[:-7]
-
-        self.type_ = type_
-        if formatting is None:
+        self.type_ = normalize_header_type(type_)
+        if formatting is None or _canonical_header_type(type_) in ("Number", "Date"):
+            # Number/Date rules were comparisons such as "> 100"; they cannot
+            # match as text, so they are dropped when the column becomes Text.
             self.formatting = []
         else:
             self.formatting = [tuple(x) for x in formatting]

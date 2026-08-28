@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import csv
-import datetime
 import json
 import os
 import re
@@ -46,8 +45,6 @@ from .constants import (
     themes,
     top_left_icon,
     upone_dir,
-    validation_allowed_date_chars,
-    validation_allowed_num_chars,
 )
 from .functions import (
     b32_x_dict,
@@ -59,7 +56,6 @@ from .functions import (
     get_json_format,
     get_json_from_file,
     json_to_sheet,
-    sort_key,
     str_io_csv_writer,
     to_clipboard,
     ws_x_data,
@@ -67,14 +63,10 @@ from .functions import (
     xlsx_changelog_header,
 )
 from .widgets import (
-    Auto_Add_Condition_Date_Frame,
-    Auto_Add_Condition_Num_Frame,
     Button,
     DataFormatSelector,
-    Date_Entry,
     Display_Text,
     Entry_With_Scrollbar,
-    Error_Frame,
     Ez_Dropdown,
     Fast_Selector,
     Flattened_Column_Selector,
@@ -82,7 +74,6 @@ from .widgets import (
     Id_Parent_Column_Selector,
     Label,
     Normal_Entry,
-    Number_Entry_With_Scrollbar,
     Readonly_Entry_With_Scrollbar,
     Scrollbar,
     Single_Column_Selector,
@@ -1091,30 +1082,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
             "Scale 19": "#fa6441",
             "Scale 20 (red)": "#f85037",
         }
-        self.scale_colors = (
-            "#509f56",
-            "#64a85b",
-            "#78b160",
-            "#8cba66",
-            "#a0c36c",
-            "#b4cc71",
-            "#c8d576",
-            "#dcde7c",
-            "#f0e782",
-            "#ffec87",
-            "#ffe182",
-            "#ffdc7d",
-            "#ffd77b",
-            "#ffc873",
-            "#ffb469",
-            "#fea05f",
-            "#fc8c55",
-            "#fb784b",
-            "#fa6441",
-            "#f85037",
-        )
         self.internal_colors = {v: k for k, v in self.displayed_colors_dct.items()}
-        self.displayed_colors = sorted(self.displayed_colors_dct, key=sort_key)
 
         self.formatting_view = Sheet(
             self,
@@ -1129,20 +1097,7 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
 
         self.formatting_view.dropdown("B", values=[""] + list(self.displayed_colors_dct), state="readonly")
 
-        if self.C.headers[self.column].type_ == "Number":
-            headers = ["If cell is: e.g. > 0 and < 5", "Make color:"]
-            self.formatting_view.popup_menu_add_command(
-                "Del all & add number scale", func=lambda: self.add_auto_conditions("num")
-            )
-        elif self.C.headers[self.column].type_ == "Date":
-            headers = ["If cell is: e.g. > 01/01/2020 and < 01/10/2020", "Make color:"]
-            self.formatting_view.popup_menu_add_command(
-                "Del all & add date scale", func=lambda: self.add_auto_conditions("date")
-            )
-        else:
-            headers = ["If cell is:", "Make color:"]
-
-        self.formatting_view.headers(headers)
+        self.formatting_view.headers(["If cell is:", "Make color:"])
 
         if len(self.C.headers[self.column].formatting) < 35:
             self.C.headers[self.column].formatting.extend(
@@ -1214,25 +1169,8 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
         self.disable_formatting_view()
         column = event.column
         if column == 0:
-            if event.value:
-                condition = self.C.check_condition_validity(self.column, event.value)
-                if condition.startswith("Error:"):
-                    self.new_frame = Error_Frame(
-                        self,
-                        f" {condition}   See 'Help' under the 'File' menu for instructions on conditional formatting   ",
-                        theme=self.C.C.theme,
-                    )
-                    self.new_frame.grid(row=1, column=0, sticky="nswe")
-                    self.new_frame.focus_set()
-                    self.bind("<Return>", self.new_frame.confirm)
-                    self.new_frame.wait_window()
-                    if not self.window_destroyed:
-                        self.unbind("<Return>")
-                        self.refresh_formatting_view()
-                        self.formatting_view.focus_set()
-                    return
             self.C.headers[self.column].formatting[event.row] = (
-                condition,
+                event.value or "",
                 self.C.headers[self.column].formatting[event.row][1],
             )
             self.refresh_formatting_view()
@@ -1243,181 +1181,6 @@ class Edit_Conditional_Formatting_Popup(tk.Toplevel):
                 self.displayed_colors_dct[event.value] if event.value else "",
             )
             self.refresh_formatting_view()
-
-    def add_auto_conditions(self, num_or_date="num"):
-        self.disable_formatting_view()
-        header = self.C.headers[self.column]
-        if num_or_date == "num":
-            self.new_frame = Auto_Add_Condition_Num_Frame(
-                self,
-                self.column,
-                self.C.sheet.MT.data,
-                theme=self.C.C.theme,
-            )
-        else:
-            self.new_frame = Auto_Add_Condition_Date_Frame(
-                self,
-                self.column,
-                self.C.sheet.MT.data,
-                self.C.DATE_FORM,
-                theme=self.C.C.theme,
-            )
-        self.new_frame.grid(row=1, column=0, sticky="nswe")
-        self.bind("<Return>", self.new_frame.confirm)
-        self.new_frame.wait_window()
-        if self.window_destroyed:
-            return
-        self.unbind("<Return>")
-        if not self.new_frame.result:
-            self.enable_formatting_view()
-            return
-        if num_or_date == "num":
-            ac = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", "."}
-            min_v = "".join(c for c in self.new_frame.min_val if c in ac)
-            max_v = "".join(c for c in self.new_frame.max_val if c in ac)
-            if not min_v and not max_v:
-                self.enable_formatting_view()
-                return
-            try:
-                min_v = 0 if not min_v else float(min_v)
-                max_v = 0 if not max_v else float(max_v)
-            except Exception:
-                self.enable_formatting_view()
-                return
-            if min_v >= max_v:
-                self.new_frame = Error_Frame(
-                    self,
-                    "Error: Minimum value greater than or equal to maximum value - see 'Help' under the 'File' menu for instructions on conditional formatting   ",
-                    theme=self.C.C.theme,
-                )
-                self.new_frame.grid(row=1, column=0, sticky="nswe")
-                self.bind("<Return>", self.new_frame.confirm)
-                self.new_frame.wait_window()
-                if self.window_destroyed:
-                    return
-                self.unbind("<Return>")
-                self.enable_formatting_view()
-                return
-            self.C.headers[self.column].formatting = []
-            step = (max_v - min_v) / 20
-            if header.type_ == "Number":
-                if self.new_frame.order == "ASCENDING":
-                    v = float(min_v)
-                    for i in range(1, 21):
-                        if not i % 20:
-                            self.C.headers[self.column].formatting.append(
-                                ("".join((">= ", str(v), " and <= ", str(v + step))), self.scale_colors[i - 1])
-                            )
-                        else:
-                            self.C.headers[self.column].formatting.append(
-                                ("".join((">= ", str(v), " and < ", str(v + step))), self.scale_colors[i - 1])
-                            )
-                            v += step
-                elif self.new_frame.order == "DESCENDING":
-                    v = float(max_v)
-                    for i in range(1, 21):
-                        if not i % 20:
-                            self.C.headers[self.column].formatting.append(
-                                ("".join(("<= ", str(v), " and >= ", str(v - step))), self.scale_colors[i - 1])
-                            )
-                        else:
-                            self.C.headers[self.column].formatting.append(
-                                ("".join(("<= ", str(v), " and > ", str(v - step))), self.scale_colors[i - 1])
-                            )
-                            v -= step
-            elif header.type_ == "Date":
-                if self.new_frame.order == "ASCENDING":
-                    v = min_v
-                    for i in range(1, 21):
-                        if not i % 20:
-                            self.C.headers[self.column].formatting.append(
-                                (
-                                    "".join((">= ", str(round(v)), " and <= ", str(round(v + step)))),
-                                    self.scale_colors[i - 1],
-                                )
-                            )
-                        else:
-                            self.C.headers[self.column].formatting.append(
-                                (
-                                    "".join((">= ", str(round(v)), " and < ", str(round(v + step)))),
-                                    self.scale_colors[i - 1],
-                                )
-                            )
-                            v += step
-                elif self.new_frame.order == "DESCENDING":
-                    v = max_v
-                    for i in range(1, 21):
-                        if not i % 20:
-                            self.C.headers[self.column].formatting.append(
-                                (
-                                    "".join(("<= ", str(round(v)), " and >= ", str(round(v - step)))),
-                                    self.scale_colors[i - 1],
-                                )
-                            )
-                        else:
-                            self.C.headers[self.column].formatting.append(
-                                (
-                                    "".join(("<= ", str(round(v)), " and > ", str(round(v - step)))),
-                                    self.scale_colors[i - 1],
-                                )
-                            )
-                            v -= step
-        elif num_or_date == "date":
-            ac = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "/", "-"}
-            min_v = "".join(c for c in self.new_frame.min_val if c in ac).replace("-", "/")
-            max_v = "".join(c for c in self.new_frame.max_val if c in ac).replace("-", "/")
-            if not min_v and not max_v:
-                self.enable_formatting_view()
-                return
-            DATE_FORM = self.C.convert_hyphen_to_slash_date_form(self.C.DATE_FORM)
-            try:
-                min_v = datetime.datetime.strptime(min_v, DATE_FORM)
-                max_v = datetime.datetime.strptime(max_v, DATE_FORM)
-            except Exception:
-                self.enable_formatting_view()
-                return
-            if min_v >= max_v:
-                self.new_frame = Error_Frame(
-                    self,
-                    "Error: Minimum value greater than or equal to maximum value - see 'Help' under the 'File' menu for instructions on conditional formatting   ",
-                    theme=self.C.C.theme,
-                )
-                self.new_frame.grid(row=1, column=0, sticky="nswe")
-                self.bind("<Return>", self.new_frame.confirm)
-                self.new_frame.wait_window()
-                if self.window_destroyed:
-                    return
-                self.unbind("<Return>")
-                self.enable_formatting_view()
-                return
-            self.C.headers[self.column].formatting = []
-            step = ((max_v - min_v).days) / 20
-            step = datetime.timedelta(days=step)
-            if self.new_frame.order == "ASCENDING":
-                v = min_v  # strptime
-                for i in range(1, 21):
-                    s1 = datetime.datetime.strftime(v, DATE_FORM)
-                    s2 = datetime.datetime.strftime(v + step, DATE_FORM)
-                    if not i % 20:
-                        self.C.headers[self.column].formatting.append(
-                            (f">= {s1} and <= {s2}", self.scale_colors[i - 1])
-                        )
-                    else:
-                        self.C.headers[self.column].formatting.append((f">= {s1} and < {s2}", self.scale_colors[i - 1]))
-                        v = v + step
-            elif self.new_frame.order == "DESCENDING":
-                v = max_v  # strptime
-                for i in range(1, 21):
-                    s1 = datetime.datetime.strftime(v, DATE_FORM)
-                    s2 = datetime.datetime.strftime(v - step, DATE_FORM)
-                    if not i % 20:
-                        self.C.headers[self.column].formatting.append(
-                            (f"<= {s1} and >= {s2}", self.scale_colors[i - 1])
-                        )
-                    else:
-                        self.C.headers[self.column].formatting.append((f"<= {s1} and > {s2}", self.scale_colors[i - 1]))
-                        v = v - step
-        self.refresh_formatting_view()
 
     def redo_formatting_view(self):
         self.formatting_view.deselect("all")
@@ -3027,175 +2790,6 @@ class Sort_Sheet_Popup(tk.Toplevel):
         self.destroy()
 
 
-class Edit_Detail_Date_Popup(tk.Toplevel):
-    def __init__(self, C, ID, column, current_detail, DATE_FORM, validation_values=None, set_value=None, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Change date detail")
-        if validation_values is None:
-            validation_values = []
-        self.grid_columnconfigure(1, weight=1)
-        self.id_label = Label(self, text="ID:", font=EF, theme=theme)
-        self.id_label.grid(row=0, column=0, sticky="nswe", padx=20)
-        self.id_display = Readonly_Entry_With_Scrollbar(self, theme=theme)
-        self.id_display.set_my_value(ID)
-        self.id_display.grid(row=0, column=1, sticky="nswe", pady=(20, 5), padx=(0, 20))
-        self.col_label = Label(self, text="Column:", font=EF, theme=theme)
-        self.col_label.grid(row=2, column=0, sticky="nswe", padx=20)
-        self.col_display = Readonly_Entry_With_Scrollbar(self, theme=theme)
-        self.col_display.set_my_value(column)
-        self.col_display.grid(row=2, column=1, sticky="nswe", pady=5, padx=(0, 20))
-
-        self.bf = Frame(self, theme=theme)
-        self.bf.grid(row=4, column=0, columnspan=2, sticky="e")
-
-        if validation_values:
-            self.validation_dropdown = Ez_Dropdown(self, font=EF)
-            self.validation_dropdown["values"] = validation_values
-            if set_value is not None:
-                self.validation_dropdown.set_my_value(set_value)
-            else:
-                self.validation_dropdown.set_my_value(validation_values[0])
-            self.validation_dropdown.grid(row=3, column=0, columnspan=2, sticky="nswe", padx=20, pady=10)
-            self.validation_dropdown.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
-            width_ = 600
-            self.bind("<Return>", self.confirm_validation)
-        else:
-            self.entries_frame = Frame(self, theme=theme)
-            self.entries_frame.grid_columnconfigure(3, weight=1)
-            self.entries_frame.grid(row=3, column=0, columnspan=2, sticky="nswe", pady=10)
-            if DATE_FORM in ("%d/%m/%Y", "%d-%m-%Y"):
-                self.date_label = Label(self.entries_frame, text="Set date DD/MM/YYYY:", font=EF, theme=theme)
-            elif DATE_FORM in ("%Y/%m/%d", "%Y-%m-%d"):
-                self.date_label = Label(self.entries_frame, text="Set date YYYY/MM/DD:", font=EF, theme=theme)
-            elif DATE_FORM in ("%m/%d/%Y", "%m-%d-%Y"):
-                self.date_label = Label(self.entries_frame, text="Set date MM/DD/YYYY:", font=EF, theme=theme)
-            self.date_label.grid(row=0, column=0, sticky="nswe", padx=(20, 10), pady=10)
-            self.date_entry_widget = Date_Entry(self.entries_frame, DATE_FORM, theme=theme)
-            self.date_entry_widget.grid(row=0, column=1, sticky="nswe", padx=(0, 30), pady=10)
-            self.number_label = Label(self.entries_frame, text="OR set Number:", font=EF, theme=theme)
-            self.number_label.grid(row=0, column=2, sticky="nswe", padx=(0, 10), pady=10)
-            self.number_entry_widget = Number_Entry_With_Scrollbar(self.entries_frame, theme=theme)
-            self.number_entry_widget.grid(row=0, column=3, sticky="nswe", padx=(0, 20), pady=15)
-            if "/" in current_detail or "-" in current_detail:
-                self.date_entry_widget.set_my_value(current_detail)
-            else:
-                self.number_entry_widget.set_my_value(current_detail)
-            self.number_entry_widget.my_entry.bind("<Return>", self.confirm_normal)
-            self.date_entry_widget.entry_1.bind("<Return>", self.confirm_normal)
-            self.date_entry_widget.entry_2.bind("<Return>", self.confirm_normal)
-            self.date_entry_widget.entry_3.bind("<Return>", self.confirm_normal)
-            width_ = 850
-
-        self.confirm_button = Button(
-            self.bf,
-            text="Save",
-            style="EF.Std.TButton",
-            command=self.confirm_validation if validation_values else self.confirm_normal,
-        )
-        self.confirm_button.grid(row=0, column=0, sticky="e", padx=20, pady=(0, 20))
-        self.cancel_button = Button(self.bf, text="Cancel", style="EF.Std.TButton", command=self.cancel)
-        self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=(0, 20))
-
-        self.result = False
-        self.bind("<Escape>", self.cancel)
-        show_toplevel_chores(
-            self,
-            width=width_,
-            focus=None if validation_values else self.date_entry_widget.place_cursor,
-        )
-
-    def confirm_normal(self, event=None):
-        self.result = True
-        x1 = self.date_entry_widget.get_my_value()
-        x2 = self.number_entry_widget.get_my_value()
-        if not all(c in ("/", "-") for c in x1):
-            self.saved_string = x1
-        elif x2:
-            self.saved_string = x2
-        else:
-            self.saved_string = ""
-        self.destroy()
-
-    def confirm_validation(self, event=None):
-        self.result = True
-        self.saved_string = self.validation_dropdown.get_my_value()
-        self.destroy()
-
-    def cancel(self, event=None):
-        self.destroy()
-
-
-class Edit_Detail_Number_Popup(tk.Toplevel):
-    def __init__(self, C, ID, column, current_detail, validation_values=None, set_value=None, theme="dark"):
-        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, f"{app_title} - Change number detail")
-        if validation_values is None:
-            validation_values = []
-        self.grid_columnconfigure(1, weight=1)
-        self.id_label = Label(self, text="ID:", font=EF, theme=theme)
-        self.id_label.grid(row=0, column=0, sticky="nswe", padx=20)
-        self.id_display = Readonly_Entry_With_Scrollbar(self, theme=theme)
-        self.id_display.set_my_value(ID)
-        self.id_display.grid(row=0, column=1, sticky="nswe", pady=(20, 5), padx=(0, 20))
-        self.col_label = Label(self, text="Column:", font=EF, theme=theme)
-        self.col_label.grid(row=2, column=0, sticky="nswe", padx=20)
-        self.col_display = Readonly_Entry_With_Scrollbar(self, theme=theme)
-        self.col_display.set_my_value(column)
-        self.col_display.grid(row=2, column=1, sticky="nswe", pady=5, padx=(0, 20))
-
-        self.bf = Frame(self, theme=theme)
-        self.bf.grid(row=4, column=0, columnspan=2, sticky="e")
-
-        if validation_values:
-            self.validation_dropdown = Ez_Dropdown(self, font=EF)
-            self.validation_dropdown["values"] = validation_values
-            if set_value is not None:
-                self.validation_dropdown.set_my_value(set_value)
-            else:
-                self.validation_dropdown.set_my_value(validation_values[0])
-            self.validation_dropdown.grid(row=3, column=0, columnspan=2, sticky="nswe", padx=20, pady=10)
-            self.validation_dropdown.bind("<<ComboboxSelected>>", lambda focus: self.focus_set())
-            width_ = 600
-            self.bind("<Return>", self.confirm_validation)
-        else:
-            self.entry_widget = Number_Entry_With_Scrollbar(self, theme=theme)
-            self.entry_widget.set_my_value(current_detail)
-            self.entry_widget.grid(row=3, column=0, columnspan=2, sticky="nswe", padx=20, pady=10)
-            self.entry_widget.my_entry.bind("<Return>", self.confirm_normal)
-            width_ = 600
-
-        self.confirm_button = Button(
-            self.bf,
-            text="Save",
-            style="EF.Std.TButton",
-            command=self.confirm_validation if validation_values else self.confirm_normal,
-        )
-        self.confirm_button.grid(row=0, column=0, sticky="e", padx=20, pady=20)
-        self.cancel_button = Button(self.bf, text="Cancel", style="EF.Std.TButton", command=self.cancel)
-        self.cancel_button.grid(row=0, column=1, sticky="e", padx=20, pady=20)
-
-        self.result = False
-        self.bind("<Escape>", self.cancel)
-        show_toplevel_chores(
-            self,
-            width=width_,
-            focus=None if validation_values else self.entry_widget.place_cursor,
-        )
-
-    def confirm_normal(self, event=None):
-        self.result = True
-        self.saved_string = self.entry_widget.get_my_value()
-        self.destroy()
-
-    def confirm_validation(self, event=None):
-        self.result = True
-        self.saved_string = self.validation_dropdown.get_my_value()
-        self.destroy()
-
-    def cancel(self, event=None):
-        self.destroy()
-
-
 class Edit_Detail_Text_Popup(tk.Toplevel):
     def __init__(self, C, ID, column, current_detail, validation_values=None, set_value=None, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
@@ -3406,17 +3000,11 @@ class Add_Child_Or_Sibling_Id_Popup(tk.Toplevel):
 
 
 class Edit_Validation_Popup(tk.Toplevel):
-    def __init__(self, C, coltype, colname, validation, theme="dark"):
+    def __init__(self, C, colname, validation, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Edit validation")
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
-        if coltype == "Number":
-            self.allowed_chars = validation_allowed_num_chars
-        elif coltype == "Date":
-            self.allowed_chars = validation_allowed_date_chars
-        else:
-            self.allowed_chars = set()  # all chars allowed
         self.validation_display = Sheet(
             self,
             name="validation",
@@ -3429,7 +3017,6 @@ class Edit_Validation_Popup(tk.Toplevel):
         if validation:
             self.validation_display.data = [[v] for v in validation]
         self.validation_display.insert_rows(100, create_selections=False)
-        self.validation_display.edit_validation(self.edit_validation)
         self.validation_display.enable_bindings("all", "ctrl_select")
         self.validation_display.disable_bindings(
             "insert_columns",
@@ -3451,13 +3038,7 @@ class Edit_Validation_Popup(tk.Toplevel):
         self.cancel_button.grid(row=0, column=1, sticky="e", padx=(10, 20), pady=(0, 20))
         self.new_validation = None
         self.validation_display.select_cell(0, 0)
-        self.validation_display.focus_set()
-        show_toplevel_chores(self, 600, 500)
-
-    def edit_validation(self, event):
-        if self.allowed_chars:
-            return "".join(filter(self.allowed_chars.__contains__, event.value))
-        return event.value
+        show_toplevel_chores(self, 600, 500, focus=self.validation_display)
 
     def confirm(self, event=None):
         self.new_validation = list(filter(None, (row[0] for row in self.validation_display.data)))
@@ -3547,19 +3128,14 @@ class Add_Detail_Column_Popup(tk.Toplevel):
     def __init__(self, C, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Add Detail Column")
-        self.grid_columnconfigure(2, weight=1)
+        self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
-        self.type_display = Ez_Dropdown(self, EF)
-        self.type_display["values"] = ("Text", "Number", "Date")
-        self.type_display.set_my_value("Text")
-        self.type_display.grid(row=0, column=0, sticky="nswe", padx=(20, 0), pady=(20, 5))
-        self.type_display.bind("<<ComboboxSelected>>", lambda focus: self.detail_name_display.place_cursor())
         self.detail_name_label = Label(self, text="New detail\ncolumn name:", font=EF, theme=theme)
-        self.detail_name_label.grid(row=0, column=1, sticky="nswe", padx=20, pady=(20, 5))
+        self.detail_name_label.grid(row=0, column=0, sticky="nswe", padx=20, pady=(20, 5))
         self.detail_name_display = Entry_With_Scrollbar(self, theme=theme)
-        self.detail_name_display.grid(row=0, column=2, sticky="nswe", pady=(20, 5), padx=(0, 20))
+        self.detail_name_display.grid(row=0, column=1, sticky="nswe", pady=(20, 5), padx=(0, 20))
         self.button_frame = Frame(self, theme=theme)
-        self.button_frame.grid(row=1, column=1, columnspan=2, sticky="nse")
+        self.button_frame.grid(row=1, column=1, sticky="nse")
         self.button_frame.grid_rowconfigure(0, weight=1)
         self.confirm_button = Button(
             self.button_frame,
@@ -3581,7 +3157,6 @@ class Add_Detail_Column_Popup(tk.Toplevel):
             self.result = self.detail_name_display.get_my_value()
         else:
             self.result = "".join(self.detail_name_display.get_my_value().strip().split())
-        self.type_ = self.type_display.get()
         self.destroy()
 
     def cancel(self, event=None):
@@ -4295,51 +3870,6 @@ class Settings_Popup(tk.Toplevel):
         self.json_format_dropdown.bind("<<ComboboxSelected>>", self.set_json_format)
         self.json_format_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
 
-        self.date_format = Frame(self, theme=theme)
-        self.date_format.grid(row=0, column=1, pady=20, padx=20, sticky="nswe")
-
-        self.date_format_header = Label(self.date_format, text="Date Format", font=TF, theme=theme, anchor="nw")
-        self.date_format_header.pack(side="top", anchor="nw", fill="x", pady=(0, 20))
-
-        self.date_format_label = Label(
-            self.date_format,
-            text="Date Format (per file): ",
-            font=EFB,
-            theme=theme,
-            anchor="nw",
-        )
-        self.date_format_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
-
-        self.date_format_dropdown = Ez_Dropdown(self.date_format, font=EF)
-        self.date_format_dropdown["values"] = [
-            "DD/MM/YYYY",
-            "DD-MM-YYYY",
-            "MM/DD/YYYY",
-            "MM-DD-YYYY",
-            "YYYY/MM/DD",
-            "YYYY-MM-DD",
-        ]
-        if self.C.DATE_FORM == "%d/%m/%Y":
-            self.date_format_dropdown.set_my_value("DD/MM/YYYY")
-
-        elif self.C.DATE_FORM == "%d-%m-%Y":
-            self.date_format_dropdown.set_my_value("DD-MM-YYYY")
-
-        elif self.C.DATE_FORM == "%m/%d/%Y":
-            self.date_format_dropdown.set_my_value("MM/DD/YYYY")
-
-        elif self.C.DATE_FORM == "%m-%d-%Y":
-            self.date_format_dropdown.set_my_value("MM-DD-YYYY")
-
-        elif self.C.DATE_FORM == "%Y/%m/%d":
-            self.date_format_dropdown.set_my_value("YYYY/MM/DD")
-
-        elif self.C.DATE_FORM == "%Y-%m-%d":
-            self.date_format_dropdown.set_my_value("YYYY-MM-DD")
-
-        self.date_format_dropdown.bind("<<ComboboxSelected>>", self.set_date_format)
-        self.date_format_dropdown.pack(side="top", anchor="nw", fill="x", pady=10)
-
         self.appearance = Frame(self, theme=theme)
         self.appearance.grid(row=0, column=1, pady=20, padx=20, sticky="nswe")
 
@@ -4499,14 +4029,6 @@ class Settings_Popup(tk.Toplevel):
         )
         self.json_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
 
-        self.date_format_button = Button(
-            self.page_chooser_frame,
-            text="Date Format",
-            style="ERR_ASK_FNT.Std.TButton",
-            command=self.goto_date_format,
-        )
-        self.date_format_button.pack(side="top", padx=20, pady=(20, 0), fill="x")
-
         self.appearance_button = Button(
             self.page_chooser_frame,
             text="Appearance",
@@ -4618,9 +4140,6 @@ class Settings_Popup(tk.Toplevel):
         self.index_alignment_label.change_theme(theme)
         self.header_alignment_label.change_theme(theme)
         # self.alternate_color_label.change_theme(theme)
-        self.date_format.config(bg=themes[theme].top_left_bg)
-        self.date_format_header.change_theme(theme)
-        self.date_format_label.change_theme(theme)
         self.layout_label.change_theme(theme)
         self.indent_label.change_theme(theme)
         self.C.change_theme(theme)
@@ -4657,21 +4176,6 @@ class Settings_Popup(tk.Toplevel):
         self.C.tree.set_options(alternate_color=color)
         self.C.tree.set_options(show_horizontal_grid=not color)
 
-    def set_date_format(self, event=None):
-        fmt = self.date_format_dropdown.get_my_value()
-        if fmt == "DD/MM/YYYY":
-            self.C.change_date_format("%d/%m/%Y")
-        elif fmt == "DD-MM-YYYY":
-            self.C.change_date_format("%d-%m-%Y")
-        elif fmt == "MM/DD/YYYY":
-            self.C.change_date_format("%m/%d/%Y")
-        elif fmt == "MM-DD-YYYY":
-            self.C.change_date_format("%m-%d-%Y")
-        elif fmt == "YYYY/MM/DD":
-            self.C.change_date_format("%Y/%m/%d")
-        elif fmt == "YYYY-MM-DD":
-            self.C.change_date_format("%Y-%m-%d")
-
     def goto_general(self):
         self.general.tkraise()
 
@@ -4680,9 +4184,6 @@ class Settings_Popup(tk.Toplevel):
 
     def goto_json(self):
         self.json.tkraise()
-
-    def goto_date_format(self):
-        self.date_format.tkraise()
 
     def goto_appearance(self):
         self.appearance.tkraise()

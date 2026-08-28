@@ -33,10 +33,6 @@ from .constants import (
     current_dir,
     from_clipboard_delimiters,
     green_add_fill,
-    isfloatre,
-    isintlikere,
-    isintre,
-    isrealre,
     red_remove_fill,
     tv_lvls_colors,
     upone_dir,
@@ -607,81 +603,6 @@ def convert_old_xl_to_xlsx(path_):
 def try_remove(remove_from, remove):
     with suppress(Exception):
         remove_from.remove(remove)
-
-
-def type_int(o):
-    return isinstance(o, int) and not isinstance(o, bool)
-
-
-def int_or_float(o):
-    return (isinstance(o, int) and not isinstance(o, bool)) or isinstance(o, float)
-
-
-def isreal(inp, str_only=False, num_only=False, allow_nan=False, allow_inf=False):
-    if str_only and not isinstance(inp, str):
-        return False
-    if num_only and not int_or_float(inp):
-        return False
-    try:
-        x = bool(isrealre.match(inp))
-    except TypeError:
-        return isinstance(inp, (int, float))
-    else:
-        return bool(
-            x
-            or allow_inf
-            and inp.lower().strip().lstrip("-+") in ("inf", "infinity")
-            or allow_nan
-            and inp.lower().strip().lstrip("-+") == "nan"
-        )
-
-
-def isfloat(inp, str_only=False, num_only=False, allow_nan=False, allow_inf=False):
-    if str_only and not isinstance(inp, str):
-        return False
-    if num_only and not isinstance(inp, float):
-        return False
-    try:
-        x = bool(isfloatre.match(inp))
-    except TypeError:
-        return isinstance(inp, float)
-    else:
-        return bool(
-            x
-            or allow_inf
-            and inp.lower().strip().lstrip("-+") in ("inf", "infinity")
-            or allow_nan
-            and inp.lower().strip().lstrip("-+") == "nan"
-        )
-
-
-def isint(inp, str_only=False, num_only=False):
-    if str_only and not isinstance(inp, str):
-        return False
-    if num_only and not type_int(inp):
-        return False
-    try:
-        return bool(isintre.match(inp))
-    except TypeError:
-        return False
-
-
-def isintlike(inp, str_only=False, num_only=False):
-    if str_only and not isinstance(inp, str):
-        return False
-    if num_only and not int_or_float(inp):
-        return False
-    try:
-        if isintre.match(inp):
-            return True
-        elif isintlikere.match(inp):
-            return float(inp).is_integer()
-        else:
-            return False
-    except TypeError:
-        if isinstance(inp, float):
-            return inp.is_integer()
-        return bool(type_int(inp))
 
 
 def equalize_sublist_lens(seq: list[list[object]], len_: int | None = None) -> list[list[object]]:

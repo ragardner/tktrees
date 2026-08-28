@@ -16,7 +16,6 @@ from collections import defaultdict, deque
 from collections.abc import Generator, Iterator, Sequence
 from contextlib import suppress
 from itertools import cycle, filterfalse, islice, repeat
-from locale import getdefaultlocale
 from math import floor
 from operator import attrgetter, itemgetter
 from tkinter import filedialog, font, ttk
@@ -54,6 +53,7 @@ from .classes import (
     RowStorage,
     SearchResult,
     TreeBuilder,
+    normalize_header_type,
 )
 from .constants import (
     BF,
@@ -64,12 +64,8 @@ from .constants import (
     changelog_header,
     ctrl_button,
     ctrl_rc_press,
-    date_formats_usable,
-    date_icon,
-    detail_column_types,
     letters_icon,
     menu_kwargs,
-    nums_icon,
     rc_button,
     rc_motion,
     rc_press,
@@ -84,8 +80,6 @@ from .constants import (
     themes,
     tree_bindings,
     tv_lvls_colors,
-    validation_allowed_date_chars,
-    validation_allowed_num_chars,
     warnings_header,
 )
 from .functions import (
@@ -100,10 +94,6 @@ from .functions import (
     get_json_format,
     get_json_from_file,
     increment_file_version,
-    isfloat,
-    isint,
-    isintlike,
-    isreal,
     json_to_sheet,
     level_to_color,
     new_info_storage,
@@ -128,8 +118,6 @@ from .toplevels import (
     Changelog_Popup,
     Delete_Ids_Using_List_Popup,
     Edit_Conditional_Formatting_Popup,
-    Edit_Detail_Date_Popup,
-    Edit_Detail_Number_Popup,
     Edit_Detail_Text_Popup,
     Edit_Validation_Popup,
     Enter_Sheet_Name_Popup,
@@ -156,9 +144,6 @@ from .widgets import (
     Frame,
     Normal_Entry,
 )
-
-# OVERRIDE LOCALE DETECTION FOR DATE FORMAT
-override_locale = None
 
 # DEFAULT SETTING FOR SAVING WITH PROGRAM DATA
 save_xlsx_and_json_with_program_data = True
@@ -222,18 +207,6 @@ class Tree_Editor(tk.Frame):
         self.auto_sort_nodes_bool = True
         self.tv_lvls_bool = False
 
-        if override_locale is not None:
-            self.user_locale = f"{override_locale}"
-        else:
-            self.user_locale = f"{getdefaultlocale()[0]}".lower()
-
-        if self.user_locale == "en_us":
-            self.DATE_FORM = "%m-%d-%Y"
-        elif self.user_locale == "en_ca" or "zh" in self.user_locale:
-            self.DATE_FORM = "%Y-%m-%d"
-        else:
-            self.DATE_FORM = "%d-%m-%Y"
-
         self.warnings_filepath = ""
         self.warnings_sheet = ""
 
@@ -243,8 +216,6 @@ class Tree_Editor(tk.Frame):
             "c": tk.PhotoImage(format="png", data=align_c_icon),
             "e": tk.PhotoImage(format="png", data=align_e_icon),
             "letters": tk.PhotoImage(format="png", data=letters_icon),
-            "dates": tk.PhotoImage(format="png", data=date_icon),
-            "numbers": tk.PhotoImage(format="png", data=nums_icon),
             "tag": tk.PhotoImage(format="png", data=tag_icon),
             "search": tk.PhotoImage(format="png", data=search_icon),
             "right": tk.PhotoImage(format="png", data=right_icon),
@@ -888,37 +859,6 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.tree_sheet_rc_menu_single_col.add_separator()
-        self.tree_sheet_rc_menu_single_col_type = tk.Menu(
-            self.tree_sheet_rc_menu_single_col,
-            tearoff=0,
-            **menu_kwargs,
-        )
-        self.tree_sheet_rc_menu_single_col.add_cascade(
-            label="Type",
-            menu=self.tree_sheet_rc_menu_single_col_type,
-            **menu_kwargs,
-        )
-        self.tree_sheet_rc_menu_single_col_type.add_command(
-            label="Text",
-            command=self.rc_change_coltype_text,
-            image=self.icons["letters"],
-            compound="left",
-            **menu_kwargs,
-        )
-        self.tree_sheet_rc_menu_single_col_type.add_command(
-            label="Number",
-            command=self.rc_change_coltype_number,
-            image=self.icons["numbers"],
-            compound="left",
-            **menu_kwargs,
-        )
-        self.tree_sheet_rc_menu_single_col_type.add_command(
-            label="Date",
-            command=self.rc_change_coltype_date,
-            image=self.icons["dates"],
-            compound="left",
-            **menu_kwargs,
-        )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Validation",
             command=self.rc_edit_validation,
@@ -1649,8 +1589,6 @@ class Tree_Editor(tk.Frame):
             self.allow_spaces_columns_var = bool(program_data.allow_spaces_columns)
             self.set_headers()
             self.tag_ids(selection=set(program_data.tagged_ids), toggle=False, do_tree=False)
-            if "date_format" in program_data:
-                self.DATE_FORM = program_data.date_format
         else:
             self.set_headers()
             self.tagged_ids = set()
@@ -2149,10 +2087,6 @@ class Tree_Editor(tk.Frame):
         return value
 
     def edit_cell_single(self, r: int, c: int, value: object) -> None:
-        if self.headers[c].type_ == "Number":
-            value = self.convert_num(value)
-        elif self.headers[c].type_ == "Date":
-            value = self.convert_date(value, self.DATE_FORM)
         self.changelog_append(
             "Edit cell",
             f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
@@ -2163,10 +2097,6 @@ class Tree_Editor(tk.Frame):
         return value
 
     def edit_cell_multiple(self, r: int, c: int, value: object) -> None:
-        if self.headers[c].type_ == "Number":
-            value = self.convert_num(value)
-        elif self.headers[c].type_ == "Date":
-            value = self.convert_date(value, self.DATE_FORM)
         self.changelog_append_no_unsaved(
             "Edit cell |",
             f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
@@ -2271,7 +2201,7 @@ class Tree_Editor(tk.Frame):
                 else:
                     Error(
                         self,
-                        f"Entered text invalid for column type - {self.why_isnt_detail_valid(x1, newtext)}   ",
+                        "Entered text is not in column validation   ",
                         theme=self.C.theme,
                     )
             if event.sheetname == "tree" and event.loc:
@@ -3136,10 +3066,8 @@ class Tree_Editor(tk.Frame):
 
     def tree_sheet_rc_menu_option_enabler_disabler(self, col: int):
         if col == self.ic or col in self.hiers:
-            self.tree_sheet_rc_menu_single_col.entryconfig("Type", state="disabled")
             self.tree_sheet_rc_menu_single_col.entryconfig("Validation", state="disabled")
         else:
-            self.tree_sheet_rc_menu_single_col.entryconfig("Type", state="normal")
             self.tree_sheet_rc_menu_single_col.entryconfig("Validation", state="normal")
 
     def tree_rc_release(self, event):
@@ -4744,30 +4672,7 @@ class Tree_Editor(tk.Frame):
     def check_validation_validity(self, col: int, validation: list[str]) -> str | list[str]:
         if not validation:
             return validation
-        if self.headers[col].type_ == "Number":
-            for e in validation:
-                if e != "" and not isreal(e):
-                    return f"Error: Only numbers are allowed in Number columns. Error caused by: {e}"
-                for c in e:
-                    if c not in validation_allowed_num_chars:
-                        return f"Error: Invalid character in validation for Number column. Error caused by: {c}"
-        elif self.headers[col].type_ == "Date":
-            for e in validation:
-                for c in e:
-                    if c not in validation_allowed_date_chars:
-                        return f"Error: Invalid character in validation for Date columns. Error caused by: {c}"
-            for i in range(len(validation)):
-                e = validation[i]
-                if not isint(e):
-                    x = self.detect_date_form(e)
-                    if x and len(x) == 1 and x[0] != self.DATE_FORM:
-                        e = datetime.datetime.strftime(datetime.datetime.strptime(e, x[0]), self.DATE_FORM)
-                    elif not x:
-                        return f"Error: Only dates are allowed in Date columns. Error caused by: {e}"
-                validation[i] = e
-        elif self.headers[col].type_ == "Text":
-            pass
-        else:
+        if self.headers[col].type_ != "Text":
             return "Error: Only Detail columns can have validation"
         return validation if "" in validation else [""] + validation
 
@@ -4776,321 +4681,6 @@ class Tree_Editor(tk.Frame):
         for rn in range(len(self.sheet.MT.data)):
             if not self.is_in_validation(validset, self.sheet.MT.data[rn][col]):
                 self.sheet.MT.data[rn][col] = ""
-
-    def check_condition_validity(self, col, condition, input_headers=None):
-        if not condition:
-            return ""
-        if input_headers is None:
-            input_headers = []
-        heads = input_headers if input_headers else self.headers
-        if heads[col].type_ in ("Number", "Date"):
-            all_allowed_chars = {
-                "a",
-                "n",
-                "d",
-                "o",
-                "r",
-                "A",
-                "N",
-                "D",
-                "O",
-                "R",
-                "0",
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-                "7",
-                "8",
-                "9",
-                "!",
-                ">",
-                "<",
-                "=",
-                " ",
-                "c",
-                "C",
-                "/",
-                "-",
-                ".",
-            }
-            condition = "".join(c.lower() for c in condition.replace("  ", " ") if c in all_allowed_chars)
-            if not condition:
-                return "Error:"
-            if not condition.startswith(" "):
-                condition = " " + condition
-            if len(condition) < 3:
-                return "Error: Condition too short"
-
-            nums = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
-            syms = {"!", ">", "<", "=", "-", "."}
-
-            # detect single equals character
-            for last_char, char, next_char in zip(
-                islice(condition, 0, len(condition)),
-                islice(condition, 1, len(condition)),
-                islice(condition, 2, len(condition)),
-            ):
-                if char == "=" and last_char not in syms and next_char != "=":
-                    return "Error: Incorrect use of ="
-                if char == "=" and last_char in syms and next_char != " ":
-                    return "Error: Missing a space after ="
-
-            d = defaultdict(int)
-            for char in condition:
-                d[char] += 1
-            if d["a"] > 1:
-                return "Error: Too many a characters"
-            if d["n"] > 1:
-                return "Error: Too many n characters"
-            if d["o"] > 1:
-                return "Error: Too many o characters"
-            if d["r"] > 1:
-                return "Error: Too many r characters"
-            if d["c"] > 2:
-                return "Error: Too many c characters"
-            if d["d"] > 2:
-                return "Error: Too many d characters"
-            if d["."] > 2:
-                return "Error: Too many . characters"
-            if d["-"] > 2:
-                return "Error: Too many - characters"
-            if d["!"] > 2:
-                return "Error: Too many ! characters"
-            if d[">"] > 2:
-                return "Error: Too many > characters"
-            if d["<"] > 2:
-                return "Error: Too many < characters"
-            if d["/"] > 4:
-                return "Error: Too many / characters"
-            if d["="] > 4:
-                return "Error: Too many = characters"
-
-            # number larger or less than 10 trillion
-            for n in re.findall("([0-9]+)", condition):
-                x = float(n)
-                if x > 10000000000000 or x < -10000000000000:
-                    return "Error: Condition contains number larger or less than 10 trillion"
-
-            # more than one . character in a number
-            for n in re.findall("([0-9.]+)", condition):
-                if n.count(".") > 1:
-                    return "Error: A number contained more than one . character"
-
-        if heads[col].type_ == "Number":
-            for last_char, char in zip(
-                islice(condition, 0, len(condition)),
-                islice(condition, 1, len(condition)),
-            ):
-                # a
-                if last_char == "a" and char != "n":
-                    return "Error: and spelt incorrectly"
-                if char == "a" and last_char != " ":
-                    return "Error: and must follow a space"
-
-                # n
-                if last_char == "n" and char != "d":
-                    return "Error: and spelt incorrectly"
-                if char == "n" and last_char != "a":
-                    return "Error: and spelt incorrectly"
-
-                # d
-                if last_char == "d" and char != " ":
-                    return "Error: A space must follow and"
-                if char == "d" and last_char != "n":
-                    return "Error: and spelt incorrectly"
-
-                # o
-                if last_char == "o" and char != "r":
-                    return "Error: or spelt incorrectly"
-                if char == "o" and last_char != " ":
-                    return "Error: or must follow a space"
-
-                # r
-                if last_char == "r" and char != " ":
-                    return "Error: A space must follow or"
-                if char == "r" and last_char != "o":
-                    return "Error: or spelt incorrectly"
-
-                # num
-                if last_char in nums and char != " " and char not in nums and char != ".":
-                    return "Error: A space or another number must follow a number"
-                if char in nums and last_char not in nums and last_char not in ("c", ".", "-", " "):
-                    return "Error: A number can only follow another number, a c character or a space"
-
-                # !
-                if last_char == "!" and char != "=":
-                    return "Error: = must follow !"
-                if char == "!" and last_char != " ":
-                    return "Error: ! must follow a space"
-
-                # >
-                if last_char == ">" and char != " " and char != "=":
-                    return "Error: A space or = must follow >"
-                if char == ">" and last_char != " ":
-                    return "Error: > must follow a space"
-
-                # <
-                if last_char == "<" and char != " " and char != "=":
-                    return "Error: A space or = must follow <"
-                if char == "<" and last_char != " ":
-                    return "Error: < must follow a space"
-
-                # =
-                if last_char == "=" and char != "=" and char != " ":
-                    return "Error: = or a space must follow ="
-                if char == "=" and last_char not in ("!", "<", ">", "=", " "):
-                    return "Error: = can only follow ! < > =  Equal to: ==  Not Equal to: !=  Less than or equal to: <=  Greater than or equal to: >="
-
-                # /
-                if last_char == "/" or char == "/":
-                    return "Error: / not allowed in Number conditions"
-
-                # .
-                if last_char == "." and char not in nums:
-                    return "Error: A number must follow a . character"
-                if char == "." and last_char not in nums:
-                    return "Error: A number must be before a . character"
-
-                # -
-                if last_char == "-" and char not in nums:
-                    return "Error: A number must follow a - character"
-                if char == "-" and last_char != " ":
-                    return "Error: A space must be before - characters"
-
-                # c
-                if char == "c":
-                    return "Error: c character not allowed in Number conditions"
-
-            if condition[-1] not in nums:
-                return "Error: Condition can only end in a number"
-
-        elif heads[col].type_ == "Date":
-            for last_char, char in zip(
-                islice(condition, 0, len(condition)),
-                islice(condition, 1, len(condition)),
-            ):
-                # a
-                if last_char == "a" and char != "n":
-                    return "Error: and spelt incorrectly"
-                if char == "a" and last_char != " ":
-                    return "Error: and must follow a space"
-
-                # n
-                if last_char == "n" and char != "d":
-                    return "Error: and spelt incorrectly"
-                if char == "n" and last_char != "a":
-                    return "Error: and spelt incorrectly"
-
-                # d
-                if last_char == "d" and char != " ":
-                    return "Error: A space must follow and"
-                # different to Number check, added c
-                if char == "d" and last_char != "n" and last_char != "c":
-                    return "Error: and or current date (cd) spelt incorrectly"
-
-                # o
-                if last_char == "o" and char != "r":
-                    return "Error: or spelt incorrectly"
-                if char == "o" and last_char != " ":
-                    return "Error: or must follow a space"
-
-                # r
-                if last_char == "r" and char != " ":
-                    return "Error: A space must follow or"
-                if char == "r" and last_char != "o":
-                    return "Error: or spelt incorrectly"
-
-                # num
-                if last_char in nums and char != "/" and char != " " and char not in nums:
-                    return "Error: A space or / must follow a number"
-                if char in nums and last_char not in nums and last_char not in (" ", "/", "c"):
-                    return "Error: A number can only follow another number, a / or a space"
-
-                # !
-                if last_char == "!" and char != "=":
-                    return "Error: = must follow !"
-                if char == "!" and last_char != " ":
-                    return "Error: ! must follow a space"
-
-                # >
-                if last_char == ">" and char != " " and char != "=":
-                    return "Error: A space or = must follow >"
-                if char == ">" and last_char != " ":
-                    return "Error: > must follow a space"
-
-                # <
-                if last_char == "<" and char != " " and char != "=":
-                    return "Error: A space or = must follow <"
-                if char == "<" and last_char != " ":
-                    return "Error: < must follow a space"
-
-                # =
-                if last_char == "=" and char != "=" and char != " ":
-                    return "Error: = or a space must follow ="
-                if char == "=" and last_char not in ("!", "<", ">", "=", " "):
-                    return "Error: = can only follow ! < > =  Equal to: ==  Not Equal to: !=  Less than or equal to: <=  Greater than or equal to: >="
-
-                # /
-                if last_char == "/" and char not in nums:
-                    return "Error: A number must follow a / character"
-                if char == "/" and last_char not in nums:
-                    return "Error: A number must be before a / character"
-
-                # .
-                if char == ".":
-                    return "Error: . characters not allowed in Date conditions"
-
-                # -
-                if char == "-":
-                    return "Error: - characters not allowed in Date conditions"
-
-                # c
-                if last_char == "c" and char != "d":
-                    return "Error: Current date (cd) spelt incorrectly"
-                if char == "c" and last_char != " ":
-                    return "Error: A space must be before current date (cd)"
-
-            if condition[-1] == "d" and condition[-2] != "c":
-                return "Error: Current date (cd) spelt incorrectly"
-
-            if condition[-1] not in nums and condition[-1] != "d":
-                return "Error: Condition can only end in a number or current date (cd)"
-        # elif heads[col].type_ in ("ID", "Parent", "Text"):
-        # pass
-        return condition
-
-    def format_str_number(self, s):
-        if not s:
-            return s
-        elif isint(s):
-            return int(s)
-        elif isintlike(s):
-            return int(float(s))
-        elif isfloat(s):
-            return float(s)
-        return s
-
-    def format_str_date(self, s):
-        if not s:
-            return s
-        elif isint(s):
-            return datetime.timedelta(days=int(s))
-        else:
-            try:
-                return datetime.datetime.strptime(s, self.DATE_FORM)
-            except Exception:
-                pass
-        return s
-
-    def format_date_str(self, d):
-        if isinstance(d, datetime.timedelta):
-            return f"{d.days}"
-        elif isinstance(d, datetime.datetime):
-            return d.strftime(self.DATE_FORM)
-        return f"{d}"
 
     def refresh_formatting(
         self,
@@ -5115,107 +4705,18 @@ class Tree_Editor(tk.Frame):
         if not rows:
             return
 
-        # used within eval if a date column condition contains "cd"
-        try:
-            cd = datetime.datetime.strptime(
-                datetime.datetime.today().strftime(self.DATE_FORM),
-                self.DATE_FORM,
-            )
-        except Exception:
-            cd = datetime.timedelta(days=0)  # noqa: F841
-
-        all_conditions = {}
-        number_cols = set()
-        date_cols = set()
-        for col, hdr in enumerate(self.headers):
-            if hdr.type_ == "Number":
-                number_cols.add(col)
-            elif hdr.type_ == "Date":
-                date_cols.add(col)
-
+        quick_data = self.sheet.MT.data
         for col in columns:
             if ignore_empty and not self.headers[col].formatting:
                 continue
-            modified_conditions = []
-            all_conditions[col] = {}
-
-            if self.headers[col].type_ in ("ID", "Parent", "Text"):
-                all_conditions[col] = self.headers[col].formatting
-
-            elif self.headers[col].type_ == "Number":
-                for condition in self.headers[col].formatting:
-                    cond, color = condition
-                    if cond:
-                        cond = "cell " + cond.replace("and", "and cell").replace("or", "or cell")
-                        modified_conditions.append((cond, color))
-                    else:
-                        modified_conditions.append(("not cell", color))
-                all_conditions[col] = modified_conditions
-
-            elif self.headers[col].type_ == "Date":
-                for condition in self.headers[col].formatting:
-                    cond, color = condition
-                    if cond:
-                        cond = cond.replace("and", "and cell").replace("or", "or cell")
-                        cond = "cell " + "".join(
-                            [
-                                (
-                                    f"datetime.timedelta(days=int({e}))"
-                                    if isreal(e)
-                                    else (
-                                        f"datetime.datetime.strptime('{e}',self.convert_hyphen_to_slash_date_form(self.DATE_FORM))"
-                                        if "/" in e
-                                        else e
-                                    )
-                                )
-                                for e in re.split("([0-9/]+)", cond)
-                            ]
-                        )
-                        modified_conditions.append((cond, color))
-                    else:
-                        modified_conditions.append(("not cell", color))
-                all_conditions[col] = modified_conditions
-
-        quick_data = self.sheet.MT.data
-        for col in filter(all_conditions.__contains__, columns):
+            conditions = self.headers[col].formatting
             for rn in rows:
                 self.sheet.dehighlight_cells(row=rn, column=col, redraw=False)
                 cell = quick_data[rn][col]
-
-                # convert cell to number/date
-                if cell:
-                    if col in number_cols:
-                        cell = self.format_str_number(cell)
-                    elif col in date_cols:
-                        cell = self.format_str_date(cell)
-
-                # apply highlights
-                if col in number_cols or col in date_cols:
-                    for cond, color in all_conditions[col]:
-                        try:
-                            if eval(cond):
-                                self.sheet.highlight_cells(
-                                    row=rn,
-                                    column=col,
-                                    bg=color,
-                                    fg="black",
-                                )
-                                break
-                        except Exception:
-                            continue
-
-                else:
-                    for cond, color in all_conditions[col]:
-                        if cell.lower() == cond.lower():
-                            self.sheet.highlight_cells(row=rn, column=col, bg=color, fg="black")
-                            break
-
-                # convert cell back to string
-                if cell != "":
-                    if col in number_cols:
-                        quick_data[rn][col] = f"{cell}"
-                    elif col in date_cols:
-                        quick_data[rn][col] = self.format_date_str(cell)
+                for cond, color in conditions:
+                    if cell.lower() == cond.lower():
+                        self.sheet.highlight_cells(row=rn, column=col, bg=color, fg="black")
+                        break
 
         self.refresh_rows = set()
 
@@ -5224,7 +4725,6 @@ class Tree_Editor(tk.Frame):
             return
         popup = Edit_Validation_Popup(
             self,
-            self.headers[col].type_,
             self.headers[col].name,
             self.headers[col].validation,
             self.C.theme,
@@ -5273,169 +4773,11 @@ class Tree_Editor(tk.Frame):
             return
         return col
 
-    def rc_change_coltype_text(self, event=None):
-        if (col := self.rc_selected_col()) is None:
-            return
-        self.snapshot_col_type_text(col)
-        self.change_coltype_text(col)
-        self.set_headers()
-
-    def change_coltype_text(self, col):
-        self.headers[col].type_ = "Text"
-        self.headers[col].formatting = []
-
-    def rc_change_coltype_number(self, event=None):
-        if (col := self.rc_selected_col()) is None:
-            return
-        self.snapshot_col_type_num_date(col, "Number")
-        self.headers[col].type_ = "Number"
-        self.change_coltype_number(col)
-        if isinstance(self.check_validation_validity(col, self.headers[col].validation), str):
-            self.headers[col].validation = []
-            self.refresh_dropdowns()
-        self.headers[col].formatting = [
-            tup
-            for tup in self.headers[col].formatting
-            if not self.check_condition_validity(col, tup[0]).startswith("Error:")
-        ]
-        self.set_headers()
-        self.refresh_formatting(columns=col)
-        self.redo_tree_display()
-        self.redraw_sheets()
-
-    def change_coltype_number(self, col, warnings=False):
-        if warnings:
-            for rn in range(len(self.sheet.MT.data)):
-                cell = self.sheet.MT.data[rn][col]
-                if cell and not isreal(cell):
-                    self.warnings.append(
-                        f" - Deleted cell row #{rn} column #{col} because {cell} was not valid for Number column"
-                    )
-                    self.sheet.MT.data[rn][col] = ""
-                    self.refresh_tree_item(self.sheet.data[rn][self.ic])
-        else:
-            for rn in range(len(self.sheet.MT.data)):
-                cell = self.sheet.MT.data[rn][col]
-                if cell and not isreal(cell):
-                    self.sheet.MT.data[rn][col] = ""
-                    self.refresh_tree_item(self.sheet.data[rn][self.ic])
-
-    def convert_num(self, num):
-        if isint(num):
-            return f"{int(num)}"
-        return f"{float(num)}"
-
-    def detect_date_form(self, date):
-        forms = []
-        for form in date_formats_usable:
-            try:
-                datetime.datetime.strptime(date, form).date()
-                forms.append(form)
-            except Exception:
-                continue
-        return forms
-
-    def convert_date(self, date, new_form):
-        if isint(date):
-            return f"{int(date)}"
-        for form in date_formats_usable:
-            try:
-                return datetime.datetime.strftime(datetime.datetime.strptime(date, form), new_form)
-            except Exception:
-                continue
-        return date
-
-    def convert_hyphen_to_slash_date_form(self, form):
-        if form.startswith("%d"):
-            return "%d/%m/%Y"
-        elif form.startswith("%m"):
-            return "%m/%d/%Y"
-        return "%Y/%m/%d"
-
     def is_in_validation(self, validation, text):
         return text in validation
 
     def detail_is_valid_for_col(self, col, detail):
-        t = self.headers[col].type_
-        if self.headers[col].validation and not self.is_in_validation(self.headers[col].validation, detail):
-            return False
-        if t == "Text":
-            return True
-        elif t == "Number":
-            if detail == "":
-                return True
-            return isreal(detail)
-        elif t == "Date":
-            if isint(detail):
-                return True
-            return bool(self.detect_date_form(detail))
-        return False
-
-    def why_isnt_detail_valid(self, col, detail):
-        t = self.headers[col].type_
-        if self.headers[col].validation and not self.is_in_validation(self.headers[col].validation, detail):
-            return "Entered detail is not in column validation"
-        if t == "Number":
-            return "Entered detail is not a valid number"
-        elif t == "Date":
-            return "Entered detail is not a valid date or integer"
-
-    def rc_change_coltype_date(self, event=None):
-        if (col := self.rc_selected_col()) is None:
-            return
-        self.snapshot_col_type_num_date(col, "Date")
-        self.headers[col].type_ = "Date"
-        self.change_coltype_date(col, detect_date_form=True)
-        if isinstance(self.check_validation_validity(col, self.headers[col].validation), str):
-            self.headers[col].validation = []
-            self.refresh_dropdowns()
-        self.headers[col].formatting = [
-            tup
-            for tup in self.headers[col].formatting
-            if not self.check_condition_validity(col, tup[0]).startswith("Error:")
-        ]
-        self.set_headers()
-        self.refresh_formatting(columns=col)
-        self.redo_tree_display()
-        self.redraw_sheets()
-
-    def change_coltype_date(self, col, detect_date_form=False, warnings=False):
-        if detect_date_form:
-            sheet_date_form = {
-                form for row in self.sheet.MT.data if len(row[col]) == 10 for form in self.detect_date_form(row[col])
-            }
-            if len(sheet_date_form) == 1:
-                sheet_date_form = next(iter(sheet_date_form))
-                quick_data = self.sheet.MT.data
-                for rn in range(len(quick_data)):
-                    if quick_data[rn][col] and not isint(quick_data[rn][col]):
-                        try:
-                            quick_data[rn][col][rn][col] = datetime.datetime.strftime(
-                                datetime.datetime.strptime(quick_data[rn][col], sheet_date_form),
-                                self.DATE_FORM,
-                            )
-                        except Exception:
-                            if warnings:
-                                self.warnings.append(
-                                    f" - Deleted cell row #{rn} column #{col} because {quick_data[rn][col]} was not valid for Date columns"
-                                )
-                            quick_data[rn][col][rn][col] = ""
-                        self.refresh_tree_item(self.sheet.data[rn][self.ic])
-            else:
-                self.change_coltype_date_validate(col)
-        else:
-            self.change_coltype_date_validate(col)
-
-    def change_coltype_date_validate(self, col):
-        quick_data = self.sheet.MT.data
-        for rn in range(len(quick_data)):
-            if (
-                quick_data[rn][col]
-                and not isint(quick_data[rn][col])
-                and not self.detect_date_form(quick_data[rn][col])
-            ):
-                quick_data[rn][col] = ""
-                self.refresh_tree_item(quick_data[rn][self.ic])
+        return not (self.headers[col].validation and not self.is_in_validation(self.headers[col].validation, detail))
 
     def increment_unsaved(self):
         self.C.unsaved_changes = True
@@ -5841,14 +5183,6 @@ class Tree_Editor(tk.Frame):
         elif new_vs["type"] == "rename col":
             ...
 
-        elif new_vs["type"] == "col type text":
-            self.refresh_formatting(columns=new_vs["col_num"])
-
-        elif new_vs["type"] == "col type num date":
-            for rn, c in enumerate(pickle.loads(zlib.decompress(new_vs["col"]))):
-                self.sheet.MT.data[rn][new_vs["col_num"]] = c
-            self.refresh_formatting(columns=new_vs["col_num"])
-
         elif new_vs["type"] == "sort":
             self.sheet.MT.data = [
                 self.sheet.MT.data[self.rns[new_vs["ids"][oldrn]]] for oldrn in range(len(new_vs["ids"]))
@@ -5869,22 +5203,6 @@ class Tree_Editor(tk.Frame):
 
         elif new_vs["type"] == "node sort":
             ...
-
-        elif new_vs["type"] == "date form":
-            self.DATE_FORM = new_vs["old_form"]
-            xxform = new_vs["new_form"]
-            date_cols = [i for i, h in enumerate(self.headers) if h.type_ == "Date"]
-            for col in date_cols:
-                for rn in range(len(self.sheet.MT.data)):
-                    cell = self.sheet.MT.data[rn][col]
-                    if "/" in cell or "-" in cell:
-                        try:
-                            cur_cell = datetime.datetime.strptime(cell, xxform)
-                            cell = datetime.datetime.strftime(cur_cell, self.DATE_FORM)
-                        except Exception:
-                            pass
-                    self.sheet.MT.data[rn][col] = cell
-            self.refresh_formatting(columns=date_cols)
 
         elif new_vs["type"].startswith("full"):
             self.warnings_filepath = new_vs["og_file"]
@@ -6125,41 +5443,6 @@ class Tree_Editor(tk.Frame):
             }
         )
 
-    def snapshot_col_type_text(self, col):
-        self.snapshot_chore()
-        self.changelog_append(
-            "Change detail column type",
-            f"Column #{col + 1} named: {self.headers[col].name}",
-            f"{self.headers[col].type_}",
-            "Text",
-        )
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-        self.vs.append(
-            {
-                "type": "col type text",
-                "col_num": col,
-                "required_data": self.get_required_snapshot_data(),
-            }
-        )
-
-    def snapshot_col_type_num_date(self, col, type_):
-        self.snapshot_chore()
-        self.changelog_append(
-            "Change detail column type",
-            f"Column #{col + 1} named: {self.headers[col].name}",
-            f"{self.headers[col].type_}",
-            f"{type_}",
-        )
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-        self.vs.append(
-            {
-                "type": "col type num date",
-                "col_num": col,
-                "col": zlib.compress(pickle.dumps([r[col] for r in self.sheet.MT.data])),
-                "required_data": self.get_required_snapshot_data(),
-            }
-        )
-
     def snapshot_begin_drag_rows(self, event=None):
         self.snapshot_chore()
         self.vs.append(
@@ -6370,24 +5653,6 @@ class Tree_Editor(tk.Frame):
             }
         )
 
-    def snapshot_change_date_form(self, old_form, new_form):
-        self.snapshot_chore()
-        self.changelog_append(
-            "Date format change",
-            "",
-            old_form.replace("%", ""),
-            new_form.replace("%", ""),
-        )
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-        self.vs.append(
-            {
-                "type": "date form",
-                "old_form": old_form,
-                "new_form": new_form,
-                "required_data": self.get_required_snapshot_data(),
-            }
-        )
-
     def snapshot_auto_sort_nodes(self):
         self.snapshot_chore()
         self.changelog_append(
@@ -6437,51 +5702,13 @@ class Tree_Editor(tk.Frame):
                 "",
                 "",
             )
-        if self.headers[col].type_ == "Date":
-            date_rows = []
-            num_rows = []
-            nothing_rows = []
-            for row in self.sheet.MT.data:
-                if "/" in row[col] or "-" in row[col]:
-                    date_rows.append(row)
-                elif row[col]:
-                    num_rows.append(row)
-                else:
-                    nothing_rows.append(row)
-            if order == "ASCENDING":
-                try:
-                    date_rows = sorted(
-                        date_rows,
-                        key=lambda row: datetime.datetime.strptime(row[col], self.DATE_FORM),
-                    )
-                except Exception:
-                    date_rows = sorted(date_rows, key=lambda row: row[col])
-                try:
-                    num_rows = sorted(num_rows, key=lambda row: int(row[col]))
-                except Exception:
-                    num_rows = sorted(num_rows, key=lambda row: row[col])
-            elif order == "DESCENDING":
-                try:
-                    date_rows = sorted(
-                        date_rows,
-                        key=lambda row: datetime.datetime.strptime(row[col], self.DATE_FORM),
-                        reverse=True,
-                    )
-                except Exception:
-                    date_rows = sorted(date_rows, key=lambda row: row[col], reverse=True)
-                try:
-                    num_rows = sorted(num_rows, key=lambda row: int(row[col]), reverse=True)
-                except Exception:
-                    num_rows = sorted(num_rows, key=lambda row: row[col], reverse=True)
-            self.sheet.MT.data = date_rows + num_rows + nothing_rows
-        else:
-            ak = lambda row: tuple(  # noqa: E731
-                int(c) if c.isdigit() else c.lower() for c in re.split("([0-9]+)", row[col])
-            )
-            if order == "ASCENDING":
-                self.sheet.MT.data.sort(key=ak)
-            elif order == "DESCENDING":
-                self.sheet.MT.data.sort(key=ak, reverse=True)
+        ak = lambda row: tuple(  # noqa: E731
+            int(c) if c.isdigit() else c.lower() for c in re.split("([0-9]+)", row[col])
+        )
+        if order == "ASCENDING":
+            self.sheet.MT.data.sort(key=ak)
+        elif order == "DESCENDING":
+            self.sheet.MT.data.sort(key=ak, reverse=True)
         row_heights = self.sheet.get_row_heights()
         nrhs = []
         for i, r in enumerate(self.sheet.MT.data):
@@ -8231,51 +7458,17 @@ class Tree_Editor(tk.Frame):
             validation = self.headers[col].validation
             if validation:
                 set_value = currentdetail if currentdetail in set(validation) else validation[0]
-                if self.headers[col].type_ == "Text":
-                    popup = Edit_Detail_Text_Popup(
-                        self,
-                        ID,
-                        heading,
-                        currentdetail,
-                        validation_values=validation,
-                        set_value=set_value,
-                        theme=self.C.theme,
-                    )
-                elif self.headers[col].type_ == "Number":
-                    popup = Edit_Detail_Number_Popup(
-                        self,
-                        ID,
-                        heading,
-                        currentdetail,
-                        validation_values=validation,
-                        set_value=set_value,
-                        theme=self.C.theme,
-                    )
-                elif self.headers[col].type_ == "Date":
-                    popup = Edit_Detail_Date_Popup(
-                        self,
-                        ID,
-                        heading,
-                        currentdetail,
-                        self.DATE_FORM,
-                        validation_values=validation,
-                        set_value=set_value,
-                        theme=self.C.theme,
-                    )
+                popup = Edit_Detail_Text_Popup(
+                    self,
+                    ID,
+                    heading,
+                    currentdetail,
+                    validation_values=validation,
+                    set_value=set_value,
+                    theme=self.C.theme,
+                )
             else:
-                if self.headers[col].type_ == "Text":
-                    popup = Edit_Detail_Text_Popup(self, ID, heading, currentdetail, theme=self.C.theme)
-                elif self.headers[col].type_ == "Number":
-                    popup = Edit_Detail_Number_Popup(self, ID, heading, currentdetail, theme=self.C.theme)
-                elif self.headers[col].type_ == "Date":
-                    popup = Edit_Detail_Date_Popup(
-                        self,
-                        ID,
-                        heading,
-                        currentdetail,
-                        self.DATE_FORM,
-                        theme=self.C.theme,
-                    )
+                popup = Edit_Detail_Text_Popup(self, ID, heading, currentdetail, theme=self.C.theme)
         if popup.result:
             self.tree_sheet_edit_table(
                 event=DotDict(
@@ -8900,56 +8093,6 @@ class Tree_Editor(tk.Frame):
         else:
             self.tree.tree_close()
 
-    def apply_date_format_change(self, new_format, snapshot=True):
-        if snapshot:
-            self.snapshot_change_date_form(old_form=str(self.DATE_FORM), new_form=str(new_format))
-        date_cols = [i for i, h in enumerate(self.headers) if h.type_ == "Date"]
-        old_formula_and_condition_dateform = self.convert_hyphen_to_slash_date_form(self.DATE_FORM)
-        new_formula_and_condition_dateform = self.convert_hyphen_to_slash_date_form(new_format)
-        for col in date_cols:
-            for i in range(len(self.headers[col].formatting)):
-                new = []
-                cond = self.headers[col].formatting[i]
-                for e in re.split("([0-9/]+)", cond[0]):
-                    if "/" in e:
-                        try:
-                            z = datetime.datetime.strptime(e, old_formula_and_condition_dateform)
-                            e = datetime.datetime.strftime(z, new_formula_and_condition_dateform)
-                        except Exception:
-                            continue
-                    new.append(e)
-                self.headers[col].formatting[i] = ("".join(new), cond[1])
-            for i in range(len(self.headers[col].validation)):
-                if not isint(self.headers[col].validation[i]):
-                    try:
-                        self.headers[col].validation[i] = datetime.datetime.strftime(
-                            datetime.datetime.strptime(self.headers[col].validation[i], self.DATE_FORM),
-                            new_format,
-                        )
-                    except Exception:
-                        continue
-        for rn in range(len(self.sheet.MT.data)):
-            for col in date_cols:
-                cell = self.sheet.MT.data[rn][col]
-                if "/" in cell or "-" in cell:
-                    try:
-                        self.sheet.MT.data[rn][col] = datetime.datetime.strftime(
-                            datetime.datetime.strptime(cell, self.DATE_FORM), new_format
-                        )
-                    except Exception:
-                        continue
-        if snapshot:
-            self.disable_paste()
-            self.redo_tree_display()
-            self.redraw_sheets()
-        else:
-            self.DATE_FORM = new_format
-
-    def change_date_format(self, new_form):
-        if new_form != self.DATE_FORM:
-            self.apply_date_format_change(new_form)
-            self.DATE_FORM = new_form
-
     def move_tree_pos(self):
         self.tree.set_yview(self.saved_info[self.pc].scrolls.treey)
         self.tree.set_xview(self.saved_info[self.pc].scrolls.treex)
@@ -9362,7 +8505,7 @@ class Tree_Editor(tk.Frame):
                     else:
                         validation_check = True
                     if (
-                        self.headers[col].type_ == type_
+                        self.headers[col].type_ == normalize_header_type(type_)
                         and cik in self.rns
                         and self.sheet.MT.data[self.rns[cik]][col] == change[3]
                         and validation_check
@@ -9536,11 +8679,7 @@ class Tree_Editor(tk.Frame):
                     colname = c3s[4]
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     coltype = f"{c3s[-2]} {c3s[-1]}"
-                    if self.headers[colnum].type_ == coltype and self.headers[colnum].type_ in (
-                        "Number",
-                        "Text",
-                        "Date",
-                    ):
+                    if self.headers[colnum].type_ == "Text" and normalize_header_type(coltype) == "Text":
                         self.del_cols(cols=[colnum], snapshot=False)
                         self.changelog_append_no_unsaved(
                             "Imported change | Delete detail column",
@@ -9561,7 +8700,7 @@ class Tree_Editor(tk.Frame):
                     colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
                     if (
                         self.headers[colnum].name.lower() == change[3].lower()
-                        and self.headers[colnum].type_ == coltype
+                        and self.headers[colnum].type_ == normalize_header_type(coltype)
                         and colname.lower() not in (h.name.lower() for h in self.headers)
                     ):
                         self.rename_col(colnum, colname, snapshot=False)
@@ -9584,8 +8723,8 @@ class Tree_Editor(tk.Frame):
                     coltype = f"{c3s[-2]} {c3s[-1]}"
                     validation = change[4]
                     if (
-                        self.headers[colnum].type_ == coltype
-                        and coltype in ("Text", "Number", "Date")
+                        self.headers[colnum].type_ == "Text"
+                        and normalize_header_type(coltype) == "Text"
                         and change[3] == ",".join(self.headers[colnum].validation)
                     ):
                         if validation:
@@ -9608,67 +8747,10 @@ class Tree_Editor(tk.Frame):
                     else:
                         successful.append(False)
 
-                #  "Change detail column type"
+                #  "Change detail column type" "Date format change"
 
-                elif ctyp == "Change detail column type":
-                    c3s = change[2].split(" ")
-                    colname = c3s[-1]
-                    colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
-                    oldtype = change[3]
-                    newtype = change[4]
-                    if self.headers[colnum].type_ == oldtype and newtype in (
-                        "Text",
-                        "Number",
-                        "Date",
-                    ):
-                        if newtype == "Text":
-                            self.change_coltype_text(colnum)
-                        elif newtype == "Number":
-                            self.headers[colnum].type_ = "Number"
-                            self.change_coltype_number(colnum)
-                            if isinstance(self.check_validation_validity(colnum, self.headers[colnum].validation), str):
-                                self.headers[colnum].validation = []
-                            self.headers[colnum].formatting = [
-                                tup
-                                for tup in self.headers[colnum].formatting
-                                if not self.check_condition_validity(colnum, tup[0]).startswith("Error:")
-                            ]
-                        else:
-                            self.headers[colnum].type_ = "Date"
-                            self.change_coltype_date(colnum, detect_date_form=True)
-                            if isinstance(self.check_validation_validity(colnum, self.headers[colnum].validation), str):
-                                self.headers[colnum].validation = []
-                            self.headers[colnum].formatting = [
-                                tup
-                                for tup in self.headers[colnum].formatting
-                                if not self.check_condition_validity(colnum, tup[0]).startswith("Error:")
-                            ]
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Change detail column type",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Date format change"
-
-                elif ctyp == "Date format change":
-                    old_form = "%" + change[3][:2] + "%" + change[3][2:4] + "%" + change[3][4:]
-                    new_form = "%" + change[4][:2] + "%" + change[4][2:4] + "%" + change[4][4:]
-                    if old_form in date_formats_usable and new_form in date_formats_usable:
-                        self.apply_date_format_change(new_form, snapshot=False)
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Date format change",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
+                elif ctyp in ("Date format change", "Change detail column type"):
+                    successful.append(False)
 
                 #  "Cut and paste ID"
 
@@ -10332,7 +9414,7 @@ class Tree_Editor(tk.Frame):
             ns_rns = {row[ns_ic].lower(): i for i, row in enumerate(self.new_sheet)}
             shared_ids = {i: ik for ik, i in self.rns.items() if ik in ns_rns}
             os_pcol_names = {h.name.lower(): i for i, h in enumerate(self.headers) if h.type_ == "Parent"}
-            os_dcol_names = {h.name.lower(): i for i, h in enumerate(self.headers) if h.type_ in detail_column_types}
+            os_dcol_names = {h.name.lower(): i for i, h in enumerate(self.headers) if h.type_ == "Text"}
             changes_made = 0
             rows_to_insert = []
 
@@ -10775,7 +9857,6 @@ class Tree_Editor(tk.Frame):
         d["sheetname"] = sheetname
         d["allow_spaces_ids"] = self.allow_spaces_ids_var
         d["allow_spaces_columns"] = self.allow_spaces_columns_var
-        d["date_format"] = self.DATE_FORM
         return d
 
     def jsonify_nodes(self):

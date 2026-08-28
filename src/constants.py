@@ -123,24 +123,6 @@ tree_bindings = (
 )
 sheet_bindings = tree_bindings
 
-detail_column_types = {"Text", "Number", "Date"}
-
-validation_allowed_num_chars = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "-", ".", "e"}
-validation_allowed_date_chars = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "/", "-", " "}
-
-# dict to maintain order
-date_formats_usable = {
-    "%d/%m/%Y": None,
-    "%m/%d/%Y": None,
-    "%Y/%m/%d": None,
-    "%d-%m-%Y": None,
-    "%m-%d-%Y": None,
-    "%Y-%m-%d": None,
-}
-# date_formats_entry = date_formats_usable.copy()
-# date_formats_entry["%B %d, %Y"] = None, # Full month name, e.g., January 01, 2023
-# date_formats_entry["%b %d, %Y"] = None, # Abbreviated month name, e.g., Jan 01, 2023
-
 themes = DotDict(
     {
         "light_blue": theme_light_blue,
@@ -226,10 +208,6 @@ openpyxl_thin_border = Border(
     bottom=Side(style="thin"),
 )
 
-isrealre = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?$")
-isfloatre = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?$")
-isintre = re.compile(r"[-+]?\d+$")
-isintlikere = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?$")
 remove_whitespace = re.compile(r"\s+")
 remove_nrt = re.compile(r"[\n\r\t]")
 
@@ -290,20 +268,6 @@ align_e_icon = (
     """JRAdkyxvKITFtorspu5t1dhEivIrQM6K1z1TR3voMjRLQlb1ATWvtSEFysTAAAAAAElFTkSuQmCC"""
 )
 
-nums_icon = (
-    """iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAjhJREFUSEuVVu11"""
-    """4jAQ3EVJH6QTU0lCGWAhY/FVxnGVhE7OhYB1WVmyVlr53jv/yFMWr2Y/ZgYQ2IMA4PwfHgUQoRDg76d3"""
-    """EBDcfA/Flx9+kX9LBEJuXkIOVr0+VFFNryX8D0B4tz9djoj46a8bXW9Me49X2/P1GwCa8P9gdPvB58rh"""
-    """2IhS2NrLF6zwV1br6LYRJIB38XOjW0wARTclGu2XKkSA5uleG3iqQb3DHwAYjN5/cFB7vno6GL2vFhq3"""
-    """JmhizzdHFcXE0/nq6Ka50lBVHUAycI7EbsrEBMAr9Z06IpZp+YhCvYxwc8TzN4zIL3F02xeOg0JFS30Y"""
-    """3W78rHkHASDmlhzLdDB3EJfMac+WXLAoKuRx0PsNoScwOleerrutlRobUPgJDtbOud+daY9R4ZFFuZLx"""
-    """ftC7bTlvrLFILKXWd5oU13g6B/TqiBbELajOLYHvpnQVwSt7mnQQPE/wnwbb2yWl5zOZRsSH+WNpuVIR"""
-    """jN7NndKhDyTI0hgJsg5Em8zg+qpSJ6UDYPNyzw083wb17pjSC7suis/221+uXhjJCqbkCRih0zsMumGW"""
-    """UTjxEgAhWQEw4WdxBLAn7kmLZpd/wC/q9N5XKuyalA7joFZR6SS0RatIwycWeavI23sYr1SAzM5jXbTk"""
-    """rr3Xvm6Fm5Z+P92Bd6N3Wzobc1urt7GBlf9C8ko/HtpjZCP3JSk0IW3OivwsxMUVJZUsfw3EXxj/IsJ0"""
-    """J3fFQmjCFsSu5fKrVsKCPOMvPi9aL6aCzOMAAAAASUVORK5CYII="""
-)
-
 letters_icon = (
     """iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAo9JREFUSEuNVs1u"""
     """2kAQ/sZRlajXpkTwGhXKuXfad+BYCR7A4GwaY8wDGIkj7xC491zxHqSQ9FSpCod4qv2xvYvXFJ/Mena+"""
@@ -318,20 +282,6 @@ letters_icon = (
     """bkCPi3IYmEZ0B4/T7nL5eCZo7cg3i/zInkhPzBR3IB7d9UfRMBZ9q9F2UEqzWrfOqDhno/0nkUpbBtjp"""
     """A7uYFZi90N332ngvhpb1d8EB8M123Y8nVn2TfJxObqK8ISJ7zhRbzw7OdvcP9QdMLotFpAkAAAAASUVO"""
     """RK5CYII="""
-)
-
-date_icon = (
-    """iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAktJREFUSEuFVeuZ"""
-    """2yAQXNCXOnzpRK4k5zKsB5IQksuIU4muk7iRM7nluRi48EcSIGZ3dnZgEAYDAF358tO1PW4+fQAAA5xy"""
-    """I1sFue0HYk5Dd9ZmOQVY1X5gSGLozvGc/DgEij+Td6l2k5IYOhKICczsl2rT+C76l3X8ycdLz17WbWaM"""
-    """/QKANxNHnpQNL02EBv+Ap14m0d8t2YQiKdU7cP47SdWhM9ChOvWzCfBTX4To7ymA2g8AaD/153kZxw88"""
-    """aNl2jVRMw5X5iKgQVrVrW4Oe4fw03d6aH/ovADzE0P00AD4iqW5fR2kYDd921lF2mobu4vVFM5jXbeaM"""
-    """n8RwvXiq5ZrWjQDsRiMWoD5izQrSZAAIYM4ZO4w3yhQVEwFq1U2BYzZxv1xvX8LWTnm0yE6SVYV8W908"""
-    """Y1HLIGkomkgGUFvEqHWkKBY5586DRZlSlMK7qYGjKMnAFYd2LW1ASkCJd2ohr91vVUSRiUy9F3mvkbZX"""
-    """gveUvCgD8NGlKrLyQp0zxk/TcDV9sKxqZqwxusf/TJ9wfhK9/cYRAKoUmYW0omUBFWZpH7h+Ck1VdE5a"""
-    """iFp9U3c2GdCGJQC0QSxFywvnUt0OZydn3LGq7cDTRB/vgwyAesgrsq9BwrnznlAD891djAmWKKr1QdmN"""
-    """/t/OaJrRKsC5qZXpAaBbCF7+neW93jsWeJJr2/AGpfzhpR3dVG7vwFl64YRbKV442U1X6kgMcurvqMYA"""
-    """YC6L5tkCN1dmG+MvOGvdhh76qf9MYz/7HANAkZAa5RlmvTb/ALlVeC92xBz2AAAAAElFTkSuQmCC"""
 )
 
 tag_icon = (

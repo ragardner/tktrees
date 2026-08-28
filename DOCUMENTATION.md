@@ -23,7 +23,7 @@ Words used here:
 - ID: the item itself (a name or code)
 - Parent: the ID it sits under
 - Hierarchy: one parent column. Extra parent columns are extra hierarchies for the same IDs
-- Detail: extra info on an ID, such as a name, note, number or date
+- Detail: extra info on an ID, such as a name or note
 - Flattened: levels spread across columns, usually one row per path from top to bottom
 
 A tree is just items nested under other items. For example:
@@ -153,12 +153,12 @@ To add many IDs at once, see Guides -> Merge sheets.
 
 Right click a column header and choose Add detail or Add hierarchy.
 
-- Add detail: extra information such as a name or date. You pick a name and a type (Text, Number or Date).
+- Add detail: extra information such as a name or note. You pick a name for the column.
 - Add hierarchy: another parent column, so the same IDs can sit in a second tree.
 
 The new column is inserted where you right clicked, or at the end if you did not right click a header.
 
-Column types and formatting are under Managing Columns.
+Formatting is under Managing Columns.
 
 #### Renaming an ID
 
@@ -212,11 +212,6 @@ If any dragged IDs are on different levels from one another then they will not b
 - An easy way to get an ID's complete information within the sheet, including parents and children across all hierarchies and all details is to select an ID in the treeview or sheet panel and then go to View -> Treeview IDs information or View -> Sheet IDs information.
 - You can also get a more concise view of an ID by right clicking on it and selecting ID concise view.
 
-#### Date column conditional formatting
-
-- When entering conditional formatting in Date Detail columns, use forward slash dates e.g. DD/MM/YYYY.
-- This is because hyphens will be interpreted as subtractions. If you want to enter a specific date, for current date use the letters: cd
-
 #### Changing the order of IDs in the treeview
 
 To disable automatic ordering of IDs in the treeview go to:
@@ -232,62 +227,13 @@ You can re-order children by selecting a single row in the tree and dragging usi
 
 Right clicking on columns in the header will show a popup menu with a few column specific options.
 
-#### Column types:
-
-A detail column can have one of three different types:
-
-- Text
-- Number
-- Date
-
-Text details can be any text, Number details can be any number and Date details can be either a date in one of three formats (YYYY/MM/DD, DD/MM/YYYY, MM/DD/YYYY) or a whole number (integer).
-
-Changing a column type will result in any details, formatting or validation being evaluated and potentially deleted if they do not meet the column type's requirements.
+Detail columns hold text. You can still restrict a column to a list of allowed values with Validation.
 
 #### Conditional Formatting:
 
 You can add conditional formatting to columns, meaning when certain conditions are met the cells in that column will be filled with a chosen color. You can set a maximum of 35 conditions.
 
-For Text detail columns conditions are limited to text matching, e.g. if the cell contains exactly the user input. Text conditions are not case sensitive.
-
-For Number Detail columns the following characters are allowed:
-
-```
-0-9 Any number
-.   Decimal place
--   Negative number
->   Greater than
-<   Less than
-==  Equal to
->=  Greater than or equal to
-<=  Less than or equal to
-and Used to add extra condition e.g. > 5 and < 10
-or  Used to add extra condition e.g. == 5 or == 6
-```
-
-e.g. > 100
-e.g. > 100 and < 200
-
-For Date Detail columns the following characters are allowed:
-
-```
-cd  Current date
-0-9 Any number
-.   Decimal place
--   Negative number
->   Greater than
-<   Less than
-==  Equal to
->=  Greater than or equal to
-<=  Less than or equal to
-and Used to add extra condition e.g. > 5 and < 10
-or  Used to add extra condition e.g. == 5 or == 6
-```
-
-e.g. > 20/06/2019
-e.g. == 100
-
-Conditions must have spaces in between statements.
+Conditions are text matching: the cell must contain exactly the user input. Conditions are not case sensitive.
 
 ---
 

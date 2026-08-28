@@ -277,12 +277,10 @@
 <li><a href="#deleting-ids">Deleting IDs</a></li>
 <li><a href="#deleting-a-column">Deleting a column</a></li>
 <li><a href="#getting-all-information-on-an-id">Getting all information on an ID</a></li>
-<li><a href="#date-column-conditional-formatting">Date column conditional formatting</a></li>
 <li><a href="#changing-the-order-of-ids-in-the-treeview">Changing the order of IDs in the treeview</a></li>
 </ul>
 </li>
 <li><a href="#managing-columns">MANAGING COLUMNS</a><ul>
-<li><a href="#column-types">Column types:</a></li>
 <li><a href="#conditional-formatting">Conditional Formatting:</a></li>
 </ul>
 </li>
@@ -338,7 +336,7 @@
 <li>ID: the item itself (a name or code)</li>
 <li>Parent: the ID it sits under</li>
 <li>Hierarchy: one parent column. Extra parent columns are extra hierarchies for the same IDs</li>
-<li>Detail: extra info on an ID, such as a name, note, number or date</li>
+<li>Detail: extra info on an ID, such as a name or note</li>
 <li>Flattened: levels spread across columns, usually one row per path from top to bottom</li>
 </ul>
 <p>A tree is just items nested under other items. For example:</p>
@@ -694,11 +692,11 @@
 <h4 id="adding-a-column">Adding a column</h4>
 <p>Right click a column header and choose Add detail or Add hierarchy.</p>
 <ul>
-<li>Add detail: extra information such as a name or date. You pick a name and a type (Text, Number or Date).</li>
+<li>Add detail: extra information such as a name or note. You pick a name for the column.</li>
 <li>Add hierarchy: another parent column, so the same IDs can sit in a second tree.</li>
 </ul>
 <p>The new column is inserted where you right clicked, or at the end if you did not right click a header.</p>
-<p>Column types and formatting are under Managing Columns.</p>
+<p>Formatting is under Managing Columns.</p>
 <h4 id="renaming-an-id">Renaming an ID</h4>
 <p>Right click the ID in the tree or sheet and choose Rename ID, then type the new name. This changes the ID everywhere it appears.</p>
 <h4 id="editing-a-detail">Editing a detail</h4>
@@ -738,11 +736,6 @@
 <li>An easy way to get an ID's complete information within the sheet, including parents and children across all hierarchies and all details is to select an ID in the treeview or sheet panel and then go to View -&gt; Treeview IDs information or View -&gt; Sheet IDs information.</li>
 <li>You can also get a more concise view of an ID by right clicking on it and selecting ID concise view.</li>
 </ul>
-<h4 id="date-column-conditional-formatting">Date column conditional formatting</h4>
-<ul>
-<li>When entering conditional formatting in Date Detail columns, use forward slash dates e.g. DD/MM/YYYY.</li>
-<li>This is because hyphens will be interpreted as subtractions. If you want to enter a specific date, for current date use the letters: cd</li>
-</ul>
 <h4 id="changing-the-order-of-ids-in-the-treeview">Changing the order of IDs in the treeview</h4>
 <p>To disable automatic ordering of IDs in the treeview go to:</p>
 <ol>
@@ -753,48 +746,10 @@
 <hr />
 <h1 id="managing-columns">MANAGING COLUMNS</h1>
 <p>Right clicking on columns in the header will show a popup menu with a few column specific options.</p>
-<h4 id="column-types">Column types:</h4>
-<p>A detail column can have one of three different types:</p>
-<ul>
-<li>Text</li>
-<li>Number</li>
-<li>Date</li>
-</ul>
-<p>Text details can be any text, Number details can be any number and Date details can be either a date in one of three formats (YYYY/MM/DD, DD/MM/YYYY, MM/DD/YYYY) or a whole number (integer).</p>
-<p>Changing a column type will result in any details, formatting or validation being evaluated and potentially deleted if they do not meet the column type's requirements.</p>
+<p>Detail columns hold text. You can still restrict a column to a list of allowed values with Validation.</p>
 <h4 id="conditional-formatting">Conditional Formatting:</h4>
 <p>You can add conditional formatting to columns, meaning when certain conditions are met the cells in that column will be filled with a chosen color. You can set a maximum of 35 conditions.</p>
-<p>For Text detail columns conditions are limited to text matching, e.g. if the cell contains exactly the user input. Text conditions are not case sensitive.</p>
-<p>For Number Detail columns the following characters are allowed:</p>
-<pre><code>0-9 Any number
-.   Decimal place
--   Negative number
-&gt;   Greater than
-&lt;   Less than
-==  Equal to
-&gt;=  Greater than or equal to
-&lt;=  Less than or equal to
-and Used to add extra condition e.g. &gt; 5 and &lt; 10
-or  Used to add extra condition e.g. == 5 or == 6
-</code></pre>
-<p>e.g. &gt; 100
-e.g. &gt; 100 and &lt; 200</p>
-<p>For Date Detail columns the following characters are allowed:</p>
-<pre><code>cd  Current date
-0-9 Any number
-.   Decimal place
--   Negative number
-&gt;   Greater than
-&lt;   Less than
-==  Equal to
-&gt;=  Greater than or equal to
-&lt;=  Less than or equal to
-and Used to add extra condition e.g. &gt; 5 and &lt; 10
-or  Used to add extra condition e.g. == 5 or == 6
-</code></pre>
-<p>e.g. &gt; 20/06/2019
-e.g. == 100</p>
-<p>Conditions must have spaces in between statements.</p>
+<p>Conditions are text matching: the cell must contain exactly the user input. Conditions are not case sensitive.</p>
 <hr />
 <h1 id="guides">GUIDES</h1>
 <h4 id="changelog">Changelog</h4>
