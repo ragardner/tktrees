@@ -9825,19 +9825,15 @@ class Tree_Editor(tk.Frame):
         self.stop_work(self.get_tree_editor_status_bar_text())
         self.new_sheet = []
 
-    def get_save_json(self, program_data=False):
-        if not program_data:
-            d = full_sheet_to_dict(
-                [h.name for h in self.headers],
-                self.sheet.MT.data,
-                format_=self.json_format,
-            )
-        else:
-            d = {}
-        if self.save_with_program_data:
+    def get_save_json(self):
+        d = full_sheet_to_dict(
+            [h.name for h in self.headers],
+            self.sheet.MT.data,
+            format_=self.json_format,
+        )
+        if self.save_json_with_program_data:
             d["version"] = software_version_number
-            if not program_data:
-                d["changelog"] = self.changelog
+            d["changelog"] = self.changelog
             d["program_data"] = dict_x_b32(self.get_program_data_dict())
         return d
 

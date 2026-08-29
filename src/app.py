@@ -202,14 +202,16 @@ class AppGUI(tk.Tk):
 
         try:
             d = load_cfg()
-            if isinstance(d, str):
-                self.default_configsettings()
+            self.default_configsettings()
+            if isinstance(d, dict):
+                self.configsettings.update(d)
+            else:
                 self.save_cfg(get_settings=False)
-            self.set_settings(d)
+            self.set_settings()
         except Exception:
             self.default_configsettings()
             self.save_cfg(get_settings=False)
-            self.set_settings(d)
+            self.set_settings()
 
         if len(start_arg) > 1:
             try:
@@ -374,6 +376,10 @@ To get started once you have closed this popup, either:
         self.frames["tree_edit"].xlsx_flattened_reverse_order = self.configsettings["Flatten reverse order"]
         self.frames["tree_edit"].xlsx_flattened_add_index = self.configsettings["Flatten add index"]
         self.frames["tree_edit"].json_format = int(self.configsettings["Json output format"])
+        if "Save json with program data" in self.configsettings:
+            self.frames["tree_edit"].save_json_with_program_data = self.configsettings[
+                "Save json with program data"
+            ]
         if "Treeview indent" in self.configsettings:
             self.frames["tree_edit"].tree.ops.treeview_indent = self.configsettings["Treeview indent"]
         if "Alternate color" in self.configsettings:
