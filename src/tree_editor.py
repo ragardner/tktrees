@@ -2212,10 +2212,13 @@ class Tree_Editor(tk.Frame):
                         "Entered text is not in column validation   ",
                         theme=self.C.theme,
                     )
-            if event.sheetname == "tree" and event.loc:
-                self.tree.next_cell(*event.loc, event.key)
-            elif event.sheetname == "sheet" and event.loc:
-                self.sheet.next_cell(*event.loc, event.key)
+            loc = event.get("loc")
+            key = event.get("key")
+            if loc and key in ("Return", "Tab"):
+                if event.sheetname == "tree":
+                    self.tree.next_cell(*loc, key)
+                elif event.sheetname == "sheet":
+                    self.sheet.next_cell(*loc, key)
 
         else:
             self.start_work("Editing table...")
@@ -7483,7 +7486,8 @@ class Tree_Editor(tk.Frame):
         if popup.result:
             self.tree_sheet_edit_table(
                 event=DotDict(
-                    sheetname="sheet", value=popup.saved_string, loc=(rn, col), data={(rn, col): popup.saved_string}
+                    sheetname="sheet",
+                    data={(rn, col): popup.saved_string},
                 )
             )
 
