@@ -6967,7 +6967,7 @@ class Tree_Editor(tk.Frame):
                 new_label = new_id
             self.changelog_append(
                 "Edit cell",
-                f"ID: {new_id} column #{self.tv_label_col + 1} named: {self.headers[self.tv_label_col].name} with type: {self.headers[self.tv_label_col].type_}"
+                f"ID: {new_id} column #{self.tv_label_col + 1} named: {self.headers[self.tv_label_col].name} with type: {self.headers[self.tv_label_col].type_}",
                 f"{self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col]}",
                 f"{new_label}",
             )
