@@ -273,12 +273,18 @@ To get started once you have closed this popup, either:
                 else:
                     success = self.frames["tree_edit"].save_as(quitting=True)
                 if not success:
-                    self.USER_HAS_QUIT = False
+                    self.abort_quit()
                     return
             elif confirm.option == "cancel":
-                self.USER_HAS_QUIT = False
+                self.abort_quit()
                 return
         self.try_to_close_everything()
+
+    def abort_quit(self):
+        self.USER_HAS_QUIT = False
+        if self.working:
+            editor = self.frames["tree_edit"]
+            editor.stop_work(editor.get_tree_editor_status_bar_text(), resume_quit=False)
 
     def try_to_close_everything(self):
         self.USER_HAS_QUIT = True

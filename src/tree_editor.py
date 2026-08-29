@@ -2409,10 +2409,10 @@ class Tree_Editor(tk.Frame):
             self.disable_widgets()
         self.C.status_bar.change_text(msg)
 
-    def stop_work(self, msg="", outside_treeframe=False):
+    def stop_work(self, msg="", outside_treeframe=False, resume_quit=True):
         self.C.working = False
         self.C.save_menu_state = "normal"
-        if self.C.USER_HAS_QUIT:
+        if resume_quit and self.C.USER_HAS_QUIT:
             self.C.USER_HAS_CLOSED_WINDOW()  # user still wants to quit
             if self.C.USER_HAS_QUIT:
                 return
@@ -10089,7 +10089,7 @@ class Tree_Editor(tk.Frame):
 
     def save_(self, event=None, quitting=False):
         if self.C.current_frame != "tree_edit":
-            return
+            return False
         newfile = os.path.normpath(self.C.open_dict["filepath"])
         self.start_work("Saving... ")
         successful = False
@@ -10107,13 +10107,13 @@ class Tree_Editor(tk.Frame):
             self.C.created_new = False
             self.bind_or_unbind_save("normal")
             self.C.unsaved_changes = False
-        if not quitting:
-            self.stop_work(self.get_tree_editor_status_bar_text())
+        if not (quitting and successful):
+            self.stop_work(self.get_tree_editor_status_bar_text(), resume_quit=not quitting)
         return successful
 
     def save_as(self, event=None, quitting=False):
         if self.C.current_frame != "tree_edit":
-            return
+            return False
         newfile = filedialog.asksaveasfilename(
             parent=self.C,
             title="Save as",
@@ -10160,8 +10160,8 @@ class Tree_Editor(tk.Frame):
             self.C.created_new = False
             self.bind_or_unbind_save("normal")
             self.C.unsaved_changes = False
-        if not quitting:
-            self.stop_work(self.get_tree_editor_status_bar_text())
+        if not (quitting and successful):
+            self.stop_work(self.get_tree_editor_status_bar_text(), resume_quit=not quitting)
         return successful
 
     def save_new_vrsn(self, event=None):
