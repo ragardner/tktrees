@@ -4751,7 +4751,7 @@ class Tree_Editor(tk.Frame):
                 Error(
                     self,
                     f" {validation}     see 'Help' under the 'File' menu for instructions on validation   ",
-                    theme=self.C.C.theme,
+                    theme=self.C.theme,
                 )
                 return
         else:
