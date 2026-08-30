@@ -601,18 +601,18 @@ It must be run with the following arguments with a space in-between each:
     - -input-sheet-Sheet1
 8. Output sheet name, if not provided uses the input sheet name or Sheet1, e.g:
     - "-output-sheet-New Sheet"
-7. Delimiter, a delimiter character for the output file if it's a csv or tsv, defaults to comma, examples below:
+7. Delimiter, a delimiter character for the output file if it's a csv or tsv. Defaults to comma, or tab if the output filepath ends with `.tsv`. `-delim-` overrides that. Examples:
     - -delim-tab
     - -delim-,
     - "-delim-|"
 
 If the delimiter is a shell special character such as `|`, `;`, `>` or `&`, surround the whole parameter in double quotes e.g. `"-delim-|"`. Without quotes the shell treats those characters as operators and they never reach the program.
-8. Flags (can be used one after the other):
+8. Flags (can be used one after the other). Omitted flags are off.
     - e.g. -odjr
 
 | Flag    | Used for                    | Applicable to    |
 |---------|-----------------------------|------------------|
-| -o      | Overwrite new file          | All actions      |
+| -o      | Overwrite existing file     | All actions      |
 | -d      | Include detail columns      | flatten          |
 | -j      | Justify output cells left   | flatten          |
 | -r      | Reverse order (base-top)    | flatten          |
@@ -622,10 +622,15 @@ Some examples:
 
 Flatten xlsx files which would flatten the hierarchy at column index 2, column C with the output order top-base:
 ```
-python TKTREES.pyw flatten "input filepath here.xlsx" "output filepath here.xlsx" -all-parent-columns-2,3 -id-0 -parent-2 -input-sheet-Sheet1 "-output-sheet-New Sheet" -odjr
+python TKTREES.pyw flatten "input filepath here.xlsx" "output filepath here.xlsx" -all-parent-columns-2,3 -id-0 -parent-2 -input-sheet-Sheet1 "-output-sheet-New Sheet" -odj
 ```
 
-Unflatten a file where the flattened id columns are in the order of right to left is top to base:
+Unflatten a file where the flattened id columns are left to right Top -> Base:
 ```
 python TKTREES.pyw unflatten-top-base "input filepath here.csv" "output filepath here.csv" -all-parent-columns-0,2,4,6 -delim-tab -o
+```
+
+Unflatten a file where the flattened id columns are left to right Base -> Top:
+```
+python TKTREES.pyw unflatten-base-top "input filepath here.csv" "output filepath here.csv" -all-parent-columns-0,2,4,6 -delim-tab -o
 ```

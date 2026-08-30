@@ -68,12 +68,19 @@ def to_csv(filepath: str, overwrite: Literal["w", "x"], dialect: csv.Dialect, da
         writer.writerows(data)
 
 
-def to_xlsx(filepath: str, sheetname: str, data: list[list[str]]) -> None:
+def to_xlsx(
+    filepath: str, sheetname: str, data: list[list[str]], overwrite: Literal["w", "x"] = "w"
+) -> None:
     wb = Workbook(write_only=True)
     ws = wb.create_sheet(title=sheetname)
     for row in data:
         ws.append(row)
     wb.active = wb[sheetname]
+    # Same "x" exclusive-create as csv/json (Windows, macOS, Linux).
+    # Close before save(); Windows will not replace a file that is still open.
+    if overwrite == "x":
+        with open(filepath, "x"):
+            pass
     wb.save(filepath)
 
 
@@ -513,6 +520,7 @@ def to_json(
     filepath,
     data,
     format_,
+    overwrite: Literal["w", "x"] = "w",
 ):
     if data:
         headers = data.pop(0)
@@ -527,7 +535,7 @@ def to_json(
             data,
             format_=format_,
         )
-    with open(filepath, "w") as fh:
+    with open(filepath, overwrite) as fh:
         fh.write(json.dumps(d, indent=4))
 
 

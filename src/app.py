@@ -768,6 +768,8 @@ def parse_api_argv(argv: list[str]) -> dict:
     if all_parent_column_indexes is None:
         raise ValueError("Missing required parameter -all-parent-columns-")
     kwargs["all_parent_column_indexes"] = all_parent_column_indexes
+    if "csv_delimiter" not in kwargs and kwargs["output_filepath"].lower().endswith(".tsv"):
+        kwargs["csv_delimiter"] = "tab"
     return kwargs
 
 

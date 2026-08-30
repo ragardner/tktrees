@@ -813,18 +813,24 @@ class RowStorage:
 
 
 def tk_trees_api(
-    api_action: Literal["flatten", "unflatten-top-base", "unflatten-base-top"],
+    api_action: Literal[
+        "flatten",
+        "unflatten-top-base",
+        "unflatten-top-baseu",
+        "unflatten-base-top",
+        "unflatten-base-topu",
+    ],
     input_filepath: str,
     output_filepath: str,
     all_parent_column_indexes: list[int],
     input_sheet: str | int = 0,
     output_sheet: str | None = None,
     csv_delimiter: str | Literal["tab"] = ",",
-    justify_left: bool = True,
+    justify_left: bool = False,
     reverse: bool = False,
-    detail_columns: bool = True,
+    detail_columns: bool = False,
     add_index: bool = False,
-    overwrite_file: bool = True,
+    overwrite_file: bool = False,
     flatten_id_column: int = 0,
     flatten_parent_column: int = 1,
 ) -> None:
@@ -900,15 +906,16 @@ def tk_trees_api(
             )
 
         elif api_action.startswith("unflatten"):
-            if api_action.endswith("top"):
-                fmt = 1
-            elif api_action.endswith("topu"):
-                fmt = 2
-            elif api_action.endswith("base"):
-                fmt = 3
-            elif api_action.endswith("baseu"):
-                fmt = 4
-            else:
+            # Full action names, not last-token matching. "unflatten-top-base"
+            # ends with "base", which previously selected Base → Top (fmt 3).
+            unflatten_fmts = {
+                "unflatten-top-base": 1,  # Top → Base
+                "unflatten-top-baseu": 2,  # Top → Base, unique details
+                "unflatten-base-top": 3,  # Base → Top
+                "unflatten-base-topu": 4,  # Base → Top, unique details
+            }
+            fmt = unflatten_fmts.get(api_action)
+            if fmt is None:
                 raise Exception(
                     "API action must be flatten, unflatten-top-base, unflatten-top-baseu, "
                     f"unflatten-base-top or unflatten-base-topu, not '{api_action}'"
@@ -938,6 +945,7 @@ def tk_trees_api(
                 filepath=output_filepath,
                 sheetname=output_sheet,
                 data=data,
+                overwrite=overwrite_file,
             )
 
         elif output_filepath.endswith(".json"):
@@ -945,6 +953,7 @@ def tk_trees_api(
                 filepath=output_filepath,
                 data=data,
                 format_=json_format[0],
+                overwrite=overwrite_file,
             )
 
     except Exception as error:
