@@ -5517,6 +5517,8 @@ class Tree_Editor(tk.Frame):
             else:
                 self.selected_PAR = new_parent
             successful = [dct["id"] for dct in self.paste_cut_sibling_all(redo_tree=False)]
+            if not successful:
+                self.disable_paste()
         if successful and (not self.auto_sort_nodes_bool or index_only):
             index_only += successful
         if index_only:
@@ -5563,8 +5565,9 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display(selections=False)
         self.redraw_sheets()
         all_iids = index_only + successful
-        self.tree.scroll_to_item(all_iids[0])
-        self.tree.selection_set(all_iids)
+        if all_iids:
+            self.tree.scroll_to_item(all_iids[0])
+            self.tree.selection_set(all_iids)
         self.stop_work(self.get_tree_editor_status_bar_text())
 
     def snapshot_begin_drag_cols(self, event=None):
