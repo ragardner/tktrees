@@ -6279,7 +6279,7 @@ class Tree_Editor(tk.Frame):
         self.sort_later_dct = None
         self.snapshot_paste_id()
         for i, dct in enumerate(self.copied, 1):
-            if self.copy_paste(dct["id"], dct["hier"], "", sort_later=True):
+            if self.copy_paste(dct["id"], dct["hier"], self.selected_PAR, sort_later=True):
                 successful.append(dct)
                 if not i % 50:
                     self.C.status_bar.change_text(
