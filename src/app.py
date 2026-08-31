@@ -377,9 +377,7 @@ To get started once you have closed this popup, either:
         self.frames["tree_edit"].xlsx_flattened_add_index = self.configsettings["Flatten add index"]
         self.frames["tree_edit"].json_format = int(self.configsettings["Json output format"])
         if "Save json with program data" in self.configsettings:
-            self.frames["tree_edit"].save_json_with_program_data = self.configsettings[
-                "Save json with program data"
-            ]
+            self.frames["tree_edit"].save_json_with_program_data = self.configsettings["Save json with program data"]
         if "Treeview indent" in self.configsettings:
             self.frames["tree_edit"].tree.ops.treeview_indent = self.configsettings["Treeview indent"]
         if "Alternate color" in self.configsettings:

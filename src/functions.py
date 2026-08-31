@@ -79,9 +79,7 @@ def to_csv(filepath: str, overwrite: Literal["w", "x"], dialect: csv.Dialect, da
         writer.writerows(data)
 
 
-def to_xlsx(
-    filepath: str, sheetname: str, data: list[list[str]], overwrite: Literal["w", "x"] = "w"
-) -> None:
+def to_xlsx(filepath: str, sheetname: str, data: list[list[str]], overwrite: Literal["w", "x"] = "w") -> None:
     wb = Workbook(write_only=True)
     ws = wb.create_sheet(title=sheetname)
     for row in data:
@@ -593,19 +591,15 @@ def increment_file_version(full_path):
     elif full_path.lower().endswith((".xlsx", ".json", ".xlsm")):
         ext = full_path[-5:]
         path = full_path[:-5]
-    numbers = []
     last_index = 0
     for i, c in enumerate(reversed(path), 1):
         if c.isdigit():
-            numbers.append(c)
             last_index = i
         else:
             break
-    if numbers:
-        numbers = numbers[::-1]
-        numbers[len(numbers) - 1] = f"{int(numbers[len(numbers) - 1]) + 1}"
-        numbers = "".join(numbers)
-        newfile = path[:-last_index] + numbers + ext
+    if last_index:
+        n = int(path[-last_index:]) + 1
+        newfile = path[:-last_index] + f"{n:0{last_index}d}" + ext
     else:
         newfile = path + "1" + ext
     return newfile

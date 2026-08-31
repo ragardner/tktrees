@@ -10178,13 +10178,7 @@ class Tree_Editor(tk.Frame):
         self.start_work("Saving... ")
         folder = popup.result
         newfile = os.path.join(folder, os.path.basename(newfile))
-        if newfile.lower().endswith((".csv", ".xls", ".tsv")):
-            ext = newfile[-4:]
-            path = newfile[:-4]
-        elif newfile.lower().endswith((".xlsx", ".json", ".xlsm")):
-            ext = newfile[-5:]
-            path = newfile[:-5]
-        else:
+        if not newfile.lower().endswith((".csv", ".xls", ".tsv", ".xlsx", ".json", ".xlsm")):
             Error(
                 self,
                 "Error saving file, file extension must be .csv/.xlsx/.json   ",
@@ -10192,17 +10186,12 @@ class Tree_Editor(tk.Frame):
             )
             self.stop_work(self.get_tree_editor_status_bar_text())
             return False
-        last_index = 0
-        for i, c in enumerate(reversed(path), 1):
-            if c.isdigit():
-                last_index = i
-            else:
-                break
-        newfile_without_numbers = path[:-last_index] + ext
+        newfile_without_numbers = os.path.basename(path_without_numbers(newfile))
         matches = {}
         found_suitable_folder = False
         while not found_suitable_folder:
             try:
+                matches = {}
                 for file in os.listdir(folder):
                     if (
                         file.lower().endswith((".json", ".xlsx", ".csv", ".xls", ".xlsm", ".tsv"))
