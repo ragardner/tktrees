@@ -303,9 +303,11 @@
 <li><a href="#json-files">JSON FILES</a></li>
 <li><a href="#bundled-libraries">BUNDLED LIBRARIES</a></li>
 <li><a href="#using-the-api">USING THE API</a><ul>
-<li><a href="#required-parameters">Required parameters:</a></li>
-<li><a href="#required-only-for-flatten-action">Required only for flatten action:</a></li>
-<li><a href="#optional-but-important-parameters">Optional (but important) parameters:</a></li>
+<li><a href="#commands">Commands</a></li>
+<li><a href="#required-for-both">Required for both</a></li>
+<li><a href="#required-only-for-flatten">Required only for flatten</a></li>
+<li><a href="#required-only-for-unflatten">Required only for unflatten</a></li>
+<li><a href="#optional">Optional</a></li>
 </ul>
 </li>
 </ul>
@@ -1002,106 +1004,104 @@ typical so only use it if you really need to.</p>
 <li>Note: This library is bundled for tkinter sheet/table functionality.</li>
 </ul>
 <h1 id="using-the-api">USING THE API</h1>
-<p>The app can be run using the command line without triggering a user interface to get different outputs and file conversions.</p>
-<p>The input file must be either .xlsx, .xls, .xlsm, .csv, .tsv or .json.</p>
-<p>Please note that if any of the parameters include spaces then they may need to be surrounded by double quotes e.g. "my xlsx sheet name" depending on how you choose to start the API.</p>
-<p>It must be run with the following arguments with a space in-between each:</p>
-<h4 id="required-parameters">Required parameters:</h4>
-<ol>
-<li>API Action, one of the following (u suffix stands for unique details modes):<ul>
-<li>flatten</li>
-<li>unflatten-top-base</li>
-<li>unflatten-top-baseu</li>
-<li>unflatten-base-top</li>
-<li>unflatten-base-topu</li>
+<p>The API reads a file, flattens or unflattens it, and writes a new file. It does not open the GUI.</p>
+<p>How <code>TKTREES.pyw</code> starts:</p>
+<ul>
+<li>No arguments: GUI</li>
+<li>A data file path (<code>.xlsx</code>, <code>.xls</code>, <code>.xlsm</code>, <code>.csv</code>, <code>.tsv</code>, <code>.json</code>), or any existing file: GUI</li>
+<li><code>flatten</code> or <code>unflatten</code> (also <code>--help</code> / <code>--version</code>): file-to-file API. Never the GUI</li>
+<li><code>cli</code>: reserved for a future interactive command line. Not available yet. Does not open the GUI</li>
+<li>Anything else, including typos: error, exit <code>2</code>, does not open the GUI</li>
 </ul>
-</li>
-<li>Input filepath, usually the full filepath including the filename</li>
+<pre><code>python TKTREES.pyw --help
+python TKTREES.pyw flatten --help
+python TKTREES.pyw unflatten --help
+</code></pre>
+<p>If any value has spaces, quote it, e.g. <code>"New Sheet"</code>.</p>
+<p>The input file must be .xlsx, .xls, .xlsm, .csv, .tsv or .json.</p>
+<p>The output file must be .csv, .tsv, .xlsx or .json. Suffix case is ignored when deciding the type (<code>.CSV</code> is csv). The filename is used as given.</p>
+<h4 id="commands">Commands</h4>
+<p><code>flatten</code> turns an ID/parent table into levels across columns.</p>
+<p><code>unflatten</code> turns a levels-across-columns table back into ID, parent, details.</p>
+<h4 id="required-for-both">Required for both</h4>
+<ul>
+<li>Input filepath</li>
 <li>Output filepath</li>
-<li>All the parent column indexes, 0 being the lowest number e.g:<ul>
-<li>-all-parent-columns-2,3</li>
-<li>-all-parent-columns-C,D</li>
+<li><code>--parents</code> every parent/hierarchy column in the file, comma-separated indexes or letters. <code>0</code> is the first column. Examples: <code>--parents 2,3</code> or <code>--parents C,D</code></li>
 </ul>
-</li>
-</ol>
-<h4 id="required-only-for-flatten-action">Required <strong>only</strong> for <code>flatten</code> action:</h4>
-<ol>
-<li>ID column index, <strong>required</strong> for flatten action, e.g:<ul>
-<li>-id-0</li>
-<li>-id-A</li>
+<h4 id="required-only-for-flatten">Required only for <code>flatten</code></h4>
+<ul>
+<li><code>--id</code> ID column, e.g. <code>--id 0</code> or <code>--id A</code></li>
+<li><code>--parent</code> parent column of the hierarchy to flatten, e.g. <code>--parent 2</code> or <code>--parent C</code></li>
 </ul>
-</li>
-<li>Parent column index, <strong>required</strong> for flatten action, e.g:<ul>
-<li>-parent-2</li>
-<li>-parent-C</li>
+<h4 id="required-only-for-unflatten">Required only for <code>unflatten</code></h4>
+<ul>
+<li><code>--order top-base</code> or <code>--order base-top</code>. You have to pass this; the API will not guess. Look at the input file: <code>top-base</code> means the root is on the left, <code>base-top</code> means the leaf is on the left. If <code>--order</code> does not match the file, every parent comes out the wrong way around.</li>
 </ul>
-</li>
-</ol>
-<h4 id="optional-but-important-parameters">Optional (but important) parameters:</h4>
-<ol>
-<li>Input sheet name, if not provided defaults to first sheet of the input file if it's an xlsx file, e.g:<ul>
-<li>-input-sheet-Sheet1</li>
+<h4 id="optional">Optional</h4>
+<ul>
+<li><code>--input-sheet NAME</code> xlsx input sheet. Default: first sheet</li>
+<li><code>--output-sheet NAME</code> xlsx output sheet. Default: input sheet name, or Sheet1</li>
+<li><code>--delim CHAR</code> delimiter for csv/tsv output. Default: comma, or tab if the output filepath ends with <code>.tsv</code>. <code>--delim</code> overrides that. Examples: <code>--delim tab</code>, <code>--delim ,</code>, <code>--delim "|"</code></li>
+<li><code>--order top-base</code> or <code>--order base-top</code> for <strong>flatten</strong> output direction. Default <code>top-base</code>. <code>base-top</code> is the same as GUI Reverse order.</li>
 </ul>
-</li>
-<li>Output sheet name, if not provided uses the input sheet name or Sheet1, e.g:<ul>
-<li>"-output-sheet-New Sheet"</li>
-</ul>
-</li>
-<li>Delimiter, a delimiter character for the output file if it's a csv or tsv. Defaults to comma, or tab if the output filepath ends with <code>.tsv</code>. <code>-delim-</code> overrides that. Examples:<ul>
-<li>-delim-tab</li>
-<li>-delim-,</li>
-<li>"-delim-|"</li>
-</ul>
-</li>
-</ol>
-<p>If the delimiter is a shell special character such as <code>|</code>, <code>;</code>, <code>&gt;</code> or <code>&amp;</code>, surround the whole parameter in double quotes e.g. <code>"-delim-|"</code>. Without quotes the shell treats those characters as operators and they never reach the program.
-8. Flags (can be used one after the other). Omitted flags are off.
-    - e.g. -odjr</p>
+<p>If the delimiter is a shell special character such as <code>|</code>, <code>;</code>, <code>&gt;</code> or <code>&amp;</code>, quote it e.g. <code>--delim "|"</code>. Without quotes the shell treats those characters as operators and they never reach the program.</p>
+<p>Omitted flags are off.</p>
 <table>
 <thead>
 <tr>
 <th>Flag</th>
 <th>Used for</th>
-<th>Applicable to</th>
+<th>Applies to</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>-o</td>
-<td>Overwrite existing file</td>
-<td>All actions</td>
+<td>--overwrite</td>
+<td>Replace output if it exists</td>
+<td>flatten, unflatten</td>
 </tr>
 <tr>
-<td>-d</td>
+<td>--details</td>
 <td>Include detail columns</td>
 <td>flatten</td>
 </tr>
 <tr>
-<td>-j</td>
-<td>Justify output cells left</td>
+<td>--justify</td>
+<td>Pack shorter paths to the left</td>
 <td>flatten</td>
 </tr>
 <tr>
-<td>-r</td>
-<td>Reverse order (base-top)</td>
-<td>flatten</td>
-</tr>
-<tr>
-<td>-i</td>
+<td>--index</td>
 <td>Add an index column</td>
 <td>flatten</td>
 </tr>
+<tr>
+<td>--order</td>
+<td>top-base (default) or base-top</td>
+<td>flatten</td>
+</tr>
+<tr>
+<td>--unique</td>
+<td>One detail column set per level</td>
+<td>unflatten</td>
+</tr>
 </tbody>
 </table>
-<p>Some examples:</p>
-<p>Flatten xlsx files which would flatten the hierarchy at column index 2, column C with the output order top-base:</p>
-<pre><code>python TKTREES.pyw flatten &quot;input filepath here.xlsx&quot; &quot;output filepath here.xlsx&quot; -all-parent-columns-2,3 -id-0 -parent-2 -input-sheet-Sheet1 &quot;-output-sheet-New Sheet&quot; -odj
+<p><code>--justify</code> packs shorter paths to the left, with details to the right of each ID.</p>
+<p>Without <code>--overwrite</code>, the API fails if the output file already exists (it does not replace it). Errors are written to <code>TKTREES-ERROR.txt</code> next to the app, and the process exits <code>1</code>. Bad arguments exit <code>2</code> and do not open the GUI.</p>
+<p>Examples:</p>
+<p>Flatten an xlsx hierarchy at column C, output top-base, with details and justify, overwriting if needed:</p>
+<pre><code>python TKTREES.pyw flatten &quot;input filepath here.xlsx&quot; &quot;output filepath here.xlsx&quot; --parents C,D --id A --parent C --input-sheet Sheet1 --output-sheet &quot;New Sheet&quot; --details --justify --overwrite
 </code></pre>
-<p>Unflatten a file where the flattened id columns are left to right Top -&gt; Base:</p>
-<pre><code>python TKTREES.pyw unflatten-top-base &quot;input filepath here.csv&quot; &quot;output filepath here.csv&quot; -all-parent-columns-0,2,4,6 -delim-tab -o
+<p>Unflatten a file whose hierarchy columns are left to right Top -&gt; Base:</p>
+<pre><code>python TKTREES.pyw unflatten &quot;input filepath here.csv&quot; &quot;output filepath here.csv&quot; --parents 0,2,4,6 --order top-base --delim tab --overwrite
 </code></pre>
-<p>Unflatten a file where the flattened id columns are left to right Base -&gt; Top:</p>
-<pre><code>python TKTREES.pyw unflatten-base-top &quot;input filepath here.csv&quot; &quot;output filepath here.csv&quot; -all-parent-columns-0,2,4,6 -delim-tab -o
+<p>Unflatten a file whose hierarchy columns are left to right Base -&gt; Top:</p>
+<pre><code>python TKTREES.pyw unflatten &quot;input filepath here.csv&quot; &quot;output filepath here.csv&quot; --parents 0,2,4,6 --order base-top --overwrite
+</code></pre>
+<p>Unflatten with unique details (each level keeps its own detail columns):</p>
+<pre><code>python TKTREES.pyw unflatten &quot;input filepath here.csv&quot; &quot;output filepath here.csv&quot; --parents 0,2,4,6 --order top-base --unique --overwrite
 </code></pre></div>
     </div>
 </body>

@@ -27,6 +27,14 @@ python3 TKTREES.pyw
 
 On Windows that command is often `python TKTREES.pyw` instead.
 
+Flatten and unflatten can be run without the GUI (the API). See `DOCUMENTATION.md` under "USING THE API", or:
+
+```
+python TKTREES.pyw --help
+python TKTREES.pyw flatten --help
+python TKTREES.pyw unflatten --help
+```
+
 ## Getting started
 
 After the app opens, use the File menu or right-click the empty space. File -> Open loads an existing file.

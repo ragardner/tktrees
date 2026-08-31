@@ -20,6 +20,7 @@ from .functions import (
     get_json_format,
     get_json_from_file,
     json_to_sheet,
+    output_kind,
     shift_elements_to_end,
     shift_elements_to_start,
     to_csv,
@@ -813,31 +814,27 @@ class RowStorage:
 
 
 def tk_trees_api(
-    api_action: Literal[
-        "flatten",
-        "unflatten-top-base",
-        "unflatten-top-baseu",
-        "unflatten-base-top",
-        "unflatten-base-topu",
-    ],
+    api_action: Literal["flatten", "unflatten"],
     input_filepath: str,
     output_filepath: str,
     all_parent_column_indexes: list[int],
     input_sheet: str | int = 0,
     output_sheet: str | None = None,
     csv_delimiter: str | Literal["tab"] = ",",
+    order: Literal["top-base", "base-top"] = "top-base",
+    unique: bool = False,
     justify_left: bool = False,
-    reverse: bool = False,
     detail_columns: bool = False,
     add_index: bool = False,
     overwrite_file: bool = False,
-    flatten_id_column: int = 0,
-    flatten_parent_column: int = 1,
+    flatten_id_column: int | None = None,
+    flatten_parent_column: int | None = None,
 ) -> None:
     try:
         dialect = csv_dialect_from_delim(csv_delimiter)
 
         overwrite_file = "w" if overwrite_file else "x"
+        kind = output_kind(output_filepath)
 
         sheet = []
         row_len = 0
@@ -845,7 +842,7 @@ def tk_trees_api(
         # ___________ LOAD FILE AND DATA ___________________
 
         if not input_filepath.lower().endswith((".xlsx", ".xls", ".xlsm", ".csv", ".tsv", ".json")):
-            raise Exception("Input file must be .xlsx / .xls / .xlsm / .csv / .tsv")
+            raise Exception("Input file must be .xlsx / .xls / .xlsm / .csv / .tsv / .json")
 
         json_format = (1, "records")
         if input_filepath.lower().endswith((".csv", ".tsv")):
@@ -878,6 +875,10 @@ def tk_trees_api(
         row_len = max(map(len, sheet), default=0)
 
         if api_action == "flatten":
+            if unique:
+                raise Exception("unique is only valid with the unflatten action")
+            if flatten_id_column is None or flatten_parent_column is None:
+                raise Exception("flatten requires id and parent column indexes")
             headers_orig = sheet.pop(0)
             sheet, nodes, _warnings, _ = TreeBuilder().build(
                 input_sheet=sheet,
@@ -901,25 +902,17 @@ def tk_trees_api(
                 hiers=all_parent_column_indexes,
                 detail_columns=detail_columns,
                 justify_left=justify_left,
-                reverse=reverse,
+                reverse=order == "base-top",
                 add_index=add_index,
             )
 
-        elif api_action.startswith("unflatten"):
-            # Full action names, not last-token matching. "unflatten-top-base"
-            # ends with "base", which previously selected Base → Top (fmt 3).
-            unflatten_fmts = {
-                "unflatten-top-base": 1,  # Top → Base
-                "unflatten-top-baseu": 2,  # Top → Base, unique details
-                "unflatten-base-top": 3,  # Base → Top
-                "unflatten-base-topu": 4,  # Base → Top, unique details
-            }
-            fmt = unflatten_fmts.get(api_action)
-            if fmt is None:
-                raise Exception(
-                    "API action must be flatten, unflatten-top-base, unflatten-top-baseu, "
-                    f"unflatten-base-top or unflatten-base-topu, not '{api_action}'"
-                )
+        elif api_action == "unflatten":
+            if order == "top-base":
+                fmt = 2 if unique else 1
+            elif order == "base-top":
+                fmt = 4 if unique else 3
+            else:
+                raise Exception(f"order must be top-base or base-top, not '{order}'")
             data = TreeBuilder().convert_flattened_to_normal(
                 data=sheet,
                 hier_cols=all_parent_column_indexes,
@@ -927,18 +920,15 @@ def tk_trees_api(
                 fmt=fmt,
             )[0]
         else:
-            raise Exception(
-                "API action must be flatten, unflatten-top-base, unflatten-top-baseu, "
-                f"unflatten-base-top or unflatten-base-topu, not '{api_action}'"
-            )
-        if output_filepath.endswith((".csv", ".tsv")):
+            raise Exception(f"API action must be flatten or unflatten, not '{api_action}'")
+        if kind == "csv":
             to_csv(
                 filepath=output_filepath,
                 overwrite=overwrite_file,
                 dialect=dialect,
                 data=data,
             )
-        elif output_filepath.endswith(".xlsx"):
+        elif kind == "xlsx":
             if output_sheet is None:
                 output_sheet = input_sheet if isinstance(input_sheet, str) else "Sheet1"
             to_xlsx(
@@ -947,8 +937,7 @@ def tk_trees_api(
                 data=data,
                 overwrite=overwrite_file,
             )
-
-        elif output_filepath.endswith(".json"):
+        else:
             to_json(
                 filepath=output_filepath,
                 data=data,

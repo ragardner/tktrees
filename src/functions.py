@@ -62,6 +62,17 @@ def csv_dialect_from_delim(delimiter: str) -> type[csv.Dialect]:
     return type("ApiCsvDialect", (csv.excel,), {"delimiter": delimiter})
 
 
+def output_kind(filepath: str) -> Literal["csv", "xlsx", "json"]:
+    suffix = os.path.splitext(filepath)[1].lower()
+    if suffix in (".csv", ".tsv"):
+        return "csv"
+    if suffix == ".xlsx":
+        return "xlsx"
+    if suffix == ".json":
+        return "json"
+    raise Exception("Output file must be .csv, .tsv, .xlsx or .json")
+
+
 def to_csv(filepath: str, overwrite: Literal["w", "x"], dialect: csv.Dialect, data: list[list[str]]) -> None:
     with open(filepath, overwrite, newline="") as fh:
         writer = csv.writer(fh, dialect=dialect, lineterminator="\n")
