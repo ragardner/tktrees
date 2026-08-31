@@ -140,7 +140,7 @@ class AppGUI(tk.Tk):
                 self,
                 (
                     f"Error locating LICENSE file: '{errormsg}'.\n\n"
-                    "LICENSE file must be in the same folder as '{app_title}.pyw'."
+                    f"LICENSE file must be in the same folder as '{app_title}.pyw'."
                 ),
                 theme=self.theme,
             )
@@ -155,7 +155,7 @@ class AppGUI(tk.Tk):
                 self,
                 (
                     f"Error locating DOCUMENTATION.md file: '{errormsg}'.\n\n"
-                    "DOCUMENTATION.md file must be in the same folder as '{app_title}.pyw'."
+                    f"DOCUMENTATION.md file must be in the same folder as '{app_title}.pyw'."
                 ),
                 theme=self.theme,
             )
