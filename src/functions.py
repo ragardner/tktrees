@@ -448,10 +448,12 @@ def json_to_sheet(
             headers = {k: i for i, k in enumerate(json_get_header_strings(j["columns"]))}
         rowlen = len(headers)
         if rowlen >= 2:
-            new_sheet = [list(headers)]
+            header_list = list(headers)
+            new_sheet = [header_list]
             for dct in j[key]:
                 row = []
-                for v in dct.values():
+                for k in header_list:
+                    v = dct.get(k, "")
                     if isinstance(v, str):
                         row.append(v)
                     else:
