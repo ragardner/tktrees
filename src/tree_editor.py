@@ -2126,92 +2126,89 @@ class Tree_Editor(tk.Frame):
             if self.headers[x1].type_ in ("ID", "Parent") and not self.allow_spaces_ids_var:
                 newtext = re.sub(r"[\n\t\s]*", "", newtext)
 
-            if newtext == self.sheet.data[y1][x1]:
-                event.data = {}
-                return
+            if newtext != self.sheet.data[y1][x1]:
+                ID = self.sheet.data[y1][self.ic]
+                ik = ID.lower()
 
-            ID = self.sheet.data[y1][self.ic]
-            ik = ID.lower()
+                if self.headers[x1].type_ == "ID":
+                    id_ = ID
+                    ik = id_.lower()
+                    tree_sel = self.tree.selection()
+                    if not self.change_ID_name(id_, newtext, errors=False):
+                        self.edit_cell_rebuild(y1, x1, newtext)
+                        event.data = {}
+                        return
 
-            if self.headers[x1].type_ == "ID":
-                id_ = ID
-                ik = id_.lower()
-                tree_sel = self.tree.selection()
-                if not self.change_ID_name(id_, newtext, errors=False):
-                    self.edit_cell_rebuild(y1, x1, newtext)
-                    event.data = {}
-                    return
-
-                self.changelog_append(
-                    "Rename ID",
-                    id_,
-                    id_,
-                    f"{newtext}",
-                )
-                new_ik = newtext.lower()
-                if ik in self.tagged_ids:
-                    self.tagged_ids.discard(ik)
-                    self.tagged_ids.add(new_ik)
-                    self.reset_tagged_ids_dropdowns()
-                self.disable_paste()
-                self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                self.refresh_formatting(rows=self.refresh_rows)
-                self.redo_tree_display()
-                self.refresh_rows = set()
-                if tree_sel:
-                    if self.tree.exists(tree_sel[0]):
-                        self.tree.scroll_to_item(tree_sel[0])
-                        self.tree.selection_set(tree_sel[0])
-                    else:
-                        self.tree.scroll_to_item(newtext.lower())
-                        self.tree.selection_set(newtext.lower())
-                else:
-                    self.move_tree_pos()
-                self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
-                self.tree_set_cell_size_to_text(y1, x1)
-                self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-
-            elif self.headers[x1].type_ == "Parent":
-                self.snapshot_paste_id()
-                oldparent = f"{self.sheet.data[y1][x1]}"
-                tree_sel = self.tree.selection()
-                if self.cut_paste_edit_cell(ID, oldparent, x1, newtext):
                     self.changelog_append(
-                        "Cut and paste ID + children" if self.nodes[ik].cn[x1] else "Cut and paste ID",
-                        ID,
-                        f"Old parent: {oldparent if oldparent else 'n/a - Top ID'} old column #{x1 + 1} named: {self.headers[x1].name}",
-                        f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.headers[x1].name}",
+                        "Rename ID",
+                        id_,
+                        id_,
+                        f"{newtext}",
                     )
-                    self.refresh_formatting(rows=y1, columns=x1)
+                    new_ik = newtext.lower()
+                    if ik in self.tagged_ids:
+                        self.tagged_ids.discard(ik)
+                        self.tagged_ids.add(new_ik)
+                        self.reset_tagged_ids_dropdowns()
+                    self.disable_paste()
+                    self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+                    self.refresh_formatting(rows=self.refresh_rows)
                     self.redo_tree_display()
-                    self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
-                    self.tree_set_cell_size_to_text(y1, x1)
+                    self.refresh_rows = set()
                     if tree_sel:
-                        self.tree.scroll_to_item(tree_sel[0])
-                        self.tree.selection_set(tree_sel)
-                    self.disable_paste()
-                    self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-                else:
-                    self.vs.pop()
-                    self.set_undo_label()
-                    self.edit_cell_rebuild(y1, x1, newtext)
-            else:
-                if self.detail_is_valid_for_col(x1, newtext):
-                    self.snapshot_ctrl_x_v_del_key()
-                    self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
-                    newtext = self.edit_cell_single(y1, x1, newtext)
-                    self.refresh_formatting(rows=y1, columns=x1)
-                    self.refresh_tree_item(ID)
+                        if self.tree.exists(tree_sel[0]):
+                            self.tree.scroll_to_item(tree_sel[0])
+                            self.tree.selection_set(tree_sel[0])
+                        else:
+                            self.tree.scroll_to_item(newtext.lower())
+                            self.tree.selection_set(newtext.lower())
+                    else:
+                        self.move_tree_pos()
                     self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
                     self.tree_set_cell_size_to_text(y1, x1)
-                    self.disable_paste()
                     self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+
+                elif self.headers[x1].type_ == "Parent":
+                    self.snapshot_paste_id()
+                    oldparent = f"{self.sheet.data[y1][x1]}"
+                    tree_sel = self.tree.selection()
+                    if self.cut_paste_edit_cell(ID, oldparent, x1, newtext):
+                        self.changelog_append(
+                            "Cut and paste ID + children" if self.nodes[ik].cn[x1] else "Cut and paste ID",
+                            ID,
+                            f"Old parent: {oldparent if oldparent else 'n/a - Top ID'} old column #{x1 + 1} named: {self.headers[x1].name}",
+                            f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.headers[x1].name}",
+                        )
+                        self.refresh_formatting(rows=y1, columns=x1)
+                        self.redo_tree_display()
+                        self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
+                        self.tree_set_cell_size_to_text(y1, x1)
+                        if tree_sel:
+                            self.tree.scroll_to_item(tree_sel[0])
+                            self.tree.selection_set(tree_sel)
+                        self.disable_paste()
+                        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+                    else:
+                        self.vs.pop()
+                        self.set_undo_label()
+                        self.edit_cell_rebuild(y1, x1, newtext)
                 else:
-                    Error(
-                        self,
-                        "Entered text is not in column validation   ",
-                        theme=self.C.theme,
-                    )
+                    if self.detail_is_valid_for_col(x1, newtext):
+                        self.snapshot_ctrl_x_v_del_key()
+                        self.vs[-1]["cells"][(y1, x1)] = f"{self.sheet.MT.data[y1][x1]}"
+                        newtext = self.edit_cell_single(y1, x1, newtext)
+                        self.refresh_formatting(rows=y1, columns=x1)
+                        self.refresh_tree_item(ID)
+                        self.sheet.set_cell_size_to_text(y1, x1, only_set_if_too_small=True)
+                        self.tree_set_cell_size_to_text(y1, x1)
+                        self.disable_paste()
+                        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+                    else:
+                        Error(
+                            self,
+                            "Entered text is not in column validation   ",
+                            theme=self.C.theme,
+                        )
             loc = event.get("loc")
             key = event.get("key")
             if loc and key in ("Return", "Tab"):
