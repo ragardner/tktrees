@@ -417,7 +417,9 @@ def json_to_sheet(
             else:
                 return [[h["name"] for h in d["headers"]]] + d["records"]
         except Exception:
-            return new_sheet, 0
+            if return_rowlen:
+                return new_sheet, 0
+            return new_sheet
     elif format_ == 1:
         new_sheet = [list(j[key])]
         keys = new_sheet[0]
