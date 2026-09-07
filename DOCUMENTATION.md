@@ -243,13 +243,15 @@ Conditions are text matching: the cell must contain exactly the user input. Cond
 
 Every change you make is recorded. Open the list with View -> View changelog, Export -> Export specific changes, or Ctrl + L.
 
-The list has five columns: date, type, what was changed, old value (red), new value (green).
+The list has five columns: date, type, what was changed, old value (red), new value (green). A multi-row action (delete several IDs, paste several IDs, edit several cells, import, merge) still shows one line per member. Member types end with `|`, then a summary row (for example `Delete 2 IDs`). Undo and prune treat that whole block as one action.
+
+The status line is `Total changes: N (M rows)`: N is the number of actions, M is the number of five-column lines.
 
 From that window you can:
 
 - Export all: save the whole list as .csv, .tsv, .xlsx or .json
 - Export selected as: save only the rows you have selected
-- Prune up to selected: delete from the start of the list through the selected row. If that row is part of a grouped change (the type ends with |), pruning continues to the end of the group. This can be undone.
+- Prune up to selected: delete from the start of the list through the action that contains the selected row, including every member of that action (also import and merge blocks). This can be undone.
 
 Two other export menu items skip the window:
 
@@ -257,6 +259,8 @@ Two other export menu items skip the window:
 - Export all changes: the whole list, straight to a file
 
 The changelog can be stored with app data, and you can also save a viewable changelog sheet (see XLSX Files). Undo does not survive closing the file, but the changelog can be saved.
+
+Older TkTrees versions that open a file saved by this version keep the sheet and drop the stored changelog. Exported five-column changelog files are unchanged and still import.
 
 #### Import changes
 

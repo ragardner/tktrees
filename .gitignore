@@ -1,7 +1,8 @@
 # lib
 _exclude/
 md_to_html.py
-test*.py*
+# Scratch scripts at the repository root only. tests/test_*.py must be tracked.
+/test*.py*
 MOD_VERSION.py
 _version.py
 TKTREES-ERROR.txt

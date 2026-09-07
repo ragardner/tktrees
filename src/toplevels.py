@@ -23,6 +23,7 @@ from tksheet import (
     move_elements_by_mapping,
 )
 
+from .changelog import display_rows
 from .classes import (
     TreeBuilder,
 )
@@ -640,7 +641,10 @@ class Changelog_Popup(tk.Toplevel):
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.wb_ = None
-        self.total_changes = f"Total changes: {len(self.C.changelog)} | "
+        self._flat = display_rows(self.C.changelog)
+        n_actions = len(self.C.changelog)
+        n_rows = len(self._flat)
+        self.total_changes = f"Total changes: {n_actions} ({n_rows} rows) | "
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
         self.sheetdisplay = Sheet(
@@ -648,8 +652,8 @@ class Changelog_Popup(tk.Toplevel):
             theme=theme,
             headers=changelog_header,
             row_index=0,
-            startup_select=(len(self.C.changelog) - 1, len(self.C.changelog), "rows"),
-            data=self.C.changelog,
+            startup_select=(n_rows - 1, n_rows, "rows") if n_rows else (0, 0, "rows"),
+            data=self._flat,
             row_index_align="w",
             header_font=sheet_header_font,
             outline_thickness=0,
@@ -696,24 +700,23 @@ class Changelog_Popup(tk.Toplevel):
             return
         num = len(selectedrows)
         self.start_work(f"Pruning {num} changes...")
-        up_to = min(selectedrows)
-        if self.C.changelog[up_to][1].endswith(("|", "| ")):
-            for i, entry in enumerate(islice(self.C.changelog, up_to, None), up_to):
-                if not entry[1].endswith(("|", "| ")):
-                    up_to = i
-                    break
-        self.C.snapshot_prune_changelog(up_to)
-        self.C.changelog[: up_to + 1] = []
+        up_to_row = min(selectedrows)
+        ch = self._flat[up_to_row].change
+        up_to_change = next(i for i, c in enumerate(self.C.changelog) if c is ch)
+        self.C.snapshot_prune_changelog(up_to_change)
+        self._flat = display_rows(self.C.changelog)
         self.sheetdisplay.headers(newheaders=changelog_header)
         self.sheetdisplay.row_index(newindex=0)
         self.sheetdisplay.data_reference(
-            newdataref=self.C.changelog, reset_col_positions=False, reset_row_positions=True, redraw=False
+            newdataref=self._flat, reset_col_positions=False, reset_row_positions=True, redraw=False
         )
-        self.total_changes = f"Total changes: {len(self.C.changelog)} | "
+        n_actions = len(self.C.changelog)
+        n_rows = len(self._flat)
+        self.total_changes = f"Total changes: {n_actions} ({n_rows} rows) | "
         self.status_bar.config(text=self.total_changes)
         self.C.C.status_bar.change_text(self.C.get_tree_editor_status_bar_text())
         self.sheetdisplay.refresh()
-        self.stop_work(f"Success! Pruned {up_to + 1} changes")
+        self.stop_work(f"Success! Pruned {up_to_change + 1} changes")
 
     def start_work(self, msg=""):
         self.status_bar.change_text(self.total_changes + msg)
@@ -783,7 +786,7 @@ class Changelog_Popup(tk.Toplevel):
                 self.wb_ = Workbook(write_only=True)
                 ws = self.wb_.create_sheet(title="Changelog")
                 ws.append(xlsx_changelog_header(ws))
-                for row in self.C.changelog:
+                for row in self._flat:
                     ws.append(e if e else None for e in row)
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
@@ -795,14 +798,14 @@ class Changelog_Popup(tk.Toplevel):
                         lineterminator="\n",
                     )
                     writer.writerow(changelog_header)
-                    writer.writerows(self.C.changelog)
+                    writer.writerows(self._flat)
             elif newfile.lower().endswith(".json"):
                 with open(newfile, "w", newline="") as fh:
                     fh.write(
                         json.dumps(
                             full_sheet_to_dict(
                                 changelog_header,
-                                self.C.changelog,
+                                self._flat,
                                 include_headers=True,
                                 format_=self.C.json_format,
                             ),
@@ -842,7 +845,7 @@ class Changelog_Popup(tk.Toplevel):
                 self.wb_ = Workbook(write_only=True)
                 ws = self.wb_.create_sheet(title="Changelog")
                 ws.append(xlsx_changelog_header(ws))
-                for row in islice(self.C.changelog, from_row, to_row):
+                for row in islice(self._flat, from_row, to_row):
                     ws.append(e if e else None for e in row)
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
@@ -854,14 +857,14 @@ class Changelog_Popup(tk.Toplevel):
                         lineterminator="\n",
                     )
                     writer.writerow(changelog_header)
-                    writer.writerows(islice(self.C.changelog, from_row, to_row))
+                    writer.writerows(islice(self._flat, from_row, to_row))
             elif newfile.lower().endswith(".json"):
                 with open(newfile, "w", newline="") as fh:
                     fh.write(
                         json.dumps(
                             full_sheet_to_dict(
                                 changelog_header,
-                                self.C.changelog[from_row:to_row],
+                                self._flat[from_row:to_row],
                                 include_headers=True,
                                 format_=self.C.json_format,
                             ),
@@ -1472,8 +1475,9 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         self.C.sheet.replace_all(mapping, within=False)
         new_len = len(self.C.changelog)
         if new_len > old_len:
-            if self.C.changelog[-1][1].endswith("cells"):
-                self.status_bar.change_text(f"Replaced {new_len - old_len - 1} cells.")
+            n = self.C.changelog[-1].n
+            if n > 1:
+                self.status_bar.change_text(f"Replaced {n} cells.")
             else:
                 self.status_bar.change_text("Replaced 1 cell.")
         else:
@@ -3099,6 +3103,16 @@ class Edit_Detail_Text_Popup(tk.Toplevel):
         self.destroy()
 
 
+def new_id_and_treeview_label(
+    allow_spaces_ids: bool,
+    label_is_id: bool,
+    id_value: str,
+    label_value: str = "",
+) -> tuple[str, str]:
+    result = id_value if allow_spaces_ids else "".join(id_value.strip().split())
+    return result, result if label_is_id else label_value
+
+
 class Add_Top_Id_Popup(tk.Toplevel):
     def __init__(self, C, sheet_selection, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
@@ -3139,18 +3153,12 @@ class Add_Top_Id_Popup(tk.Toplevel):
         show_toplevel_chores(self, width=600, focus=self.id_name_display.place_cursor)
 
     def confirm(self, event=None):
-        if self.C.allow_spaces_ids_var:
-            self.result = self.id_name_display.get_my_value()
-            if self.C.tv_label_col != self.C.ic:
-                self.id_label = self.id_tv_display.get_my_value()
-            else:
-                self.id_label = self.result
-        else:
-            self.result = "".join(self.id_name_display.get_my_value().strip().split())
-            if self.C.tv_label_col != self.C.ic:
-                self.id_label = "".join(self.id_tv_display.get_my_value().strip().split())
-            else:
-                self.id_label = self.result
+        self.result, self.id_label = new_id_and_treeview_label(
+            self.C.allow_spaces_ids_var,
+            self.C.tv_label_col == self.C.ic,
+            self.id_name_display.get_my_value(),
+            self.id_tv_display.get_my_value(),
+        )
         self.destroy()
 
     def enter_sheet_sel(self, event=None):
@@ -3217,18 +3225,12 @@ class Add_Child_Or_Sibling_Id_Popup(tk.Toplevel):
         show_toplevel_chores(self, width=600, focus=self.id_name_display.place_cursor)
 
     def confirm(self, event=None):
-        if self.C.allow_spaces_ids_var:
-            self.result = self.id_name_display.get_my_value()
-            if self.C.tv_label_col != self.C.ic:
-                self.id_label = self.id_tv_display.get_my_value()
-            else:
-                self.id_label = self.result
-        else:
-            self.result = "".join(self.id_name_display.get_my_value().strip().split())
-            if self.C.tv_label_col != self.C.ic:
-                self.id_label = "".join(self.id_tv_display.get_my_value().strip().split())
-            else:
-                self.id_label = self.result
+        self.result, self.id_label = new_id_and_treeview_label(
+            self.C.allow_spaces_ids_var,
+            self.C.tv_label_col == self.C.ic,
+            self.id_name_display.get_my_value(),
+            self.id_tv_display.get_my_value(),
+        )
         self.destroy()
 
     def enter_sheet_sel(self, event=None):

@@ -48,8 +48,8 @@ def _is_gui_file_arg(token: str) -> bool:
     return os.path.splitext(token)[1].lower() in DATA_SUFFIXES
 
 
-def classify_invocation(argv: list[str]) -> Literal["gui", "api"]:
-    """Decide GUI vs file-to-file API. Unknown or reserved tokens exit 2."""
+def classify_invocation(argv: list[str]) -> Literal["gui", "api", "cli"]:
+    """Decide GUI vs file-to-file API vs CLI. Unknown tokens exit 2."""
     if len(argv) < 2:
         return "gui"
     first = argv[1]
@@ -60,11 +60,8 @@ def classify_invocation(argv: list[str]) -> Literal["gui", "api"]:
         argv[1] = key
         return "api"
     if key == CLI_COMMAND:
-        _fail_startup(
-            "'cli' is reserved for a future interactive command line and is not available yet.\n"
-            "This version has the file-to-file API: flatten and unflatten.\n"
-            "python TKTREES.pyw --help"
-        )
+        argv[1] = key
+        return "cli"
     if _is_gui_file_arg(first):
         return "gui"
     matches = difflib.get_close_matches(key, sorted(API_COMMANDS | {CLI_COMMAND}), n=1, cutoff=0.6)
@@ -73,7 +70,7 @@ def classify_invocation(argv: list[str]) -> Literal["gui", "api"]:
         f"Unknown command '{first}'.{hint}\n"
         "\n"
         "flatten and unflatten are the file-to-file API.\n"
-        "cli is reserved for a future interactive command line.\n"
+        "cli is the interactive/scripted command line (python TKTREES.pyw cli --help).\n"
         "A data file path, or no arguments, opens the GUI.\n"
         "python TKTREES.pyw --help"
     )
@@ -118,7 +115,7 @@ def build_parser(prog: str = "TKTREES.pyw") -> argparse.ArgumentParser:
             "level-across-columns table back to ID/parent.\n\n"
             "Running this file with no arguments, or with a data file path, opens the GUI. "
             "flatten, unflatten, --help and --version never open the GUI. "
-            "cli is reserved for a future interactive command line. "
+            "cli is the interactive/scripted command line (python TKTREES.pyw cli --help). "
             "Any other first argument is an error, not the GUI."
         ),
         epilog="""examples:

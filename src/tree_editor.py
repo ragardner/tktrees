@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import csv
-import datetime
 import json
 import os
 import pickle
@@ -15,13 +14,13 @@ from bisect import bisect_left
 from collections import defaultdict, deque
 from collections.abc import Generator, Iterator, Sequence
 from contextlib import suppress
-from itertools import cycle, filterfalse, islice, repeat
+from itertools import cycle, islice, repeat
 from math import floor
-from operator import attrgetter, itemgetter
+from operator import attrgetter
 from tkinter import filedialog, font, ttk
 from typing import Literal
 
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from openpyxl.cell import WriteOnlyCell
 from tksheet import (
     ICON_ADD,
@@ -47,13 +46,11 @@ from tksheet import (
     num2alpha as _n2a,
 )
 
+from .changelog import display_rows, flatten_changelog
 from .classes import (
     Header,
-    Node,
-    RowStorage,
     SearchResult,
     TreeBuilder,
-    normalize_header_type,
 )
 from .constants import (
     BF,
@@ -83,7 +80,6 @@ from .constants import (
     warnings_header,
 )
 from .functions import (
-    bytes_io_wb,
     convert_old_xl_to_xlsx,
     create_cell_align_selector_menu,
     csv_str_x_data,
@@ -91,8 +87,6 @@ from .functions import (
     equalize_sublist_lens,
     frame_w_to_nchars,
     full_sheet_to_dict,
-    get_json_format,
-    get_json_from_file,
     increment_file_version,
     json_to_sheet,
     level_to_color,
@@ -102,13 +96,12 @@ from .functions import (
     path_without_numbers,
     process_search_results,
     search_results_max_column_chars,
-    sort_key,
     str_io_csv_writer,
     to_clipboard,
     try_remove,
-    ws_x_data,
     xlsx_changelog_header,
 )
+from .session import Session
 from .toplevels import (
     Add_Child_Or_Sibling_Id_Popup,
     Add_Detail_Column_Popup,
@@ -150,10 +143,91 @@ from .widgets import (
 save_xlsx_and_json_with_program_data = True
 
 
+class _Fwd:
+    def __init__(self, name: str):
+        self.name = name
+
+    def __get__(self, obj, owner):
+        if obj is None:
+            return self
+        return getattr(obj.session, self.name)
+
+    def __set__(self, obj, value):
+        setattr(obj.session, self.name, value)
+
+
+class SheetOps:
+    def __init__(self, editor: Tree_Editor):
+        self.e = editor
+
+    def insert_rows(self, rows, idx=None):
+        # tksheet treats a string idx as an Excel letter (alpha2idx("end") == 3747).
+        # None means append, same as insert_row() on main.
+        self.e.sheet.insert_rows(
+            rows=rows,
+            idx=idx,
+            undo=False,
+            emit_event=False,
+            redraw=False,
+            create_selections=False,
+        )
+
+    def delete_rows(self, idxs):
+        self.e.sheet.del_rows(idxs, undo=False, emit_event=False, redraw=False)
+
+    def insert_cols(self, idx, n=1):
+        if self.e.sheet.MT.data:
+            kw = {
+                "idx": idx,
+                "undo": False,
+                "emit_event": False,
+                "redraw": False,
+                "create_selections": False,
+                "add_row_heights": False,
+            }
+            self.e.sheet.insert_columns(n, **kw)
+            self.e.tree.insert_columns(n, **kw)
+        else:
+            self.e.tree.insert_column_positions(idx=idx, widths=n)
+            self.e.sheet.insert_column_positions(idx=idx, widths=n)
+
+    def delete_cols(self, idxs):
+        self.e.sheet.del_columns(idxs, undo=False, emit_event=False, redraw=False)
+        self.e.tree.del_columns(idxs, undo=False, emit_event=False, redraw=False)
+
+
 class Tree_Editor(tk.Frame):
+    nodes = _Fwd("nodes")
+    rns = _Fwd("rns")
+    headers = _Fwd("headers")
+    ic = _Fwd("ic")
+    pc = _Fwd("pc")
+    hiers = _Fwd("hiers")
+    row_len = _Fwd("row_len")
+    changelog = _Fwd("changelog")
+    changelog_at_open = _Fwd("changelog_at_open")
+    warnings = _Fwd("warnings")
+    tagged_ids = _Fwd("tagged_ids")
+    topnodes_order = _Fwd("topnodes_order")
+    auto_sort_nodes_bool = _Fwd("auto_sort_nodes_bool")
+    allow_spaces_ids_var = _Fwd("allow_spaces_ids_var")
+    allow_spaces_columns_var = _Fwd("allow_spaces_columns_var")
+    vs = _Fwd("vs")
+    refresh_rows = _Fwd("refresh_rows")
+    sort_later_dct = _Fwd("sort_later_dct")
+
+    @property
+    def data(self):
+        return self.session.data
+
+    @data.setter
+    def data(self, rows):
+        self.set_records(rows)
+
     def __init__(self, parent, C):
         tk.Frame.__init__(self, parent)
         self.C = C
+        self.session = Session()
         # try:
         #     self.monitor_scale = self.C.call("tk", "scaling")
         # except Exception:
@@ -164,32 +238,19 @@ class Tree_Editor(tk.Frame):
         self.currently_adjusting_divider = False
         self.tree_has_focus = True
         self.sheet_has_focus = False
-        self.sheet_changes = 0
-        self.nodes = {}
-        self.topnodes_order = {}
         self.levels = defaultdict(list)
-        self.row_len = 0
-        self.headers = []
-        self.changelog = []
         self.treecolsel = 0
-        self.ic = 0
         self.tv_label_col = 0
-        self.pc = 0
-        self.hiers = []
-        self.warnings = []
         self.reset_tree_drag_vars()
         self.rc_iid = None
         self.row_cut_updated = False
         self.mirror_sels_disabler = False
-        self.tagged_ids = set()
         self.date_split_regex = "|".join(map(re.escape, ("/", "-")))
         self.find_popup = None
         self.fixed_font_w = font.nametofont("TkFixedFont").measure("0")
 
         self.auto_resize_indexes = True
         self.mirror_var = False
-        self.allow_spaces_ids_var = False
-        self.allow_spaces_columns_var = False
         self.save_xlsx_with_program_data = bool(save_xlsx_and_json_with_program_data)
         self.save_json_with_program_data = bool(save_xlsx_and_json_with_program_data)
         self.save_xlsx_with_changelog = False
@@ -205,7 +266,6 @@ class Tree_Editor(tk.Frame):
         self.dark_theme_bool = self.C.theme == "dark"
         self.light_green_theme_bool = self.C.theme == "light_green"
         self.light_blue_theme_bool = self.C.theme == "light_blue"
-        self.auto_sort_nodes_bool = True
         self.tv_lvls_bool = False
 
         self.warnings_filepath = ""
@@ -653,6 +713,10 @@ class Tree_Editor(tk.Frame):
             max_undos=0,
         )
         self.sheet.pack(side="right", fill="both", expand=True)
+        self.set_records(self.session.data)
+        self.session.ops = SheetOps(self)
+        self.session.on_increment_unsaved = self.increment_unsaved
+        self.session.on_changelog_row = lambda: None
 
         # buttons for top right frame
         # tag ID
@@ -1551,65 +1615,84 @@ class Tree_Editor(tk.Frame):
         )
         self.main_canvas.create_rectangle(0, 1, 0, 1, fill="gray60", outline="", tag="div")
 
+    def set_records(self, rows, *, redraw=False, reset_positions=True):
+        self.session.data = rows
+        self.sheet.data_reference(
+            rows,
+            reset_col_positions=reset_positions,
+            reset_row_positions=reset_positions,
+            redraw=redraw,
+        )
+
+    def _adopt_sheet_data(self):
+        # tksheet column/row drag assigns a new MT.data list. Session must follow
+        # or undo remaps the pre-drag rows and rns loses IDs.
+        self.session.data = self.sheet.MT.data
+
+    def _sync_sheet_from_session(self, *, redraw=False):
+        # In-file update: do not reset widths/heights (Open/New uses set_records).
+        if self.sheet.MT.data is self.session.data:
+            return
+        self.set_records(self.session.data, redraw=redraw, reset_positions=False)
+
     def populate(self, program_data=None):
         if program_data:
-            self.sheet.MT.data = program_data.records
-            self.ic = int(program_data.ic)
-            self.pc = int(program_data.pc)
-            self.hiers = [int(h) for h in program_data.hiers]
-            self.headers = [
-                Header(
-                    h["name"],
-                    h["type"],
-                    [tuple(x) for x in h["formatting"]],
-                    h["validation"],
-                )
-                for h in program_data.headers
-            ]
-            self.row_len = len(self.headers)
-            self.changelog = program_data.changelog
-            if self.changelog and len(self.changelog[0]) > 5:
-                self.changelog = []
-            self.sheet.align(program_data.sheet_table_align, redraw=False)
-            self.sheet.row_index_align(program_data.sheet_index_align, redraw=False)
-            self.sheet.header_align(program_data.sheet_header_align, redraw=False)
-            self.tree.align(program_data.sheet_table_align, redraw=False)
-            self.tree.header_align(program_data.sheet_header_align, redraw=False)
-            self.nodes = self.nodes_json_x_dict(program_data.nodes, hiers=self.hiers)
-            self.topnodes_order = {int(h): v for h, v in program_data.topnodes_order.items()}
-            self.auto_sort_nodes_bool = bool(program_data.auto_sort_nodes_bool)
-            self.tv_label_col = int(program_data.tv_label_col)
+            self.session.load_program_data(program_data)
+            self.set_records(self.session.data)
+            self.apply_view_program_data(program_data)
+            self.populate_view(from_program_data=True)
+        else:
+            self._apply_raw_view_defaults()
+            self.populate_view(from_program_data=False)
+
+    def _apply_raw_view_defaults(self):
+        self.set_headers()
+        self.tv_label_col = int(self.ic)
+        self.saved_info = new_saved_info(self.hiers)
+        self.tree.set_column_widths()
+        self.sheet.set_row_heights().set_column_widths()
+
+    def apply_view_program_data(self, d):
+        table_align = d.get("sheet_table_align")
+        if table_align:
+            self.sheet.align(table_align, redraw=False)
+            self.tree.align(table_align, redraw=False)
+        index_align = d.get("sheet_index_align")
+        if index_align:
+            self.sheet.row_index_align(index_align, redraw=False)
+        header_align = d.get("sheet_header_align")
+        if header_align:
+            self.sheet.header_align(header_align, redraw=False)
+            self.tree.header_align(header_align, redraw=False)
+        row_heights = d.get("row_heights")
+        column_widths = d.get("column_widths")
+        if row_heights:
             self.sheet.set_row_heights(
-                row_heights=map(self.sheet.valid_row_height, map(int, program_data.row_heights)),
+                row_heights=map(self.sheet.valid_row_height, map(int, row_heights)),
             )
-            self.sheet.set_column_widths(
-                column_widths=map(int, program_data.column_widths),
-            )
-            self.saved_info = DotDict({int(k): v for k, v in program_data.saved_info.items()})
+        if column_widths:
+            self.sheet.set_column_widths(column_widths=map(int, column_widths))
+        if not row_heights:
+            self.sheet.set_row_heights()
+        if not column_widths:
+            self.sheet.set_column_widths()
+        saved = d.get("saved_info")
+        if saved:
+            self.saved_info = DotDict({int(k): v for k, v in saved.items()})
             for dct in self.saved_info.values():
                 dct["theights"] = {k: self.tree.valid_row_height(int(v)) for k, v in dct["theights"].items()}
                 dct["twidths"] = {k: int(v) for k, v in dct["twidths"].items()}
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            for c, align in program_data.sheet_column_alignments.items():
-                self.sheet.align_columns(int(c), align=align, redraw=False)
-                self.tree.align_columns(int(c), align=align, redraw=False)
-            self.allow_spaces_ids_var = bool(program_data.allow_spaces_ids)
-            self.allow_spaces_columns_var = bool(program_data.allow_spaces_columns)
-            self.set_headers()
-            self.tag_ids(selection=set(program_data.tagged_ids), toggle=False, do_tree=False)
         else:
-            self.set_headers()
-            self.tagged_ids = set()
-            self.pc = int(self.hiers[0])
-            self.tv_label_col = int(self.ic)
             self.saved_info = new_saved_info(self.hiers)
-            self.topnodes_order = {}
-            if not self.C.created_new:
-                self.fix_associate_sort()
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.remake_topnodes_order()
-            self.tree.set_column_widths()
-            self.sheet.set_row_heights().set_column_widths()
+        for c, align in (d.get("sheet_column_alignments") or {}).items():
+            self.sheet.align_columns(int(c), align=align, redraw=False)
+            self.tree.align_columns(int(c), align=align, redraw=False)
+        tv = d.get("tv_label_col")
+        self.tv_label_col = int(tv) if tv is not None else int(self.ic)
+        self.set_headers()
+        self.tag_ids(selection=set(self.tagged_ids), toggle=False, do_tree=False)
+
+    def populate_view(self, *, from_program_data=False):
         self.saved_sheet_row_heights = {}
         self.reset_tree_search_dropdown()
         self.reset_sheet_search_dropdown()
@@ -1642,7 +1725,7 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.disable_paste()
         self.refresh_dropdowns()
-        if program_data:
+        if from_program_data:
             self.move_sheet_pos()
             self.move_tree_pos()
         else:
@@ -1781,36 +1864,21 @@ class Tree_Editor(tk.Frame):
             self.C.menubar_state("disabled")
             self.bind_or_unbind_save("disabled")
         self.C.unsaved_changes = False
-        self.sheet_changes = 0
         self.tv_label_col = 0
         self.selected_ID = ""
         self.selected_PAR = ""
         self.rc_iid = None
         self.disable_paste()
-        self.changelog = []
         self.search_results = []
         self.sheet_search_results = []
         self.tree.reset()
-        self.sheet.data_reference(newdataref=[], redraw=True)
+        self.session.clear()
+        self.set_records([], redraw=True)
         self.sheet.deselect("all", redraw=False)
         self.sheet.reset_all_options()
-        self.headers = []
         self.set_headers()
-        self.auto_sort_nodes_bool = True
-        self.topnodes_order = {}
-        self.nodes = {}
-        self.rns = {}
-        self.sheet.MT.data = []
         self.new_sheet = []
-        self.vs = deque(maxlen=30)
-        self.row_len = 0
-        self.headers = []
-        self.ic = 0
-        self.pc = 0
         self.sheet.row_index(newindex=self.ic)
-        self.hiers = []
-        self.warnings = []
-        self.tagged_ids = set()
         self.C.created_new = False
         self.C.change_app_title(title=None)
 
@@ -1986,21 +2054,14 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_choice_dropdown.unbind("<<ComboboxSelected>>")
 
     def toggle_sort_all_nodes(self, enabled, snapshot=True):
+        if enabled and snapshot:
+            self.snapshot_auto_sort_nodes()
+        self.session.set_option("auto-sort", enabled)
         if enabled:
-            if snapshot:
-                self.snapshot_auto_sort_nodes()
-            self.auto_sort_nodes_bool = enabled
-            self.sort_all_children()
             self.redo_tree_display()
-        else:
-            self.auto_sort_nodes_bool = enabled
-            self.remake_topnodes_order()
 
     def sort_all_children(self):
-        for n in self.nodes.values():
-            for h, cn in n.cn.items():
-                if cn:
-                    n.cn[h] = self.sort_node_cn(cn, h)
+        self.session.sort_all_children()
 
     def copy_ID_row(self, event=None):
         selections = self.tree.selection(cells=True)
@@ -2062,39 +2123,16 @@ class Tree_Editor(tk.Frame):
         )
 
     def changelog_singular(self, text):
-        self.changelog[-1] = self.changelog[-1][:1] + (text,) + self.changelog[-1][2:]
-        self.increment_unsaved()
+        self.session.changelog_singular(text)
 
     def changelog_append(self, change, id_, old, new):
-        self.changelog.append(
-            (
-                self.get_datetime_changelog(increment_unsaved=True),
-                change,
-                id_,
-                old,
-                new,
-            )
-        )
+        self.session.changelog_append(change, id_, old, new)
 
     def changelog_append_no_unsaved(self, change, id_, old, new):
-        self.changelog.append(
-            (
-                self.get_datetime_changelog(increment_unsaved=False),
-                change,
-                id_,
-                old,
-                new,
-            )
-        )
+        self.session.changelog_append_no_unsaved(change, id_, old, new)
 
     def edit_cell_rebuild(self, r, c, value) -> object:
         self.snapshot_ctrl_x_v_del_key_id_par()
-        self.edit_cell_single(r, c, value)
-        self.rebuild_tree()
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-        return value
-
-    def edit_cell_single(self, r: int, c: int, value: object) -> None:
         self.changelog_append(
             "Edit cell",
             f"ID: {self.sheet.MT.data[r][self.ic]} column #{c + 1} named: {self.headers[c].name} with type: {self.headers[c].type_}",
@@ -2102,6 +2140,12 @@ class Tree_Editor(tk.Frame):
             value,
         )
         self.sheet.MT.data[r][c] = value
+        self.rebuild_tree()
+        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
+        return value
+
+    def edit_cell_single(self, r: int, c: int, value: object) -> None:
+        self.session.set_detail(self.sheet.MT.data[r][self.ic], c, value)
         return value
 
     def edit_cell_multiple(self, r: int, c: int, value: object) -> None:
@@ -2139,17 +2183,7 @@ class Tree_Editor(tk.Frame):
                         event.data = {}
                         return
 
-                    self.changelog_append(
-                        "Rename ID",
-                        id_,
-                        id_,
-                        f"{newtext}",
-                    )
-                    new_ik = newtext.lower()
-                    if ik in self.tagged_ids:
-                        self.tagged_ids.discard(ik)
-                        self.tagged_ids.add(new_ik)
-                        self.reset_tagged_ids_dropdowns()
+                    self.reset_tagged_ids_dropdowns()
                     self.disable_paste()
                     self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                     self.refresh_formatting(rows=self.refresh_rows)
@@ -2327,28 +2361,15 @@ class Tree_Editor(tk.Frame):
     def rebuild_tree(self, deselect=True, redraw=False):
         if deselect:
             self.sheet.deselect("all", redraw=False)
-        self.nodes = {}
         self.clear_copied_details()
-        self.auto_sort_nodes_bool = True
         self.save_info_get_saved_info()
-        self.sheet.MT.data, self.nodes = TreeBuilder().build(
-            input_sheet=self.sheet.MT.data,
-            output_sheet=self.new_sheet,
-            row_len=self.row_len,
-            ic=self.ic,
-            hiers=self.hiers,
-            nodes=self.nodes,
-            add_warnings=False,
-            strip=not self.allow_spaces_ids_var,
-        )
+        self.session.rebuild_identity()
+        self._sync_sheet_from_session()
         self.new_sheet = []
-        self.fix_associate_sort_edit_cells()
-        self.rns = {}
         rhs = []
         default_row_height = self.sheet.MT.get_default_row_height()
-        for i, r in enumerate(self.sheet.data):
+        for _i, r in enumerate(self.sheet.data):
             ik = r[self.ic].lower()
-            self.rns[ik] = i
             if ik in self.saved_sheet_row_heights:
                 rhs.append(self.saved_sheet_row_heights[ik])
             else:
@@ -2491,16 +2512,9 @@ class Tree_Editor(tk.Frame):
         if not self.ask_continue_unsaved():
             return
         self.reset_tree(False)
-        self.headers = [
-            Header("ID", "ID"),
-            Header("DETAIL_1"),
-            Header("PARENT_1", "Parent"),
-        ]
-        self.ic = 0
+        self.session.new(discard=True)
+        self.set_records(self.session.data)
         self.tv_label_col = 0
-        self.pc = 2
-        self.hiers = [2]
-        self.row_len = 3
         self.C.created_new = True
         self.C.open_dict["filepath"] = "New sheet"
         self.C.change_app_title(title="New sheet")
@@ -2772,41 +2786,7 @@ class Tree_Editor(tk.Frame):
                 )
 
     def fix_headers(self, headers, row_len, warnings=True):
-        if len(headers) < row_len:
-            headers += list(repeat("", row_len - len(headers)))
-        tally_of_headers = defaultdict(lambda: -1)
-        allow_whitespace = self.allow_spaces_columns_var
-        for coln in range(len(headers)):
-            cell = headers[coln]
-            if not cell:
-                cell = f"MISSING_{coln + 1}"
-                if warnings:
-                    self.warnings.append(f" - Missing header in column #{coln + 1}")
-            if not allow_whitespace:
-                if warnings:
-                    if " " in cell:
-                        self.warnings.append(f" - Spaces in header column #{coln + 1}")
-                    if "\n" in cell:
-                        self.warnings.append(f" - Newlines in header column #{coln + 1}")
-                    if "\r" in cell:
-                        self.warnings.append(f" - Carriage returns in header column #{coln + 1}")
-                    if "\t" in cell:
-                        self.warnings.append(f" - Tabs in header column #{coln + 1}")
-                cell = "".join(cell.strip().split())
-            hk = cell.lower()
-            tally_of_headers[hk] += 1
-            if tally_of_headers[hk] > 0:
-                if warnings:
-                    self.warnings.append(f" - Duplicate header in column #{coln + 1}")
-                orig = cell
-                x = 1
-                while hk in tally_of_headers:
-                    cell = f"{orig}_DUPLICATED_{x}"
-                    hk = cell.lower()
-                    x += 1
-                tally_of_headers[hk] += 1
-            headers[coln] = cell
-        return headers
+        return self.session.fix_headers(headers, row_len, warnings=warnings)
 
     def remove_selections(self, event=None):
         self.sheet.deselect()
@@ -2987,7 +2967,7 @@ class Tree_Editor(tk.Frame):
         else:
             cc_add = ""
         if self.changelog:
-            end = f"|   Last Edit: {self.changelog[-1][1]}   {cc_add}"
+            end = f"|   Last Edit: {self.changelog[-1].label}   {cc_add}"
         else:
             end = f"|   No Changes Made   {cc_add}"
         return f"{len(self.sheet.MT.data)} IDs   {tree_addition}{sheet_addition}{end}"
@@ -3236,119 +3216,37 @@ class Tree_Editor(tk.Frame):
             self.switch_hier(hier=self.hiers[self.switch_hier_dropdown.current() + 1])
 
     def check_cn(self, iid: str, h: int) -> Generator[str]:
-        stack = [iid]
-        while stack:
-            current = stack.pop()
-            yield current
-            stack.extend(reversed(self.nodes[current].cn[h]))
+        yield from self.session.check_cn(iid, h)
 
     def check_ps(self, iid: str, h: int) -> Generator[str]:
-        current = iid
-        while True:
-            yield current
-            if not self.nodes[current].ps[h]:
-                break
-            current = self.nodes[current].ps[h]
+        yield from self.session.check_ps(iid, h)
 
     def add(self, ID, parent, insert_row=None, snapshot=True, errors=True):
-        ik = ID.lower()
-        pk = parent.lower()
-        if ik in self.nodes and self.nodes[ik].ps[self.pc] is not None:
-            if errors:
-                Error(self, "ID already in hierarchy   ", theme=self.C.theme)
-            return False
         if snapshot:
             self.snapshot_add_id()
-        if ik not in self.nodes:
-            self.nodes[ik] = Node(ID, self.hiers)
-            newrow = list(repeat("", self.row_len))
-            newrow[self.ic] = ID
-            newrow[self.pc] = parent
-            if insert_row is None:
-                self.sheet.insert_row(newrow)
-                rn = len(self.sheet.MT.data) - 1
-                self.rns[ik] = rn
-            else:
-                self.sheet.insert_row(newrow, insert_row)
-                rn = int(insert_row)
-            if snapshot:
-                self.vs[-1]["row"]["added_or_changed"] = "added"
-                self.vs[-1]["row"]["rn"] = rn
-        else:
-            rn = self.rns[ik]
-            if snapshot:
-                self.vs[-1]["row"]["added_or_changed"] = "changed"
-                self.vs[-1]["row"]["rn"] = rn
-                self.vs[-1]["row"]["stored"] = self.sheet.MT.data[rn].copy()
-            self.sheet.MT.data[rn][self.pc] = parent
-        if parent == "":
-            self.nodes[ik].ps[self.pc] = ""
-        else:
-            self.nodes[ik].ps[self.pc] = pk
-            self.nodes[pk].cn[self.pc].append(ik)
-            if self.auto_sort_nodes_bool:
-                self.nodes[pk].cn[self.pc] = self.sort_node_cn(self.nodes[pk].cn[self.pc], self.pc)
-                if self.nodes[pk].ps[self.pc]:
-                    parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
-                    parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-        if not self.auto_sort_nodes_bool and parent == "":
-            self.topnodes_order[self.pc].append(ik)
-        if insert_row is not None and snapshot:
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        out = self.session.add(ID, parent, insert_row=insert_row, snapshot=snapshot)
+        if not out["ok"]:
+            if snapshot and self.vs and self.vs[-1].get("type") == "add id" and not self.vs[-1]["row"]:
+                self.vs.pop()
+            if errors:
+                Error(self, out["error"]["message"], theme=self.C.theme)
+            return False
         if snapshot:
             self.refresh_formatting(rows=len(self.sheet.data) - 1 if insert_row is None else insert_row)
         return True
 
     def change_ID_name(self, ID, new_name, snapshot=True, errors=True):
-        self.refresh_rows = set()
         ik = ID.lower()
-        if ik not in self.nodes:
-            if errors:
-                Error(self, "ID doesn't exist   ", theme=self.C.theme)
-            return False
         nnk = new_name.lower()
-        if nnk in self.nodes and ik != nnk:
-            if errors:
-                Error(self, "New name already exists   ", theme=self.C.theme)
-            return False
-        if not nnk:
-            if errors:
-                Error(self, "New name cannot be empty   ", theme=self.C.theme)
-            return False
         if snapshot:
             self.snapshot_rename_id()
-            qvsrwsapp = self.vs[-1]["rows"].append
-        ik_rn = self.rns[ik]
-        self.sheet.MT.data[ik_rn][self.ic] = new_name
-        for h, cn in self.nodes[ik].cn.items():
-            for ciid in cn:
-                chld_rn = self.rns[ciid]
-                self.refresh_rows.add(chld_rn)
-                if snapshot:
-                    qvsrwsapp(zlib.compress(pickle.dumps((chld_rn, h, self.sheet.MT.data[chld_rn][h]))))
-                self.sheet.MT.data[chld_rn][h] = f"{new_name}"
-                self.nodes[ciid].ps[h] = nnk
-        for h, p in self.nodes[ik].ps.items():
-            if p:
-                self.nodes[p].cn[h][self.nodes[p].cn[h].index(ik)] = nnk
-        if snapshot:
-            self.vs[-1]["ikrow"] = (ik_rn, ik, self.nodes[ik].name, new_name)
-        self.nodes[ik].name = new_name
-        self.nodes[nnk] = self.nodes.pop(ik)
-        self.rns[nnk] = self.rns.pop(ik)
-        if self.auto_sort_nodes_bool:
-            for h, p in self.nodes[nnk].ps.items():
-                if p:
-                    parent_node = self.nodes[self.nodes[nnk].ps[h]]
-                    parent_node.cn[h] = self.sort_node_cn(parent_node.cn[h], h)
-
-        else:
-            for h in self.hiers:
-                if self.nodes[nnk].ps[h] == "":
-                    try:
-                        self.topnodes_order[h][self.topnodes_order[h].index(ik)] = nnk
-                    except Exception:
-                        continue
+        out = self.session.rename(ID, new_name, snapshot=snapshot)
+        if not out["ok"]:
+            if snapshot and self.vs and self.vs[-1].get("type") == "rename id" and not self.vs[-1]["rows"]:
+                self.vs.pop()
+            if errors:
+                Error(self, out["error"]["message"], theme=self.C.theme)
+            return False
         if ik in self.saved_info[self.pc].opens:
             self.saved_info[self.pc].opens[nnk] = self.saved_info[self.pc].opens.pop(ik)
         return True
@@ -3363,117 +3261,11 @@ class Tree_Editor(tk.Frame):
         errors=True,
         sort_later=False,
     ):
-        self.refresh_rows = set()
-        if self.sort_later_dct is None:
-            self.sort_later_dct = {
-                "filled": False,
-                "old_parents_of_parents": set(),
-                "old_hier": None,
-                "new_parent": (),
-                "new_parent_of_parent": (),
-            }
-        ik = ID.lower()
-        pk = oldparent.lower()
-        npk = newparent.lower()
-        parent_of_ik: str = self.nodes[ik].ps[hier]
-        if ik == npk:
+        out = self.session.cut_paste(ID, oldparent, hier, newparent, snapshot=snapshot, sort_later=sort_later)
+        if not out["ok"]:
             if errors:
-                Error(self, "New parent is ID   ", theme=self.C.theme)
+                Error(self, out["error"]["message"], theme=self.C.theme)
             return False
-        if hier != self.pc and self.nodes[ik].ps[self.pc] is not None:
-            if errors:
-                Error(self, f"ID: {ID} already in hierarchy   ", theme=self.C.theme)
-            return False
-        if npk == "":
-            if self.nodes[ik].ps[self.pc] == "":
-                if errors:
-                    Error(self, f"ID: {ID} already has this parent   ", theme=self.C.theme)
-                return False
-        else:
-            if self.nodes[ik].ps[self.pc] and npk == self.nodes[ik].ps[self.pc]:
-                if errors:
-                    Error(self, f"ID: {ID} already has this parent   ", theme=self.C.theme)
-                return False
-        auto_sort_quick = self.auto_sort_nodes_bool
-        for ciid in self.nodes[ik].cn[hier]:
-            child = self.nodes[ciid]
-            child.ps[hier] = parent_of_ik
-            crow = self.rns[ciid]
-            if snapshot:
-                self.vs[-1]["rows"].append(
-                    zlib.compress(
-                        pickle.dumps(
-                            (
-                                crow,
-                                hier,
-                                self.sheet.MT.data[crow][hier],
-                                self.pc,
-                                self.sheet.MT.data[crow][self.pc],
-                            )
-                        )
-                    )
-                )
-                self.refresh_rows.add(int(crow))
-            self.sheet.MT.data[crow][hier] = self.nodes[parent_of_ik].name if parent_of_ik else ""
-            if parent_of_ik:
-                self.nodes[parent_of_ik].cn[hier].append(ciid)
-            elif not parent_of_ik and not auto_sort_quick:
-                self.topnodes_order[hier].append(ciid)
-        self.nodes[ik].cn[hier] = []
-        self.nodes[ik].ps[hier] = None
-        if pk != "":
-            self.nodes[pk].cn[hier].remove(ik)
-        if npk == "":
-            self.nodes[ik].ps[self.pc] = ""
-        else:
-            self.nodes[ik].ps[self.pc] = npk
-            self.nodes[npk].cn[self.pc].append(ik)
-            if auto_sort_quick:
-                if sort_later and not self.sort_later_dct["filled"]:
-                    self.sort_later_dct["new_parent"] = (npk, self.pc)
-                    if self.nodes[npk].ps[self.pc]:
-                        self.sort_later_dct["new_parent_of_parent"] = (
-                            self.nodes[npk].ps[self.pc],
-                            self.pc,
-                        )
-                elif not sort_later:
-                    self.nodes[npk].cn[self.pc] = self.sort_node_cn(self.nodes[npk].cn[self.pc], self.pc)
-                    if self.nodes[npk].ps[self.pc]:
-                        parent_parent_node = self.nodes[self.nodes[npk].ps[self.pc]]
-                        parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-        if not auto_sort_quick:
-            if pk == "":
-                try_remove(self.topnodes_order[hier], ik)
-            if npk == "":
-                self.topnodes_order[self.pc].append(ik)
-        idrow = self.rns[ik]
-        if snapshot:
-            self.vs[-1]["rows"].append(
-                zlib.compress(
-                    pickle.dumps(
-                        (
-                            idrow,
-                            hier,
-                            self.sheet.MT.data[idrow][hier],
-                            self.pc,
-                            self.sheet.MT.data[idrow][self.pc],
-                        )
-                    )
-                )
-            )
-            self.refresh_rows.add(int(idrow))
-        self.sheet.MT.data[idrow][hier] = ""
-        self.sheet.MT.data[idrow][self.pc] = newparent
-        if auto_sort_quick and parent_of_ik and self.nodes[parent_of_ik].ps[hier]:
-            parent_parent_iid = self.nodes[parent_of_ik].ps[hier]
-            if sort_later:
-                self.sort_later_dct["old_parents_of_parents"].add(parent_parent_iid)
-                if self.sort_later_dct["old_hier"] is None:
-                    self.sort_later_dct["old_hier"] = hier
-            elif not sort_later:
-                parent_parent_node = self.nodes[parent_parent_iid]
-                parent_parent_node.cn[hier] = self.sort_node_cn(parent_parent_node.cn[hier], hier)
-        self.sort_later_dct["filled"] = True
         return True
 
     def cut_paste_all(
@@ -3486,315 +3278,36 @@ class Tree_Editor(tk.Frame):
         errors=True,
         sort_later=False,
     ):
-        self.refresh_rows = set()
-        if self.sort_later_dct is None:
-            self.sort_later_dct = {
-                "filled": False,
-                "old_parents_of_parents": set(),
-                "old_hier": None,
-                "new_parent": (),
-                "new_parent_of_parent": (),
-            }
-        ik = ID.lower()
-        pk = oldparent.lower()
-        npk = newparent.lower()
-
-        # Validation checks
-        if hier != self.pc:
-            if self.nodes[ik].ps[self.pc] is not None:
-                if errors:
-                    Error(self, f"ID: {ID} already in hierarchy   ", theme=self.C.theme)
-                return False
-            for ck in self.check_cn(ik, hier):
-                if self.nodes[ck].ps[self.pc] is not None:
-                    if errors:
-                        Error(
-                            self,
-                            f"ID: {self.nodes[ck].name} is already in hierarchy   ",
-                            theme=self.C.theme,
-                        )
-                    return False
-        else:
-            if any(npk == ck for ck in self.check_cn(ik, hier)):
-                if errors:
-                    Error(self, f"Cannot add ID: {ID} to same line   ", theme=self.C.theme)
-                return False
-        if npk == "":
-            if self.nodes[ik].ps[self.pc] == "":
-                if errors:
-                    Error(self, f"ID: {ID} already has this parent   ", theme=self.C.theme)
-                return False
-        else:
-            if self.nodes[ik].ps[self.pc] and npk == self.nodes[ik].ps[self.pc]:
-                if errors:
-                    Error(self, f"ID: {ID} already has this parent   ", theme=self.C.theme)
-                return False
-
-        # Update node relationships
-        self.nodes[ik].ps[hier] = None
-        if pk != "":
-            self.nodes[pk].cn[hier].remove(ik)
-        if npk == "":
-            self.nodes[ik].ps[self.pc] = ""
-        else:
-            self.nodes[ik].ps[self.pc] = npk
-            self.nodes[npk].cn[self.pc].append(ik)
-
-        # Handle top-level node ordering
-        if not self.auto_sort_nodes_bool:
-            if pk == "":
-                try_remove(self.topnodes_order[hier], ik)
-            if npk == "":
-                self.topnodes_order[self.pc].append(ik)
-
-        # Update sheet data and snapshot for the root node
-        idrow = self.rns[ik]
-        if snapshot:
-            self.vs[-1]["rows"].append(
-                zlib.compress(
-                    pickle.dumps(
-                        (
-                            idrow,
-                            hier,
-                            self.sheet.MT.data[idrow][hier],
-                            self.pc,
-                            self.sheet.MT.data[idrow][self.pc],
-                        )
-                    )
-                )
-            )
-            self.refresh_rows.add(int(idrow))
-        self.sheet.MT.data[idrow][hier] = ""
-        self.sheet.MT.data[idrow][self.pc] = newparent
-
-        # Process the subtree iteratively if hierarchies differ
-        if hier != self.pc:
-            self.nodes[ik].cn[self.pc] = list(self.nodes[ik].cn[hier])
-            self.nodes[ik].cn[hier] = []
-            # Initialize stack with the root node of the subtree
-            stack = [self.nodes[ik]]
-            while stack:
-                node = stack.pop()
-                for ciid in node.cn[self.pc]:
-                    child = self.nodes[ciid]
-                    # Update child’s hierarchy data
-                    child.ps[self.pc] = child.ps[hier]
-                    child.ps[hier] = None
-                    child.cn[self.pc] = list(child.cn[hier])
-                    child.cn[hier] = []
-                    # Update sheet data and snapshot for the child
-                    crow = self.rns[ciid]
-                    if snapshot:
-                        self.vs[-1]["rows"].append(
-                            zlib.compress(
-                                pickle.dumps(
-                                    (
-                                        crow,
-                                        hier,
-                                        self.sheet.MT.data[crow][hier],
-                                        self.pc,
-                                        self.sheet.MT.data[crow][self.pc],
-                                    )
-                                )
-                            )
-                        )
-                        self.refresh_rows.add(int(crow))
-                    self.sheet.MT.data[crow][self.pc] = f"{self.sheet.MT.data[crow][hier]}"
-                    self.sheet.MT.data[crow][hier] = ""
-                    # Add child to stack for further processing
-                    stack.append(child)
-
-        # Handle sorting
-        if self.auto_sort_nodes_bool:
-            if sort_later:
-                if npk and not self.sort_later_dct["filled"]:
-                    self.sort_later_dct["new_parent"] = (npk, self.pc)
-                    if self.nodes[npk].ps[self.pc]:
-                        self.sort_later_dct["new_parent_of_parent"] = (
-                            self.nodes[npk].ps[self.pc],
-                            self.pc,
-                        )
-                if pk and self.nodes[pk].ps[hier]:
-                    self.sort_later_dct["old_parents_of_parents"].add(self.nodes[pk].ps[hier])
-                    if self.sort_later_dct["old_hier"] is None:
-                        self.sort_later_dct["old_hier"] = hier
-            elif not sort_later:
-                if npk:
-                    self.nodes[npk].cn[self.pc] = self.sort_node_cn(self.nodes[npk].cn[self.pc], self.pc)
-                    if self.nodes[npk].ps[self.pc]:
-                        parent_parent_node = self.nodes[self.nodes[npk].ps[self.pc]]
-                        parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-                if pk and self.nodes[pk].ps[hier]:
-                    parent_parent_node = self.nodes[self.nodes[pk].ps[hier]]
-                    parent_parent_node.cn[hier] = self.sort_node_cn(parent_parent_node.cn[hier], hier)
-
-        self.sort_later_dct["filled"] = True
+        out = self.session.cut_paste_all(ID, oldparent, hier, newparent, snapshot=snapshot, sort_later=sort_later)
+        if not out["ok"]:
+            if errors:
+                Error(self, out["error"]["message"], theme=self.C.theme)
+            return False
         return True
 
     def copy_paste(self, ID, hier, newparent, snapshot=True, errors=True, sort_later=False):
-        self.refresh_rows = set()
-        if self.sort_later_dct is None:
-            self.sort_later_dct = {
-                "filled": False,
-                "old_parents_of_parents": set(),
-                "old_hier": None,
-                "new_parent": (),
-                "new_parent_of_parent": (),
-            }
-        ik = ID.lower()
-        npk = newparent.lower()
-        if hier == self.pc or self.nodes[ik].ps[self.pc] is not None:
+        out = self.session.copy_paste(ID, hier, newparent, snapshot=snapshot, sort_later=sort_later)
+        if not out["ok"]:
             if errors:
-                Error(self, f"ID {ID} already in hierarchy   ", theme=self.C.theme)
+                Error(self, out["error"]["message"], theme=self.C.theme)
             return False
-        if npk == "":
-            self.nodes[ik].ps[self.pc] = ""
-        else:
-            self.nodes[ik].ps[self.pc] = npk
-            self.nodes[npk].cn[self.pc].append(ik)
-            if self.auto_sort_nodes_bool:
-                if sort_later and not self.sort_later_dct["filled"]:
-                    self.sort_later_dct["new_parent"] = (npk, self.pc)
-                    if self.nodes[npk].ps[self.pc]:
-                        self.sort_later_dct["new_parent_of_parent"] = (
-                            self.nodes[npk].ps[self.pc],
-                            self.pc,
-                        )
-                elif not sort_later:
-                    self.nodes[npk].cn[self.pc] = self.sort_node_cn(self.nodes[npk].cn[self.pc], self.pc)
-                    if self.nodes[npk].ps[self.pc]:
-                        parent_parent_node = self.nodes[self.nodes[npk].ps[self.pc]]
-                        parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-        if not self.auto_sort_nodes_bool and npk == "":
-            self.topnodes_order[self.pc].append(ik)
-        rn = self.rns[ik]
-        if snapshot:
-            self.vs[-1]["rows"].append(
-                zlib.compress(
-                    pickle.dumps(
-                        (
-                            rn,
-                            hier,
-                            self.sheet.MT.data[rn][hier],
-                            self.pc,
-                            self.sheet.MT.data[rn][self.pc],
-                        )
-                    )
-                )
-            )
-            self.refresh_rows.add(rn)
-        self.sheet.MT.data[rn][self.pc] = newparent
-        self.sort_later_dct["filled"] = True
         return True
 
     def copy_paste_all(self, ID, hier, newparent, snapshot=True, errors=True, sort_later=False):
-        self.refresh_rows = set()
-        if self.sort_later_dct is None:
-            self.sort_later_dct = {
-                "filled": False,
-                "old_parents_of_parents": set(),
-                "old_hier": None,
-                "new_parent": (),
-                "new_parent_of_parent": (),
-            }
-        ik = ID.lower()
-        npk = newparent.lower()
-
-        # Validation checks
-        if hier == self.pc or self.nodes[ik].ps[self.pc] is not None:
+        out = self.session.copy_paste_all(ID, hier, newparent, snapshot=snapshot, sort_later=sort_later)
+        if not out["ok"]:
             if errors:
-                Error(self, f"ID {ID} already in hierarchy   ", theme=self.C.theme)
+                Error(self, out["error"]["message"], theme=self.C.theme)
             return False
-        for ck in self.check_cn(ik, hier):
-            if self.nodes[ck].ps[self.pc] is not None:
-                if errors:
-                    Error(
-                        self,
-                        f"ID: {self.nodes[ck].name} is already in hierarchy   ",
-                        theme=self.C.theme,
-                    )
-                return False
-
-        # Update root node relationships
-        if npk == "":
-            self.nodes[ik].ps[self.pc] = ""
-        else:
-            self.nodes[ik].ps[self.pc] = npk
-            self.nodes[npk].cn[self.pc].append(ik)
-        if not self.auto_sort_nodes_bool and npk == "":
-            self.topnodes_order[self.pc].append(ik)
-
-        # Update sheet data and snapshot for the root node
-        rn = self.rns[ik]
-        if snapshot:
-            self.vs[-1]["rows"].append(
-                zlib.compress(
-                    pickle.dumps(
-                        (
-                            rn,
-                            hier,
-                            self.sheet.MT.data[rn][hier],
-                            self.pc,
-                            self.sheet.MT.data[rn][self.pc],
-                        )
-                    )
-                )
-            )
-            self.refresh_rows.add(rn)
-        self.sheet.MT.data[rn][self.pc] = newparent
-
-        # Process the subtree iteratively
-        self.nodes[ik].cn[self.pc] = list(self.nodes[ik].cn[hier])
-        # Initialize stack with the root node's children
-        stack = list(self.nodes[ik].cn[hier])
-        while stack:
-            ciid = stack.pop()
-            child = self.nodes[ciid]
-            crow = self.rns[ciid]
-            # Update child data and snapshot
-            if snapshot:
-                self.vs[-1]["rows"].append(
-                    zlib.compress(
-                        pickle.dumps(
-                            (
-                                crow,
-                                hier,
-                                self.sheet.MT.data[crow][hier],
-                                self.pc,
-                                self.sheet.MT.data[crow][self.pc],
-                            )
-                        )
-                    )
-                )
-                self.refresh_rows.add(int(crow))
-            child.ps[self.pc] = child.ps[hier]
-            child.cn[self.pc] = list(child.cn[hier])
-            self.sheet.MT.data[crow][self.pc] = f"{self.sheet.MT.data[crow][hier]}"
-            # Add the child's children to the stack
-            stack.extend(child.cn[hier])
-
-        # Handle sorting
-        if npk and self.auto_sort_nodes_bool:
-            if sort_later and not self.sort_later_dct["filled"]:
-                self.sort_later_dct["new_parent"] = (npk, self.pc)
-                if self.nodes[npk].ps[self.pc]:
-                    self.sort_later_dct["new_parent_of_parent"] = (
-                        self.nodes[npk].ps[self.pc],
-                        self.pc,
-                    )
-            elif not sort_later:
-                self.nodes[npk].cn[self.pc] = self.sort_node_cn(self.nodes[npk].cn[self.pc], self.pc)
-                if self.nodes[npk].ps[self.pc]:
-                    parent_parent_node = self.nodes[self.nodes[npk].ps[self.pc]]
-                    parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-
-        self.sort_later_dct["filled"] = True
         return True
 
     def cut_paste_children(self, oldparent, newparent, hier, snapshot=True, errors=True):
-        self.refresh_rows = set()
         pk = oldparent.lower()
         npk = newparent.lower()
+        if pk not in self.nodes:
+            if errors:
+                Error(self, "ID doesn't exist   ", theme=self.C.theme)
+            return
         if not len(self.nodes[pk].cn[hier]):
             if errors:
                 Error(
@@ -3835,87 +3348,14 @@ class Tree_Editor(tk.Frame):
             )
             if not confirm.boolean:
                 return False
-
-        for ciid in tuple(self.nodes[pk].cn[hier]):
-            if ciid not in already_in:
-                # Move the direct child
-                if not self.auto_sort_nodes_bool and npk == "":
-                    self.topnodes_order[self.pc].append(ciid)
-                crow = self.rns[ciid]
-                if snapshot:
-                    self.vs[-1]["rows"].append(
-                        zlib.compress(
-                            pickle.dumps(
-                                (
-                                    crow,
-                                    hier,
-                                    self.sheet.MT.data[crow][hier],
-                                    self.pc,
-                                    self.sheet.MT.data[crow][self.pc],
-                                )
-                            )
-                        )
-                    )
-                    self.refresh_rows.add(int(crow))
-                self.sheet.MT.data[crow][hier] = ""
-                self.nodes[ciid].ps[hier] = None
-                if npk:
-                    self.sheet.MT.data[crow][self.pc] = self.nodes[npk].name
-                    self.nodes[ciid].ps[self.pc] = npk
-                    self.nodes[npk].cn[self.pc].append(ciid)
-                else:
-                    self.sheet.MT.data[crow][self.pc] = ""
-                    self.nodes[ciid].ps[self.pc] = ""
-                self.nodes[pk].cn[hier].remove(ciid)
-
-                # Process the child's subtree iteratively if hier != self.pc
-                if hier != self.pc:
-                    stack = [ciid]
-                    while stack:
-                        current_iid = stack.pop()
-                        # Get children not already in self.pc
-                        children = [
-                            child_iid for child_iid in self.nodes[current_iid].cn[hier] if child_iid not in already_in
-                        ]
-                        self.nodes[current_iid].cn[self.pc] = children
-                        children_to_remove = set(children)
-                        self.nodes[current_iid].cn[hier] = [
-                            child for child in self.nodes[current_iid].cn[hier] if child not in children_to_remove
-                        ]
-                        # Push children in reverse to maintain DFS order (first child processed first)
-                        for child_iid in reversed(children):
-                            child = self.nodes[child_iid]
-                            crow = self.rns[child_iid]
-                            if snapshot:
-                                self.vs[-1]["rows"].append(
-                                    zlib.compress(
-                                        pickle.dumps(
-                                            (
-                                                crow,
-                                                hier,
-                                                self.sheet.MT.data[crow][hier],
-                                                self.pc,
-                                                self.sheet.MT.data[crow][self.pc],
-                                            )
-                                        )
-                                    )
-                                )
-                                self.refresh_rows.add(int(crow))
-                            self.sheet.MT.data[crow][self.pc] = f"{self.sheet.MT.data[crow][hier]}"
-                            self.sheet.MT.data[crow][hier] = ""
-                            child.ps[self.pc] = current_iid  # Parent in self.pc is the current node
-                            child.ps[hier] = None
-                            stack.append(child_iid)
-
-            if self.auto_sort_nodes_bool:
-                if self.nodes[pk].ps[hier]:
-                    parent_parent_node = self.nodes[self.nodes[pk].ps[hier]]
-                    parent_parent_node.cn[hier] = self.sort_node_cn(parent_parent_node.cn[hier], hier)
-                if npk:
-                    if self.nodes[npk].ps[self.pc]:
-                        parent_parent_node = self.nodes[self.nodes[npk].ps[self.pc]]
-                        parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-                    self.nodes[npk].cn[self.pc] = self.sort_node_cn(self.nodes[npk].cn[self.pc], self.pc)
+        out = self.session.cut_paste_children(oldparent, newparent, hier, snapshot=snapshot)
+        if not out["ok"]:
+            if errors:
+                Error(self, out["error"]["message"], theme=self.C.theme)
+            msg = out["error"]["message"]
+            if out["error"]["code"] == "cycle" or "already have this parent" in msg:
+                return False
+            return
         return True
 
     def cut_paste_edit_cell(self, ID, oldparent, hier, newparent, snapshot=True):
@@ -3977,240 +3417,16 @@ class Tree_Editor(tk.Frame):
         return True
 
     def _del_id_core(self, name: str, to_del: list[str] | None = None, snapshot: bool = True) -> list[str]:
-        if to_del is None:
-            to_del = []
-        iid = name.lower()
-        if iid not in self.nodes or self.nodes[iid].ps[self.pc] is None:
-            return to_del
-        pk = self.get_ids_parent(iid)
-        if pk:
-            self.nodes[pk].cn[self.pc].remove(iid)
-        if not self.auto_sort_nodes_bool:
-            if pk == "":
-                self.topnodes_order[self.pc].remove(iid)
-                for ciid in self.nodes[iid].cn[self.pc]:
-                    self.topnodes_order[self.pc].append(ciid)
-            else:
-                for ciid in self.nodes[iid].cn[self.pc]:
-                    self.nodes[pk].cn[self.pc].append(ciid)
-        else:
-            if pk:
-                for ciid in self.nodes[iid].cn[self.pc]:
-                    self.nodes[pk].cn[self.pc].append(ciid)
-                self.nodes[pk].cn[self.pc] = self.sort_node_cn(self.nodes[pk].cn[self.pc], self.pc)
-        if pk:
-            for ciid in self.nodes[iid].cn[self.pc]:
-                rn = self.rns[ciid]
-                if snapshot and rn not in self.vs[-1]["rows"]:
-                    self.vs[-1]["rows"][rn] = RowStorage(
-                        0,
-                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                    )
-                self.nodes[ciid].ps[self.pc] = pk
-                self.sheet.MT.data[rn][self.pc] = self.nodes[pk].name
-                self.refresh_rows.add(ciid)
-        elif pk == "":
-            for ciid in self.nodes[iid].cn[self.pc]:
-                rn = self.rns[ciid]
-                if snapshot and rn not in self.vs[-1]["rows"]:
-                    self.vs[-1]["rows"][rn] = RowStorage(
-                        0,
-                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                    )
-                self.nodes[ciid].ps[self.pc] = ""
-                self.sheet.MT.data[rn][self.pc] = ""
-                self.refresh_rows.add(ciid)
-        rn = self.rns[iid]
-        if sum(1 for v in self.nodes[iid].ps.values() if v is not None) < 2:
-            if snapshot:
-                self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
-            del self.nodes[iid]
-            self.untag_id(iid)
-            to_del.append(iid)
-            self.refresh_rows.discard(iid)
-        else:
-            if snapshot and rn not in self.vs[-1]["rows"]:
-                self.vs[-1]["rows"][rn] = RowStorage(
-                    0,
-                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                )
-            self.nodes[iid].cn[self.pc] = []
-            self.nodes[iid].ps[self.pc] = None
-            self.sheet.MT.data[rn][self.pc] = ""
-            self.refresh_rows.add(iid)
-        if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
-            parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
-            parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-        return to_del
+        return self.session._del_id_core(name, to_del, snapshot)
 
     def _del_id_all_core(self, name: str, to_del: list[str] | None = None, snapshot: bool = True) -> list[str]:
-        if to_del is None:
-            to_del = []
-        iid = name.lower()
-        if iid not in self.nodes:
-            return to_del
-        self.untag_id(iid)
-        to_sort = set()
-        if not self.auto_sort_nodes_bool:
-            for h, pk in self.nodes[iid].ps.items():
-                if pk == "":
-                    self.topnodes_order[h].remove(iid)
-                    for ciid in self.nodes[iid].cn[h]:
-                        child = self.nodes[ciid]
-                        self.topnodes_order[h].append(ciid)
-                        child.ps[h] = ""
-                        rn = self.rns[ciid]
-                        if snapshot and rn not in self.vs[-1]["rows"]:
-                            self.vs[-1]["rows"][rn] = RowStorage(
-                                0,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                            )
-                            self.refresh_rows.add(ciid)
-                        self.sheet.MT.data[rn][h] = ""
-                elif pk:
-                    self.nodes[pk].cn[h].remove(iid)
-                    for ciid in self.nodes[iid].cn[h]:
-                        self.nodes[pk].cn[h].append(ciid)
-                        child = self.nodes[ciid]
-                        child.ps[h] = pk
-                        rn = self.rns[ciid]
-                        if snapshot and rn not in self.vs[-1]["rows"]:
-                            self.vs[-1]["rows"][rn] = RowStorage(
-                                0,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                            )
-                            self.refresh_rows.add(ciid)
-                        self.sheet.MT.data[rn][h] = self.nodes[pk].name
-        else:
-            for h, pk in self.nodes[iid].ps.items():
-                if pk == "":
-                    for ciid in self.nodes[iid].cn[h]:
-                        child = self.nodes[ciid]
-                        child.ps[h] = ""
-                        rn = self.rns[ciid]
-                        if snapshot and rn not in self.vs[-1]["rows"]:
-                            self.vs[-1]["rows"][rn] = RowStorage(
-                                0,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                            )
-                            self.refresh_rows.add(ciid)
-                        self.sheet.MT.data[rn][h] = ""
-                elif pk:
-                    self.nodes[pk].cn[h].remove(iid)
-                    for ciid in self.nodes[iid].cn[h]:
-                        self.nodes[pk].cn[h].append(ciid)
-                        child = self.nodes[ciid]
-                        child.ps[h] = pk
-                        rn = self.rns[ciid]
-                        if snapshot and rn not in self.vs[-1]["rows"]:
-                            self.vs[-1]["rows"][rn] = RowStorage(
-                                0,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                            )
-                            self.refresh_rows.add(ciid)
-                        self.sheet.MT.data[rn][h] = self.nodes[pk].name
-                    # sort parents children
-                    to_sort.add((pk, h))
-                    # sort grandparents children
-                    if self.nodes[pk].ps[h]:
-                        to_sort.add((self.nodes[pk].ps[h], h))
-        rn = self.rns[iid]
-        if snapshot:
-            self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
-        del self.nodes[iid]
-        to_del.append(iid)
-        self.refresh_rows.discard(iid)
-        if self.auto_sort_nodes_bool:
-            for node_id, h in to_sort:
-                if node_id in self.nodes:
-                    self.nodes[node_id].cn[h] = self.sort_node_cn(self.nodes[node_id].cn[h], h)
-        return to_del
+        return self.session._del_id_all_core(name, to_del, snapshot)
 
-    def _del_id_orphan_core(self, name: str, parent: str, snapshot: bool = True) -> None:
-        ik = name.lower()
-        if ik not in self.nodes or self.nodes[ik].ps[self.pc] is None:
-            return
-        pk = parent.lower()
-        self.refresh_rows = set()
-        if pk:
-            self.nodes[pk].cn[self.pc].remove(ik)
-        if not self.auto_sort_nodes_bool:
-            if pk == "":
-                self.topnodes_order[self.pc].remove(ik)
-            for ciid in self.nodes[ik].cn[self.pc]:
-                self.topnodes_order[self.pc].append(ciid)
-        for ciid in self.nodes[ik].cn[self.pc]:
-            rn = self.rns[ciid]
-            child = self.nodes[ciid]
-            if snapshot and rn not in self.vs[-1]["rows"]:
-                self.vs[-1]["rows"][rn] = RowStorage(
-                    0,
-                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                )
-                self.refresh_rows.add(ciid)
-            child.ps[self.pc] = ""
-            self.sheet.MT.data[rn][self.pc] = ""
-        rn = self.rns[ik]
-        if sum(1 for v in self.nodes[ik].ps.values() if v is not None) < 2:
-            if snapshot:
-                self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
-            del self.nodes[ik]
-            self.sheet.delete_row(rn, redraw=False)
-            self.untag_id(ik)
-        else:
-            if snapshot and rn not in self.vs[-1]["rows"]:
-                self.vs[-1]["rows"][rn] = RowStorage(
-                    0,
-                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                )
-                self.refresh_rows.add(ik)
-            self.nodes[ik].cn[self.pc] = []
-            self.nodes[ik].ps[self.pc] = None
-            self.sheet.MT.data[rn][self.pc] = ""
-        if self.auto_sort_nodes_bool and pk and self.nodes[pk].ps[self.pc]:
-            parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
-            parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
+    def _del_id_orphan_core(self, name: str, parent: str, snapshot: bool = True) -> list[str]:
+        return self.session._del_id_orphan_core(name, parent, snapshot=snapshot)
 
-    def _del_id_all_orphan_core(self, name: str, snapshot: bool = True) -> None:
-        ik = name.lower()
-        if ik not in self.nodes:
-            return
-        self.refresh_rows = set()
-        to_sort = set()
-        self.untag_id(ik)
-        if not self.auto_sort_nodes_bool:
-            for h, p in self.nodes[ik].ps.items():
-                if p == "":
-                    self.topnodes_order[h].remove(ik)
-                for ciid in self.nodes[ik].cn[h]:
-                    self.topnodes_order[h].append(ciid)
-        for h, p in self.nodes[ik].ps.items():
-            if p:
-                self.nodes[p].cn[h].remove(ik)
-                # sort grandparents children
-                if self.auto_sort_nodes_bool and self.nodes[p].ps[h]:
-                    to_sort.add((self.nodes[p].ps[h], h))
-        for h, cn in self.nodes[ik].cn.items():
-            for ciid in cn:
-                rn = self.rns[ciid]
-                if snapshot and rn not in self.vs[-1]["rows"]:
-                    self.vs[-1]["rows"][rn] = RowStorage(
-                        0,
-                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][hx] for hx in self.hiers])),
-                    )
-                    self.refresh_rows.add(ciid)
-                child = self.nodes[ciid]
-                child.ps[h] = ""
-                self.sheet.MT.data[rn][h] = ""
-        rn = self.rns[ik]
-        if snapshot:
-            self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
-        del self.nodes[ik]
-        self.sheet.delete_row(rn, redraw=False)
-        if self.auto_sort_nodes_bool:
-            for node_id, h in to_sort:
-                if node_id in self.nodes:
-                    self.nodes[node_id].cn[h] = self.sort_node_cn(self.nodes[node_id].cn[h], h)
+    def _del_id_all_orphan_core(self, name: str, snapshot: bool = True) -> list[str]:
+        return self.session._del_id_all_orphan_core(name, snapshot=snapshot)
 
     def get_lvls(self, iid: str, lvl=1):
         # Initialize stack with the initial node at lvl - 1
@@ -4236,218 +3452,10 @@ class Tree_Editor(tk.Frame):
                 stack.append((child, next_lvl))
 
     def _del_id_children_core(self, name: str, to_del: list[str] | None = None, snapshot: bool = True) -> list[str]:
-        if to_del is None:
-            to_del = []
-        ik = name.lower()
-        if ik not in self.nodes or self.nodes[ik].ps[self.pc] is None:
-            return to_del
-        self.levels = defaultdict(list)
-        self.get_lvls(ik)
-        for lvl in sorted(((k, v) for k, v in self.levels.items()), key=itemgetter(0), reverse=True):
-            for ik_ in lvl[1]:
-                if ik_ not in self.nodes:
-                    continue
-                rn = self.rns[ik_]
-                if sum(1 for v in self.nodes[ik_].ps.values() if v is not None) < 2:
-                    if snapshot:
-                        self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
-                    del self.nodes[ik_]
-                    to_del.append(ik_)
-                    self.refresh_rows.discard(ik_)
-                    self.untag_id(ik_)
-                else:
-                    if snapshot and rn not in self.vs[-1]["rows"]:
-                        self.vs[-1]["rows"][rn] = RowStorage(
-                            0,
-                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                        )
-                        self.refresh_rows.add(ik_)
-                    self.nodes[ik_].cn[self.pc] = []
-                    self.nodes[ik_].ps[self.pc] = None
-                    self.sheet.MT.data[rn][self.pc] = ""
-        pk = self.get_ids_parent(ik)
-        rn = self.rns[ik]
-        if pk:
-            self.nodes[pk].cn[self.pc].remove(ik)
-        if sum(1 for v in self.nodes[ik].ps.values() if v is not None) < 2:
-            if snapshot:
-                self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
-            del self.nodes[ik]
-            to_del.append(ik)
-            self.refresh_rows.discard(ik)
-            self.untag_id(ik)
-        else:
-            if snapshot and rn not in self.vs[-1]["rows"]:
-                self.vs[-1]["rows"][rn] = RowStorage(
-                    0,
-                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                )
-                self.refresh_rows.add(ik)
-            self.nodes[ik].cn[self.pc] = []
-            self.nodes[ik].ps[self.pc] = None
-            self.sheet.MT.data[rn][self.pc] = ""
-        self.levels = defaultdict(list)
-        if self.auto_sort_nodes_bool:
-            if pk and pk in self.nodes and self.nodes[pk].ps[self.pc]:
-                parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
-                parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-        elif not self.auto_sort_nodes_bool and pk == "":
-            try_remove(self.topnodes_order[self.pc], ik)
-        return to_del
+        return self.session._del_id_children_core(name, to_del, snapshot)
 
     def _del_id_children_all_core(self, name: str, to_del: list[str] | None = None, snapshot: bool = True) -> list[str]:
-        if to_del is None:
-            to_del = []
-        ik = name.lower()
-        if ik not in self.nodes or self.nodes[ik].ps[self.pc] is None:
-            return to_del
-        self.levels = defaultdict(list)
-        # the selected id and its descendants are the things being deleted
-        # so descendants in self.pc works
-        self.get_lvls(ik)
-        del_set = {ik, *(descendant for lvl in self.levels.values() for descendant in lvl)}
-        to_sort = set()
-        for lvl in sorted(((k, v) for k, v in self.levels.items()), key=itemgetter(0), reverse=True):
-            for descendant in lvl[1]:
-                if descendant not in self.nodes:
-                    continue
-
-                # deal with the parents in other hierarchies of the ids to be deleted
-                for h, p in self.nodes[descendant].ps.items():
-                    # skip self.pc cos we're deleting the descendants of descendant in there
-                    # if no parent then the descendant has to be removed from topnodes order
-                    if h == self.pc or p is None:
-                        continue
-
-                    if p == "":
-                        if not self.auto_sort_nodes_bool:
-                            self.topnodes_order[h].remove(descendant)
-                    elif p not in del_set and p in self.nodes:
-                        # otherwise we have to remove descendant from parents list of children
-                        self.nodes[p].cn[h].remove(descendant)
-                        # add parent to sort list
-                        if self.auto_sort_nodes_bool:
-                            to_sort.add((p, h))
-
-                    # add grandparent to sort list
-                    if self.auto_sort_nodes_bool and p and p in self.nodes and self.nodes[p].ps[h]:
-                        gp = self.nodes[p].ps[h]
-                        if gp and gp not in del_set:
-                            to_sort.add((gp, h))
-
-                    # deal with the children in other hierarchies of ids to be deleted
-                    for ciid in self.nodes[descendant].cn[h]:
-                        # if it's in del_set we shouldn't bother saving/editing
-                        if ciid not in self.nodes or ciid in del_set:
-                            continue
-
-                        # backup the row
-                        rn = self.rns[ciid]
-                        if snapshot and rn not in self.vs[-1]["rows"]:
-                            self.vs[-1]["rows"][rn] = RowStorage(
-                                0,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                            )
-                            self.refresh_rows.add(ciid)
-
-                        if p == "" or p in del_set or p not in self.nodes:
-                            # orphan child
-                            self.nodes[ciid].ps[h] = ""
-                            # orphan child in sheet
-                            self.sheet.MT.data[rn][h] = ""
-                            # append to topnodes order if not auto_sort
-                            if not self.auto_sort_nodes_bool:
-                                self.topnodes_order[h].append(ciid)
-                        else:
-                            # re-parent child
-                            self.nodes[ciid].ps[h] = p
-                            self.nodes[p].cn[h].append(ciid)
-                            # re-parent child in sheet
-                            self.sheet.MT.data[rn][h] = self.nodes[p].name
-
-                rn = self.rns[descendant]
-                if snapshot:
-                    self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
-                to_del.append(descendant)
-                self.refresh_rows.discard(descendant)
-                self.untag_id(descendant)
-                del self.nodes[descendant]
-
-        pk = self.get_ids_parent(ik)
-        rn = self.rns[ik]
-        if snapshot:
-            self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
-        to_del.append(ik)
-        self.refresh_rows.discard(ik)
-        self.untag_id(ik)
-
-        # do the same thing that we did for the descendants but for the main id being deleted
-        for h, p in self.nodes[ik].ps.items():
-            # if no parent then the ik has to be removed from topnodes order
-            if p is None:
-                continue
-            if p == "":
-                if not self.auto_sort_nodes_bool:
-                    self.topnodes_order[h].remove(ik)
-            elif p not in del_set and p in self.nodes:
-                # otherwise we have to remove ik from parents list of children
-                self.nodes[p].cn[h].remove(ik)
-                # add parent to sort list
-                if self.auto_sort_nodes_bool:
-                    to_sort.add((p, h))
-
-            # add grandparent to sort list
-            if self.auto_sort_nodes_bool and p and p in self.nodes and self.nodes[p].ps[h]:
-                gp = self.nodes[p].ps[h]
-                if gp and gp not in del_set:
-                    to_sort.add((gp, h))
-
-            # skip self.pc cos we're deleting the descendants of ik there
-            if h == self.pc:
-                continue
-
-            # children in other hierarchies of ik to be deleted
-            for ciid in self.nodes[ik].cn[h]:
-                # if it's in del_set we shouldn't bother saving/editing
-                if ciid not in self.nodes or ciid in del_set:
-                    continue
-
-                # backup the row
-                rn = self.rns[ciid]
-                if snapshot and rn not in self.vs[-1]["rows"]:
-                    self.vs[-1]["rows"][rn] = RowStorage(
-                        0,
-                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                    )
-                    self.refresh_rows.add(ciid)
-
-                if p == "" or p in del_set or p not in self.nodes:
-                    # orphan child
-                    self.nodes[ciid].ps[h] = ""
-                    # orphan child in sheet
-                    self.sheet.MT.data[rn][h] = ""
-                    # append to topnodes order if not auto_sort
-                    if not self.auto_sort_nodes_bool:
-                        self.topnodes_order[h].append(ciid)
-                else:
-                    # re-parent child
-                    self.nodes[ciid].ps[h] = p
-                    self.nodes[p].cn[h].append(ciid)
-                    # re-parent child in sheet
-                    self.sheet.MT.data[rn][h] = self.nodes[p].name
-
-        del self.nodes[ik]
-        self.levels = defaultdict(list)
-        if self.auto_sort_nodes_bool:
-            for iid, h in to_sort:
-                if iid in self.nodes:
-                    self.nodes[iid].cn[h] = self.sort_node_cn(self.nodes[iid].cn[h], h)
-            if pk and pk in self.nodes and self.nodes[pk].ps[self.pc]:
-                parent_parent_node = self.nodes[self.nodes[pk].ps[self.pc]]
-                parent_parent_node.cn[self.pc] = self.sort_node_cn(parent_parent_node.cn[self.pc], self.pc)
-        elif not self.auto_sort_nodes_bool and pk == "":
-            try_remove(self.topnodes_order[self.pc], ik)
-        return to_del
+        return self.session._del_id_children_all_core(name, to_del, snapshot)
 
     def details(self, ik):
         allrows = []
@@ -4478,174 +3486,21 @@ class Tree_Editor(tk.Frame):
         return "\n".join(allrows)
 
     def fix_associate_sort(self, startup=True):
-        first_hier = self.hiers[0]
-        quick_hiers = self.hiers[1:]
-        lh = len(self.hiers)
-        if startup and self.auto_sort_nodes_bool:
-            for node in self.nodes.values():
-                if all(p is None for p in node.ps.values()):
-                    node.ps = {h: "" if node.cn[h] else None for h in self.hiers}
-                    newrow = list(repeat("", self.row_len))
-                    newrow[self.ic] = node.name
-                    self.sheet.MT.data.append(newrow)
-                    self.warnings.append(f" - ID ({node.name}) missing from ID column, new row added")
-                tlly = 0
-                for k, v in node.cn.items():
-                    if v:
-                        node.cn[k] = self.sort_node_cn(v, k)
-                    elif not node.ps[k]:
-                        node.ps[k] = None
-                        tlly += 1
-                if tlly == lh:
-                    node.ps[first_hier] = ""
-                    for h in quick_hiers:
-                        node.ps[h] = None
-
-        elif not startup and self.auto_sort_nodes_bool:
-            to_insert = []
-            for node in self.nodes.values():
-                if all(p is None for p in node.ps.values()):
-                    node.ps = {h: "" if node.cn[h] else None for h in self.hiers}
-                    newrow = list(repeat("", self.row_len))
-                    newrow[self.ic] = node.name
-                    to_insert.append(newrow)
-                tlly = 0
-                for k, v in node.cn.items():
-                    if v:
-                        node.cn[k] = self.sort_node_cn(v, k)
-                    elif not node.ps[k]:
-                        node.ps[k] = None
-                        tlly += 1
-                if tlly == lh:
-                    node.ps[first_hier] = ""
-                    for h in quick_hiers:
-                        node.ps[h] = None
-            if to_insert:
-                self.sheet.insert_rows(rows=to_insert)
-
-        elif not startup and not self.auto_sort_nodes_bool:
-            st_check_topnodes_order = {k: set(v) for k, v in self.topnodes_order.items()}
-            to_insert = []
-            for iid, node in self.nodes.items():
-                if all(p is None for p in node.ps.values()):
-                    node.ps = {h: "" if node.cn[h] else None for h in self.hiers}
-                    newrow = list(repeat("", self.row_len))
-                    newrow[self.ic] = node.name
-                    to_insert.append(newrow)
-                tlly = 0
-                for k, v in node.cn.items():
-                    if not v and not node.ps[k]:
-                        node.ps[k] = None
-                        tlly += 1
-                if tlly == lh:
-                    if all(iid not in h for h in st_check_topnodes_order.values()):
-                        node.ps[first_hier] = ""
-                        for h in quick_hiers:
-                            node.ps[h] = None
-                        self.topnodes_order[first_hier].append(iid)
-                    else:
-                        for h, v in st_check_topnodes_order.items():
-                            if iid in v:
-                                node.ps[h] = ""
-            if to_insert:
-                self.sheet.insert_rows(rows=to_insert)
+        self.session.associate(startup=startup)
 
     def fix_associate_sort_edit_cells(self):
-        first_hier = self.hiers[0]
-        quick_hiers = self.hiers[1:]
-        lh = len(self.hiers)
-        to_insert = []
-        if self.auto_sort_nodes_bool:
-            for n in self.nodes.values():
-                if all(p is None for p in n.ps.values()):
-                    n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
-                    newrow = list(repeat("", self.row_len))
-                    newrow[self.ic] = n.name
-                    to_insert.append(newrow)
-                tlly = 0
-                for k, v in n.cn.items():
-                    if v:
-                        n.cn[k] = self.sort_node_cn(v, k)
-                    elif not n.ps[k]:
-                        n.ps[k] = None
-                        tlly += 1
-                if tlly == lh:
-                    n.ps[first_hier] = ""
-                    for h in quick_hiers:
-                        n.ps[h] = None
-        else:
-            for n in self.nodes.values():
-                if all(p is None for p in n.ps.values()):
-                    n.ps = {h: "" if n.cn[h] else None for h in self.hiers}
-                    newrow = list(repeat("", self.row_len))
-                    newrow[self.ic] = n.name
-                    to_insert.append(newrow)
-                tlly = 0
-                for k, v in n.cn.items():
-                    if not v and not n.ps[k]:
-                        n.ps[k] = None
-                        tlly += 1
-                if tlly == lh:
-                    n.ps[first_hier] = ""
-                    for h in quick_hiers:
-                        n.ps[h] = None
-        if to_insert:
-            self.sheet.insert_rows(rows=to_insert)
+        self.session.associate_after_edit()
+        self._sync_sheet_from_session()
         return "break"
 
     def associate(self):
-        first_hier = self.hiers[0]
-        quick_hiers = self.hiers[1:]
-        lh = len(self.hiers)
-        for node in self.nodes.values():
-            tlly = 0
-            for k, v in node.cn.items():
-                if not (v or node.ps[k]):
-                    node.ps[k] = None
-                    tlly += 1
-            if tlly == lh:
-                node.ps[first_hier] = ""
-                for h in quick_hiers:
-                    node.ps[h] = None
-        if not self.auto_sort_nodes_bool:
-            current_nodes = dict.fromkeys(self.topnodes_order[self.hiers[0]])
-            wc = []
-            woc = []
-            for iid, node in self.nodes.items():
-                if iid not in current_nodes and node.ps[self.hiers[0]] == "":
-                    if node.cn[self.hiers[0]]:
-                        wc.append(iid)
-                    else:
-                        woc.append(iid)
-            self.topnodes_order[self.hiers[0]] = (
-                list(current_nodes) + sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
-            )
+        self.session.repair_empty_hierarchies()
 
     def sort_node_cn(self, cn: list[str], h: int):
-        wc = []
-        woc = []
-        for ciid in cn:
-            if self.nodes[ciid].cn[h]:
-                wc.append(ciid)
-            else:
-                woc.append(ciid)
-        return sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
+        return self.session.sort_node_cn(cn, h)
 
     def top_iids(self):
-        pc = self.pc
-        if self.auto_sort_nodes_bool:
-            wc = []
-            woc = []
-            for iid, node in self.nodes.items():
-                if node.ps[pc] == "":
-                    if node.cn[pc]:
-                        wc.append(iid)
-                    else:
-                        woc.append(iid)
-            yield from sorted(wc, key=sort_key)
-            yield from sorted(woc, key=sort_key)
-        else:
-            yield from self.topnodes_order[pc]
+        yield from self.session.top_iids()
 
     def pc_iids(self) -> Generator[str]:
         top_iter = iter(self.top_iids())
@@ -4664,34 +3519,16 @@ class Tree_Editor(tk.Frame):
                 stack.extend(reversed(self.nodes[iid].cn[self.pc]))
 
     def remake_topnodes_order(self):
-        self.topnodes_order = {}
-        for h in self.hiers:
-            wc = []
-            woc = []
-            for iid, node in self.nodes.items():
-                if node.ps[h] == "":
-                    if node.cn[h]:
-                        wc.append(iid)
-                    else:
-                        woc.append(iid)
-            self.topnodes_order[h] = sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
+        self.session.remake_topnodes_order()
 
     def gen_sheet_w_headers(self):
-        yield (h.name for h in self.headers)
-        yield from ((e if e else None for e in r) for r in self.sheet.MT.data)
+        return self.session.gen_sheet_w_headers()
 
     def check_validation_validity(self, col: int, validation: list[str]) -> str | list[str]:
-        if not validation:
-            return validation
-        if self.headers[col].type_ != "Text":
-            return "Error: Only Detail columns can have validation"
-        return validation if "" in validation else [""] + validation
+        return self.session.check_validation_validity(col, validation)
 
     def apply_validation_to_col(self, col):
-        validset = set(self.headers[col].validation)
-        for rn in range(len(self.sheet.MT.data)):
-            if not self.is_in_validation(validset, self.sheet.MT.data[rn][col]):
-                self.sheet.MT.data[rn][col] = ""
+        self.session.apply_validation_to_col(col)
 
     def refresh_formatting(
         self,
@@ -4756,9 +3593,7 @@ class Tree_Editor(tk.Frame):
         if validation == self.headers[col].validation:
             return
         self.snapshot_edit_validation(col, validation)
-        self.headers[col].validation = validation
-        if validation:
-            self.apply_validation_to_col(col)
+        self.session.set_validation(col, validation, snapshot=False)
         self.refresh_dropdowns()
         self.refresh_formatting(columns=col)
         self.redo_tree_display()
@@ -4785,10 +3620,10 @@ class Tree_Editor(tk.Frame):
         return col
 
     def is_in_validation(self, validation, text):
-        return text in validation
+        return self.session.is_in_validation(validation, text)
 
     def detail_is_valid_for_col(self, col, detail):
-        return not (self.headers[col].validation and not self.is_in_validation(self.headers[col].validation, detail))
+        return self.session.detail_is_valid_for_col(col, detail)
 
     def increment_unsaved(self):
         self.C.unsaved_changes = True
@@ -4796,10 +3631,7 @@ class Tree_Editor(tk.Frame):
         self.C.change_app_title(star="add")
 
     def get_datetime_changelog(self, increment_unsaved=True):
-        if increment_unsaved:
-            self.increment_unsaved()
-        self.sheet_changes += 1
-        return f"{datetime.datetime.today().strftime('%Y/%m/%d')}"
+        return self.session.get_datetime_changelog(increment_unsaved=increment_unsaved)
 
     def rc_rename_col(self, event=None):
         if (col := self.rc_selected_col(allow_hiers=True)) is None:
@@ -4825,40 +3657,17 @@ class Tree_Editor(tk.Frame):
     def rename_col(self, col, name, snapshot=True):
         if snapshot:
             self.snapshot_rename_col()
-            self.changelog_append(
-                "Column rename",
-                f"Column #{col + 1} with type: {self.headers[col].type_}",
-                f"{self.headers[col].name}",
-                f"{name}",
-            )
-        self.headers[col].name = name
+        self.session.rename_col(col, name, snapshot=snapshot)
         if snapshot:
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def add_hier_col(self, col, name, snapshot=True):
         if snapshot:
             self.snapshot_add_col(col)
-        self.ic = push_n(self.ic, [col])
-        self.pc = push_n(self.pc, [col])
         self.tv_label_col = push_n(self.tv_label_col, [col])
-        self.row_len += 1
-        self.adjust_hiers_add_cols(cols=[col])
-        self.hiers = sorted([col] + self.hiers)
-        self.headers.insert(col, Header(name, "Parent"))
-        self.insert_columns_no_blank_row(idx=col, add_row_heights=False)
-        for node in self.nodes.values():
-            node.ps[col] = None
-            node.cn[col] = []
+        self.saved_info = {push_n(k, [col]): v for k, v in self.saved_info.items()}
+        self.session.add_hier_col(col, name, snapshot=snapshot)
         self.saved_info[col] = new_info_storage()
-        if not self.auto_sort_nodes_bool:
-            self.topnodes_order[col] = []
-        if snapshot:
-            self.changelog_append(
-                "Add new hierarchy column",
-                f"Column #{col + 1} with name: {name}",
-                "",
-                "",
-            )
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def rc_add_hier_col(self, event=None):
@@ -4911,68 +3720,28 @@ class Tree_Editor(tk.Frame):
     def add_col(self, col, name, type_, snapshot=True):
         if snapshot:
             self.snapshot_add_col(col)
-        self.ic = push_n(self.ic, [col])
-        self.pc = push_n(self.pc, [col])
         self.tv_label_col = push_n(self.tv_label_col, [col])
-        self.row_len += 1
-        self.headers.insert(col, Header(name, type_))
-        self.insert_columns_no_blank_row(idx=col, add_row_heights=False)
-        self.adjust_hiers_add_cols(cols=[col])
-        if snapshot:
-            self.changelog_append(
-                "Add new detail column",
-                f"Column #{col} with name: {name} and type: {type_}",
-                "",
-                "",
-            )
+        self.saved_info = {push_n(k, [col]): v for k, v in self.saved_info.items()}
+        self.session.add_col(col, name, type_, snapshot=snapshot)
         if snapshot:
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def del_cols(self, cols, snapshot=True):
         if snapshot:
             self.snapshot_del_cols()
-            cols_dict = self.vs[-1]["cols"]
-            for datacn in reversed(cols):
-                for rn in range(len(self.sheet.MT.data)):
-                    if datacn not in cols_dict:
-                        cols_dict[datacn] = {}
-                    try:
-                        cols_dict[datacn][rn] = self.sheet.MT.data[rn][datacn]
-                    except Exception:
-                        continue
-        self.sheet.del_columns(cols)
-        self.tree.del_columns(cols)
-        self.ic = self.ic if not (num := bisect_left(cols, self.ic)) else self.ic - num
-        self.pc = self.pc if not (num := bisect_left(cols, self.pc)) else self.pc - num
+        cols_set = set(cols)
+        hiers_orig = list(self.hiers)
+        if hiers_to_del := list(filter(cols_set.__contains__, reversed(hiers_orig))):
+            for col in hiers_to_del:
+                del self.saved_info[col]
+        self.session.del_cols(cols, snapshot=snapshot)
         if self.tv_label_col == self.ic or self.tv_label_col in cols:
             self.tv_label_col = self.ic
         else:
             self.tv_label_col = (
                 self.tv_label_col if not (num := bisect_left(cols, self.tv_label_col)) else self.tv_label_col - num
             )
-        if snapshot:
-            colnames = ", ".join(self.headers[col].name for col in cols)
-            self.changelog_append(
-                "Delete columns",
-                f"Columns: {colnames}",
-                "",
-                "",
-            )
-        cols_set = set(cols)
-        self.headers = [hdr for i, hdr in enumerate(self.headers) if i not in cols_set]
-        self.hiers_orig = self.hiers.copy()
-        self.hiers = list(filterfalse(cols_set.__contains__, self.hiers))
-        if hiers_to_del := list(filter(cols_set.__contains__, reversed(self.hiers_orig))):
-            for col in hiers_to_del:
-                for node in self.nodes.values():
-                    del node.ps[col]
-                    del node.cn[col]
-                del self.saved_info[col]
-                if not self.auto_sort_nodes_bool:
-                    del self.topnodes_order[col]
-            self.associate()
-        self.row_len -= len(cols)
-        self.adjust_hiers_del_cols(cols)
+        self.saved_info = {k if not (num := bisect_left(cols, k)) else k - num: v for k, v in self.saved_info.items()}
         if snapshot:
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
@@ -5062,181 +3831,28 @@ class Tree_Editor(tk.Frame):
                 )
         self.redraw_sheets()
 
-    def prev_change(self) -> Generator[int]:
-        prefix = (
-            "Merge | ",
-            "Imported change |",
-            "Edit cell |",
-            "Delete ID from all hierarchies |",
-            "Delete ID |",
-            "Delete ID + all children |",
-            "Delete ID + all children from all hierarchies |",
-            "Cut and paste ID + children |",
-            "Copy and paste ID |",
-            "Copy and paste ID + children |",
-            "Cut and paste ID |",
-        )
-        for idx in range(len(self.changelog) - 1, -1, -1):
-            if not self.changelog[idx][1].startswith(prefix):
-                yield idx
-
     def undo(self, event=None):
         if self.C.working or not self.vs:
             return "break"
         self.start_work("Undoing last action...")
         self.C.unsaved_changes = True
         self.C.change_app_title(star="add")
-        new_vs = self.vs.pop()
-        self.ic = new_vs["required_data"]["ic"]
-        self.pc = new_vs["required_data"]["pc"]
-        self.hiers = new_vs["required_data"]["hiers"]
-        self.nodes = pickle.loads(new_vs["required_data"]["nodes"])
-        self.tv_label_col = new_vs["required_data"]["tv_label_col"]
-        self.row_len = new_vs["required_data"]["row_len"]
-        self.mirror_var = new_vs["required_data"]["mirror_bool"]
-        self.auto_sort_nodes_bool = new_vs["required_data"]["auto_sort_nodes_bool"]
-        self.topnodes_order = new_vs["required_data"]["topnodes_order"]
-        self.saved_info = pickle.loads(new_vs["required_data"]["saved_info"])
-        self.tagged_ids = new_vs["required_data"]["tagged_ids"]
-        self.sheet.align_columns(
-            columns=new_vs["required_data"]["sheet_column_alignments"],
-            redraw=False,
-        )
-        self.tree.align_columns(
-            columns=new_vs["required_data"]["sheet_column_alignments"],
-            redraw=False,
-        )
+        new_vs = self.vs[-1]
+        rd = new_vs["required_data"]
+        typ = new_vs["type"]
+        self.session.undo()
+        self._sync_sheet_from_session()
+        self.tv_label_col = rd["tv_label_col"]
+        self.mirror_var = rd["mirror_bool"]
+        self.saved_info = pickle.loads(rd["saved_info"])
+        self.sheet.align_columns(columns=rd["sheet_column_alignments"], redraw=False)
+        self.tree.align_columns(columns=rd["sheet_column_alignments"], redraw=False)
         self.reset_tagged_ids_dropdowns()
         self.clear_copied_details()
-        self.headers = new_vs["required_data"]["headers"]
-
-        if new_vs["type"] in (
-            "full sheet",
-            "ctrl x, v, del key",
-            "ctrl x, v, del key id par",
-            "paste id",
-            "delete ids",
-        ):
-            try:
-                gen = self.prev_change()
-                next(gen)
-                prev_idx = next(gen)
-                self.sheet_changes -= len(self.changelog) - prev_idx - 1
-                self.changelog = self.changelog[: prev_idx + 1]
-            except Exception:
-                self.sheet_changes = 0
-                self.changelog = []
-        else:
-            del self.changelog[-1]
-        if new_vs["type"] == "add id":
-            rn = new_vs["row"]["rn"]
-            if new_vs["row"]["added_or_changed"] == "changed":
-                self.sheet.MT.data[rn] = new_vs["row"]["stored"]
-                self.refresh_formatting(rows=rn)
-            elif new_vs["row"]["added_or_changed"] == "added":
-                del self.sheet.MT.data[rn]
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-
-        elif new_vs["type"] == "rename id":
-            rows = {new_vs["ikrow"][0]}
-            cols = {self.ic}
-            for tup in new_vs["rows"]:
-                rn, h, v = pickle.loads(zlib.decompress(tup))
-                rows.add(rn)
-                cols.add(h)
-                self.sheet.MT.data[rn][h] = v
-            self.sheet.MT.data[new_vs["ikrow"][0]][self.ic] = new_vs["ikrow"][2]
-            self.refresh_formatting(rows=rows, columns=cols)
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-
-        elif new_vs["type"] == "paste id":
-            rows = set()
-            cols = set()
-            for tup in new_vs["rows"]:
-                rn, fromcol, frompar, tocol, topar = pickle.loads(zlib.decompress(tup))
-                self.sheet.MT.data[rn][fromcol] = frompar
-                self.sheet.MT.data[rn][tocol] = topar
-                rows.add(rn)
-                cols.add(fromcol)
-                cols.add(tocol)
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(rows=rows, columns=cols)
-
-        elif new_vs["type"] == "delete ids":
-            rows = new_vs["rows"]
-            for rn in sorted(r for r, obj in rows.items() if obj.t == 1):
-                self.sheet.MT.data.insert(rn, rows[rn].row)
-            for rn in sorted(r for r, obj in rows.items() if obj.t == 0):
-                for h, par in zip(self.hiers, pickle.loads(zlib.decompress(rows[rn].row))):
-                    self.sheet.MT.data[rn][h] = par
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(dehighlight=True)
-
-        elif new_vs["type"] == "add col":
-            c = new_vs["treecolsel"]
-            for r in range(len(self.sheet.MT.data)):
-                del self.sheet.MT.data[r][c]
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(dehighlight=True)
-
-        elif new_vs["type"] == "del cols":
-            for cn, rowdict in reversed(new_vs["cols"].items()):
-                for rn, v in rowdict.items():
-                    self.sheet.MT.data[rn].insert(cn, v)
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(dehighlight=True)
-
-        elif new_vs["type"] == "edit validation":
-            for rn, c in enumerate(pickle.loads(zlib.decompress(new_vs["col"]))):
-                self.sheet.MT.data[rn][new_vs["col_num"]] = c
-            self.refresh_formatting(dehighlight=True)
-
-        elif new_vs["type"] == "rename col":
-            ...
-
-        elif new_vs["type"] == "sort":
-            self.sheet.MT.data = [
-                self.sheet.MT.data[self.rns[new_vs["ids"][oldrn]]] for oldrn in range(len(new_vs["ids"]))
-            ]
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(dehighlight=True)
-
-        elif new_vs["type"] == "prune changelog":
-            self.changelog = new_vs["rows"] + self.changelog
-
-        elif new_vs["type"] == "drag rows":
-            self.sheet.mapping_move_rows(dict(zip(new_vs["row_mapping"].values(), new_vs["row_mapping"])), undo=False)
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-
-        elif new_vs["type"] == "drag cols":
-            self.sheet.mapping_move_columns(new_vs["column_mapping"], undo=False)
-            self.tree.mapping_move_columns(new_vs["column_mapping"], undo=False)
-
-        elif new_vs["type"] == "node sort":
-            ...
-
-        elif new_vs["type"].startswith("full"):
-            self.warnings_filepath = new_vs["og_file"]
-            self.warnings_sheet = new_vs["og_sheet"]
-            self.warnings = new_vs["build_warnings"]
-            self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(dehighlight=True)
-
-        elif new_vs["type"] == "ctrl x, v, del key id par":
-            self.sheet.MT.data = pickle.loads(zlib.decompress(new_vs["sheet"]))
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(dehighlight=True)
-
-        elif new_vs["type"] == "ctrl x, v, del key":
-            rows = set()
-            cols = set()
-            for k, v in new_vs["cells"].items():
-                self.sheet.MT.data[k[0]][k[1]] = v
-                rows.add(k[0])
-                cols.add(k[1])
-            self.refresh_formatting(rows=rows, columns=cols)
-
+        if typ.startswith("full"):
+            self.warnings_filepath = new_vs.get("og_file", self.warnings_filepath)
+            self.warnings_sheet = new_vs.get("og_sheet", self.warnings_sheet)
+        self.refresh_formatting(dehighlight=True)
         self.sheet.row_index(newindex=self.ic)
         self.sheet.set_column_widths(new_vs["required_data"]["sheet_col_positions"], canvas_positions=True)
         self.sheet.set_safe_row_heights(new_vs["required_data"]["sheet_row_positions"])
@@ -5474,6 +4090,7 @@ class Tree_Editor(tk.Frame):
             f"Old locations: {old_locs}",
             f"New locations: {new_locs}",
         )
+        self._adopt_sheet_data()
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.disable_paste()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
@@ -5483,9 +4100,7 @@ class Tree_Editor(tk.Frame):
         self.save_info_get_saved_info()
 
     def get_ids_parent(self, iid) -> str:
-        if self.nodes[iid.lower()].ps[self.pc]:
-            return self.nodes[iid.lower()].ps[self.pc]
-        return ""
+        return self.session.get_ids_parent(iid)
 
     def tree_drag_drop_ids(self, event=None):
         if not event.moved.rows.data:
@@ -5619,6 +4234,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.sheet.row_index(newindex=self.ic)
         self.vs[-1]["column_mapping"] = dict(zip(full_new_idxs.values(), full_new_idxs))
+        self._adopt_sheet_data()
         self.refresh_dropdowns()
         self.redraw_sheets()
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
@@ -5653,16 +4269,14 @@ class Tree_Editor(tk.Frame):
 
     def snapshot_prune_changelog(self, up_to):
         self.snapshot_chore()
-        self.changelog_append(
-            "Pruned changelog",
-            f"From: {self.changelog[0][0]} To: {self.changelog[up_to][0]}",
-            "",
-            "",
-        )
+        out = self.session.prune_changelog(up_to)
+        if not out["ok"]:
+            return
         self.vs.append(
             {
                 "type": "prune changelog",
-                "rows": self.changelog[: up_to + 1],
+                "rows": out["result"]["removed"],
+                "changelog_at_open": out["result"]["changelog_at_open"],
                 "required_data": self.get_required_snapshot_data(),
             }
         )
@@ -5707,28 +4321,12 @@ class Tree_Editor(tk.Frame):
             self.sort_sheet(header=self.headers[widget.selected.column].name, order="DESCENDING")
 
     def sort_sheet(self, header, order, snapshot=True):
-        col = next(i for i, h in enumerate(self.headers) if h.name == header)
+        row_heights = self.sheet.get_row_heights()
+        old_rns = dict(self.rns)
         if snapshot:
             self.snapshot_sheet_sort()
-            self.changelog_append(
-                "Sort sheet",
-                f"Sorted sheet by column #{col + 1} named: {header} in {order} order",
-                "",
-                "",
-            )
-        ak = lambda row: tuple(  # noqa: E731
-            int(c) if c.isdigit() else c.lower() for c in re.split("([0-9]+)", row[col])
-        )
-        if order == "ASCENDING":
-            self.sheet.MT.data.sort(key=ak)
-        elif order == "DESCENDING":
-            self.sheet.MT.data.sort(key=ak, reverse=True)
-        row_heights = self.sheet.get_row_heights()
-        nrhs = []
-        for i, r in enumerate(self.sheet.MT.data):
-            ik = r[self.ic].lower()
-            nrhs.append(row_heights[self.rns[ik]])
-            self.rns[ik] = i
+        self.session.sort_sheet(header, order, snapshot=snapshot)
+        nrhs = [row_heights[old_rns[r[self.ic].lower()]] for r in self.sheet.MT.data]
         self.sheet.set_row_heights(nrhs)
         if snapshot:
             self.disable_paste()
@@ -5740,27 +4338,12 @@ class Tree_Editor(tk.Frame):
 
     def sort_sheet_walk(self, snapshot=True):
         oldrns = self.rns.copy()
-        oldpc = int(self.pc)
+        row_heights = self.sheet.get_row_heights()
         if snapshot:
             self.snapshot_sheet_sort()
-            self.changelog_append(
-                "Sort sheet",
-                "Sorted sheet in tree walk order",
-                "",
-                "",
-            )
-        for h in reversed(self.hiers):
-            self.pc = int(h)
-            self.sort_sheet_walk_pc_changer()
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.pc = int(oldpc)
-        row_heights = self.sheet.get_row_heights()
-        nrhs = []
-        self.rns = {}
-        for i, r in enumerate(self.sheet.MT.data):
-            ik = r[self.ic].lower()
-            nrhs.append(row_heights[oldrns[ik]])
-            self.rns[ik] = i
+        self.session.sort_sheet_walk(snapshot=snapshot)
+        self._sync_sheet_from_session()
+        nrhs = [row_heights[oldrns[r[self.ic].lower()]] for r in self.sheet.MT.data]
         self.sheet.set_row_heights(nrhs)
         if snapshot:
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
@@ -5769,34 +4352,6 @@ class Tree_Editor(tk.Frame):
             self.rehighlight_tagged_ids()
             self.disable_paste()
             self.redraw_sheets()
-
-    def sort_sheet_walk_pc_changer(self):
-        self.new_sheet = []
-        self.visited = set()
-
-        # Initialize stack with top nodes and their children
-        stack = [(iid, self.nodes[iid].cn[self.pc]) for iid in self.top_iids()]
-        stack.reverse()  # Reverse to maintain original processing order
-
-        # Iterative depth-first traversal
-        while stack:
-            iid, children = stack.pop()
-            rowno = self.rns[iid]
-            if rowno not in self.visited:
-                self.visited.add(rowno)
-                self.new_sheet.append(self.sheet.MT.data[rowno])
-                # Push children in reverse order to process them in original order
-                child_stack = [(ciid, self.nodes[ciid].cn[self.pc]) for ciid in reversed(children)]
-                stack.extend(child_stack)
-
-        # Append any remaining unvisited rows
-        for r in sorted(r for r in self.rns.values() if r not in self.visited):
-            self.new_sheet.append(self.sheet.MT.data[r])
-
-        # Update sheet data and reset temporary attributes
-        self.sheet.MT.data = self.new_sheet
-        self.new_sheet = []
-        self.visited = set()
 
     def search_choice(self, event=None):
         choice = self.search_choice_displayed.get()
@@ -6239,9 +4794,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
@@ -6286,9 +4839,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             if self.selected_PAR == "":
@@ -6341,9 +4892,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
@@ -6388,9 +4937,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
@@ -6435,9 +4982,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             if self.selected_PAR == "":
@@ -6490,9 +5035,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
@@ -6537,15 +5080,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, set):
-                for idk in v:
-                    self.nodes[idk].cn[self.sort_later_dct["old_hier"]] = self.sort_node_cn(
-                        self.nodes[idk].cn[self.sort_later_dct["old_hier"]],
-                        self.sort_later_dct["old_hier"],
-                    )
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
@@ -6590,15 +5125,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, set):
-                for idk in v:
-                    self.nodes[idk].cn[self.sort_later_dct["old_hier"]] = self.sort_node_cn(
-                        self.nodes[idk].cn[self.sort_later_dct["old_hier"]],
-                        self.sort_later_dct["old_hier"],
-                    )
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             if self.selected_PAR == "":
@@ -6651,15 +5178,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, set):
-                for idk in v:
-                    self.nodes[idk].cn[self.sort_later_dct["old_hier"]] = self.sort_node_cn(
-                        self.nodes[idk].cn[self.sort_later_dct["old_hier"]],
-                        self.sort_later_dct["old_hier"],
-                    )
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
@@ -6704,15 +5223,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, set):
-                for idk in v:
-                    self.nodes[idk].cn[self.sort_later_dct["old_hier"]] = self.sort_node_cn(
-                        self.nodes[idk].cn[self.sort_later_dct["old_hier"]],
-                        self.sort_later_dct["old_hier"],
-                    )
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
@@ -6758,15 +5269,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return successful
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, set):
-                for idk in v:
-                    self.nodes[idk].cn[self.sort_later_dct["old_hier"]] = self.sort_node_cn(
-                        self.nodes[idk].cn[self.sort_later_dct["old_hier"]],
-                        self.sort_later_dct["old_hier"],
-                    )
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             if self.selected_PAR == "":
@@ -6821,15 +5324,7 @@ class Tree_Editor(tk.Frame):
         if not successful:
             self.unsuccessful_paste()
             return
-        for v in self.sort_later_dct.values():
-            if v and isinstance(v, set):
-                for idk in v:
-                    self.nodes[idk].cn[self.sort_later_dct["old_hier"]] = self.sort_node_cn(
-                        self.nodes[idk].cn[self.sort_later_dct["old_hier"]],
-                        self.sort_later_dct["old_hier"],
-                    )
-            if v and isinstance(v, tuple):  # v[0] is node name.lower() v[1] is hier, always sorting .cn[hier int]
-                self.nodes[v[0]].cn[v[1]] = self.sort_node_cn(self.nodes[v[0]].cn[v[1]], v[1])
+        self.session.apply_sort_later()
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
@@ -6934,6 +5429,23 @@ class Tree_Editor(tk.Frame):
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         return "break"
 
+    def _set_new_id_treeview_label(self, new_id, new_ik, label):
+        if self.tv_label_col == self.ic:
+            return
+        if not label:
+            label = new_id
+        col = self.tv_label_col
+        old = f"{self.sheet.MT.data[self.rns[new_ik]][col]}"
+        self.sheet.MT.data[self.rns[new_ik]][col] = label
+        if not self.changelog:
+            return
+        self.changelog[-1].add_row(
+            "Edit cell",
+            f"ID: {new_id} column #{col + 1} named: {self.headers[col].name} with type: {self.headers[col].type_}",
+            old,
+            f"{label}",
+        )
+
     def add_child_node(self):
         if not self.selected_ID:
             return
@@ -6955,23 +5467,7 @@ class Tree_Editor(tk.Frame):
         success = self.add(new_id, self.selected_ID)
         if not success:
             return
-        self.changelog_append(
-            "Add ID",
-            f"Name: {new_id} Parent: {self.selected_ID} column #{self.pc + 1} named: {self.headers[self.pc].name}",
-            "",
-            "",
-        )
-        if self.tv_label_col != self.ic:
-            new_label = popup.id_label
-            if not new_label:
-                new_label = new_id
-            self.changelog_append(
-                "Edit cell",
-                f"ID: {new_id} column #{self.tv_label_col + 1} named: {self.headers[self.tv_label_col].name} with type: {self.headers[self.tv_label_col].type_}",
-                f"{self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col]}",
-                f"{new_label}",
-            )
-            self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col] = new_label
+        self._set_new_id_treeview_label(new_id, new_ik, popup.id_label)
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
@@ -7001,31 +5497,7 @@ class Tree_Editor(tk.Frame):
         success = self.add(new_id, self.selected_PAR)
         if not success:
             return
-        if self.selected_PAR == "":
-            self.changelog_append(
-                "Add ID",
-                f"Name: {new_id} Parent: n/a - Top ID column #{self.pc + 1} named: {self.headers[self.pc].name}",
-                "",
-                "",
-            )
-        else:
-            self.changelog_append(
-                "Add ID",
-                f"Name: {new_id} Parent: {self.selected_PAR} column #{self.pc + 1} named: {self.headers[self.pc].name}",
-                "",
-                "",
-            )
-        if self.tv_label_col != self.ic:
-            new_label = popup.id_label
-            if not new_label:
-                new_label = new_id
-            self.changelog_append(
-                "Edit cell",
-                f"ID: {new_id} column #{self.tv_label_col + 1} named: {self.headers[self.tv_label_col].name} with type: {self.headers[self.tv_label_col].type_}",
-                f"{self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col]}",
-                f"{new_label}",
-            )
-            self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col] = new_label
+        self._set_new_id_treeview_label(new_id, new_ik, popup.id_label)
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
@@ -7047,23 +5519,7 @@ class Tree_Editor(tk.Frame):
         success = self.add(new_id, "", insert_row)
         if not success:
             return
-        self.changelog_append(
-            "Add ID",
-            f"Name: {new_id} Parent: n/a - Top ID column #{self.pc + 1} named: {self.headers[self.pc].name}",
-            "",
-            "",
-        )
-        if self.tv_label_col != self.ic:
-            new_label = popup.id_label
-            if not new_label:
-                new_label = new_id
-            self.changelog_append(
-                "Edit cell",
-                f"ID: {new_id} column #{self.tv_label_col + 1} named: {self.headers[self.tv_label_col].name} with type: {self.headers[self.tv_label_col].type_}",
-                f"{self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col]}",
-                f"{new_label}",
-            )
-            self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col] = new_label
+        self._set_new_id_treeview_label(new_id, new_ik, popup.id_label)
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
@@ -7086,23 +5542,7 @@ class Tree_Editor(tk.Frame):
         success = self.add(new_id, "")
         if not success:
             return
-        self.changelog_append(
-            "Add ID",
-            f"Name: {new_id} Parent: n/a - Top ID column #{self.pc + 1} named: {self.headers[self.pc].name}",
-            "",
-            "",
-        )
-        if self.tv_label_col != self.ic:
-            new_label = popup.id_label
-            if not new_label:
-                new_label = new_id
-            self.changelog_append(
-                "Edit cell",
-                f"ID: {new_id} column #{self.tv_label_col + 1} named: {self.headers[self.tv_label_col].name} with type: {self.headers[self.tv_label_col].type_}",
-                f"{self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col]}",
-                f"{new_label}",
-            )
-            self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col] = new_label
+        self._set_new_id_treeview_label(new_id, new_ik, popup.id_label)
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
@@ -7114,7 +5554,6 @@ class Tree_Editor(tk.Frame):
     def sheet_rename_node(self):
         rn = self.sheet.get_selected_rows(get_cells_as_rows=True, return_tuple=True)[0]
         id_ = self.sheet.MT.data[rn][self.ic]
-        ik = id_.lower()
         popup = Rename_Id_Popup(self, id_, theme=self.C.theme)
         if not popup.result:
             return
@@ -7122,17 +5561,7 @@ class Tree_Editor(tk.Frame):
         success = self.change_ID_name(id_, popup.result)
         if not success:
             return
-        self.changelog_append(
-            "Rename ID",
-            id_,
-            id_,
-            str(popup.result),
-        )
-        new_ik = popup.result.lower()
-        if ik in self.tagged_ids:
-            self.tagged_ids.discard(ik)
-            self.tagged_ids.add(new_ik)
-            self.reset_tagged_ids_dropdowns()
+        self.reset_tagged_ids_dropdowns()
         self.disable_paste()
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.refresh_formatting(rows=self.refresh_rows)
@@ -7153,24 +5582,13 @@ class Tree_Editor(tk.Frame):
     def rename_node(self):
         if not self.selected_ID:
             return
-        ik = self.selected_ID.lower()
         popup = Rename_Id_Popup(self, self.selected_ID, theme=self.C.theme)
         if not popup.result:
             return
         success = self.change_ID_name(self.selected_ID, popup.result)
         if not success:
             return
-        self.changelog_append(
-            "Rename ID",
-            self.selected_ID,
-            self.selected_ID,
-            f"{popup.result}",
-        )
-        new_ik = popup.result.lower()
-        if ik in self.tagged_ids:
-            self.tagged_ids.discard(ik)
-            self.tagged_ids.add(new_ik)
-            self.reset_tagged_ids_dropdowns()
+        self.reset_tagged_ids_dropdowns()
         self.disable_paste()
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
         self.refresh_formatting(rows=self.refresh_rows)
@@ -7186,36 +5604,9 @@ class Tree_Editor(tk.Frame):
             return
         self.start_work(f"Deleting {len(iids)} IDs")
         self.snapshot_delete_ids()
-        to_del = []
-        self.refresh_rows = set()
-        processed = 0
-        for iid in iids:
-            iid = iid.lower()
-            if iid not in self.nodes or self.nodes[iid].ps[self.pc] is None:
-                continue
-            par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
-            to_del = self._del_id_core(iid, to_del, snapshot=True)
-            self.changelog_append_no_unsaved(
-                "Delete ID |",
-                f"ID: {self.sheet.data[self.rns[iid]][self.ic]} parent: {par if par else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
-                "",
-                "",
-            )
-            processed += 1
-        if processed > 1:
-            self.changelog_append(
-                f"Delete {processed} IDs",
-                "",
-                "",
-                "",
-            )
-        elif processed == 1:
-            self.changelog_singular("Delete ID")
-        if to_del:
-            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
-            self.sheet.deselect("all", redraw=False)
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
+        self.session.delete(iids)
+        self.sheet.deselect("all", redraw=False)
+        self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
         self.disable_paste()
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
@@ -7230,33 +5621,9 @@ class Tree_Editor(tk.Frame):
             iids = self.tree.selection()
         self.start_work(f"Deleting {len(iids)} IDs")
         self.snapshot_delete_ids()
-        to_del = []
-        self.refresh_rows = set()
-        for iid in iids:
-            iid = iid.lower()
-            if iid not in self.nodes:
-                continue
-            to_del = self._del_id_all_core(iid, to_del, snapshot=True)
-            self.changelog_append_no_unsaved(
-                "Delete ID from all hierarchies |",
-                f"{self.sheet.data[self.rns[iid]][self.ic]}",
-                "",
-                "",
-            )
-        if len(to_del) > 1:
-            self.changelog_append(
-                f"Deleted {len(to_del)} IDs from all hierarchies",
-                "",
-                "",
-                "",
-            )
-        elif to_del:
-            self.changelog_singular("Delete ID from all hierarchies")
-        if to_del:
-            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
-            self.sheet.deselect("all", redraw=False)
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-            self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
+        self.session.delete(iids, all_hierarchies=True)
+        self.sheet.deselect("all", redraw=False)
+        self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
         self.disable_paste()
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
@@ -7269,18 +5636,11 @@ class Tree_Editor(tk.Frame):
     def del_id_orphan(self, event=None):
         if not self.selected_ID:
             return
-        self.changelog_append(
-            "Delete ID, orphan children",
-            f"ID: {self.selected_ID} parent: {self.selected_PAR if self.selected_PAR else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
-            "",
-            "",
-        )
         self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        self._del_id_orphan_core(self.selected_ID, self.selected_PAR if self.selected_PAR else "")
-        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
+        self.session.delete([self.selected_ID], orphan=True)
+        self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
         self.rehighlight_tagged_ids()
@@ -7314,40 +5674,13 @@ class Tree_Editor(tk.Frame):
             iids = self.tree.selection()
         if not iids and self.selected_ID:
             iids = (self.selected_ID,)
-        iids = self._del_id_selection_roots(iids)
         if not iids:
             return
         self.start_work(f"Deleting {len(iids)} IDs and all children...")
         self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        to_del = []
-        self.refresh_rows = set()
-        processed = 0
-        for iid in iids:
-            if iid not in self.nodes or self.nodes[iid].ps[self.pc] is None:
-                continue
-            par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
-            to_del = self._del_id_children_core(iid, to_del, snapshot=True)
-            self.changelog_append_no_unsaved(
-                "Delete ID + all children |",
-                f"ID: {self.sheet.data[self.rns[iid]][self.ic]} parent: {par if par else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
-                "",
-                "",
-            )
-            processed += 1
-        if processed > 1:
-            self.changelog_append(
-                f"Delete {processed} IDs + all children",
-                "",
-                "",
-                "",
-            )
-        elif processed == 1:
-            self.changelog_singular("Delete ID + all children")
-        if to_del:
-            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        self.session.delete(iids, children=True)
         self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
         self.redo_tree_display()
         self.move_tree_pos()
@@ -7362,40 +5695,13 @@ class Tree_Editor(tk.Frame):
             iids = self.tree.selection()
         if not iids and self.selected_ID:
             iids = (self.selected_ID,)
-        iids = self._del_id_selection_roots(iids)
         if not iids:
             return
         self.start_work(f"Deleting {len(iids)} IDs and all children...")
         self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        to_del = []
-        self.refresh_rows = set()
-        processed = 0
-        for iid in iids:
-            if iid not in self.nodes or self.nodes[iid].ps[self.pc] is None:
-                continue
-            par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
-            to_del = self._del_id_children_all_core(iid, to_del, snapshot=True)
-            self.changelog_append_no_unsaved(
-                "Delete ID + all children from all hierarchies |",
-                f"ID: {self.sheet.data[self.rns[iid]][self.ic]} parent: {par if par else 'n/a - Top ID'} column #{self.pc + 1} named: {self.headers[self.pc].name}",
-                "",
-                "",
-            )
-            processed += 1
-        if processed > 1:
-            self.changelog_append(
-                f"Delete {processed} IDs + all children from all hierarchies",
-                "",
-                "",
-                "",
-            )
-        elif processed == 1:
-            self.changelog_singular("Delete ID + all children from all hierarchies")
-        if to_del:
-            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
-            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+        self.session.delete(iids, children=True, all_hierarchies=True)
         self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
         self.redo_tree_display()
         self.move_tree_pos()
@@ -7408,18 +5714,11 @@ class Tree_Editor(tk.Frame):
     def del_id_all_orphan(self):
         if not self.selected_ID:
             return
-        self.changelog_append(
-            "Delete ID from all hierarchies, orphan children",
-            self.selected_ID,
-            "",
-            "",
-        )
         self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
-        self._del_id_all_orphan_core(self.selected_ID)
-        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-        self.refresh_formatting(rows=map(self.rns.__getitem__, self.refresh_rows))
+        self.session.delete([self.selected_ID], orphan=True, all_hierarchies=True)
+        self.refresh_formatting(rows=(self.rns[iid] for iid in self.refresh_rows if iid in self.rns))
         self.redo_tree_display()
         self.move_tree_pos()
         self.reset_tagged_ids_dropdowns()
@@ -7645,7 +5944,7 @@ class Tree_Editor(tk.Frame):
                 self.tree.dehighlight_rows(self.tree.itemrow(ik))
 
     def clear_tagged_ids(self, event=None):
-        self.tagged_ids = set()
+        self.session.clear_tags()
         self.reset_tagged_ids_dropdowns()
         self.sheet.dehighlight_cells(canvas="row_index", all_=True, redraw=True)
         self.redo_tree_display()
@@ -7993,83 +6292,45 @@ class Tree_Editor(tk.Frame):
                 return
             self.C.status_bar.change_text("Saving changelog...")
             if event == "all":
-                try:
-                    if newfile.lower().endswith(".xlsx"):
-                        self.C.wb = Workbook(write_only=True)
-                        ws = self.C.wb.create_sheet(title="Changelog")
-                        ws.append(xlsx_changelog_header(ws))
-                        for row in self.changelog:
-                            ws.append(e if e else None for e in row)
-                        self.C.wb.save(newfile)
-                        self.C.try_to_close_workbook()
-                    elif newfile.lower().endswith((".csv", ".tsv")):
-                        with open(newfile, "w", newline="", encoding="utf-8") as fh:
-                            writer = csv.writer(
-                                fh,
-                                dialect=csv.excel_tab if newfile.lower().endswith(".tsv") else csv.excel,
-                                lineterminator="\n",
-                            )
-                            writer.writerow(changelog_header)
-                            writer.writerows(self.changelog)
-                    elif newfile.lower().endswith(".json"):
-                        with open(newfile, "w", newline="") as fh:
-                            fh.write(
-                                json.dumps(
-                                    full_sheet_to_dict(
-                                        changelog_header,
-                                        self.changelog,
-                                        include_headers=True,
-                                        format_=self.json_format,
-                                    ),
-                                    indent=4,
-                                )
-                            )
-                except Exception as error_msg:
+                rows = display_rows(self.changelog)
+            else:
+                rows = display_rows(self.changelog[self.changelog_at_open :])
+            try:
+                if newfile.lower().endswith(".xlsx"):
+                    self.C.wb = Workbook(write_only=True)
+                    ws = self.C.wb.create_sheet(title="Changelog")
+                    ws.append(xlsx_changelog_header(ws))
+                    for row in rows:
+                        ws.append(e if e else None for e in row)
+                    self.C.wb.save(newfile)
                     self.C.try_to_close_workbook()
-                    self.stop_work(f"Error saving file: {error_msg}")
-                    return
-                self.stop_work("Success! Changelog saved")
-            elif event == "sheet":
-                from_row = len(self.changelog) - self.sheet_changes
-                to_row = len(self.changelog)
-                try:
-                    if newfile.lower().endswith(".xlsx"):
-                        self.C.wb = Workbook(write_only=True)
-                        ws = self.C.wb.create_sheet(title="Changelog")
-                        ws.append(xlsx_changelog_header(ws))
-                        if self.sheet_changes:
-                            for row in islice(self.changelog, from_row, to_row):
-                                ws.append(e if e else None for e in row)
-                        self.C.wb.save(newfile)
-                        self.C.try_to_close_workbook()
-                    elif newfile.lower().endswith((".csv", ".tsv")):
-                        with open(newfile, "w", newline="", encoding="utf-8") as fh:
-                            writer = csv.writer(
-                                fh,
-                                dialect=csv.excel_tab if newfile.lower().endswith(".tsv") else csv.excel,
-                                lineterminator="\n",
+                elif newfile.lower().endswith((".csv", ".tsv")):
+                    with open(newfile, "w", newline="", encoding="utf-8") as fh:
+                        writer = csv.writer(
+                            fh,
+                            dialect=csv.excel_tab if newfile.lower().endswith(".tsv") else csv.excel,
+                            lineterminator="\n",
+                        )
+                        writer.writerow(changelog_header)
+                        writer.writerows(rows)
+                elif newfile.lower().endswith(".json"):
+                    with open(newfile, "w", newline="") as fh:
+                        fh.write(
+                            json.dumps(
+                                full_sheet_to_dict(
+                                    changelog_header,
+                                    rows,
+                                    include_headers=True,
+                                    format_=self.json_format,
+                                ),
+                                indent=4,
                             )
-                            writer.writerow(changelog_header)
-                            if self.sheet_changes:
-                                writer.writerows(islice(self.changelog, from_row, to_row))
-                    elif newfile.lower().endswith(".json"):
-                        with open(newfile, "w", newline="") as fh:
-                            fh.write(
-                                json.dumps(
-                                    full_sheet_to_dict(
-                                        changelog_header,
-                                        self.changelog[from_row:to_row] if self.sheet_changes else [],
-                                        include_headers=True,
-                                        format_=self.json_format,
-                                    ),
-                                    indent=4,
-                                )
-                            )
-                except Exception as error_msg:
-                    self.C.try_to_close_workbook()
-                    self.stop_work(f"Error saving file: {error_msg}")
-                    return
-                self.stop_work("Success! Changelog saved")
+                        )
+            except Exception as error_msg:
+                self.C.try_to_close_workbook()
+                self.stop_work(f"Error saving file: {error_msg}")
+                return
+            self.stop_work("Success! Changelog saved")
 
     def go_to_row(self):
         if not self.selected_ID:
@@ -8368,7 +6629,7 @@ class Tree_Editor(tk.Frame):
                 self.sheet.align_columns(existing_headers[h.name], existing_col_alignments[h.name])
 
         self.headers = new_headers
-        self.sheet.MT.data = self.new_sheet
+        self.set_records(self.new_sheet)
         self.new_sheet = []
         self.saved_info = new_saved_info(self.hiers)
         self.clear_copied_details()
@@ -8378,9 +6639,9 @@ class Tree_Editor(tk.Frame):
         self.sheet.set_xview(0.0)
         self.sheet.set_yview(0.0)
         self.auto_sort_nodes_bool = True
-        self.sheet.MT.data, self.nodes, self.warnings = TreeBuilder().build(
+        built, nodes, warnings = TreeBuilder().build(
             input_sheet=self.sheet.MT.data,
-            output_sheet=self.new_sheet,
+            output_sheet=[],
             row_len=self.row_len,
             ic=self.ic,
             hiers=self.hiers,
@@ -8389,6 +6650,9 @@ class Tree_Editor(tk.Frame):
             add_warnings=True,
             strip=not self.allow_spaces_ids_var,
         )
+        self.nodes = nodes
+        self.warnings = warnings
+        self.set_records(built)
         self.new_sheet = []
         self.fix_associate_sort(startup=True)
         self.set_headers()
@@ -8429,882 +6693,28 @@ class Tree_Editor(tk.Frame):
             Error(self, "Filepath invalid   ", theme=self.C.theme)
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
-        changes = []
-        row_len = 0
-        if fp.lower().endswith((".csv", ".tsv")):
-            try:
-                with open(fp, "r") as fh:
-                    temp_data = fh.read()
-                if not temp_data:
-                    Error(
-                        self,
-                        "No data found in file",
-                        theme=self.C.theme,
-                    )
-                    self.stop_work(self.get_tree_editor_status_bar_text())
-                    return
-                changes = csv_str_x_data(temp_data)
-            except Exception as error_msg:
-                Error(self, f"Error: {error_msg}", theme=self.C.theme)
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-        elif fp.lower().endswith(".json"):
-            try:
-                j = get_json_from_file(fp)
-                json_format = get_json_format(j)
-                if not json_format:
-                    Error(
-                        self,
-                        "Error opening file, could not find data of correct format   ",
-                        theme=self.C.theme,
-                    )
-                    self.stop_work(self.get_tree_editor_status_bar_text())
-                    return
-                changes, row_len = json_to_sheet(
-                    j,
-                    format_=json_format[0],
-                    key=json_format[1],
-                    get_format=False,
-                    return_rowlen=True,
-                )
-            except Exception as error_msg:
-                Error(self, f"Error: {error_msg}", theme=self.C.theme)
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
-        elif fp.lower().endswith((".xls", ".xlsx", ".xlsm")):
-            try:
-                wb = load_workbook(bytes_io_wb(fp), read_only=True, data_only=True)
-                ws = wb[wb.sheetnames[0]]
-                ws.reset_dimensions()
-                changes = ws_x_data(ws)
-                wb.close()
-            except Exception as error_msg:
-                Error(self, f"Error: {error_msg}", theme=self.C.theme)
-                self.stop_work(self.get_tree_editor_status_bar_text())
-                return
+        from .session import read_table
+
+        loaded = read_table(fp)
+        if not loaded["ok"]:
+            Error(self, loaded["error"]["message"], theme=self.C.theme)
+            self.stop_work(self.get_tree_editor_status_bar_text())
+            return
+        changes = loaded["result"]["rows"]
         if not changes:
             Error(self, "File contains no data   ", theme=self.C.theme)
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
-        row_len = max(map(len, changes), default=0)
-        if row_len != 5:
-            Error(self, "Invalid changelog format   ", theme=self.C.theme)
+        self.snapshot_sheet()
+        out = self.session.import_changes(changes, file_opened=fp)
+        if not out["ok"]:
+            if self.vs:
+                self.vs.pop()
+                self.set_undo_label()
+            Error(self, out["error"]["message"], theme=self.C.theme)
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
-        equalize_sublist_lens(seq=changes, len_=row_len)
-        successful = []
-        excluded = 0
-        self.snapshot_sheet()
-        changes_len = len(changes)
-        for changenum, change in enumerate(changes):
-            if not changenum % 10:
-                self.C.update()
-                self.C.status_bar.change_text(f"Imported {changenum} / {changes_len} changes")
-            ctyp = change[1]
-            if ctyp.startswith("Imported change |"):
-                ctyp = ctyp.split("Imported change | ")[1]
-            elif ctyp.startswith("Merge |"):
-                ctyp = ctyp.split("Merge | ")[1]
-            try:
-                #  "Edit cell"
-                if ctyp == "Edit cell |" or ctyp == "Edit cell":
-                    c3s = change[2].split(" ")
-                    cik = c3s[1].lower()
-                    name = c3s[5]  # col name in change
-                    col = next(i for i, h in enumerate(self.headers) if h.name.lower() == name.lower())
-                    type_ = c3s[-1]  # col type in change
-                    if type_ == "Detail":
-                        type_ = f"{c3s[-2]} {type_}"
-                    if self.headers[col].validation:
-                        validation_check = self.is_in_validation(self.headers[col].validation, change[4])
-                    else:
-                        validation_check = True
-                    if (
-                        self.headers[col].type_ == normalize_header_type(type_)
-                        and cik in self.rns
-                        and self.sheet.MT.data[self.rns[cik]][col] == change[3]
-                        and validation_check
-                    ):
-                        oldv = f"{self.sheet.MT.data[self.rns[cik]][col]}"
-                        newv = f"{change[4]}"
-                        if self.sheet.MT.data[self.rns[cik]][col] != change[4]:
-                            self.changelog_append_no_unsaved(
-                                "Imported change | Edit cell",
-                                change[2],
-                                change[3],
-                                change[4],
-                            )
-                            self.sheet.MT.data[self.rns[cik]][col] = change[4]
-                            if oldv != newv and type_ == "ID" or type_ == "Parent":
-                                self.nodes = {}
-                                self.auto_sort_nodes_bool = True
-                                self.sheet.MT.data, self.nodes = TreeBuilder().build(
-                                    self.sheet.MT.data,
-                                    self.new_sheet,
-                                    self.row_len,
-                                    self.ic,
-                                    self.hiers,
-                                    self.nodes,
-                                    add_warnings=False,
-                                    strip=not self.allow_spaces_ids_var,
-                                )
-                                self.new_sheet = []
-                                self.fix_associate_sort_edit_cells()
-                                self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                            successful.append(True)
-                        else:
-                            excluded += 1
-                    else:
-                        successful.append(False)
-
-                #  "Move rows"
-
-                elif ctyp == "Move rows":
-                    old_locs = change[3].split(",")
-                    new_locs = change[4].split(",")
-                    if len(old_locs) != len(new_locs):
-                        successful.append(False)
-                        continue
-                    if len(old_locs) == 1:
-                        old_locs = [old_locs[0].split("Old locations: ")[1]]
-                        new_locs = [new_locs[0].split("New locations: ")[1]]
-                    new_idxs = dict(zip(map(int, old_locs), map(int, new_locs)))
-                    if all(i <= len(self.sheet.data) and i >= 0 for i in new_idxs) and all(
-                        i <= len(self.sheet.data) and i >= 0 for i in new_idxs.values()
-                    ):
-                        self.sheet.mapping_move_rows(
-                            data_new_idxs=new_idxs,
-                            disp_new_idxs=new_idxs,
-                            undo=False,
-                            create_selections=False,
-                            redraw=False,
-                        )
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Move rows",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Move columns"
-
-                elif ctyp == "Move columns":
-                    old_locs = change[3].split(",")
-                    new_locs = change[4].split(",")
-                    if len(old_locs) != len(new_locs):
-                        successful.append(False)
-                        continue
-                    if len(old_locs) == 1:
-                        old_locs = [old_locs[0].split("Old locations: ")[1]]
-                        new_locs = [new_locs[0].split("New locations: ")[1]]
-                    new_idxs = dict(zip(map(int, old_locs), map(int, new_locs)))
-                    event_data = {
-                        "moved": {
-                            "columns": {
-                                "data": new_idxs,
-                                "displayed": new_idxs,
-                            }
-                        }
-                    }
-                    if max(new_idxs.values()) < self.row_len:
-                        self.snapshot_drag_cols(event_data=event_data)
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Move columns",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Add new hierarchy column"
-
-                elif ctyp == "Add new hierarchy column":
-                    c3s = change[2].split(" ")
-                    colname = "".join(c3s[-1].split(" ")).strip()
-                    colnum = int(c3s[1][1:]) - 1
-                    if (
-                        colname.lower() not in (h.name.lower() for h in self.headers)
-                        and colnum >= 0
-                        and colnum <= len(self.headers)
-                    ):
-                        self.add_hier_col(colnum, colname, snapshot=False)
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Add new hierarchy column",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Add new detail column"
-
-                elif ctyp == "Add new detail column":
-                    c3s = change[2].split(" ")
-                    colname = "".join(c3s[4].split(" ")).strip()
-                    colnum = int(c3s[1][1:]) - 1
-                    coltype = f"{c3s[-2]} {c3s[-1]}"
-                    if (
-                        colname.lower() not in (h.name.lower() for h in self.headers)
-                        and colnum >= 0
-                        and colnum <= len(self.headers)
-                    ):
-                        self.add_col(colnum, colname, coltype, snapshot=False)
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Add new detail column",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Delete hierarchy column"
-
-                elif ctyp == "Delete hierarchy column":
-                    c3s = change[2].split(" ")
-                    colname = c3s[-1]
-                    colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
-                    if self.headers[colnum].type_ == "Parent" and len(self.hiers) > 1:
-                        if self.pc == colnum:
-                            self.pc = int(next(i for i in self.hiers if i != colnum))
-                        self.del_cols(cols=[colnum], snapshot=False)
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Delete hierarchy column",
-                            change[2],
-                            "",
-                            "",
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Delete detail column"
-
-                elif ctyp == "Delete detail column":
-                    c3s = change[2].split(" ")
-                    colname = c3s[4]
-                    colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
-                    coltype = f"{c3s[-2]} {c3s[-1]}"
-                    if self.headers[colnum].type_ == "Text" and normalize_header_type(coltype) == "Text":
-                        self.del_cols(cols=[colnum], snapshot=False)
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Delete detail column",
-                            change[2],
-                            "",
-                            "",
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Column rename"
-
-                elif ctyp == "Column rename":
-                    c3s = change[2].split(" ")
-                    coltype = f"{c3s[-2]} {c3s[-1]}"
-                    colname = "".join(change[4].split(" ")).strip()
-                    colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
-                    if (
-                        self.headers[colnum].name.lower() == change[3].lower()
-                        and self.headers[colnum].type_ == normalize_header_type(coltype)
-                        and colname.lower() not in (h.name.lower() for h in self.headers)
-                    ):
-                        self.rename_col(colnum, colname, snapshot=False)
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Column rename",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Edit validation"
-
-                elif ctyp == "Edit validation":
-                    c3s = change[2].split(" ")
-                    colname = c3s[3]
-                    colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
-                    coltype = f"{c3s[-2]} {c3s[-1]}"
-                    validation = change[4]
-                    if (
-                        self.headers[colnum].type_ == "Text"
-                        and normalize_header_type(coltype) == "Text"
-                        and change[3] == ",".join(self.headers[colnum].validation)
-                    ):
-                        if validation:
-                            validation = self.check_validation_validity(colnum, validation.split(","))
-                            if isinstance(validation, str):
-                                successful.append(False)
-                                continue
-                        else:
-                            validation = []
-                        self.headers[colnum].validation = validation
-                        if validation:
-                            self.apply_validation_to_col(colnum)
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Edit validation",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Change detail column type" "Date format change"
-
-                elif ctyp in ("Date format change", "Change detail column type"):
-                    successful.append(False)
-
-                #  "Cut and paste ID"
-
-                elif ctyp == "Cut and paste ID" or ctyp == "Cut and paste ID |":
-                    cik = change[2].lower()
-                    old = change[3].split(" ")
-                    oldcolname = old[-1]
-                    oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
-                    if "n/a - Top ID" in change[3]:
-                        oldpar = ""
-                        oldpar_check = True
-                    else:
-                        oldpar = old[2]
-                        if oldpar.lower() not in self.nodes or oldpar != self.nodes[self.nodes[cik].ps[oldcol]].name:
-                            oldpar_check = False
-                        else:
-                            oldpar_check = True
-
-                    new = change[4].split(" ")
-                    newcolname = new[-1]
-                    newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    if "n/a - Top ID" in change[4]:
-                        newpar = ""
-                        newpar_check = True
-                    else:
-                        newpar = new[2]
-                        if newpar.lower() not in self.nodes or self.nodes[newpar.lower()].ps[newcol] is None:
-                            newpar_check = False
-                        else:
-                            newpar_check = True
-
-                    if (
-                        self.headers[oldcol].type_ == "Parent"
-                        and self.headers[newcol].type_ == "Parent"
-                        and cik in self.rns
-                        and oldpar_check
-                        and newpar_check
-                    ):
-                        oldpc = int(self.pc)
-                        self.pc = newcol
-                        if self.cut_paste(
-                            f"{change[2]}",
-                            oldpar,
-                            oldcol,
-                            newpar,
-                            snapshot=False,
-                            errors=False,
-                        ):
-                            self.changelog_append_no_unsaved(
-                                "Imported change | Cut and paste ID",
-                                change[2],
-                                change[3],
-                                change[4],
-                            )
-                            successful.append(True)
-                        else:
-                            successful.append(False)
-                        self.pc = int(oldpc)
-                    else:
-                        successful.append(False)
-
-                #  "Cut and paste ID + children |"
-
-                elif ctyp == "Cut and paste ID + children" or ctyp == "Cut and paste ID + children |":
-                    cik = change[2].lower()
-                    old = change[3].split(" ")
-                    oldcolname = old[-1]
-                    oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
-                    if "n/a - Top ID" in change[3]:
-                        oldpar = ""
-                        oldpar_check = True
-                    else:
-                        oldpar = old[2]
-                        if oldpar.lower() not in self.nodes or oldpar != self.nodes[self.nodes[cik].ps[oldcol]].name:
-                            oldpar_check = False
-                        else:
-                            oldpar_check = True
-
-                    new = change[4].split(" ")
-                    newcolname = new[-1]
-                    newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    if "n/a - Top ID" in change[4]:
-                        newpar = ""
-                        newpar_check = True
-                    else:
-                        newpar = new[2]
-                        if newpar.lower() not in self.nodes or self.nodes[newpar.lower()].ps[newcol] is None:
-                            newpar_check = False
-                        else:
-                            newpar_check = True
-
-                    if (
-                        self.headers[oldcol].type_ == "Parent"
-                        and self.headers[newcol].type_ == "Parent"
-                        and cik in self.rns
-                        and oldpar_check
-                        and newpar_check
-                    ):
-                        oldpc = int(self.pc)
-                        self.pc = newcol
-                        if self.cut_paste_all(
-                            f"{change[2]}",
-                            oldpar,
-                            oldcol,
-                            newpar,
-                            snapshot=False,
-                            errors=False,
-                        ):
-                            self.changelog_append_no_unsaved(
-                                "Imported change | Cut and paste ID + children",
-                                change[2],
-                                change[3],
-                                change[4],
-                            )
-                            successful.append(True)
-                        else:
-                            successful.append(False)
-                        self.pc = int(oldpc)
-                    else:
-                        successful.append(False)
-
-                #  "Cut and paste children"
-
-                elif ctyp == "Cut and paste children":
-                    old = change[3].split(" ")
-                    oldcolname = old[-1]
-                    oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
-                    if "n/a - Top ID" in change[3]:
-                        oldpar = ""
-                        oldpar_check = True
-                    else:
-                        oldpar = old[2]
-                        if oldpar.lower() not in self.nodes or self.nodes[oldpar.lower()].ps[oldcol] is None:
-                            oldpar_check = False
-                        else:
-                            oldpar_check = True
-
-                    new = change[4].split(" ")
-                    newcolname = new[-1]
-                    newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    if "n/a - Top ID" in change[4]:
-                        newpar = ""
-                        newpar_check = True
-                    else:
-                        newpar = new[2]
-                        if newpar.lower() not in self.nodes or self.nodes[newpar.lower()].ps[newcol] is None:
-                            newpar_check = False
-                        else:
-                            newpar_check = True
-
-                    if (
-                        self.headers[oldcol].type_ == "Parent"
-                        and self.headers[newcol].type_ == "Parent"
-                        and oldpar_check
-                        and newpar_check
-                    ):
-                        oldpc = int(self.pc)
-                        self.pc = newcol
-                        if self.cut_paste_children(oldpar, newpar, oldcol, snapshot=False, errors=False):
-                            self.changelog_append_no_unsaved(
-                                "Imported change | Cut and paste children",
-                                change[2],
-                                change[3],
-                                change[4],
-                            )
-                            successful.append(True)
-                        else:
-                            successful.append(False)
-                        self.pc = int(oldpc)
-                    else:
-                        successful.append(False)
-
-                #  "Copy and paste ID |"
-
-                elif ctyp == "Copy and paste ID |" or ctyp == "Copy and paste ID":
-                    cik = change[2].lower()
-                    old = change[3].split(" ")
-                    oldcolname = old[-1]
-                    oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
-                    new = change[4].split(" ")
-                    newcolname = new[-1]
-                    newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    if "n/a - Top ID" in change[4]:
-                        newpar = ""
-                        newpar_check = True
-                    else:
-                        newpar = new[2]
-                        if newpar.lower() not in self.nodes or self.nodes[newpar.lower()].ps[newcol] is None:
-                            newpar_check = False
-                        else:
-                            newpar_check = True
-
-                    if (
-                        self.headers[newcol].type_ == "Parent"
-                        and self.headers[oldcol].type_ == "Parent"
-                        and cik in self.rns
-                        and newpar_check
-                    ):
-                        oldpc = int(self.pc)
-                        self.pc = newcol
-                        if self.copy_paste(change[2], oldcol, newpar, snapshot=False, errors=False):
-                            self.changelog_append_no_unsaved(
-                                "Imported change | Copy and paste ID",
-                                change[2],
-                                change[3],
-                                change[4],
-                            )
-                            successful.append(True)
-                        else:
-                            successful.append(False)
-                        self.pc = int(oldpc)
-                    else:
-                        successful.append(False)
-
-                #  "Copy and paste ID + children |"
-
-                elif ctyp == "Copy and paste ID + children |" or ctyp == "Copy and paste ID + children":
-                    cik = change[2].lower()
-                    old = change[3].split(" ")
-                    oldcolname = old[-1]
-                    oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
-                    new = change[4].split(" ")
-                    newcolname = new[-1]
-                    newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    if "n/a - Top ID" in change[4]:
-                        newpar = ""
-                        newpar_check = True
-                    else:
-                        newpar = new[2]
-                        if newpar.lower() not in self.nodes or self.nodes[newpar.lower()].ps[newcol] is None:
-                            newpar_check = False
-                        else:
-                            newpar_check = True
-
-                    if (
-                        self.headers[newcol].type_ == "Parent"
-                        and self.headers[oldcol].type_ == "Parent"
-                        and cik in self.rns
-                        and newpar_check
-                    ):
-                        oldpc = int(self.pc)
-                        self.pc = newcol
-                        if self.copy_paste_all(change[2], oldcol, newpar, snapshot=False, errors=False):
-                            self.changelog_append_no_unsaved(
-                                "Imported change | Copy and paste ID + children",
-                                change[2],
-                                change[3],
-                                change[4],
-                            )
-                            successful.append(True)
-                        else:
-                            successful.append(False)
-                        self.pc = int(oldpc)
-                    else:
-                        successful.append(False)
-
-                #  "Add ID"
-
-                elif ctyp == "Add ID":
-                    new = change[2].split(" ")
-                    newcolname = new[-1]
-                    newcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == newcolname.lower())
-                    cid = new[1]
-                    cik = cid.lower()
-                    if "n/a - Top ID" in change[2]:
-                        newpar = ""
-                        newpk = ""
-                    else:
-                        newpar = new[3]
-                        newpk = newpar.lower()
-                    newpar_check = bool(not newpk or newpk in self.rns)
-
-                    if self.headers[newcol].type_ == "Parent" and newpar_check:
-                        oldpc = int(self.pc)
-                        self.pc = newcol
-                        if self.add(cid, newpar, snapshot=False, errors=False):
-                            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                            self.changelog_append_no_unsaved(
-                                "Imported change | Add ID",
-                                change[2],
-                                change[3],
-                                change[4],
-                            )
-                            successful.append(True)
-                        else:
-                            successful.append(False)
-                        self.pc = int(oldpc)
-                    else:
-                        successful.append(False)
-
-                #  "Rename ID"
-
-                elif ctyp == "Rename ID":
-                    oldname = change[3]
-                    newname = change[4]
-                    if oldname.lower() in self.rns and newname.lower() not in self.rns:
-                        if self.change_ID_name(oldname, newname, snapshot=False, errors=False):
-                            self.changelog_append_no_unsaved(
-                                "Imported change | Rename ID",
-                                change[2],
-                                change[3],
-                                change[4],
-                            )
-                            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                            if oldname.lower() in self.tagged_ids:
-                                self.tagged_ids.discard(oldname.lower())
-                                self.tagged_ids.add(newname.lower())
-                            successful.append(True)
-                        else:
-                            successful.append(False)
-                    else:
-                        successful.append(False)
-
-                #  "Delete ID |"
-
-                elif ctyp == "Delete ID |" or ctyp == "Delete ID":
-                    info = change[2].split(" ")
-                    colname = info[-1]
-                    colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
-                    cid = info[1]
-                    cpar = "" if "n/a - Top ID" in change[2] else info[3]
-                    if cpar:
-                        if (
-                            cpar.lower() not in self.nodes
-                            or self.nodes[self.nodes[cid.lower()].ps[colnum]].name != cpar
-                        ):
-                            cpar_check = False
-                        else:
-                            cpar_check = True
-                    else:
-                        cpar_check = True
-                    if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
-                        oldpc = int(self.pc)
-                        self.pc = colnum
-                        to_del = self._del_id_core(cid.lower(), snapshot=False)
-                        self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
-                        self.pc = int(oldpc)
-                        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Delete ID",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Delete ID, orphan children"
-
-                elif ctyp == "Delete ID, orphan children":
-                    info = change[2].split(" ")
-                    colname = info[-1]
-                    colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
-                    cid = info[1]
-                    cpar = "" if "n/a - Top ID" in change[2] else info[3]
-                    if cpar:
-                        if (
-                            cpar.lower() not in self.nodes
-                            or self.nodes[self.nodes[cid.lower()].ps[colnum]].name != cpar
-                        ):
-                            cpar_check = False
-                        else:
-                            cpar_check = True
-                    else:
-                        cpar_check = True
-                    if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
-                        oldpc = int(self.pc)
-                        self.pc = colnum
-                        self._del_id_orphan_core(cid.lower(), cpar.lower(), snapshot=False)
-                        self.pc = int(oldpc)
-                        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Delete ID",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Delete ID + all children"
-
-                elif ctyp == "Delete ID + all children |" or ctyp == "Delete ID + all children":
-                    info = change[2].split(" ")
-                    colname = info[-1]
-                    colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
-                    cid = info[1]
-                    cpar = "" if "n/a - Top ID" in change[2] else info[3]
-                    if cpar:
-                        if (
-                            cpar.lower() not in self.nodes
-                            or self.nodes[self.nodes[cid.lower()].ps[colnum]].name != cpar
-                        ):
-                            cpar_check = False
-                        else:
-                            cpar_check = True
-                    else:
-                        cpar_check = True
-                    if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
-                        oldpc = int(self.pc)
-                        self.pc = colnum
-                        to_del = self._del_id_children_core(cid.lower(), snapshot=False)
-                        if to_del:
-                            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
-                        self.pc = int(oldpc)
-                        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Delete ID + all children",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Delete ID + all children from all hierarchies"
-
-                elif (
-                    ctyp == "Delete ID + all children from all hierarchies |"
-                    or ctyp == "Delete ID + all children from all hierarchies"
-                ):
-                    info = change[2].split(" ")
-                    colname = info[-1]
-                    colnum = next(i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower())
-                    cid = info[1]
-                    cpar = "" if "n/a - Top ID" in change[2] else info[3]
-                    if cpar:
-                        if (
-                            cpar.lower() not in self.nodes
-                            or self.nodes[self.nodes[cid.lower()].ps[colnum]].name != cpar
-                        ):
-                            cpar_check = False
-                        else:
-                            cpar_check = True
-                    else:
-                        cpar_check = True
-                    if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
-                        oldpc = int(self.pc)
-                        self.pc = colnum
-                        to_del = self._del_id_children_all_core(cid.lower(), snapshot=False)
-                        if to_del:
-                            self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
-                        self.pc = int(oldpc)
-                        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Delete ID + all children from all hierarchies",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Delete ID from all hierarchies |"
-
-                elif ctyp == "Delete ID from all hierarchies |" or ctyp == "Delete ID from all hierarchies":
-                    cid = change[2]
-                    if cid.lower() in self.rns:
-                        to_del = self._del_id_all_core(cid.lower(), snapshot=False)
-                        self.sheet.del_rows(map(self.rns.__getitem__, to_del), redraw=False)
-                        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Delete ID from all hierarchies",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Delete ID from all hierarchies, orphan children"
-
-                elif ctyp == "Delete ID from all hierarchies, orphan children":
-                    cid = change[2]
-                    if cid.lower() in self.rns:
-                        self._del_id_all_orphan_core(cid.lower(), snapshot=False)
-                        self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                        self.changelog_append_no_unsaved(
-                            "Imported change | Delete ID from all hierarchies, orphan children",
-                            change[2],
-                            change[3],
-                            change[4],
-                        )
-                        successful.append(True)
-                    else:
-                        successful.append(False)
-
-                #  "Sort sheet"
-
-                elif ctyp == "Sort sheet":
-                    if change[2] == "Sorted sheet in tree walk order":
-                        if self.sheet.MT.data:
-                            self.sort_sheet_walk(snapshot=False)
-                            self.changelog_append_no_unsaved(
-                                f"Imported change | {change[1]}",
-                                change[2],
-                                change[3],
-                                change[4],
-                            )
-                            successful.append(True)
-                        else:
-                            successful.append(False)
-                    else:
-                        c3s = change[2].split(" ")
-                        colname = info[6]
-                        colnum = next(
-                            i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower()
-                        )  # checks if column name exists
-                        order = info[8]
-                        if order in ("ASCENDING", "DESCENDING"):
-                            self.sort_sheet(colname, order, snapshot=False)
-                            self.changelog_append_no_unsaved(
-                                f"Imported change | {change[1]}",
-                                change[2],
-                                change[3],
-                                change[4],
-                            )
-                            successful.append(True)
-                        else:
-                            successful.append(False)
-            except Exception:
-                successful.append(False)
-                continue
-        num_successful = sum(successful)
-        if num_successful:
-            self.changelog_append(
-                f"Imported {num_successful} changes from: {os.path.basename(fp)}",
-                f"Unsuccessful: {len(successful) - num_successful} Unnecessary: {excluded}",
-                "",
-                "",
-            )
-        else:
-            self.vs.pop()
-            self.set_undo_label()
+        self._sync_sheet_from_session()
         self.pc = int(self.hiers[0])
         self.clear_copied_details()
         self.refresh_hier_dropdown(0)
@@ -9317,6 +6727,8 @@ class Tree_Editor(tk.Frame):
         self.redo_tree_display()
         self.refresh_dropdowns()
         self.stop_work(self.get_tree_editor_status_bar_text())
+        result_rows = out["result"]["rows"]
+        successful = [r["ok"] and r["reason"] is None for r in result_rows]
         applicable_changes = {
             "Edit cell",
             "Edit cell |",
@@ -9354,12 +6766,14 @@ class Tree_Editor(tk.Frame):
             "Sort sheet",
         }
         applicable_changes = applicable_changes | {f"Imported change | {change}" for change in applicable_changes}
-        Post_Import_Changes_Popup(
-            self,
-            [change for change in changes if change[1] in applicable_changes or change[1].startswith("Merge | ")],
-            successful,
-            theme=self.C.theme,
-        )
+        shown = []
+        flags = []
+        for change, ok_row in zip(changes, successful):
+            ctyp = change[1] if len(change) > 1 else ""
+            if ctyp in applicable_changes or ctyp.startswith("Merge | "):
+                shown.append(change)
+                flags.append(ok_row)
+        Post_Import_Changes_Popup(self, shown, flags, theme=self.C.theme)
         self.focus_tree()
 
     def add_rows_rc(self, insert=False):
@@ -9375,7 +6789,7 @@ class Tree_Editor(tk.Frame):
 
     def merge_sheets(self, insert_row=None, popup_=None):
         try:
-            if insert_row is None:
+            if popup_ is None:
                 self.new_sheet = []
                 popup = Merge_Sheets_Popup(self, theme=self.C.theme)
                 if not popup.result:
@@ -9385,429 +6799,57 @@ class Tree_Editor(tk.Frame):
                 popup = popup_
             self.start_work("Merging sheets...")
             self.snapshot_sheet()
-            self.warnings = []
             fmt = popup.format_selector_current
+            incoming = [list(r) for r in self.new_sheet]
+            id_col = popup.ic if fmt == 0 else None
             if fmt == 0:
-                ns_ic = popup.ic
-                ns_hiers = popup.pcols
-                ns_hiers_set = set(ns_hiers)
-                ns_row_len = popup.row_len
-                ns_headers = self.fix_headers(self.new_sheet.pop(0), ns_row_len)
-                equalize_sublist_lens(seq=self.new_sheet, len_=len(ns_headers))
+                parent_cols = popup.pcols
             elif fmt in (1, 2, 3, 4):
-                self.new_sheet, ns_row_len, ns_ic, ns_hiers = TreeBuilder().convert_flattened_to_normal(
-                    data=self.new_sheet,
-                    hier_cols=popup.flattened_pcols,
-                    rowlen=popup.row_len,
-                    fmt=fmt,
-                    warnings=self.warnings,
-                )
-            elif fmt == 5:
-                self.new_sheet, ns_row_len, ns_ic, ns_hiers = (
-                    TreeBuilder().convert_indented_tree_detail_adjacent_to_normal(
-                        data=self.new_sheet,
-                    )
-                )
-            elif fmt == 6:
-                self.new_sheet, ns_row_len, ns_ic, ns_hiers = (
-                    TreeBuilder().convert_indented_tree_details_adjacent_to_normal(
-                        data=self.new_sheet,
-                    )
-                )
-            elif fmt == 7:
-                self.new_sheet, ns_row_len, ns_ic, ns_hiers = TreeBuilder().convert_indented_tree_with_header_to_normal(
-                    data=self.new_sheet,
-                )
-            if fmt > 0:
-                ns_hiers_set = set(ns_hiers)
-                ns_headers = self.fix_headers(self.new_sheet.pop(0), ns_row_len)
-            ns_pcol_names = {cell.lower(): i for i, cell in enumerate(ns_headers) if i in ns_hiers_set}
-            ns_dcol_names = {
-                cell.lower(): i for i, cell in enumerate(ns_headers) if i not in ns_hiers_set and i != ns_ic
-            }
-            os_header_names = {h.name.lower() for h in self.headers}
-            ns_rns = {row[ns_ic].lower(): i for i, row in enumerate(self.new_sheet)}
-            shared_ids = {i: ik for ik, i in self.rns.items() if ik in ns_rns}
-            os_pcol_names = {h.name.lower(): i for i, h in enumerate(self.headers) if h.type_ == "Parent"}
-            os_dcol_names = {h.name.lower(): i for i, h in enumerate(self.headers) if h.type_ == "Text"}
-            changes_made = 0
-            rows_to_insert = []
-
-            # add new details columns option
-            if popup.add_new_dcols:
-                new_dcols = [idx for colname, idx in ns_dcol_names.items() if colname not in os_header_names]
-                num_new_dcols = len(new_dcols)
-                self.headers.extend([Header(ns_headers[idx], "Text") for idx in new_dcols])
-                if num_new_dcols:
-                    self.insert_columns_no_blank_row(num_new_dcols)
-                for num, idx in enumerate(new_dcols, 1):
-                    self.changelog_append_no_unsaved(
-                        "Merge | Add new detail column",
-                        f"Column #{self.row_len + num} with name: {ns_headers[idx]} and type: Text",
-                        "",
-                        "",
-                    )
-                    changes_made += 1
-                for rn in range(len(self.sheet.MT.data)):
-                    row = self.sheet.MT.data[rn]
-                    if rn in shared_ids:
-                        ns_rn = ns_rns[shared_ids[rn]]
-                        for num, idx in enumerate(new_dcols):
-                            row[self.row_len + num] = self.new_sheet[ns_rn][idx]
-                            if row[self.row_len + num] != "":
-                                self.changelog_append_no_unsaved(
-                                    "Merge | Edit cell",
-                                    f"ID: {row[self.ic]} column #{self.row_len + num + 1} named: {self.headers[self.row_len + num].name} with type: {self.headers[self.row_len + num].type_}",
-                                    "",
-                                    f"{row[self.row_len + num]}",
-                                )
-                                changes_made += 1
-                    self.sheet.MT.data[rn] = row
-                self.row_len += num_new_dcols
-
-            # add new parent columns option
-            if popup.add_new_pcols:
-                new_pcols = [idx for colname, idx in ns_pcol_names.items() if colname not in os_header_names]
-                num_new_pcols = len(new_pcols)
-                self.headers.extend([Header(ns_headers[idx], "Parent") for idx in new_pcols])
-                if num_new_pcols:
-                    self.insert_columns_no_blank_row(num_new_pcols)
-                for num, idx in enumerate(new_pcols, 1):
-                    self.changelog_append_no_unsaved(
-                        "Merge | Add new hierarchy column",
-                        f"Column #{self.row_len + num} with name: {ns_headers[idx]}",
-                        "",
-                        "",
-                    )
-                    changes_made += 1
-                range_end = self.row_len + num_new_pcols
-                self.hiers.extend(list(range(self.row_len, range_end)))
-                for node in self.nodes.values():
-                    for i in range(self.row_len, range_end):
-                        node.ps[i] = None
-                        node.cn[i] = []
-                for i in range(self.row_len, range_end):
-                    self.saved_info[i] = new_info_storage()
-                for rn in range(len(self.sheet.MT.data)):
-                    row = self.sheet.MT.data[rn]
-                    if rn in shared_ids:
-                        ns_rn = ns_rns[shared_ids[rn]]
-                        for num, idx in enumerate(new_pcols):
-                            row[self.row_len + num] = self.new_sheet[ns_rn][idx]
-                            if row[self.row_len + num] != "":
-                                self.changelog_append_no_unsaved(
-                                    "Merge | Edit cell",
-                                    f"ID: {row[self.ic]} column #{self.row_len + num + 1} named: {self.headers[self.row_len + num].name} with type: {self.headers[self.row_len + num].type_}",
-                                    "",
-                                    f"{row[self.row_len + num]}",
-                                )
-                                changes_made += 1
-                    self.sheet.MT.data[rn] = row
-                self.row_len += num_new_pcols
-
-            # add any new ids
-            # AND if add new detail columns then add the details for those ids
-            # AND if add new parent columns then add the parents for those ids
-            if popup.add_new_ids:
-                new_ids = {ik for ik in ns_rns if ik not in self.rns and ik}
-                shared_dcols = tuple(name for name in os_dcol_names if name in ns_dcol_names)
-                shared_pcols = tuple(name for name in os_pcol_names if name in ns_pcol_names)
-                if not popup.add_new_dcols and not popup.add_new_pcols:
-                    for row in self.new_sheet:
-                        if row[ns_ic].lower() in new_ids:
-                            newrow = list(repeat("", self.row_len))
-                            newrow[self.ic] = row[ns_ic]
-                            self.changelog_append_no_unsaved(
-                                "Merge | Add ID",
-                                f"Name: {newrow[self.ic]} Parent: n/a - Top ID column #{self.hiers[0] + 1} named: {self.headers[self.hiers[0]].name}",
-                                "",
-                                "",
-                            )
-                            changes_made += 1
-                            for name in shared_dcols:
-                                if self.detail_is_valid_for_col(os_dcol_names[name], row[ns_dcol_names[name]]):
-                                    newrow[os_dcol_names[name]] = row[ns_dcol_names[name]]
-                                    hdr_idx = os_dcol_names[name]
-                                    if newrow[hdr_idx] != "":
-                                        self.changelog_append_no_unsaved(
-                                            "Merge | Edit cell",
-                                            f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                            "",
-                                            f"{newrow[hdr_idx]}",
-                                        )
-                                        changes_made += 1
-                            for name in shared_pcols:
-                                newrow[os_pcol_names[name]] = row[ns_pcol_names[name]]
-                                hdr_idx = os_pcol_names[name]
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
-                                        f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                    )
-                                    changes_made += 1
-                            rows_to_insert.append(newrow)
-                elif popup.add_new_dcols and not popup.add_new_pcols:
-                    new_dcol_indexes = {
-                        i: h.name.lower()
-                        for i, h in enumerate(self.headers)
-                        if h.name.lower() in ns_dcol_names and h.name.lower() not in os_dcol_names
-                    }
-                    for row in self.new_sheet:
-                        if row[ns_ic].lower() in new_ids:
-                            newrow = list(repeat("", self.row_len))
-                            newrow[self.ic] = row[ns_ic]
-                            self.changelog_append_no_unsaved(
-                                "Merge | Add ID",
-                                f"Name: {newrow[self.ic]} Parent: n/a - Top ID column #{self.hiers[0] + 1} named: {self.headers[self.hiers[0]].name}",
-                                "",
-                                "",
-                            )
-                            changes_made += 1
-                            for idx, colname in new_dcol_indexes.items():
-                                newrow[idx] = row[ns_dcol_names[colname]]
-                                hdr_idx = idx
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
-                                        f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                    )
-                                    changes_made += 1
-                            for name in shared_dcols:
-                                if self.detail_is_valid_for_col(os_dcol_names[name], row[ns_dcol_names[name]]):
-                                    newrow[os_dcol_names[name]] = row[ns_dcol_names[name]]
-                                    hdr_idx = os_dcol_names[name]
-                                    if newrow[hdr_idx] != "":
-                                        self.changelog_append_no_unsaved(
-                                            "Merge | Edit cell",
-                                            f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                            "",
-                                            f"{newrow[hdr_idx]}",
-                                        )
-                                        changes_made += 1
-                            for name in shared_pcols:
-                                newrow[os_pcol_names[name]] = row[ns_pcol_names[name]]
-                                hdr_idx = os_pcol_names[name]
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
-                                        f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                    )
-                                    changes_made += 1
-                            rows_to_insert.append(newrow)
-                elif popup.add_new_pcols and not popup.add_new_dcols:
-                    new_pcol_indexes = {
-                        i: h.name.lower()
-                        for i, h in enumerate(self.headers)
-                        if h.name.lower() in ns_pcol_names and h.name.lower() not in os_pcol_names
-                    }
-                    for row in self.new_sheet:
-                        if row[ns_ic].lower() in new_ids:
-                            newrow = list(repeat("", self.row_len))
-                            newrow[self.ic] = row[ns_ic]
-                            self.changelog_append_no_unsaved(
-                                "Merge | Add ID",
-                                f"Name: {newrow[self.ic]} Parent: n/a - Top ID column #{self.hiers[0] + 1} named: {self.headers[self.hiers[0]].name}",
-                                "",
-                                "",
-                            )
-                            changes_made += 1
-                            for idx, colname in new_pcol_indexes.items():
-                                newrow[idx] = row[ns_pcol_names[colname]]
-                                hdr_idx = idx
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
-                                        f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                    )
-                                    changes_made += 1
-                            for name in shared_dcols:
-                                if self.detail_is_valid_for_col(os_dcol_names[name], row[ns_dcol_names[name]]):
-                                    newrow[os_dcol_names[name]] = row[ns_dcol_names[name]]
-                                    hdr_idx = os_dcol_names[name]
-                                    if newrow[hdr_idx] != "":
-                                        self.changelog_append_no_unsaved(
-                                            "Merge | Edit cell",
-                                            f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                            "",
-                                            f"{newrow[hdr_idx]}",
-                                        )
-                                        changes_made += 1
-                            for name in shared_pcols:
-                                newrow[os_pcol_names[name]] = row[ns_pcol_names[name]]
-                                hdr_idx = os_pcol_names[name]
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
-                                        f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                    )
-                                    changes_made += 1
-                            rows_to_insert.append(newrow)
-                elif popup.add_new_pcols and popup.add_new_dcols:
-                    new_dcol_indexes = {
-                        i: h.name.lower()
-                        for i, h in enumerate(self.headers)
-                        if h.name.lower() in ns_dcol_names and h.name.lower() not in os_dcol_names
-                    }
-                    new_pcol_indexes = {
-                        i: h.name.lower()
-                        for i, h in enumerate(self.headers)
-                        if h.name.lower() in ns_pcol_names and h.name.lower() not in os_pcol_names
-                    }
-                    for row in self.new_sheet:
-                        if row[ns_ic].lower() in new_ids:
-                            newrow = list(repeat("", self.row_len))
-                            newrow[self.ic] = row[ns_ic]
-                            self.changelog_append_no_unsaved(
-                                "Merge | Add ID",
-                                f"Name: {newrow[self.ic]} Parent: n/a - Top ID column #{self.hiers[0] + 1} named: {self.headers[self.hiers[0]].name}",
-                                "",
-                                "",
-                            )
-                            changes_made += 1
-                            for idx, colname in new_dcol_indexes.items():
-                                newrow[idx] = row[ns_dcol_names[colname]]
-                                hdr_idx = idx
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
-                                        f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                    )
-                                    changes_made += 1
-                            for idx, colname in new_pcol_indexes.items():
-                                newrow[idx] = row[ns_pcol_names[colname]]
-                                hdr_idx = idx
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
-                                        f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                    )
-                                    changes_made += 1
-                            for name in shared_dcols:
-                                if self.detail_is_valid_for_col(os_dcol_names[name], row[ns_dcol_names[name]]):
-                                    newrow[os_dcol_names[name]] = row[ns_dcol_names[name]]
-                                    hdr_idx = os_dcol_names[name]
-                                    if newrow[hdr_idx] != "":
-                                        self.changelog_append_no_unsaved(
-                                            "Merge | Edit cell",
-                                            f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                            "",
-                                            f"{newrow[hdr_idx]}",
-                                        )
-                                        changes_made += 1
-                            for name in shared_pcols:
-                                newrow[os_pcol_names[name]] = row[ns_pcol_names[name]]
-                                hdr_idx = os_pcol_names[name]
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
-                                        f"ID: {newrow[self.ic]} column #{hdr_idx + 1} named: {self.headers[hdr_idx].name} with type: {self.headers[hdr_idx].type_}",
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                    )
-                                    changes_made += 1
-                            rows_to_insert.append(newrow)
-
-            # overwrite details for same ids with shared detail columns
-            if popup.overwrite_details:
-                shared_dcols = {name: idx for name, idx in os_dcol_names.items() if name in ns_dcol_names}
-                for rn in range(len(self.sheet.MT.data)):
-                    row = self.sheet.MT.data[rn]
-                    if rn in shared_ids:
-                        ns_rn = ns_rns[shared_ids[rn]]
-                        for name, idx in shared_dcols.items():
-                            ns_dcol_idx = ns_dcol_names[name]
-                            if (
-                                self.detail_is_valid_for_col(idx, self.new_sheet[ns_rn][ns_dcol_idx])
-                                and row[idx] != self.new_sheet[ns_rn][ns_dcol_idx]
-                            ):
-                                self.changelog_append_no_unsaved(
-                                    "Merge | Edit cell",
-                                    f"ID: {row[self.ic]} column #{idx + 1} named: {self.headers[idx].name} with type: {self.headers[idx].type_}",
-                                    f"{row[idx]}",
-                                    self.new_sheet[ns_rn][ns_dcol_idx],
-                                )
-                                changes_made += 1
-                                row[idx] = self.new_sheet[ns_rn][ns_dcol_idx]
-                    self.sheet.MT.data[rn] = row
-
-            # overwrite parents for same ids with shared parent columns
-            if popup.overwrite_parents:
-                shared_pcols = {name: idx for name, idx in os_pcol_names.items() if name in ns_pcol_names}
-                for rn in range(len(self.sheet.MT.data)):
-                    row = self.sheet.MT.data[rn]
-                    if rn in shared_ids:
-                        ns_rn = ns_rns[shared_ids[rn]]
-                        for name, idx in shared_pcols.items():
-                            ns_pcol_idx = ns_pcol_names[name]
-                            if row[idx] != self.new_sheet[ns_rn][ns_pcol_idx]:
-                                self.changelog_append_no_unsaved(
-                                    "Merge | Edit cell",
-                                    f"ID: {row[self.ic]} column #{idx + 1} named: {self.headers[idx].name} with type: {self.headers[idx].type_}",
-                                    f"{row[idx]}",
-                                    self.new_sheet[ns_rn][ns_pcol_idx],
-                                )
-                                changes_made += 1
-                                row[idx] = self.new_sheet[ns_rn][ns_pcol_idx]
-                    self.sheet.MT.data[rn] = row
-
-            if rows_to_insert:
-                self.sheet.insert_rows(rows_to_insert, insert_row)
-            if changes_made:
-                self.changelog_append(
-                    f"Merged sheets making {changes_made} {'changes' if changes_made > 1 else 'change'}",
-                    f"{'With file:' if popup.file_opened else ''} {popup.file_opened}",
-                    "",
-                    "",
-                )
-                self.new_sheet = []
-                self.nodes = {}
-                self.clear_copied_details()
-                self.auto_sort_nodes_bool = True
-                self.sheet.MT.data, self.nodes, self.warnings = TreeBuilder().build(
-                    self.sheet.MT.data,
-                    self.new_sheet,
-                    self.row_len,
-                    self.ic,
-                    self.hiers,
-                    self.nodes,
-                    warnings=self.warnings,
-                    add_warnings=True,
-                    strip=not self.allow_spaces_ids_var,
-                )
-                self.new_sheet = []
-                self.fix_associate_sort(startup=False)
-                self.refresh_hier_dropdown(self.hiers.index(self.pc))
-                self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
-                self.sheet.deselect()
-                self.set_headers()
-                self.refresh_formatting()
-                self.reset_tagged_ids_dropdowns()
-                self.rehighlight_tagged_ids()
-                self.redo_tree_display()
-                self.refresh_dropdowns()
-                self.show_warnings("n/a - Data imported from: " + popup.file_opened, popup.sheet_opened)
+                parent_cols = popup.flattened_pcols
             else:
-                self.vs.pop()
-                self.set_undo_label()
-                Error(self, "No applicable changes were made", theme=self.C.theme)
+                parent_cols = None
+            out = self.session.merge_from_rows(
+                incoming,
+                fmt=fmt,
+                id_col=id_col,
+                parent_cols=parent_cols,
+                add_ids=popup.add_new_ids,
+                add_dcols=popup.add_new_dcols,
+                add_pcols=popup.add_new_pcols,
+                overwrite_details=popup.overwrite_details,
+                overwrite_parents=popup.overwrite_parents,
+                insert_row=insert_row,
+                file_opened=popup.file_opened or "",
+            )
+            self.new_sheet = []
+            if not out["ok"]:
+                if out["error"]["code"] != "no_changes" and self.vs:
+                    self.vs.pop()
+                    self.set_undo_label()
+                Error(self, out["error"]["message"], theme=self.C.theme)
+                self.stop_work(self.get_tree_editor_status_bar_text())
+                self.focus_sheet()
+                return
+            self.clear_copied_details()
+            for h in self.hiers:
+                if h not in self.saved_info:
+                    self.saved_info[h] = new_info_storage()
+            self._sync_sheet_from_session()
+            self.refresh_hier_dropdown(self.hiers.index(self.pc))
+            self.sheet.deselect()
+            self.set_headers()
+            self.refresh_formatting()
+            self.reset_tagged_ids_dropdowns()
+            self.rehighlight_tagged_ids()
+            self.redo_tree_display()
+            self.refresh_dropdowns()
+            self.show_warnings("n/a - Data imported from: " + popup.file_opened, popup.sheet_opened)
             self.stop_work(self.get_tree_editor_status_bar_text())
             self.focus_sheet()
+            return
         except Exception as error_msg:
             Error(self, f"Error: {error_msg}", theme=self.C.theme)
+            self.stop_work(self.get_tree_editor_status_bar_text())
 
     def get_par_lvls(self, h: int, iid: str, lvl=1):
         current_iid = iid
@@ -9833,27 +6875,12 @@ class Tree_Editor(tk.Frame):
         )
         if self.save_json_with_program_data:
             d["version"] = software_version_number
-            d["changelog"] = self.changelog
+            d["changelog"] = flatten_changelog(self.changelog)[0]
             d["program_data"] = dict_x_b32(self.get_program_data_dict())
         return d
 
     def get_program_data_dict(self, sheetname="n/a"):
-        d = {}
-        d["records"] = self.sheet.data
-        d["ic"] = self.ic
-        d["pc"] = self.pc
-        d["hiers"] = self.hiers
-        d["headers"] = [
-            {
-                "name": h.name,
-                "type": h.type_,
-                "formatting": h.formatting,
-                "validation": h.validation,
-            }
-            for h in self.headers
-        ]
-        d["nodes"] = self.jsonify_nodes()
-        d["changelog"] = self.changelog
+        d = self.session.program_data_dict(sheetname)
         d["row_heights"] = self.sheet.get_safe_row_heights()
         d["column_widths"] = self.sheet.get_column_widths()
         d["sheet_column_alignments"] = self.sheet.get_column_alignments()
@@ -9862,33 +6889,13 @@ class Tree_Editor(tk.Frame):
         d["sheet_index_align"] = self.sheet.index_align()
         d["saved_info"] = self.save_info_get_saved_info()
         d["tv_label_col"] = self.tv_label_col
-        d["topnodes_order"] = self.topnodes_order
-        d["tagged_ids"] = list(self.tagged_ids)
-        d["auto_sort_nodes_bool"] = self.auto_sort_nodes_bool
-        d["sheetname"] = sheetname
-        d["allow_spaces_ids"] = self.allow_spaces_ids_var
-        d["allow_spaces_columns"] = self.allow_spaces_columns_var
         return d
 
     def jsonify_nodes(self):
-        return {
-            n.name: {
-                "cn": n.cn,
-                "ps": n.ps,
-            }
-            for n in self.nodes.values()
-        }
+        return self.session.jsonify_nodes()
 
     def nodes_json_x_dict(self, njson: dict, hiers: Sequence[int]) -> dict:
-        return {
-            name.lower(): Node(
-                name=name,
-                hrs=hiers,
-                cn={int(h): cnl for h, cnl in nodedict["cn"].items()},
-                ps={int(h): pk for h, pk in nodedict["ps"].items()},
-            )
-            for name, nodedict in njson.items()
-        }
+        return self.session.nodes_json_x_dict(njson, hiers)
 
     def xlsx_chunker(self, seq):
         size = min(len(seq), 32000)
@@ -9913,7 +6920,7 @@ class Tree_Editor(tk.Frame):
                 continue
         ws = wb.create_sheet(title=new_title1)
         ws.append(xlsx_changelog_header(ws))
-        for r in reversed(self.changelog):
+        for r in reversed(display_rows(self.changelog)):
             ws.append(e if e else None for e in r)
 
     def write_flattened_to_workbook(self, wb, sheetnames_):

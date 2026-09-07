@@ -521,7 +521,9 @@ def full_sheet_to_dict(
         else:
             return {key: [{hdr: row[i] for i, hdr in enumerate(headers)} for row in data]}
     elif format_ == 3:
-        return {key: [headers] + data}
+        # Materialize rows: changelog export passes ChangeRow objects, which
+        # json.dumps cannot serialize. list(row) uses the five-column sequence.
+        return {key: [list(headers)] + [list(row) for row in data]}
     elif format_ == 4:
         s, writer = str_io_csv_writer(dialect=csv.excel_tab)
         writer.writerow(headers)

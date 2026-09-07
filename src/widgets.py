@@ -13,10 +13,6 @@ from tksheet import (
 )
 
 from . import toplevels
-from .classes import (
-    Header,
-    TreeBuilder,
-)
 from .constants import (
     BF,
     EF,
@@ -31,9 +27,6 @@ from .constants import (
     std_font_size,
     themes,
     unchecked_icon,
-)
-from .functions import (
-    equalize_sublist_lens,
 )
 
 
@@ -172,11 +165,14 @@ class Column_Selection(tk.Frame):
             self.sheet_selector.updatesheets([])
         self.sheetdisplay.deselect("all")
         self.rowlen = len(columns)
-        self.selector.set_columns(self.C.frames.tree_edit.sheet.data[0])
-        self.flattened_selector.set_columns(self.C.frames.tree_edit.sheet.data[0])
-        self.C.frames.tree_edit.sheet.MT.data = self.sheetdisplay.set_sheet_data(
-            data=self.C.frames.tree_edit.sheet.MT.data,
-            redraw=True,
+        ed = self.C.frames.tree_edit
+        self.selector.set_columns(ed.sheet.data[0])
+        self.flattened_selector.set_columns(ed.sheet.data[0])
+        ed.set_records(
+            self.sheetdisplay.set_sheet_data(
+                data=ed.sheet.MT.data,
+                redraw=True,
+            )
         )
         self.sheetdisplay.headers(newheaders=0)
         self.selector.detect_id_col()
@@ -201,75 +197,39 @@ class Column_Selection(tk.Frame):
         self.C.try_to_close_workbook()
         self.C.status_bar.change_text("Loading...   ")
         self.C.disable_at_start()
-        self.C.frames.tree_edit.sheet.MT.data = self.sheetdisplay.get_sheet_data()
-        self.rowlen = max(map(len, self.C.frames.tree_edit.sheet.MT.data), default=0)
-        equalize_sublist_lens(self.C.frames.tree_edit.sheet.MT.data, self.rowlen)
-        if flattened:
-            (
-                self.C.frames.tree_edit.sheet.MT.data,
-                self.rowlen,
-                idcol,
-                hier_cols,
-            ) = TreeBuilder().convert_flattened_to_normal(
-                data=self.C.frames.tree_edit.sheet.MT.data,
-                hier_cols=hier_cols,
-                rowlen=self.rowlen,
+        ed = self.C.frames.tree_edit
+        rows = self.sheetdisplay.get_sheet_data()
+        if flattened or fmt in (1, 2, 3, 4):
+            out = ed.session.load_table(
+                rows,
+                parent_cols=hier_cols,
                 fmt=fmt,
-                warnings=self.C.frames.tree_edit.warnings,
+                associate=True,
+                strip_ids=not ed.allow_spaces_ids_var,
             )
-        elif fmt == 5:
-            (
-                self.C.frames.tree_edit.sheet.MT.data,
-                self.rowlen,
-                idcol,
-                hier_cols,
-            ) = TreeBuilder().convert_indented_tree_detail_adjacent_to_normal(
-                data=self.C.frames.tree_edit.sheet.MT.data,
+        elif fmt in (5, 6, 7):
+            out = ed.session.load_table(
+                rows,
+                fmt=fmt,
+                associate=True,
+                strip_ids=not ed.allow_spaces_ids_var,
             )
-        elif fmt == 6:
-            (
-                self.C.frames.tree_edit.sheet.MT.data,
-                self.rowlen,
-                idcol,
-                hier_cols,
-            ) = TreeBuilder().convert_indented_tree_details_adjacent_to_normal(
-                data=self.C.frames.tree_edit.sheet.MT.data,
+        else:
+            out = ed.session.load_table(
+                rows,
+                id_col=idcol,
+                parent_cols=hier_cols,
+                fmt=fmt,
+                associate=True,
+                strip_ids=not ed.allow_spaces_ids_var,
             )
-        elif fmt == 7:
-            (
-                self.C.frames.tree_edit.sheet.MT.data,
-                self.rowlen,
-                idcol,
-                hier_cols,
-            ) = TreeBuilder().convert_indented_tree_with_header_to_normal(
-                data=self.C.frames.tree_edit.sheet.MT.data,
-            )
-        self.C.frames.tree_edit.ic = idcol
-        self.C.frames.tree_edit.hiers = hier_cols
-        self.C.frames.tree_edit.pc = hier_cols[0]
-        self.C.frames.tree_edit.row_len = int(self.rowlen)
-        self.C.frames.tree_edit.headers = [
-            Header(name, type_="ID" if i == idcol else "Parent" if i in hier_cols else "Text")
-            for i, name in enumerate(
-                self.C.frames.tree_edit.fix_headers(self.C.frames.tree_edit.sheet.MT.data.pop(0), self.rowlen)
-            )
-        ]
-        (
-            self.C.frames.tree_edit.sheet.MT.data,
-            self.C.frames.tree_edit.nodes,
-            self.C.frames.tree_edit.warnings,
-        ) = TreeBuilder().build(
-            input_sheet=self.C.frames.tree_edit.sheet.MT.data,
-            output_sheet=self.C.frames.tree_edit.new_sheet,
-            row_len=self.C.frames.tree_edit.row_len,
-            ic=self.C.frames.tree_edit.ic,
-            hiers=self.C.frames.tree_edit.hiers,
-            nodes=self.C.frames.tree_edit.nodes,
-            warnings=self.C.frames.tree_edit.warnings,
-            strip=not self.C.frames.tree_edit.allow_spaces_ids_var,
-        )
-        self.C.frames.tree_edit.populate()
-        self.C.frames.tree_edit.show_warnings(str(self.C.open_dict["filepath"]), str(self.C.open_dict["sheet"]))
+        if not out["ok"]:
+            toplevels.Error(self.C, out["error"]["message"], theme=self.C.theme)
+            self.C.enable_at_start()
+            return
+        ed.set_records(ed.session.data)
+        ed.populate()
+        ed.show_warnings(str(self.C.open_dict["filepath"]), str(self.C.open_dict["sheet"]))
 
 
 class Id_Parent_Column_Selector(tk.Frame):

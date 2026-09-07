@@ -12,7 +12,6 @@ from openpyxl import load_workbook
 from tksheet import DotDict
 
 from .api import classify_invocation, run_api
-from .classes import Header
 from .constants import (
     BF,
     EF,
@@ -454,14 +453,14 @@ To get started once you have closed this popup, either:
 
     def load_from_file(self):
         self.status_bar.change_text("Loading...")
-        self.frames["tree_edit"].sheet.MT.data = []
+        self.frames["tree_edit"].set_records([])
         self.change_app_title(title=os.path.basename(self.open_dict["filepath"]))
         self.try_to_close_workbook()
         if self.open_dict["filepath"].lower().endswith((".csv", ".tsv")):
             try:
                 with open(self.open_dict["filepath"], "r") as fh:
                     temp_data = fh.read()
-                self.frames["tree_edit"].sheet.MT.data = csv_str_x_data(temp_data)
+                self.frames["tree_edit"].set_records(csv_str_x_data(temp_data))
             except Exception as error_msg:
                 Error(self, f"Error: {error_msg}", theme=self.theme)
                 self.create_new_at_start()
@@ -486,7 +485,7 @@ To get started once you have closed this popup, either:
             if "program_data" in j:
                 try:
                     program_data = b32_x_dict(j["program_data"])
-                    self.frames["tree_edit"].sheet.MT.data = program_data["records"]
+                    self.frames["tree_edit"].set_records(program_data["records"])
                     self.open_dict["sheet"] = "Sheet1"
                 except Exception as error_msg:
                     Error(self, f"Error: {error_msg}", theme=self.theme)
@@ -529,7 +528,7 @@ To get started once you have closed this popup, either:
 
                 except Exception as error_msg:
                     self.wb.close()
-                    self.frames["tree_edit"].sheet.MT.data = []
+                    self.frames["tree_edit"].set_records([])
                     self.wb = load_workbook(in_mem, read_only=True, data_only=True)
                     self.frames["column_selection"].sheet_selector.updatesheets(self.wb.sheetnames)
                     self.frames["column_selection"].sheet_selector.cont()
@@ -559,13 +558,15 @@ To get started once you have closed this popup, either:
                 )
                 self.create_new_at_start()
                 return False
-            self.frames["tree_edit"].sheet.MT.data, self.frames["tree_edit"].row_len = json_to_sheet(
+            rows, row_len = json_to_sheet(
                 d,
                 format_=json_format[0],
                 key=json_format[1],
                 get_format=False,
                 return_rowlen=True,
             )
+            self.frames["tree_edit"].set_records(rows)
+            self.frames["tree_edit"].row_len = row_len
             self.open_dict["sheet"] = "Sheet1"
             self.frames["column_selection"].populate(
                 list(map(str, range(1, max(map(len, self.frames["tree_edit"].sheet.MT.data), default=0) + 1))),
@@ -581,7 +582,7 @@ To get started once you have closed this popup, either:
         self.status_bar.change_text("Loading...")
         ws = self.wb[selection]
         ws.reset_dimensions()
-        self.frames["tree_edit"].sheet.MT.data = ws_x_data(ws)
+        self.frames["tree_edit"].set_records(ws_x_data(ws))
         if not self.frames["tree_edit"].sheet.MT.data:
             Error(self, "Sheet contains no data   ", theme=self.theme)
             self.frames["column_selection"].sheet_selector.updatesheets(self.wb.sheetnames)
@@ -615,7 +616,7 @@ To get started once you have closed this popup, either:
         )
 
     def reset_data_change_app_title(self):
-        self.frames["tree_edit"].sheet.MT.data = []
+        self.frames["tree_edit"].set_records([])
         self.change_app_title(title=None)
         if self.current_frame == "treecompare":
             self.frames["tree_compare"].reset()
@@ -630,15 +631,13 @@ To get started once you have closed this popup, either:
             return
         self.reset_data_change_app_title()
         self.frames["tree_edit"].reset_tree(False)
+        self.frames["tree_edit"].session.new(discard=True)
+        self.frames["tree_edit"].set_records(self.frames["tree_edit"].session.data)
+        self.frames["tree_edit"].tv_label_col = 0
         self.created_new = True
         self.open_dict["filepath"] = "New sheet"
         self.open_dict["sheet"] = "Sheet1"
         self.frames["tree_edit"].show_warnings("n/a - CREATED NEW", "n/a")
-        self.frames["tree_edit"].headers = [Header("ID", "ID"), Header("DETAIL_1"), Header("PARENT_1", "Parent")]
-        self.frames["tree_edit"].ic = 0
-        self.frames["tree_edit"].pc = 2
-        self.frames["tree_edit"].hiers = [2]
-        self.frames["tree_edit"].row_len = 3
         self.change_app_title(title="New sheet")
         self.frames["tree_edit"].populate()
         self.bind(f"<{ctrl_button}-O>", self.open_file_at_start)
@@ -694,8 +693,15 @@ To get started once you have closed this popup, either:
 
 
 def run_app(startup_args):
-    if allow_api_use and classify_invocation(startup_args) == "api":
-        run_api(startup_args)
-        return
+    if allow_api_use:
+        kind = classify_invocation(startup_args)
+        if kind == "api":
+            run_api(startup_args)
+            return
+        if kind == "cli":
+            from .cli import run_cli
+
+            run_cli(startup_args)
+            return
     app = AppGUI(startup_args)
     app.mainloop()
