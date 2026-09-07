@@ -3099,6 +3099,16 @@ class Edit_Detail_Text_Popup(tk.Toplevel):
         self.destroy()
 
 
+def new_id_and_treeview_label(
+    allow_spaces_ids: bool,
+    label_is_id: bool,
+    id_value: str,
+    label_value: str = "",
+) -> tuple[str, str]:
+    result = id_value if allow_spaces_ids else "".join(id_value.strip().split())
+    return result, result if label_is_id else label_value
+
+
 class Add_Top_Id_Popup(tk.Toplevel):
     def __init__(self, C, sheet_selection, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
@@ -3139,18 +3149,12 @@ class Add_Top_Id_Popup(tk.Toplevel):
         show_toplevel_chores(self, width=600, focus=self.id_name_display.place_cursor)
 
     def confirm(self, event=None):
-        if self.C.allow_spaces_ids_var:
-            self.result = self.id_name_display.get_my_value()
-            if self.C.tv_label_col != self.C.ic:
-                self.id_label = self.id_tv_display.get_my_value()
-            else:
-                self.id_label = self.result
-        else:
-            self.result = "".join(self.id_name_display.get_my_value().strip().split())
-            if self.C.tv_label_col != self.C.ic:
-                self.id_label = "".join(self.id_tv_display.get_my_value().strip().split())
-            else:
-                self.id_label = self.result
+        self.result, self.id_label = new_id_and_treeview_label(
+            self.C.allow_spaces_ids_var,
+            self.C.tv_label_col == self.C.ic,
+            self.id_name_display.get_my_value(),
+            self.id_tv_display.get_my_value(),
+        )
         self.destroy()
 
     def enter_sheet_sel(self, event=None):
@@ -3217,18 +3221,12 @@ class Add_Child_Or_Sibling_Id_Popup(tk.Toplevel):
         show_toplevel_chores(self, width=600, focus=self.id_name_display.place_cursor)
 
     def confirm(self, event=None):
-        if self.C.allow_spaces_ids_var:
-            self.result = self.id_name_display.get_my_value()
-            if self.C.tv_label_col != self.C.ic:
-                self.id_label = self.id_tv_display.get_my_value()
-            else:
-                self.id_label = self.result
-        else:
-            self.result = "".join(self.id_name_display.get_my_value().strip().split())
-            if self.C.tv_label_col != self.C.ic:
-                self.id_label = "".join(self.id_tv_display.get_my_value().strip().split())
-            else:
-                self.id_label = self.result
+        self.result, self.id_label = new_id_and_treeview_label(
+            self.C.allow_spaces_ids_var,
+            self.C.tv_label_col == self.C.ic,
+            self.id_name_display.get_my_value(),
+            self.id_tv_display.get_my_value(),
+        )
         self.destroy()
 
     def enter_sheet_sel(self, event=None):
