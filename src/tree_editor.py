@@ -5126,6 +5126,11 @@ class Tree_Editor(tk.Frame):
             except Exception:
                 self.sheet_changes = 0
                 self.changelog = []
+        elif new_vs["type"] == "add id":
+            n = new_vs.get("changelog_len", max(0, len(self.changelog) - 1))
+            n = max(0, min(n, len(self.changelog)))
+            self.sheet_changes = max(0, self.sheet_changes - (len(self.changelog) - n))
+            self.changelog = self.changelog[:n]
         else:
             del self.changelog[-1]
         if new_vs["type"] == "add id":
@@ -5372,6 +5377,7 @@ class Tree_Editor(tk.Frame):
             {
                 "type": "add id",
                 "row": {},
+                "changelog_len": len(self.changelog),
                 "required_data": self.get_required_snapshot_data(),
             }
         )
