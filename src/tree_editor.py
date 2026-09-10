@@ -3464,15 +3464,18 @@ class Tree_Editor(tk.Frame):
             self.refresh_rows.add(int(idrow))
         self.sheet.MT.data[idrow][hier] = ""
         self.sheet.MT.data[idrow][self.pc] = newparent
-        if auto_sort_quick and parent_of_ik and self.nodes[parent_of_ik].ps[hier]:
-            parent_parent_iid = self.nodes[parent_of_ik].ps[hier]
+        if auto_sort_quick and parent_of_ik:
             if sort_later:
-                self.sort_later_dct["old_parents_of_parents"].add(parent_parent_iid)
+                self.sort_later_dct["old_parents_of_parents"].add(parent_of_ik)
                 if self.sort_later_dct["old_hier"] is None:
                     self.sort_later_dct["old_hier"] = hier
+                if self.nodes[parent_of_ik].ps[hier]:
+                    self.sort_later_dct["old_parents_of_parents"].add(self.nodes[parent_of_ik].ps[hier])
             elif not sort_later:
-                parent_parent_node = self.nodes[parent_parent_iid]
-                parent_parent_node.cn[hier] = self.sort_node_cn(parent_parent_node.cn[hier], hier)
+                self.nodes[parent_of_ik].cn[hier] = self.sort_node_cn(self.nodes[parent_of_ik].cn[hier], hier)
+                if self.nodes[parent_of_ik].ps[hier]:
+                    parent_parent_node = self.nodes[self.nodes[parent_of_ik].ps[hier]]
+                    parent_parent_node.cn[hier] = self.sort_node_cn(parent_parent_node.cn[hier], hier)
         self.sort_later_dct["filled"] = True
         return True
 
