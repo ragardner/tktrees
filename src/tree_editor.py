@@ -3961,6 +3961,9 @@ class Tree_Editor(tk.Frame):
                 try_remove(self.topnodes_order[hier], ik)
             if npk == "":
                 self.topnodes_order[hier].append(ik)
+        elif pk and self.nodes[pk].ps[hier]:
+            parent_parent_node = self.nodes[self.nodes[pk].ps[hier]]
+            parent_parent_node.cn[hier] = self.sort_node_cn(parent_parent_node.cn[hier], hier)
         idrow = self.rns[ik]
         if snapshot:
             self.vs[-1]["rows"].append(
