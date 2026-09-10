@@ -2327,9 +2327,10 @@ class Tree_Editor(tk.Frame):
     def rebuild_tree(self, deselect=True, redraw=False):
         if deselect:
             self.sheet.deselect("all", redraw=False)
+        old_nodes = self.nodes
+        old_topnodes_order = {h: list(v) for h, v in self.topnodes_order.items()}
         self.nodes = {}
         self.clear_copied_details()
-        self.auto_sort_nodes_bool = True
         self.save_info_get_saved_info()
         self.sheet.MT.data, self.nodes = TreeBuilder().build(
             input_sheet=self.sheet.MT.data,
@@ -2343,6 +2344,7 @@ class Tree_Editor(tk.Frame):
         )
         self.new_sheet = []
         self.fix_associate_sort_edit_cells()
+        self._restore_custom_tree_order(old_nodes, old_topnodes_order)
         self.rns = {}
         rhs = []
         default_row_height = self.sheet.MT.get_default_row_height()
@@ -4668,6 +4670,30 @@ class Tree_Editor(tk.Frame):
                 iid = stack.pop()
                 yield iid
                 stack.extend(reversed(self.nodes[iid].cn[self.pc]))
+
+    def _restore_custom_tree_order(self, old_nodes, old_topnodes_order):
+        if self.auto_sort_nodes_bool:
+            return
+        for iid, node in self.nodes.items():
+            old = old_nodes.get(iid)
+            if old is None:
+                continue
+            for h, new_cn in node.cn.items():
+                if not new_cn:
+                    continue
+                old_cn = old.cn.get(h) or []
+                if not old_cn:
+                    continue
+                new_set = set(new_cn)
+                old_set = set(old_cn)
+                node.cn[h] = [c for c in old_cn if c in new_set] + [c for c in new_cn if c not in old_set]
+        self.topnodes_order = {}
+        for h in self.hiers:
+            current_tops = {iid for iid, n in self.nodes.items() if n.ps[h] == ""}
+            kept = [iid for iid in old_topnodes_order.get(h, []) if iid in current_tops]
+            kept_set = set(kept)
+            new_tops = [iid for iid, n in self.nodes.items() if n.ps[h] == "" and iid not in kept_set]
+            self.topnodes_order[h] = kept + new_tops
 
     def remake_topnodes_order(self):
         self.topnodes_order = {}
@@ -8548,8 +8574,9 @@ class Tree_Editor(tk.Frame):
                             )
                             self.sheet.MT.data[self.rns[cik]][col] = change[4]
                             if oldv != newv and type_ == "ID" or type_ == "Parent":
+                                old_nodes = self.nodes
+                                old_topnodes_order = {h: list(v) for h, v in self.topnodes_order.items()}
                                 self.nodes = {}
-                                self.auto_sort_nodes_bool = True
                                 self.sheet.MT.data, self.nodes = TreeBuilder().build(
                                     self.sheet.MT.data,
                                     self.new_sheet,
@@ -8562,6 +8589,7 @@ class Tree_Editor(tk.Frame):
                                 )
                                 self.new_sheet = []
                                 self.fix_associate_sort_edit_cells()
+                                self._restore_custom_tree_order(old_nodes, old_topnodes_order)
                                 self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                             successful.append(True)
                         else:
@@ -9786,9 +9814,10 @@ class Tree_Editor(tk.Frame):
                     "",
                 )
                 self.new_sheet = []
+                old_nodes = self.nodes
+                old_topnodes_order = {h: list(v) for h, v in self.topnodes_order.items()}
                 self.nodes = {}
                 self.clear_copied_details()
-                self.auto_sort_nodes_bool = True
                 self.sheet.MT.data, self.nodes, self.warnings = TreeBuilder().build(
                     self.sheet.MT.data,
                     self.new_sheet,
@@ -9802,6 +9831,7 @@ class Tree_Editor(tk.Frame):
                 )
                 self.new_sheet = []
                 self.fix_associate_sort(startup=False)
+                self._restore_custom_tree_order(old_nodes, old_topnodes_order)
                 self.refresh_hier_dropdown(self.hiers.index(self.pc))
                 self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
                 self.sheet.deselect()
