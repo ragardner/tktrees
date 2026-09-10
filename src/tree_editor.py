@@ -3259,6 +3259,15 @@ class Tree_Editor(tk.Frame):
             if errors:
                 Error(self, "ID already in hierarchy   ", theme=self.C.theme)
             return False
+        if parent:
+            if ik == pk:
+                if errors:
+                    Error(self, "Cannot add ID to same line   ", theme=self.C.theme)
+                return False
+            if pk not in self.nodes or self.nodes[pk].ps[self.pc] is None:
+                if errors:
+                    Error(self, "Parent is not in this hierarchy   ", theme=self.C.theme)
+                return False
         if snapshot:
             self.snapshot_add_id()
         if ik not in self.nodes:
