@@ -4158,9 +4158,9 @@ class Tree_Editor(tk.Frame):
         if sum(1 for v in self.nodes[ik].ps.values() if v is not None) < 2:
             if snapshot:
                 self._delete_snap_row(rn, deleted=True)
+            self.untag_id(ik)
             del self.nodes[ik]
             self.sheet.delete_row(rn, redraw=False)
-            self.untag_id(ik)
         else:
             if snapshot:
                 self._delete_snap_row(rn)
