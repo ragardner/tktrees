@@ -1566,9 +1566,12 @@ class Tree_Editor(tk.Frame):
                 for h in program_data.headers
             ]
             self.row_len = len(self.headers)
-            self.changelog = program_data.changelog
-            if self.changelog and len(self.changelog[0]) != 7:
-                self.changelog = []
+            self.changelog = []
+            for row in program_data.changelog or []:
+                row = list(row)
+                if len(row) < 7:
+                    row.extend([""] * (7 - len(row)))
+                self.changelog.append(tuple(row[:7]))
             self.sheet.align(program_data.sheet_table_align, redraw=False)
             self.sheet.row_index_align(program_data.sheet_index_align, redraw=False)
             self.sheet.header_align(program_data.sheet_header_align, redraw=False)
