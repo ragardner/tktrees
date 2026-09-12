@@ -9113,13 +9113,9 @@ class Tree_Editor(tk.Frame):
                     cid = info[1]
                     cpar = "" if "n/a - Top ID" in change[2] else info[3]
                     if cpar:
-                        if (
-                            cpar.lower() not in self.nodes
-                            or self.nodes[self.nodes[cid.lower()].ps[colnum]].name != cpar
-                        ):
-                            cpar_check = False
-                        else:
-                            cpar_check = True
+                        cik = cid.lower()
+                        p = self.nodes[cik].ps[colnum] if cik in self.nodes else None
+                        cpar_check = bool(p) and cpar.lower() in self.nodes and self.nodes[p].name == cpar
                     else:
                         cpar_check = True
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
@@ -9148,13 +9144,9 @@ class Tree_Editor(tk.Frame):
                     cid = info[1]
                     cpar = "" if "n/a - Top ID" in change[2] else info[3]
                     if cpar:
-                        if (
-                            cpar.lower() not in self.nodes
-                            or self.nodes[self.nodes[cid.lower()].ps[colnum]].name != cpar
-                        ):
-                            cpar_check = False
-                        else:
-                            cpar_check = True
+                        cik = cid.lower()
+                        p = self.nodes[cik].ps[colnum] if cik in self.nodes else None
+                        cpar_check = bool(p) and cpar.lower() in self.nodes and self.nodes[p].name == cpar
                     else:
                         cpar_check = True
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
@@ -9182,13 +9174,9 @@ class Tree_Editor(tk.Frame):
                     cid = info[1]
                     cpar = "" if "n/a - Top ID" in change[2] else info[3]
                     if cpar:
-                        if (
-                            cpar.lower() not in self.nodes
-                            or self.nodes[self.nodes[cid.lower()].ps[colnum]].name != cpar
-                        ):
-                            cpar_check = False
-                        else:
-                            cpar_check = True
+                        cik = cid.lower()
+                        p = self.nodes[cik].ps[colnum] if cik in self.nodes else None
+                        cpar_check = bool(p) and cpar.lower() in self.nodes and self.nodes[p].name == cpar
                     else:
                         cpar_check = True
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
@@ -9221,13 +9209,9 @@ class Tree_Editor(tk.Frame):
                     cid = info[1]
                     cpar = "" if "n/a - Top ID" in change[2] else info[3]
                     if cpar:
-                        if (
-                            cpar.lower() not in self.nodes
-                            or self.nodes[self.nodes[cid.lower()].ps[colnum]].name != cpar
-                        ):
-                            cpar_check = False
-                        else:
-                            cpar_check = True
+                        cik = cid.lower()
+                        p = self.nodes[cik].ps[colnum] if cik in self.nodes else None
+                        cpar_check = bool(p) and cpar.lower() in self.nodes and self.nodes[p].name == cpar
                     else:
                         cpar_check = True
                     if cid.lower() in self.rns and cpar_check and self.headers[colnum].type_ == "Parent":
