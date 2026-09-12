@@ -2036,8 +2036,10 @@ class View_Id_Popup(tk.Toplevel):
                 self.C.changelog_append(
                     "Cut and paste ID + children" if self.C.nodes[ik].cn[x1] else "Cut and paste ID",
                     ID,
-                    f"Old parent: {oldparent if oldparent else 'n/a - Top ID'} old column #{x1 + 1} named: {self.C.headers[x1].name}",
-                    f"New parent: {newtext if newtext else 'n/a - Top ID'} new column #{x1 + 1} named: {self.C.headers[x1].name}",
+                    oldparent,
+                    newtext,
+                    self.C.headers[x1].name,
+                    self.C.headers[x1].name,
                 )
                 self.C.redo_tree_display()
                 self.C.refresh_formatting(rows=y1, columns=x1)
@@ -2054,9 +2056,10 @@ class View_Id_Popup(tk.Toplevel):
                 self.C.set_undo_label()
                 self.C.changelog_append(
                     "Edit cell",
-                    f"ID: {ID} column #{x1 + 1} named: {self.C.headers[x1].name} with type: {self.C.headers[x1].type_}",
+                    ID,
                     f"{self.C.sheet.MT.data[y1][x1]}",
                     f"{newtext}",
+                    self.C.headers[x1].name,
                 )
                 self.C.snapshot_ctrl_x_v_del_key_id_par()
                 self.C.sheet.MT.data[y1][x1] = newtext

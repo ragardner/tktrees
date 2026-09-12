@@ -234,6 +234,8 @@ changelog_header = [
     "ID/Name/Number",
     "Old Value",
     "New Value",
+    "From column",
+    "To column",
 ]
 
 align_w_icon = (

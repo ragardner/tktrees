@@ -243,7 +243,9 @@ Conditions are text matching: the cell must contain exactly the user input. Cond
 
 Every change you make is recorded. Open the list with View -> View changelog, Export -> Export specific changes, or Ctrl + L.
 
-The list has five columns: date, type, what was changed, old value (red), new value (green).
+The list has seven columns: date, type, ID (or column name), old value (red), new value (green), from column, to column.
+
+Names and headers are whole cells. They are never packed into a sentence. An empty old or new parent means the ID is (or becomes) a top. From/To column hold the hierarchy or detail header name when the action uses one.
 
 From that window you can:
 
@@ -262,16 +264,16 @@ The changelog can be stored with app data, and you can also save a viewable chan
 
 Import -> Import changes replays a saved changelog on the file you have open. Use this to apply the same edits to another file, or to replay an exported list.
 
-The file must be .csv, .tsv, .xlsx, .xlsm, .xls or .json. For Excel, only the first sheet is read. The table must have exactly five columns, the same as an exported changelog.
+The file must be .csv, .tsv, .xlsx, .xlsm, .xls or .json. For Excel, only the first sheet is read. The table must have exactly seven columns, the same as an exported changelog.
 
 Lines that already start with "Imported change |" or "Merge |" are treated as the action after that prefix, so you can export and import the same list again.
 
 Each row is tried on its own. A change is applied only if the sheet still matches what the row expects, for example:
 
-- The column still exists, with the same name and type
+- The column named in From/To still exists
 - The ID still exists
 - For a cell edit, the current value is still the old value in the row
-- For a move or delete, the parent is still the parent recorded in the row
+- For a move or delete, the parent is still the parent recorded in the Old column (empty means top)
 - Detail values still pass that column's validation
 
 If the new value is already what the sheet has, that row is counted as unnecessary, not as a failure.
