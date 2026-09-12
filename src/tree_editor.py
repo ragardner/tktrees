@@ -3993,6 +3993,13 @@ class Tree_Editor(tk.Frame):
         self.sheet.MT.data[idrow][hier] = newparent
         return True
 
+    def _delete_snap_row(self, rn: int, deleted: bool = False) -> None:
+        rows = self.vs[-1]["rows"]
+        if rn not in rows:
+            rows[rn] = RowStorage(1 if deleted else 0, self.sheet.MT.data[rn].copy())
+        elif deleted:
+            rows[rn].t = 1
+
     def _del_id_core(self, name: str, to_del: list[str] | None = None, snapshot: bool = True) -> list[str]:
         if to_del is None:
             to_del = []
@@ -4018,39 +4025,30 @@ class Tree_Editor(tk.Frame):
         if pk:
             for ciid in self.nodes[iid].cn[self.pc]:
                 rn = self.rns[ciid]
-                if snapshot and rn not in self.vs[-1]["rows"]:
-                    self.vs[-1]["rows"][rn] = RowStorage(
-                        0,
-                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                    )
+                if snapshot:
+                    self._delete_snap_row(rn)
                 self.nodes[ciid].ps[self.pc] = pk
                 self.sheet.MT.data[rn][self.pc] = self.nodes[pk].name
                 self.refresh_rows.add(ciid)
         elif pk == "":
             for ciid in self.nodes[iid].cn[self.pc]:
                 rn = self.rns[ciid]
-                if snapshot and rn not in self.vs[-1]["rows"]:
-                    self.vs[-1]["rows"][rn] = RowStorage(
-                        0,
-                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                    )
+                if snapshot:
+                    self._delete_snap_row(rn)
                 self.nodes[ciid].ps[self.pc] = ""
                 self.sheet.MT.data[rn][self.pc] = ""
                 self.refresh_rows.add(ciid)
         rn = self.rns[iid]
         if sum(1 for v in self.nodes[iid].ps.values() if v is not None) < 2:
             if snapshot:
-                self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
+                self._delete_snap_row(rn, deleted=True)
             del self.nodes[iid]
             self.untag_id(iid)
             to_del.append(iid)
             self.refresh_rows.discard(iid)
         else:
-            if snapshot and rn not in self.vs[-1]["rows"]:
-                self.vs[-1]["rows"][rn] = RowStorage(
-                    0,
-                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                )
+            if snapshot:
+                self._delete_snap_row(rn)
             self.nodes[iid].cn[self.pc] = []
             self.nodes[iid].ps[self.pc] = None
             self.sheet.MT.data[rn][self.pc] = ""
@@ -4077,11 +4075,8 @@ class Tree_Editor(tk.Frame):
                         self.topnodes_order[h].append(ciid)
                         child.ps[h] = ""
                         rn = self.rns[ciid]
-                        if snapshot and rn not in self.vs[-1]["rows"]:
-                            self.vs[-1]["rows"][rn] = RowStorage(
-                                0,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                            )
+                        if snapshot:
+                            self._delete_snap_row(rn)
                             self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = ""
                 elif pk:
@@ -4091,11 +4086,8 @@ class Tree_Editor(tk.Frame):
                         child = self.nodes[ciid]
                         child.ps[h] = pk
                         rn = self.rns[ciid]
-                        if snapshot and rn not in self.vs[-1]["rows"]:
-                            self.vs[-1]["rows"][rn] = RowStorage(
-                                0,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                            )
+                        if snapshot:
+                            self._delete_snap_row(rn)
                             self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = self.nodes[pk].name
         else:
@@ -4105,11 +4097,8 @@ class Tree_Editor(tk.Frame):
                         child = self.nodes[ciid]
                         child.ps[h] = ""
                         rn = self.rns[ciid]
-                        if snapshot and rn not in self.vs[-1]["rows"]:
-                            self.vs[-1]["rows"][rn] = RowStorage(
-                                0,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                            )
+                        if snapshot:
+                            self._delete_snap_row(rn)
                             self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = ""
                 elif pk:
@@ -4119,11 +4108,8 @@ class Tree_Editor(tk.Frame):
                         child = self.nodes[ciid]
                         child.ps[h] = pk
                         rn = self.rns[ciid]
-                        if snapshot and rn not in self.vs[-1]["rows"]:
-                            self.vs[-1]["rows"][rn] = RowStorage(
-                                0,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h_] for h_ in self.hiers])),
-                            )
+                        if snapshot:
+                            self._delete_snap_row(rn)
                             self.refresh_rows.add(ciid)
                         self.sheet.MT.data[rn][h] = self.nodes[pk].name
                     # sort parents children
@@ -4133,7 +4119,7 @@ class Tree_Editor(tk.Frame):
                         to_sort.add((self.nodes[pk].ps[h], h))
         rn = self.rns[iid]
         if snapshot:
-            self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
+            self._delete_snap_row(rn, deleted=True)
         del self.nodes[iid]
         to_del.append(iid)
         self.refresh_rows.discard(iid)
@@ -4159,27 +4145,21 @@ class Tree_Editor(tk.Frame):
         for ciid in self.nodes[ik].cn[self.pc]:
             rn = self.rns[ciid]
             child = self.nodes[ciid]
-            if snapshot and rn not in self.vs[-1]["rows"]:
-                self.vs[-1]["rows"][rn] = RowStorage(
-                    0,
-                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                )
+            if snapshot:
+                self._delete_snap_row(rn)
                 self.refresh_rows.add(ciid)
             child.ps[self.pc] = ""
             self.sheet.MT.data[rn][self.pc] = ""
         rn = self.rns[ik]
         if sum(1 for v in self.nodes[ik].ps.values() if v is not None) < 2:
             if snapshot:
-                self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
+                self._delete_snap_row(rn, deleted=True)
             del self.nodes[ik]
             self.sheet.delete_row(rn, redraw=False)
             self.untag_id(ik)
         else:
-            if snapshot and rn not in self.vs[-1]["rows"]:
-                self.vs[-1]["rows"][rn] = RowStorage(
-                    0,
-                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                )
+            if snapshot:
+                self._delete_snap_row(rn)
                 self.refresh_rows.add(ik)
             self.nodes[ik].cn[self.pc] = []
             self.nodes[ik].ps[self.pc] = None
@@ -4210,18 +4190,15 @@ class Tree_Editor(tk.Frame):
         for h, cn in self.nodes[ik].cn.items():
             for ciid in cn:
                 rn = self.rns[ciid]
-                if snapshot and rn not in self.vs[-1]["rows"]:
-                    self.vs[-1]["rows"][rn] = RowStorage(
-                        0,
-                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][hx] for hx in self.hiers])),
-                    )
+                if snapshot:
+                    self._delete_snap_row(rn)
                     self.refresh_rows.add(ciid)
                 child = self.nodes[ciid]
                 child.ps[h] = ""
                 self.sheet.MT.data[rn][h] = ""
         rn = self.rns[ik]
         if snapshot:
-            self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
+            self._delete_snap_row(rn, deleted=True)
         del self.nodes[ik]
         self.sheet.delete_row(rn, redraw=False)
         if self.auto_sort_nodes_bool:
@@ -4267,17 +4244,14 @@ class Tree_Editor(tk.Frame):
                 rn = self.rns[ik_]
                 if sum(1 for v in self.nodes[ik_].ps.values() if v is not None) < 2:
                     if snapshot:
-                        self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
+                        self._delete_snap_row(rn, deleted=True)
                     del self.nodes[ik_]
                     to_del.append(ik_)
                     self.refresh_rows.discard(ik_)
                     self.untag_id(ik_)
                 else:
-                    if snapshot and rn not in self.vs[-1]["rows"]:
-                        self.vs[-1]["rows"][rn] = RowStorage(
-                            0,
-                            zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                        )
+                    if snapshot:
+                        self._delete_snap_row(rn)
                         self.refresh_rows.add(ik_)
                     self.nodes[ik_].cn[self.pc] = []
                     self.nodes[ik_].ps[self.pc] = None
@@ -4288,17 +4262,14 @@ class Tree_Editor(tk.Frame):
             self.nodes[pk].cn[self.pc].remove(ik)
         if sum(1 for v in self.nodes[ik].ps.values() if v is not None) < 2:
             if snapshot:
-                self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
+                self._delete_snap_row(rn, deleted=True)
             del self.nodes[ik]
             to_del.append(ik)
             self.refresh_rows.discard(ik)
             self.untag_id(ik)
         else:
-            if snapshot and rn not in self.vs[-1]["rows"]:
-                self.vs[-1]["rows"][rn] = RowStorage(
-                    0,
-                    zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                )
+            if snapshot:
+                self._delete_snap_row(rn)
                 self.refresh_rows.add(ik)
             self.nodes[ik].cn[self.pc] = []
             self.nodes[ik].ps[self.pc] = None
@@ -4360,11 +4331,8 @@ class Tree_Editor(tk.Frame):
 
                         # backup the row
                         rn = self.rns[ciid]
-                        if snapshot and rn not in self.vs[-1]["rows"]:
-                            self.vs[-1]["rows"][rn] = RowStorage(
-                                0,
-                                zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                            )
+                        if snapshot:
+                            self._delete_snap_row(rn)
                             self.refresh_rows.add(ciid)
 
                         if p == "" or p in del_set or p not in self.nodes:
@@ -4384,7 +4352,7 @@ class Tree_Editor(tk.Frame):
 
                 rn = self.rns[descendant]
                 if snapshot:
-                    self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
+                    self._delete_snap_row(rn, deleted=True)
                 to_del.append(descendant)
                 self.refresh_rows.discard(descendant)
                 self.untag_id(descendant)
@@ -4393,7 +4361,7 @@ class Tree_Editor(tk.Frame):
         pk = self.get_ids_parent(ik)
         rn = self.rns[ik]
         if snapshot:
-            self.vs[-1]["rows"][rn] = RowStorage(1, self.sheet.MT.data[rn])
+            self._delete_snap_row(rn, deleted=True)
         to_del.append(ik)
         self.refresh_rows.discard(ik)
         self.untag_id(ik)
@@ -4431,11 +4399,8 @@ class Tree_Editor(tk.Frame):
 
                 # backup the row
                 rn = self.rns[ciid]
-                if snapshot and rn not in self.vs[-1]["rows"]:
-                    self.vs[-1]["rows"][rn] = RowStorage(
-                        0,
-                        zlib.compress(pickle.dumps([self.sheet.MT.data[rn][h] for h in self.hiers])),
-                    )
+                if snapshot:
+                    self._delete_snap_row(rn)
                     self.refresh_rows.add(ciid)
 
                 if p == "" or p in del_set or p not in self.nodes:
@@ -5211,10 +5176,9 @@ class Tree_Editor(tk.Frame):
         elif new_vs["type"] == "delete ids":
             rows = new_vs["rows"]
             for rn in sorted(r for r, obj in rows.items() if obj.t == 1):
-                self.sheet.MT.data.insert(rn, rows[rn].row)
+                self.sheet.MT.data.insert(rn, rows[rn].row.copy())
             for rn in sorted(r for r, obj in rows.items() if obj.t == 0):
-                for h, par in zip(self.hiers, pickle.loads(zlib.decompress(rows[rn].row))):
-                    self.sheet.MT.data[rn][h] = par
+                self.sheet.MT.data[rn] = rows[rn].row.copy()
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
 
