@@ -8801,7 +8801,7 @@ class Tree_Editor(tk.Frame):
                     oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
                     if "n/a - Top ID" in change[3]:
                         oldpar = ""
-                        oldpar_check = True
+                        oldpar_check = cik in self.nodes and self.nodes[cik].ps[oldcol] == ""
                     else:
                         oldpar = old[2]
                         if oldpar.lower() not in self.nodes or oldpar != self.nodes[self.nodes[cik].ps[oldcol]].name:
@@ -8861,7 +8861,7 @@ class Tree_Editor(tk.Frame):
                     oldcol = next(i for i, h in enumerate(self.headers) if h.name.lower() == oldcolname.lower())
                     if "n/a - Top ID" in change[3]:
                         oldpar = ""
-                        oldpar_check = True
+                        oldpar_check = cik in self.nodes and self.nodes[cik].ps[oldcol] == ""
                     else:
                         oldpar = old[2]
                         if oldpar.lower() not in self.nodes or oldpar != self.nodes[self.nodes[cik].ps[oldcol]].name:
