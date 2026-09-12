@@ -3360,8 +3360,12 @@ class Tree_Editor(tk.Frame):
                         self.topnodes_order[h][self.topnodes_order[h].index(ik)] = nnk
                     except Exception:
                         continue
-        if ik in self.saved_info[self.pc].opens:
-            self.saved_info[self.pc].opens[nnk] = self.saved_info[self.pc].opens.pop(ik)
+        for h in self.hiers:
+            info = self.saved_info[h]
+            if ik in info.opens:
+                info.opens[nnk] = info.opens.pop(ik)
+            if ik in info.theights:
+                info.theights[nnk] = info.theights.pop(ik)
         return True
 
     def cut_paste(
