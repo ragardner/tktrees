@@ -9300,11 +9300,11 @@ class Tree_Editor(tk.Frame):
                             successful.append(False)
                     else:
                         c3s = change[2].split(" ")
-                        colname = info[6]
+                        colname = c3s[6]
                         colnum = next(
                             i for i, h in enumerate(self.headers) if h.name.lower() == colname.lower()
                         )  # checks if column name exists
-                        order = info[8]
+                        order = c3s[8]
                         if order in ("ASCENDING", "DESCENDING"):
                             self.sort_sheet(colname, order, snapshot=False)
                             self.changelog_append_no_unsaved(
