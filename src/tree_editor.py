@@ -8623,11 +8623,7 @@ class Tree_Editor(tk.Frame):
                         validation_check = self.is_in_validation(self.headers[col].validation, change[4])
                     else:
                         validation_check = True
-                    if (
-                        cik in self.rns
-                        and self.sheet.MT.data[self.rns[cik]][col] == change[3]
-                        and validation_check
-                    ):
+                    if cik in self.rns and self.sheet.MT.data[self.rns[cik]][col] == change[3] and validation_check:
                         oldv = f"{self.sheet.MT.data[self.rns[cik]][col]}"
                         newv = f"{change[4]}"
                         if self.sheet.MT.data[self.rns[cik]][col] != change[4]:
@@ -8904,9 +8900,17 @@ class Tree_Editor(tk.Frame):
                     newpar = change[4]
                     oldcol = self._col_index_named(change[5])
                     newcol = self._col_index_named(change[6])
-                    oldpar_check = oldpar.lower() in self.nodes and oldcol is not None and self.nodes[oldpar.lower()].ps[oldcol] is not None
+                    oldpar_check = (
+                        oldpar.lower() in self.nodes
+                        and oldcol is not None
+                        and self.nodes[oldpar.lower()].ps[oldcol] is not None
+                    )
                     if newpar:
-                        newpar_check = newpar.lower() in self.nodes and newcol is not None and self.nodes[newpar.lower()].ps[newcol] is not None
+                        newpar_check = (
+                            newpar.lower() in self.nodes
+                            and newcol is not None
+                            and self.nodes[newpar.lower()].ps[newcol] is not None
+                        )
                     else:
                         newpar_check = True
                     if (
@@ -8936,7 +8940,11 @@ class Tree_Editor(tk.Frame):
                     oldcol = self._col_index_named(change[5])
                     newcol = self._col_index_named(change[6])
                     if newpar:
-                        newpar_check = newpar.lower() in self.nodes and newcol is not None and self.nodes[newpar.lower()].ps[newcol] is not None
+                        newpar_check = (
+                            newpar.lower() in self.nodes
+                            and newcol is not None
+                            and self.nodes[newpar.lower()].ps[newcol] is not None
+                        )
                     else:
                         newpar_check = True
                     if (
@@ -8966,7 +8974,11 @@ class Tree_Editor(tk.Frame):
                     oldcol = self._col_index_named(change[5])
                     newcol = self._col_index_named(change[6])
                     if newpar:
-                        newpar_check = newpar.lower() in self.nodes and newcol is not None and self.nodes[newpar.lower()].ps[newcol] is not None
+                        newpar_check = (
+                            newpar.lower() in self.nodes
+                            and newcol is not None
+                            and self.nodes[newpar.lower()].ps[newcol] is not None
+                        )
                     else:
                         newpar_check = True
                     if (
@@ -9033,7 +9045,12 @@ class Tree_Editor(tk.Frame):
                     cpar = change[3]
                     colnum = self._col_index_named(change[5])
                     cpar_check = self._import_parent_matches(cid.lower(), colnum, cpar)
-                    if cid.lower() in self.rns and colnum is not None and cpar_check and self.headers[colnum].type_ == "Parent":
+                    if (
+                        cid.lower() in self.rns
+                        and colnum is not None
+                        and cpar_check
+                        and self.headers[colnum].type_ == "Parent"
+                    ):
                         oldpc = int(self.pc)
                         self.pc = colnum
                         to_del = self._del_id_core(cid.lower(), snapshot=False)
@@ -9052,7 +9069,12 @@ class Tree_Editor(tk.Frame):
                     cpar = change[3]
                     colnum = self._col_index_named(change[5])
                     cpar_check = self._import_parent_matches(cid.lower(), colnum, cpar)
-                    if cid.lower() in self.rns and colnum is not None and cpar_check and self.headers[colnum].type_ == "Parent":
+                    if (
+                        cid.lower() in self.rns
+                        and colnum is not None
+                        and cpar_check
+                        and self.headers[colnum].type_ == "Parent"
+                    ):
                         oldpc = int(self.pc)
                         self.pc = colnum
                         self._del_id_orphan_core(cid.lower(), cpar.lower(), snapshot=False)
@@ -9070,7 +9092,12 @@ class Tree_Editor(tk.Frame):
                     cpar = change[3]
                     colnum = self._col_index_named(change[5])
                     cpar_check = self._import_parent_matches(cid.lower(), colnum, cpar)
-                    if cid.lower() in self.rns and colnum is not None and cpar_check and self.headers[colnum].type_ == "Parent":
+                    if (
+                        cid.lower() in self.rns
+                        and colnum is not None
+                        and cpar_check
+                        and self.headers[colnum].type_ == "Parent"
+                    ):
                         oldpc = int(self.pc)
                         self.pc = colnum
                         to_del = self._del_id_children_core(cid.lower(), snapshot=False)
@@ -9093,7 +9120,12 @@ class Tree_Editor(tk.Frame):
                     cpar = change[3]
                     colnum = self._col_index_named(change[5])
                     cpar_check = self._import_parent_matches(cid.lower(), colnum, cpar)
-                    if cid.lower() in self.rns and colnum is not None and cpar_check and self.headers[colnum].type_ == "Parent":
+                    if (
+                        cid.lower() in self.rns
+                        and colnum is not None
+                        and cpar_check
+                        and self.headers[colnum].type_ == "Parent"
+                    ):
                         oldpc = int(self.pc)
                         self.pc = colnum
                         to_del = self._del_id_children_all_core(cid.lower(), snapshot=False)
