@@ -757,7 +757,8 @@
 <h1 id="guides">GUIDES</h1>
 <h4 id="changelog">Changelog</h4>
 <p>Every change you make is recorded. Open the list with View -&gt; View changelog, Export -&gt; Export specific changes, or Ctrl + L.</p>
-<p>The list has five columns: date, type, what was changed, old value (red), new value (green).</p>
+<p>The list has seven columns: date, type, ID (or column name), old value (red), new value (green), from column, to column.</p>
+<p>Names and headers are whole cells. They are never packed into a sentence. An empty old or new parent means the ID is (or becomes) a top. From/To column hold the hierarchy or detail header name when the action uses one.</p>
 <p>From that window you can:</p>
 <ul>
 <li>Export all: save the whole list as .csv, .tsv, .xlsx or .json</li>
@@ -772,14 +773,14 @@
 <p>The changelog can be stored with app data, and you can also save a viewable changelog sheet (see XLSX Files). Undo does not survive closing the file, but the changelog can be saved.</p>
 <h4 id="import-changes">Import changes</h4>
 <p>Import -&gt; Import changes replays a saved changelog on the file you have open. Use this to apply the same edits to another file, or to replay an exported list.</p>
-<p>The file must be .csv, .tsv, .xlsx, .xlsm, .xls or .json. For Excel, only the first sheet is read. The table must have exactly five columns, the same as an exported changelog.</p>
+<p>The file must be .csv, .tsv, .xlsx, .xlsm, .xls or .json. For Excel, only the first sheet is read. The table must have exactly seven columns, the same as an exported changelog.</p>
 <p>Lines that already start with "Imported change |" or "Merge |" are treated as the action after that prefix, so you can export and import the same list again.</p>
 <p>Each row is tried on its own. A change is applied only if the sheet still matches what the row expects, for example:</p>
 <ul>
-<li>The column still exists, with the same name and type</li>
+<li>The column named in From/To still exists</li>
 <li>The ID still exists</li>
 <li>For a cell edit, the current value is still the old value in the row</li>
-<li>For a move or delete, the parent is still the parent recorded in the row</li>
+<li>For a move or delete, the parent is still the parent recorded in the Old column (empty means top)</li>
 <li>Detail values still pass that column's validation</li>
 </ul>
 <p>If the new value is already what the sheet has, that row is counted as unnecessary, not as a failure.</p>
