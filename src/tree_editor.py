@@ -53,7 +53,6 @@ from .classes import (
     RowStorage,
     SearchResult,
     TreeBuilder,
-    normalize_header_type,
 )
 from .constants import (
     BF,
