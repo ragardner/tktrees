@@ -3378,7 +3378,6 @@ class Tree_Editor(tk.Frame):
         errors=True,
         sort_later=False,
     ):
-        self.refresh_rows = set()
         if self.sort_later_dct is None:
             self.sort_later_dct = {
                 "filled": False,
@@ -3504,7 +3503,6 @@ class Tree_Editor(tk.Frame):
         errors=True,
         sort_later=False,
     ):
-        self.refresh_rows = set()
         if self.sort_later_dct is None:
             self.sort_later_dct = {
                 "filled": False,
@@ -3650,7 +3648,6 @@ class Tree_Editor(tk.Frame):
         return True
 
     def copy_paste(self, ID, hier, newparent, snapshot=True, errors=True, sort_later=False):
-        self.refresh_rows = set()
         if self.sort_later_dct is None:
             self.sort_later_dct = {
                 "filled": False,
@@ -3706,7 +3703,6 @@ class Tree_Editor(tk.Frame):
         return True
 
     def copy_paste_all(self, ID, hier, newparent, snapshot=True, errors=True, sort_later=False):
-        self.refresh_rows = set()
         if self.sort_later_dct is None:
             self.sort_later_dct = {
                 "filled": False,
@@ -6242,6 +6238,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.copied)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.copied, 1):
             if self.copy_paste(dct["id"], dct["hier"], self.selected_ID, sort_later=True):
@@ -6289,6 +6286,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.copied)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.copied, 1):
             if self.copy_paste(dct["id"], dct["hier"], self.selected_PAR, sort_later=True):
@@ -6344,6 +6342,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.copied)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.copied, 1):
             if self.copy_paste(dct["id"], dct["hier"], "", sort_later=True):
@@ -6391,6 +6390,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.copied)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.copied, 1):
             if self.copy_paste_all(dct["id"], dct["hier"], self.selected_ID, sort_later=True):
@@ -6438,6 +6438,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.copied)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.copied, 1):
             if self.copy_paste_all(dct["id"], dct["hier"], self.selected_PAR, sort_later=True):
@@ -6493,6 +6494,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.copied)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.copied, 1):
             if self.copy_paste_all(dct["id"], dct["hier"], "", sort_later=True):
@@ -6540,6 +6542,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.cut)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
             if self.cut_paste(dct["id"], dct["parent"], dct["hier"], self.selected_ID, sort_later=True):
@@ -6593,6 +6596,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.cut)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
             if self.cut_paste(dct["id"], dct["parent"], dct["hier"], self.selected_PAR, sort_later=True):
@@ -6654,6 +6658,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.cut)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
             if self.cut_paste(dct["id"], dct["parent"], dct["hier"], "", sort_later=True):
@@ -6707,6 +6712,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.cut)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
             if self.cut_paste_all(dct["id"], dct["parent"], dct["hier"], self.selected_ID, sort_later=True):
@@ -6761,6 +6767,7 @@ class Tree_Editor(tk.Frame):
         if redo_tree:
             self.start_work(f"Pasting {len(self.cut)} IDs...")
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
             if self.cut_paste_all(dct["id"], dct["parent"], dct["hier"], self.selected_PAR, sort_later=True):
@@ -6824,6 +6831,7 @@ class Tree_Editor(tk.Frame):
         self.start_work(f"Pasting {len(self.cut)} IDs...")
         successful = []
         self.sort_later_dct = None
+        self.refresh_rows = set()
         self.snapshot_paste_id()
         for i, dct in enumerate(self.cut, 1):
             if self.cut_paste_all(dct["id"], dct["parent"], dct["hier"], "", sort_later=True):
