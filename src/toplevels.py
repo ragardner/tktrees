@@ -1634,7 +1634,7 @@ class Delete_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         self.focus_force()
 
 
-class Tag_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
+class Check_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
     load_column_limit = 1
     green_bg = "#40bd59"
     red_bg = "#db7463"
@@ -1642,7 +1642,7 @@ class Tag_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
 
     def __init__(self, C, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
-        self.C = new_toplevel_chores(self, C, "Tag IDs using list")
+        self.C = new_toplevel_chores(self, C, "Check IDs using list")
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.theme = theme
 
@@ -1651,7 +1651,7 @@ class Tag_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         self.grid_rowconfigure(2, weight=1)
 
         self.status_bar = Readonly_Entry_With_Scrollbar(self, theme=theme, use_status_fg=True)
-        self.status_bar.change_text(text="Tag listed terms. Empty cells are ignored.")
+        self.status_bar.change_text(text="Check listed terms. Empty cells are ignored.")
         self.status_bar.my_entry.config(relief="flat", font=("Calibri", std_font_size))
         self.status_bar.grid(row=4, column=0, columnspan=2, sticky="we")
 
@@ -1729,14 +1729,22 @@ class Tag_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
             checked=False,
         )
         self.exact_match_button.grid(row=3, column=0, padx=10, pady=5, sticky="we")
-
-        self.tag_button = Button(
+        self.tag_button = X_Checkbutton(
             self.options_frame,
             text="Tag",
-            style="EF.Std.TButton",
-            command=self.tag,
+            style="x_button.Std.TButton",
+            compound="right",
+            checked=False,
         )
-        self.tag_button.grid(row=4, column=0, padx=50, pady=(40, 5), sticky="we")
+        self.tag_button.grid(row=4, column=0, padx=10, pady=5, sticky="we")
+
+        self.check_button = Button(
+            self.options_frame,
+            text="Check",
+            style="EF.Std.TButton",
+            command=self.check,
+        )
+        self.check_button.grid(row=5, column=0, padx=50, pady=(40, 5), sticky="we")
 
         self.done_button = Button(
             self.options_frame,
@@ -1744,7 +1752,7 @@ class Tag_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
             style="EF.Std.TButton",
             command=self.cancel,
         )
-        self.done_button.grid(row=5, column=0, padx=50, pady=(5, 20), sticky="we")
+        self.done_button.grid(row=6, column=0, padx=50, pady=(5, 20), sticky="we")
 
         self.bind("<Escape>", self.cancel)
         self.bind(f"<{ctrl_button}-z>", self.C.undo)
@@ -1785,8 +1793,9 @@ class Tag_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
             return ""
         return str(val)
 
-    def tag(self) -> None:
-        self.start_work("Tagging...")
+    def check(self) -> None:
+        do_tag = self.tag_button.get_checked()
+        self.start_work("Tagging..." if do_tag else "Checking...")
         self.update()
         data = self.sheetdisplay.get_sheet_data()
         terms_set = set()
@@ -1836,11 +1845,11 @@ class Tag_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
                             if term in cell:
                                 matched_lower.add(term)
                                 row_matched = True
-            if row_matched:
+            if row_matched and do_tag:
                 ik = r[ic].lower()
                 if ik in self.C.rns:
                     ids_to_tag.add(ik)
-        if ids_to_tag:
+        if do_tag and ids_to_tag:
             self.C.tag_ids(selection=ids_to_tag, toggle=False)
         success, fail, empty = [], [], []
         for row in data:
@@ -1876,7 +1885,10 @@ class Tag_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
             )
         self.sheetdisplay.refresh()
         n_terms = n_ok + n_fail
-        self.stop_work(f"{n_ok}/{n_terms} terms matched, {len(ids_to_tag)} IDs tagged")
+        status = f"{n_ok}/{n_terms} terms matched"
+        if do_tag:
+            status += f", {len(ids_to_tag)} IDs tagged"
+        self.stop_work(status)
         self.focus_force()
 
 

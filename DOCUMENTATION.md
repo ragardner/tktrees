@@ -330,13 +330,13 @@ Tags are stored with app data when you save .xlsx or .json.
 
 Edit -> Clear all tagged IDs cannot be undone.
 
-#### Tag IDs using list
+#### Check IDs using list
 
-Edit -> Tag IDs using list. One column of terms. Empty cells are ignored.
+Edit -> Check IDs using list. One column of terms. Empty cells are ignored.
 
 Find IDs and Find Details control which main-sheet cells are searched. At least one of those stays on. Exact Match requires a full cell match; otherwise the term can appear anywhere in the cell. All matching is not case sensitive. Parent columns are not searched.
 
-Load a file, paste from the clipboard, or type in the mini table. Tag adds matches to tagged IDs (it does not untag). After Tag, terms that found something are green at the top, terms that found nothing are red below. Empty rows stay at the bottom. The status line says how many terms matched and how many IDs were tagged, for example `8/12 terms matched, 15 IDs tagged`.
+Load a file, paste from the clipboard, or type in the mini table. Check tests whether each term is in the sheet. Tag, if on, also adds matches to tagged IDs (it does not untag). After Check, terms that exist are green at the top, terms that do not are red below. Empty rows stay at the bottom. The status line says how many terms matched, and if Tag is on how many IDs were tagged, for example `8/12 terms matched` or `8/12 terms matched, 15 IDs tagged`.
 
 #### Delete IDs using list
 

@@ -115,6 +115,7 @@ from .toplevels import (
     Add_Top_Id_Popup,
     Ask_Confirm,
     Changelog_Popup,
+    Check_Ids_Using_List_Popup,
     Delete_Ids_Using_List_Popup,
     Edit_Conditional_Formatting_Popup,
     Edit_Detail_Text_Popup,
@@ -133,7 +134,6 @@ from .toplevels import (
     Save_New_Version_Presave_Popup,
     Settings_Popup,
     Sort_Sheet_Popup,
-    Tag_Ids_Using_List_Popup,
     Text_Popup,
     Treeview_Id_Finder,
     View_Id_Popup,
@@ -306,8 +306,8 @@ class Tree_Editor(tk.Frame):
         )
         self.edit_menu.add_separator()
         self.edit_menu.add_command(
-            label="Tag IDs using list",
-            command=self.tag_ids_using_list,
+            label="Check IDs using list",
+            command=self.check_ids_using_list,
             image=self.icons["tag"],
             compound="left",
             **menu_kwargs,
@@ -2311,8 +2311,8 @@ class Tree_Editor(tk.Frame):
                 only_set_if_too_small=True,
             )
 
-    def tag_ids_using_list(self, event=None) -> None:
-        Tag_Ids_Using_List_Popup(self, theme=self.C.theme)
+    def check_ids_using_list(self, event=None) -> None:
+        Check_Ids_Using_List_Popup(self, theme=self.C.theme)
 
     def delete_ids_using_list(self, event=None) -> None:
         Delete_Ids_Using_List_Popup(self, theme=self.C.theme)
