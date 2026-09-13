@@ -7967,13 +7967,17 @@ class Tree_Editor(tk.Frame):
         self.sheet.focus_set()
 
     def tree_focus_leave(self, event=None):
+        # Sheet.bind() attaches this to every child canvas; skip intra-sheet moves.
+        if event is not None and self.tree.has_focus():
+            return
         self.l_frame.config(
             highlightbackground=themes[self.C.theme].table_bg,
             highlightcolor=themes[self.C.theme].table_bg,
         )
-        self.l_frame.update_idletasks()
 
     def tree_focus_enter(self, event=None):
+        if event is not None and not self.tree.has_focus():
+            return
         if self.get_display_option() in ("50/50", "adjustable"):
             self.l_frame.config(
                 highlightbackground=themes[self.C.theme].table_selected_box_cells_fg,
@@ -7983,18 +7987,20 @@ class Tree_Editor(tk.Frame):
         else:
             self.tree_focus_leave()
             self.l_frame.config(highlightthickness=0)
-        self.l_frame.update_idletasks()
         self.tree_has_focus = True
         self.sheet_has_focus = False
 
     def sheet_focus_leave(self, event=None):
+        if event is not None and self.sheet.has_focus():
+            return
         self.r_frame.config(
             highlightbackground=themes[self.C.theme].table_bg,
             highlightcolor=themes[self.C.theme].table_bg,
         )
-        self.r_frame.update_idletasks()
 
     def sheet_focus_enter(self, event=None):
+        if event is not None and not self.sheet.has_focus():
+            return
         if self.get_display_option() in ("50/50", "adjustable"):
             self.r_frame.config(
                 highlightbackground=themes[self.C.theme].table_selected_box_cells_fg,
@@ -8004,7 +8010,6 @@ class Tree_Editor(tk.Frame):
         else:
             self.sheet_focus_leave()
             self.r_frame.config(highlightthickness=0)
-        self.r_frame.update_idletasks()
         self.tree_has_focus = False
         self.sheet_has_focus = True
 
