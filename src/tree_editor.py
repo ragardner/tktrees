@@ -4624,18 +4624,8 @@ class Tree_Editor(tk.Frame):
                 for h in quick_hiers:
                     node.ps[h] = None
         if not self.auto_sort_nodes_bool:
-            current_nodes = dict.fromkeys(self.topnodes_order[self.hiers[0]])
-            wc = []
-            woc = []
-            for iid, node in self.nodes.items():
-                if iid not in current_nodes and node.ps[self.hiers[0]] == "":
-                    if node.cn[self.hiers[0]]:
-                        wc.append(iid)
-                    else:
-                        woc.append(iid)
-            self.topnodes_order[self.hiers[0]] = (
-                list(current_nodes) + sorted(wc, key=sort_key) + sorted(woc, key=sort_key)
-            )
+            for h in self.hiers:
+                self.topnodes_order[h] = self._topnodes_order_matching_ps(h, self.topnodes_order.get(h, []))
 
     def sort_node_cn(self, cn: list[str], h: int):
         wc = []
@@ -4697,11 +4687,14 @@ class Tree_Editor(tk.Frame):
                 node.cn[h] = [c for c in old_cn if c in new_set] + [c for c in new_cn if c not in old_set]
         self.topnodes_order = {}
         for h in self.hiers:
-            current_tops = {iid for iid, n in self.nodes.items() if n.ps[h] == ""}
-            kept = [iid for iid in old_topnodes_order.get(h, []) if iid in current_tops]
-            kept_set = set(kept)
-            new_tops = [iid for iid, n in self.nodes.items() if n.ps[h] == "" and iid not in kept_set]
-            self.topnodes_order[h] = kept + new_tops
+            self.topnodes_order[h] = self._topnodes_order_matching_ps(h, old_topnodes_order.get(h, []))
+
+    def _topnodes_order_matching_ps(self, h: int, old_order: list[str]) -> list[str]:
+        current_tops = {iid for iid, n in self.nodes.items() if n.ps[h] == ""}
+        kept = [iid for iid in old_order if iid in current_tops]
+        kept_set = set(kept)
+        new_tops = [iid for iid, n in self.nodes.items() if n.ps[h] == "" and iid not in kept_set]
+        return kept + new_tops
 
     def remake_topnodes_order(self):
         self.topnodes_order = {}
