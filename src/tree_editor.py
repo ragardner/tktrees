@@ -6881,8 +6881,8 @@ class Tree_Editor(tk.Frame):
             self.redraw_sheets()
             self.tree.scroll_to_item(iid.lower())
             self.tree.selection_set(tuple(dct["id"] for dct in successful))
-            self.disable_paste()
             self.stop_work(self.get_tree_editor_status_bar_text())
+        self.disable_paste()
         return successful
 
     def paste_cut_empty_all(self):
