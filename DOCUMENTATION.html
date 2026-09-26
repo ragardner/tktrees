@@ -282,6 +282,7 @@
 </li>
 <li><a href="#managing-columns">MANAGING COLUMNS</a><ul>
 <li><a href="#conditional-formatting">Conditional Formatting:</a></li>
+<li><a href="#fill-column">Fill column</a></li>
 </ul>
 </li>
 <li><a href="#guides">GUIDES</a><ul>
@@ -753,6 +754,31 @@
 <h4 id="conditional-formatting">Conditional Formatting:</h4>
 <p>You can add conditional formatting to columns, meaning when certain conditions are met the cells in that column will be filled with a chosen color. You can set a maximum of 35 conditions.</p>
 <p>Conditions are text matching: the cell must contain exactly the user input. Conditions are not case sensitive.</p>
+<h4 id="fill-column">Fill column</h4>
+<p>Right click a detail column header and choose Fill column. ID and parent columns do not have this item. It writes that detail column once. It does not stay linked to the tree.</p>
+<p>The box on the left starts empty. Text written into it is what gets written into the column's cells. Press Add to insert a token at the cursor. You can type your own words around a token. A token is replaced by the text it stands for when you press Fill column. A token with nothing to copy becomes an empty string, and the row is still written. <code>WIP-{parent}-A</code> on a top becomes <code>WIP--A</code>. A name that is not a column, or a column number past the sheet, is rejected before anything is written.</p>
+<p><strong>Which cells to fill</strong></p>
+<p>The first dropdown starts on "Only where this column is empty". The other choices are "Only where this column already has text" and "Every row".</p>
+<p>Only Tagged and Only Selected sit under that. Turn both on and a row has to be tagged and selected.</p>
+<p>Under the line, "The options here use this parent column:" sits above the parent column dropdown. The next dropdown is "Rows with or without children", "Only rows without children", or "Only rows with children". Then In this hierarchy, Depth equals, Descendants of selection, and Same level as selection. Depth 1 is the top of the tree. Descendants of selection and Same level as selection use the rows you have selected. If nothing is selected, those two fill no rows.</p>
+<p><strong>Add words</strong></p>
+<p>"Adding items using the options below will insert a token that will be replaced with the text the token represents."</p>
+<p>Parent column: "This dropdown chooses which hierarchy the following adds use upon pressing fill." <code>{parent}</code>, <code>{grandparent}</code>, <code>{great-grandparent}</code>, <code>{great-great-grandparent}</code>, <code>{root}</code>, <code>{path}</code>, and <code>{depth}</code> use that hierarchy.</p>
+<p>Insert an ID or a cell. "Choose where to look, what to copy, and then press Add." The first dropdown is This ID, Parent, Grandparent, Great-grandparent, Great-great-grandparent, or Root. "Choose a column to copy from." Then Add.</p>
+<p>Insert label, depth, or path. The dropdown is Label, Depth, or Path. "Depth inserts an item's current depth, 1 being a top/root. Path is the names from the top down, such as Animals &gt; Cats &gt; Lion."</p>
+<p>Tokens you can type, as well as the ones Add inserts:</p>
+<ul>
+<li><code>{id}</code> this ID</li>
+<li><code>{parent}</code> <code>{grandparent}</code> <code>{great-grandparent}</code> <code>{great-great-grandparent}</code> <code>{root}</code> that ID, using the Parent column under Add words</li>
+<li><code>{Description}</code> this row, that column. A name with spaces is written as it is, <code>{Cost centre}</code></li>
+<li><code>{parent.Description}</code> that column on the parent's row. The same for grandparent, great-grandparent, great-great-grandparent, and root</li>
+<li><code>{5}</code> this row, column 5. Column 1 is the first column. Add does not insert numbers; type them</li>
+<li><code>{parent.5}</code> column 5 on the parent's row</li>
+<li><code>{label}</code> the name shown in the tree</li>
+<li><code>{depth}</code> the item's current depth, using the Parent column under Add words. 1 is a top/root</li>
+<li><code>{path}</code> the names from the top down, joined with <code>&gt;</code>. A top is just its name</li>
+</ul>
+<p>Each changed cell is its own changelog row. Undo reverts the whole fill.</p>
 <hr />
 <h1 id="guides">GUIDES</h1>
 <h4 id="changelog">Changelog</h4>

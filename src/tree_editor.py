@@ -81,6 +81,7 @@ from .constants import (
     tv_lvls_colors,
     warnings_header,
 )
+from .fill_column import FillFilters, plan_fill
 from .functions import (
     bytes_io_wb,
     convert_old_xl_to_xlsx,
@@ -123,6 +124,7 @@ from .toplevels import (
     Enter_Sheet_Name_Popup,
     Error,
     Export_Flattened_Popup,
+    Fill_Column_Popup,
     Get_Clipboard_Data_Popup,
     Merge_Sheets_Popup,
     Post_Import_Changes_Popup,
@@ -876,6 +878,13 @@ class Tree_Editor(tk.Frame):
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Conditional Formatting",
             command=self.rc_edit_formatting,
+            image=self.icons["ICON_EDIT"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.tree_sheet_rc_menu_single_col.add_command(
+            label="Fill column",
+            command=self.rc_fill_column,
             image=self.icons["ICON_EDIT"],
             compound="left",
             **menu_kwargs,
@@ -3112,10 +3121,9 @@ class Tree_Editor(tk.Frame):
         #     #     self.tree_drop_iid()
 
     def tree_sheet_rc_menu_option_enabler_disabler(self, col: int):
-        if col == self.ic or col in self.hiers:
-            self.tree_sheet_rc_menu_single_col.entryconfig("Validation", state="disabled")
-        else:
-            self.tree_sheet_rc_menu_single_col.entryconfig("Validation", state="normal")
+        state = "disabled" if col == self.ic or col in self.hiers else "normal"
+        self.tree_sheet_rc_menu_single_col.entryconfig("Validation", state=state)
+        self.tree_sheet_rc_menu_single_col.entryconfig("Fill column", state=state)
 
     def tree_rc_release(self, event):
         if self.drag_iid is not None:
@@ -4763,6 +4771,98 @@ class Tree_Editor(tk.Frame):
                         break
 
         self.refresh_rows = set()
+
+    def _fill_column_selected_ids(self) -> set[str]:
+        selected = {iid.lower() for iid in self.tree.selection()}
+        for r in self.sheet.get_selected_rows():
+            if isinstance(r, int) and 0 <= r < len(self.sheet.MT.data):
+                selected.add(self.sheet.MT.data[r][self.ic].lower())
+        return selected
+
+    def rc_fill_column(self, event=None):
+        if (col := self.rc_selected_col()) is None:
+            return
+        selected = self._fill_column_selected_ids()
+        popup = Fill_Column_Popup(
+            self,
+            self.headers[col].name,
+            [h.name for h in self.headers],
+            [self.headers[h].name for h in self.hiers],
+            self.headers[self.pc].name,
+            self.C.theme,
+        )
+        if not popup.result:
+            return
+        self.apply_fill_column(col, popup.result, selected)
+
+    def apply_fill_column(self, col: int, spec: dict, selected: set[str]) -> None:
+        if col == self.ic or col in self.hiers:
+            return
+        fill_h = self._col_index_named(spec["fill_hier"])
+        filter_h = self._col_index_named(spec["filter_hier"])
+        if fill_h not in self.hiers or filter_h not in self.hiers:
+            Error(self, "Choose a hierarchy for the fill and for the filters", theme=self.C.theme)
+            return
+        filters = FillFilters(
+            emptiness=spec["emptiness"],
+            tree_place=spec["tree_place"],
+            in_hierarchy=spec["in_hierarchy"],
+            depth=spec["depth"],
+            tagged=spec["tagged"],
+            selected=spec["selected"],
+            descendants=spec["descendants"],
+            same_level=spec["same_level"],
+        )
+        changes, err = plan_fill(
+            rows=self.sheet.MT.data,
+            ic=self.ic,
+            target_col=col,
+            nodes=self.nodes,
+            headers=[h.name for h in self.headers],
+            fill_h=fill_h,
+            filter_h=filter_h,
+            label_col=self.tv_label_col,
+            template=spec["template"],
+            filters=filters,
+            tagged=set(self.tagged_ids),
+            selected=selected,
+        )
+        if err:
+            Error(self, err, theme=self.C.theme)
+            return
+        skipped = 0
+        accepted = []
+        for rn, old, new in changes:
+            if not self.detail_is_valid_for_col(col, new):
+                skipped += 1
+                continue
+            accepted.append((rn, old, new))
+        if not accepted:
+            if skipped:
+                self.C.status_bar.change_text("No cells filled. Values were not in the column validation")
+            else:
+                self.C.status_bar.change_text("No cells to fill")
+            return
+        self.start_work("Filling column...")
+        msg = ""
+        try:
+            self.snapshot_ctrl_x_v_del_key()
+            refresh_rows = set()
+            for rn, old, new in accepted:
+                self.vs[-1]["cells"][(rn, col)] = old
+                self.edit_cell_multiple(rn, col, new)
+                refresh_rows.add(rn)
+            self.changelog_singular("Edit cell")
+            self.refresh_formatting(rows=refresh_rows, columns=col)
+            for rn in refresh_rows:
+                self.refresh_tree_item(self.sheet.MT.data[rn][self.ic])
+            self.disable_paste()
+            self.redraw_sheets()
+            msg = self.get_tree_editor_status_bar_text()
+            if skipped:
+                msg = f"{msg}  ({skipped} skipped, not in validation)"
+        finally:
+            self.stop_work(msg)
 
     def rc_edit_validation(self, event=None):
         if (col := self.rc_selected_col()) is None:

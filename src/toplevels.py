@@ -46,6 +46,18 @@ from .constants import (
     top_left_icon,
     upone_dir,
 )
+from .fill_column import (
+    CELL_CHOICES,
+    CELL_EMPTINESS,
+    TREE_FIELDS,
+    TREE_PLACE,
+    TREE_PLACE_CHOICES,
+    WHO_CHOICES,
+    ascii_int,
+    inserted_column_token,
+    inserted_tree_field,
+    parse_template,
+)
 from .functions import (
     b32_x_dict,
     bytes_io_wb,
@@ -3416,6 +3428,265 @@ class Add_Detail_Column_Popup(tk.Toplevel):
             self.result = self.detail_name_display.get_my_value()
         else:
             self.result = "".join(self.detail_name_display.get_my_value().strip().split())
+        self.destroy()
+
+    def cancel(self, event=None):
+        self.destroy()
+
+
+class Fill_Column_Popup(tk.Toplevel):
+    def __init__(self, C, _col_name, headers, hier_names, current_hier, theme="dark"):
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
+        self.C = new_toplevel_chores(self, C, f"{app_title} - Fill column", resizable=True)
+        self.theme = theme
+        self.headers = list(headers)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.textbox = Working_Text(self, wrap="word", font=EF, theme=theme)
+        self.textbox.config(width=48, height=22)
+        self.textbox.grid(row=0, column=0, sticky="nswe", padx=(20, 8), pady=(20, 8))
+        self.canvas = tk.Canvas(
+            self,
+            width=440,
+            highlightthickness=0,
+            bg=themes[theme].top_left_bg,
+        )
+        self.canvas.grid(row=0, column=1, sticky="nswe", pady=(12, 8))
+        self.options_scroll = Scrollbar(self, self.canvas.yview, "vertical", self.canvas)
+        self.options_scroll.grid(row=0, column=2, sticky="ns", padx=(0, 12), pady=(12, 8))
+        self.opts = Frame(self.canvas, theme=theme)
+        self.opts_window = self.canvas.create_window((0, 0), window=self.opts, anchor="nw")
+        self.opts.bind("<Configure>", self._options_configured)
+        self.canvas.bind("<Configure>", self._canvas_configured)
+        self.opts.grid_columnconfigure(0, weight=1)
+
+        row = 0
+        self._section(row, "Which cells to fill", top=16)
+        row += 1
+        self.emptiness = self._dropdown(row, CELL_CHOICES, CELL_CHOICES[0])
+        row += 1
+        self.tagged = self._check(row, "Only Tagged")
+        row += 1
+        self.selected = self._check(row, "Only Selected")
+        row += 1
+        self._rule(row)
+        row += 1
+        self._hint(row, "The options here use this parent column:")
+        row += 1
+        self.filter_hier = self._dropdown(row, hier_names, current_hier)
+        self.filter_hier.grid_configure(pady=(0, 23))
+        row += 1
+        self.tree_place = self._dropdown(row, TREE_PLACE_CHOICES, TREE_PLACE_CHOICES[0])
+        row += 1
+        self.in_hierarchy = self._check(row, "In this hierarchy")
+        row += 1
+        self.depth_on = self._check(row, "Depth equals", with_entry=True)
+        self.depth_entry = self.depth_on.entry
+        row += 1
+        self.descendants = self._check(row, "Descendants of selection")
+        row += 1
+        self.same_level = self._check(row, "Same level as selection")
+        row += 1
+        self._hint(
+            row,
+            "Depth 1 is the top of the tree. Descendants and Same level use the rows you have selected. "
+            "If nothing is selected, those two fill no rows.",
+        )
+        row += 1
+        self._rule(row)
+        row += 1
+
+        self._section(row, "Add words")
+        row += 1
+        self._hint(
+            row,
+            "Adding items using the options below will insert a token that will be replaced with the text the token represents.",
+        )
+        row += 1
+        self._caption(row, "Parent column")
+        row += 1
+        self._hint(row, "This dropdown chooses which hierarchy the following adds use upon pressing fill.")
+        row += 1
+        self.fill_hier = self._dropdown(row, hier_names, current_hier)
+        row += 1
+        self._rule(row)
+        row += 1
+        self._caption(row, "Insert an ID or a cell")
+        row += 1
+        self._hint(row, "Choose where to look, what to copy, and then press Add.")
+        row += 1
+        self.who = self._dropdown(row, WHO_CHOICES, WHO_CHOICES[0])
+        self.who.grid_configure(pady=(0, 18))
+        row += 1
+        self._hint(row, "Choose a column to copy from.")
+        row += 1
+        self.column = self._dropdown(row, self.headers, self.headers[0])
+        row += 1
+        self._add_button(row, self.add_column)
+        row += 1
+        self._rule(row)
+        row += 1
+        self._caption(row, "Insert label, depth, or path")
+        row += 1
+        self.tree_field = self._dropdown(row, TREE_FIELDS, TREE_FIELDS[0])
+        row += 1
+        self._hint(
+            row,
+            "Depth inserts an item's current depth, 1 being a top/root. "
+            "Path is the names from the top down, such as Animals > Cats > Lion.",
+        )
+        row += 1
+        self._add_button(row, self.add_tree_field)
+
+        self._bind_wheel(self.canvas)
+        self._bind_wheel(self.opts)
+
+        self.error_label = Label(self, text="", font=BF, theme=theme, anchor="w")
+        self.error_label.config(wraplength=920)
+        self.error_label.grid(row=1, column=0, columnspan=3, sticky="ew", padx=20)
+        self.button_frame = Frame(self, theme=theme)
+        self.button_frame.grid(row=2, column=0, columnspan=3, sticky="ew")
+        self.button_frame.grid_columnconfigure(0, weight=1)
+        self.filling = Label(
+            self.button_frame,
+            text="Text written into the text box above will be written into the column's cells.",
+            font=BF,
+            theme=theme,
+            anchor="w",
+        )
+        self.filling.config(wraplength=620)
+        self.filling.grid(row=0, column=0, sticky="w", padx=(20, 12), pady=(8, 16))
+        Button(self.button_frame, text="Fill column", style="EF.Std.TButton", command=self.confirm).grid(
+            row=0, column=1, sticky="e", padx=(8, 10), pady=(8, 16)
+        )
+        Button(self.button_frame, text="Cancel", style="EF.Std.TButton", command=self.cancel).grid(
+            row=0, column=2, sticky="e", padx=(10, 20), pady=(8, 16)
+        )
+        self.result = None
+        self.bind("<Escape>", self.cancel)
+        show_toplevel_chores(self, width=980, height=640, focus=self.textbox)
+
+    def _section(self, row, text, top=8):
+        Label(self.opts, text, TF, theme=self.theme, anchor="center").grid(
+            row=row, column=0, sticky="ew", padx=18, pady=(top, 8)
+        )
+
+    def _caption(self, row, text):
+        Label(self.opts, text, EFB, theme=self.theme, anchor="center").grid(
+            row=row, column=0, sticky="ew", padx=18, pady=(12, 4)
+        )
+
+    def _hint(self, row, text):
+        label = Label(self.opts, text, BF, theme=self.theme, anchor="w")
+        label.config(wraplength=390, justify="left")
+        label.grid(row=row, column=0, sticky="ew", padx=18, pady=(0, 6))
+        return label
+
+    def _rule(self, row):
+        ttk.Separator(self.opts, orient="horizontal").grid(row=row, column=0, sticky="ew", padx=22, pady=(16, 12))
+
+    def _dropdown(self, row, values, current):
+        dropdown = Ez_Dropdown(self.opts, font=BF, width_=32)
+        dropdown["values"] = values
+        dropdown.set_my_value(current)
+        dropdown.grid(row=row, column=0, sticky="ew", padx=18, pady=(0, 6))
+        return dropdown
+
+    def _add_button(self, row, command):
+        Button(self.opts, text="Add", style="BF.Std.TButton", command=command).grid(
+            row=row, column=0, sticky="e", padx=18, pady=(4, 14)
+        )
+
+    def _check(self, row, text, with_entry=False):
+        frame = Frame(self.opts, theme=self.theme)
+        frame.grid(row=row, column=0, sticky="ew", padx=18, pady=8)
+        button = X_Checkbutton(frame, text="", style="Std.TButton")
+        button.configure(width=0, padding=0)
+        button.pack(side="right")
+        entry = None
+        if with_entry:
+            entry = Normal_Entry(frame, font=EF, theme=self.theme, width_=8)
+            entry.config(
+                highlightthickness=1,
+                highlightbackground=themes[self.theme].table_fg,
+                highlightcolor=themes[self.theme].table_fg,
+            )
+            entry.pack(side="right", padx=(12, 12))
+        label = Label(frame, text, EF, theme=self.theme, anchor="w")
+        label.pack(side="left", fill="x", expand=True)
+        label.bind("<Button-1>", button.B1)
+        frame.bind("<Button-1>", button.B1)
+        button.entry = entry
+        return button
+
+    def _options_configured(self, event=None):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def _canvas_configured(self, event):
+        self.canvas.itemconfig(self.opts_window, width=event.width)
+
+    def _bind_wheel(self, widget):
+        widget.bind("<MouseWheel>", self._on_wheel, add="+")
+        widget.bind("<Button-4>", self._on_wheel, add="+")
+        widget.bind("<Button-5>", self._on_wheel, add="+")
+        for child in widget.winfo_children():
+            self._bind_wheel(child)
+
+    def _on_wheel(self, event):
+        number = getattr(event, "num", None)
+        if number == 4:
+            self.canvas.yview_scroll(-3, "units")
+        elif number == 5:
+            self.canvas.yview_scroll(3, "units")
+        else:
+            delta = getattr(event, "delta", 0) or 0
+            if delta:
+                direction = -1 if delta > 0 else 1
+                self.canvas.yview_scroll(direction * max(1, abs(delta) // 120), "units")
+        return "break"
+
+    def _insert(self, body):
+        with suppress(tk.TclError):
+            self.textbox.delete("sel.first", "sel.last")
+        self.textbox.insert(tk.INSERT, "{" + body + "}")
+        self.textbox.focus_set()
+
+    def add_column(self, event=None):
+        # Index 0 is the ID sentinel, even when a header has the same text.
+        self._insert(inserted_column_token(self.who.get_my_value(), self.column.get_my_value(), self.headers))
+
+    def add_tree_field(self, event=None):
+        self._insert(inserted_tree_field(self.tree_field.get_my_value()))
+
+    def _show_error(self, msg):
+        self.error_label.config(text=msg, foreground="red")
+
+    def confirm(self, event=None):
+        self.error_label.config(text="")
+        template = self.textbox.get("1.0", "end-1c")
+        _, err = parse_template(template, self.headers)
+        if err:
+            self._show_error(err)
+            return
+        depth = None
+        if self.depth_on.get_checked():
+            depth = ascii_int(self.depth_entry.get().strip())
+            if depth is None or depth < 1:
+                self._show_error("Depth must be a whole number starting at 1")
+                return
+        self.result = {
+            "template": template,
+            "emptiness": CELL_EMPTINESS[self.emptiness.get_my_value()],
+            "tree_place": TREE_PLACE[self.tree_place.get_my_value()],
+            "in_hierarchy": self.in_hierarchy.get_checked(),
+            "depth": depth,
+            "tagged": self.tagged.get_checked(),
+            "selected": self.selected.get_checked(),
+            "descendants": self.descendants.get_checked(),
+            "same_level": self.same_level.get_checked(),
+            "fill_hier": self.fill_hier.get_my_value(),
+            "filter_hier": self.filter_hier.get_my_value(),
+        }
         self.destroy()
 
     def cancel(self, event=None):
