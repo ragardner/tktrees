@@ -281,19 +281,23 @@ Each changed cell is its own changelog row. Undo reverts the whole fill.
 
 Every change you make is recorded. Open the list with View -> View changelog, Export -> Export specific changes, or Ctrl + L.
 
-The list has seven columns: date, type, ID (or column name), old value (red), new value (green), from column, to column.
+The list has seven columns: date and time, type, ID (or column name), old value (red), new value (green), from column, to column.
+
+One action can be several lines. A paste, a delete, a multi-cell edit, an import, or a merge writes a line per ID or cell, with `|` on the end of those types, then a summary line. Undo and prune remove the whole action. The status line is `Total changes: N (M rows)`. N is the number of actions. M is the number of lines.
+
+A new action stores one local time for every line in it, in ISO-8601 form such as `2026-09-27T15:04:05`.
 
 Names and headers are whole cells. They are never packed into a sentence. An empty old or new parent means the ID is (or becomes) a top. From/To column hold the hierarchy or detail header name when the action uses one.
 
 From that window you can:
 
 - Export all: save the whole list as .csv, .tsv, .xlsx or .json
-- Export selected as: save only the rows you have selected
-- Prune up to selected: delete from the start of the list through the selected row. If that row is part of a grouped change (the type ends with |), pruning continues to the end of the group. This can be undone.
+- Export selected as: save only the lines you have selected
+- Prune up to selected: delete from the start of the list through the action that contains the selected line. The success text counts actions. This can be undone.
 
 Two other export menu items skip the window:
 
-- Export file session changes: only changes made since this file was opened
+- Export file session changes: lines recorded since this file was opened. Undo drops an action out of that set. Prune moves the start of it back when earlier actions are removed.
 - Export all changes: the whole list, straight to a file
 
 The changelog can be stored with app data, and you can also save a viewable changelog sheet (see XLSX Files). Undo does not survive closing the file, but the changelog can be saved.

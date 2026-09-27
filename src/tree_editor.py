@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import csv
-import datetime
 import json
 import os
 import pickle
@@ -47,6 +46,7 @@ from tksheet import (
     num2alpha as _n2a,
 )
 
+from .changelog import ChangelogLog
 from .classes import (
     Header,
     Node,
@@ -165,13 +165,12 @@ class Tree_Editor(tk.Frame):
         self.currently_adjusting_divider = False
         self.tree_has_focus = True
         self.sheet_has_focus = False
-        self.sheet_changes = 0
         self.nodes = {}
         self.topnodes_order = {}
         self.levels = defaultdict(list)
         self.row_len = 0
         self.headers = []
-        self.changelog = []
+        self.changelog = ChangelogLog(on_unsaved=self.increment_unsaved)
         self.treecolsel = 0
         self.ic = 0
         self.tv_label_col = 0
@@ -1575,12 +1574,8 @@ class Tree_Editor(tk.Frame):
                 for h in program_data.headers
             ]
             self.row_len = len(self.headers)
-            self.changelog = []
-            for row in program_data.changelog or []:
-                row = list(row)
-                if len(row) < 7:
-                    row.extend([""] * (7 - len(row)))
-                self.changelog.append(tuple(row[:7]))
+            self.changelog.load(program_data.changelog or [], warnings=self.warnings)
+            self.changelog.mark_opened()
             self.sheet.align(program_data.sheet_table_align, redraw=False)
             self.sheet.row_index_align(program_data.sheet_index_align, redraw=False)
             self.sheet.header_align(program_data.sheet_header_align, redraw=False)
@@ -1792,13 +1787,12 @@ class Tree_Editor(tk.Frame):
             self.C.menubar_state("disabled")
             self.bind_or_unbind_save("disabled")
         self.C.unsaved_changes = False
-        self.sheet_changes = 0
         self.tv_label_col = 0
         self.selected_ID = ""
         self.selected_PAR = ""
         self.rc_iid = None
         self.disable_paste()
-        self.changelog = []
+        self.changelog.clear()
         self.search_results = []
         self.sheet_search_results = []
         self.tree.reset()
@@ -2073,34 +2067,16 @@ class Tree_Editor(tk.Frame):
         )
 
     def changelog_singular(self, text):
-        self.changelog[-1] = self.changelog[-1][:1] + (text,) + self.changelog[-1][2:]
-        self.increment_unsaved()
+        self.changelog.singular(text)
+
+    def changelog_finish(self):
+        self.changelog.finish_plain()
 
     def changelog_append(self, change, id_="", old="", new="", from_col="", to_col=""):
-        self.changelog.append(
-            (
-                self.get_datetime_changelog(increment_unsaved=True),
-                change,
-                id_,
-                old,
-                new,
-                from_col,
-                to_col,
-            )
-        )
+        self.changelog.append(change, id_, old, new, from_col, to_col)
 
     def changelog_append_no_unsaved(self, change, id_="", old="", new="", from_col="", to_col=""):
-        self.changelog.append(
-            (
-                self.get_datetime_changelog(increment_unsaved=False),
-                change,
-                id_,
-                old,
-                new,
-                from_col,
-                to_col,
-            )
-        )
+        self.changelog.append_no_unsaved(change, id_, old, new, from_col, to_col)
 
     def _col_index_named(self, name):
         if name is None or name == "":
@@ -3032,7 +3008,7 @@ class Tree_Editor(tk.Frame):
         else:
             cc_add = ""
         if self.changelog:
-            end = f"|   Last Edit: {self.changelog[-1][1]}   {cc_add}"
+            end = f"|   Last Edit: {self.changelog.last_type()}   {cc_add}"
         else:
             end = f"|   No Changes Made   {cc_add}"
         return f"{len(self.sheet.MT.data)} IDs   {tree_addition}{sheet_addition}{end}"
@@ -4928,12 +4904,6 @@ class Tree_Editor(tk.Frame):
         self.set_undo_label()
         self.C.change_app_title(star="add")
 
-    def get_datetime_changelog(self, increment_unsaved=True):
-        if increment_unsaved:
-            self.increment_unsaved()
-        self.sheet_changes += 1
-        return f"{datetime.datetime.today().strftime('%Y/%m/%d')}"
-
     def rc_rename_col(self, event=None):
         if (col := self.rc_selected_col(allow_hiers=True)) is None:
             return
@@ -5087,7 +5057,8 @@ class Tree_Editor(tk.Frame):
             for col in cols:
                 hdr = self.headers[col]
                 kind = "Delete hierarchy column" if hdr.type_ == "Parent" else "Delete detail column"
-                self.changelog_append(kind, hdr.name)
+                self.changelog_append_no_unsaved(kind, hdr.name)
+            self.changelog_finish()
         cols_set = set(cols)
         self.headers = [hdr for i, hdr in enumerate(self.headers) if i not in cols_set]
         self.hiers_orig = self.hiers.copy()
@@ -5192,24 +5163,6 @@ class Tree_Editor(tk.Frame):
                 )
         self.redraw_sheets()
 
-    def prev_change(self) -> Generator[int]:
-        prefix = (
-            "Merge | ",
-            "Imported change |",
-            "Edit cell |",
-            "Delete ID from all hierarchies |",
-            "Delete ID |",
-            "Delete ID + all children |",
-            "Delete ID + all children from all hierarchies |",
-            "Cut and paste ID + children |",
-            "Copy and paste ID |",
-            "Copy and paste ID + children |",
-            "Cut and paste ID |",
-        )
-        for idx in range(len(self.changelog) - 1, -1, -1):
-            if not self.changelog[idx][1].startswith(prefix):
-                yield idx
-
     def undo(self, event=None):
         if self.C.working or not self.vs:
             return "break"
@@ -5240,29 +5193,11 @@ class Tree_Editor(tk.Frame):
         self.clear_copied_details()
         self.headers = new_vs["required_data"]["headers"]
 
-        if new_vs["type"] in (
-            "full sheet",
-            "ctrl x, v, del key",
-            "ctrl x, v, del key id par",
-            "paste id",
-            "delete ids",
-        ):
-            try:
-                gen = self.prev_change()
-                next(gen)
-                prev_idx = next(gen)
-                self.sheet_changes -= len(self.changelog) - prev_idx - 1
-                self.changelog = self.changelog[: prev_idx + 1]
-            except Exception:
-                self.sheet_changes = 0
-                self.changelog = []
-        elif new_vs["type"] == "add id":
-            n = new_vs.get("changelog_len", max(0, len(self.changelog) - 1))
-            n = max(0, min(n, len(self.changelog)))
-            self.sheet_changes = max(0, self.sheet_changes - (len(self.changelog) - n))
-            self.changelog = self.changelog[:n]
+        if new_vs["type"] == "prune changelog":
+            self.changelog.pop()
+            self.changelog.restore_front(new_vs["rows"], new_vs["opened_at"])
         else:
-            del self.changelog[-1]
+            self.changelog.pop()
         if new_vs["type"] == "add id":
             rn = new_vs["row"]["rn"]
             if new_vs["row"]["added_or_changed"] == "changed":
@@ -5334,9 +5269,6 @@ class Tree_Editor(tk.Frame):
             ]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
-
-        elif new_vs["type"] == "prune changelog":
-            self.changelog = new_vs["rows"] + self.changelog
 
         elif new_vs["type"] == "drag rows":
             self.sheet.mapping_move_rows(dict(zip(new_vs["row_mapping"].values(), new_vs["row_mapping"])), undo=False)
@@ -5506,7 +5438,6 @@ class Tree_Editor(tk.Frame):
             {
                 "type": "add id",
                 "row": {},
-                "changelog_len": len(self.changelog),
                 "required_data": self.get_required_snapshot_data(),
             }
         )
@@ -5789,16 +5720,19 @@ class Tree_Editor(tk.Frame):
 
     def snapshot_prune_changelog(self, up_to):
         self.snapshot_chore()
+        opened_at = self.changelog.opened_at
+        removed = list(self.changelog.changes[: up_to + 1])
         self.changelog_append(
             "Pruned changelog",
-            f"From: {self.changelog[0][0]} To: {self.changelog[up_to][0]}",
+            f"From: {removed[0].first_stamp()} To: {removed[-1].last_stamp()}",
             "",
             "",
         )
         self.vs.append(
             {
                 "type": "prune changelog",
-                "rows": self.changelog[: up_to + 1],
+                "rows": removed,
+                "opened_at": opened_at,
                 "required_data": self.get_required_snapshot_data(),
             }
         )
@@ -7140,7 +7074,7 @@ class Tree_Editor(tk.Frame):
         success = self.add(new_id, self.selected_ID)
         if not success:
             return
-        self.changelog_append(
+        self.changelog_append_no_unsaved(
             "Add ID",
             new_id,
             self.selected_ID,
@@ -7151,7 +7085,7 @@ class Tree_Editor(tk.Frame):
             new_label = popup.id_label
             if not new_label:
                 new_label = new_id
-            self.changelog_append(
+            self.changelog_append_no_unsaved(
                 "Edit cell",
                 new_id,
                 f"{self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col]}",
@@ -7159,6 +7093,7 @@ class Tree_Editor(tk.Frame):
                 self.headers[self.tv_label_col].name,
             )
             self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col] = new_label
+        self.changelog_finish()
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
@@ -7189,7 +7124,7 @@ class Tree_Editor(tk.Frame):
         if not success:
             return
         if self.selected_PAR == "":
-            self.changelog_append(
+            self.changelog_append_no_unsaved(
                 "Add ID",
                 new_id,
                 "",
@@ -7197,7 +7132,7 @@ class Tree_Editor(tk.Frame):
                 self.headers[self.pc].name,
             )
         else:
-            self.changelog_append(
+            self.changelog_append_no_unsaved(
                 "Add ID",
                 new_id,
                 self.selected_PAR,
@@ -7208,7 +7143,7 @@ class Tree_Editor(tk.Frame):
             new_label = popup.id_label
             if not new_label:
                 new_label = new_id
-            self.changelog_append(
+            self.changelog_append_no_unsaved(
                 "Edit cell",
                 new_id,
                 f"{self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col]}",
@@ -7216,6 +7151,7 @@ class Tree_Editor(tk.Frame):
                 self.headers[self.tv_label_col].name,
             )
             self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col] = new_label
+        self.changelog_finish()
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
@@ -7237,7 +7173,7 @@ class Tree_Editor(tk.Frame):
         success = self.add(new_id, "", insert_row)
         if not success:
             return
-        self.changelog_append(
+        self.changelog_append_no_unsaved(
             "Add ID",
             new_id,
             "",
@@ -7248,7 +7184,7 @@ class Tree_Editor(tk.Frame):
             new_label = popup.id_label
             if not new_label:
                 new_label = new_id
-            self.changelog_append(
+            self.changelog_append_no_unsaved(
                 "Edit cell",
                 new_id,
                 f"{self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col]}",
@@ -7256,6 +7192,7 @@ class Tree_Editor(tk.Frame):
                 self.headers[self.tv_label_col].name,
             )
             self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col] = new_label
+        self.changelog_finish()
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
@@ -7278,7 +7215,7 @@ class Tree_Editor(tk.Frame):
         success = self.add(new_id, "")
         if not success:
             return
-        self.changelog_append(
+        self.changelog_append_no_unsaved(
             "Add ID",
             new_id,
             "",
@@ -7289,7 +7226,7 @@ class Tree_Editor(tk.Frame):
             new_label = popup.id_label
             if not new_label:
                 new_label = new_id
-            self.changelog_append(
+            self.changelog_append_no_unsaved(
                 "Edit cell",
                 new_id,
                 f"{self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col]}",
@@ -7297,6 +7234,7 @@ class Tree_Editor(tk.Frame):
                 self.headers[self.tv_label_col].name,
             )
             self.sheet.MT.data[self.rns[new_ik]][self.tv_label_col] = new_label
+        self.changelog_finish()
         self.disable_paste()
         self.redo_tree_display()
         self.refresh_dropdowns()
@@ -8195,13 +8133,14 @@ class Tree_Editor(tk.Frame):
                 self.stop_work("Can only save .csv/.xlsx/.json file types")
                 return
             self.C.status_bar.change_text("Saving changelog...")
-            if event == "all":
+            rows = self.changelog.flatten() if event == "all" else self.changelog.session_rows()
+            if event in ("all", "sheet"):
                 try:
                     if newfile.lower().endswith(".xlsx"):
                         self.C.wb = Workbook(write_only=True)
                         ws = self.C.wb.create_sheet(title="Changelog")
                         ws.append(xlsx_changelog_header(ws))
-                        for row in self.changelog:
+                        for row in rows:
                             ws.append(e if e else None for e in row)
                         self.C.wb.save(newfile)
                         self.C.try_to_close_workbook()
@@ -8213,55 +8152,14 @@ class Tree_Editor(tk.Frame):
                                 lineterminator="\n",
                             )
                             writer.writerow(changelog_header)
-                            writer.writerows(self.changelog)
+                            writer.writerows(rows)
                     elif newfile.lower().endswith(".json"):
                         with open(newfile, "w", newline="") as fh:
                             fh.write(
                                 json.dumps(
                                     full_sheet_to_dict(
                                         changelog_header,
-                                        self.changelog,
-                                        include_headers=True,
-                                        format_=self.json_format,
-                                    ),
-                                    indent=4,
-                                )
-                            )
-                except Exception as error_msg:
-                    self.C.try_to_close_workbook()
-                    self.stop_work(f"Error saving file: {error_msg}")
-                    return
-                self.stop_work("Success! Changelog saved")
-            elif event == "sheet":
-                from_row = len(self.changelog) - self.sheet_changes
-                to_row = len(self.changelog)
-                try:
-                    if newfile.lower().endswith(".xlsx"):
-                        self.C.wb = Workbook(write_only=True)
-                        ws = self.C.wb.create_sheet(title="Changelog")
-                        ws.append(xlsx_changelog_header(ws))
-                        if self.sheet_changes:
-                            for row in islice(self.changelog, from_row, to_row):
-                                ws.append(e if e else None for e in row)
-                        self.C.wb.save(newfile)
-                        self.C.try_to_close_workbook()
-                    elif newfile.lower().endswith((".csv", ".tsv")):
-                        with open(newfile, "w", newline="", encoding="utf-8") as fh:
-                            writer = csv.writer(
-                                fh,
-                                dialect=csv.excel_tab if newfile.lower().endswith(".tsv") else csv.excel,
-                                lineterminator="\n",
-                            )
-                            writer.writerow(changelog_header)
-                            if self.sheet_changes:
-                                writer.writerows(islice(self.changelog, from_row, to_row))
-                    elif newfile.lower().endswith(".json"):
-                        with open(newfile, "w", newline="") as fh:
-                            fh.write(
-                                json.dumps(
-                                    full_sheet_to_dict(
-                                        changelog_header,
-                                        self.changelog[from_row:to_row] if self.sheet_changes else [],
+                                        rows,
                                         include_headers=True,
                                         format_=self.json_format,
                                     ),
@@ -9848,7 +9746,7 @@ class Tree_Editor(tk.Frame):
         )
         if self.save_json_with_program_data:
             d["version"] = software_version_number
-            d["changelog"] = self.changelog
+            d["changelog"] = self.changelog.flatten()
             d["program_data"] = dict_x_b32(self.get_program_data_dict())
         return d
 
@@ -9868,7 +9766,7 @@ class Tree_Editor(tk.Frame):
             for h in self.headers
         ]
         d["nodes"] = self.jsonify_nodes()
-        d["changelog"] = self.changelog
+        d["changelog"] = self.changelog.flatten()
         d["row_heights"] = self.sheet.get_safe_row_heights()
         d["column_widths"] = self.sheet.get_column_widths()
         d["sheet_column_alignments"] = self.sheet.get_column_alignments()
@@ -9928,7 +9826,7 @@ class Tree_Editor(tk.Frame):
                 continue
         ws = wb.create_sheet(title=new_title1)
         ws.append(xlsx_changelog_header(ws))
-        for r in reversed(self.changelog):
+        for r in reversed(self.changelog.flatten()):
             ws.append(e if e else None for e in r)
 
     def write_flattened_to_workbook(self, wb, sheetnames_):

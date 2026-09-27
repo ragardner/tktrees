@@ -652,7 +652,10 @@ class Changelog_Popup(tk.Toplevel):
         self.USER_HAS_QUIT = False
         self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
         self.wb_ = None
-        self.total_changes = f"Total changes: {len(self.C.changelog)} | "
+        self._rows = self.C.changelog.display_rows()
+        n_actions = len(self.C.changelog)
+        n_rows = len(self._rows)
+        self.total_changes = f"Total changes: {n_actions} ({n_rows} rows) | "
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
         self.sheetdisplay = Sheet(
@@ -660,8 +663,8 @@ class Changelog_Popup(tk.Toplevel):
             theme=theme,
             headers=changelog_header,
             row_index=0,
-            startup_select=(len(self.C.changelog) - 1, len(self.C.changelog), "rows"),
-            data=self.C.changelog,
+            startup_select=(n_rows - 1, n_rows, "rows") if n_rows else (0, 0, "rows"),
+            data=self._rows,
             row_index_align="w",
             header_font=sheet_header_font,
             outline_thickness=0,
@@ -708,20 +711,20 @@ class Changelog_Popup(tk.Toplevel):
             return
         num = len(selectedrows)
         self.start_work(f"Pruning {num} changes...")
-        up_to = min(selectedrows)
-        if self.C.changelog[up_to][1].endswith(("|", "| ")):
-            for i, entry in enumerate(islice(self.C.changelog, up_to, None), up_to):
-                if not entry[1].endswith(("|", "| ")):
-                    up_to = i
-                    break
+        up_to_row = min(selectedrows)
+        ch = self._rows[up_to_row].change
+        up_to = next(i for i, c in enumerate(self.C.changelog.changes) if c is ch)
         self.C.snapshot_prune_changelog(up_to)
-        self.C.changelog[: up_to + 1] = []
+        self.C.changelog.prune_through(up_to)
+        self._rows = self.C.changelog.display_rows()
         self.sheetdisplay.headers(newheaders=changelog_header)
         self.sheetdisplay.row_index(newindex=0)
         self.sheetdisplay.data_reference(
-            newdataref=self.C.changelog, reset_col_positions=False, reset_row_positions=True, redraw=False
+            newdataref=self._rows, reset_col_positions=False, reset_row_positions=True, redraw=False
         )
-        self.total_changes = f"Total changes: {len(self.C.changelog)} | "
+        n_actions = len(self.C.changelog)
+        n_rows = len(self._rows)
+        self.total_changes = f"Total changes: {n_actions} ({n_rows} rows) | "
         self.status_bar.config(text=self.total_changes)
         self.C.C.status_bar.change_text(self.C.get_tree_editor_status_bar_text())
         self.sheetdisplay.refresh()
@@ -790,12 +793,13 @@ class Changelog_Popup(tk.Toplevel):
             self.stop_work("Can only save .csv/.xlsx/.json file types")
             return
         self.status_bar.change_text(f"{self.total_changes}Saving...")
+        rows = self.C.changelog.flatten()
         try:
             if newfile.lower().endswith(".xlsx"):
                 self.wb_ = Workbook(write_only=True)
                 ws = self.wb_.create_sheet(title="Changelog")
                 ws.append(xlsx_changelog_header(ws))
-                for row in self.C.changelog:
+                for row in rows:
                     ws.append(e if e else None for e in row)
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
@@ -807,14 +811,14 @@ class Changelog_Popup(tk.Toplevel):
                         lineterminator="\n",
                     )
                     writer.writerow(changelog_header)
-                    writer.writerows(self.C.changelog)
+                    writer.writerows(rows)
             elif newfile.lower().endswith(".json"):
                 with open(newfile, "w", newline="") as fh:
                     fh.write(
                         json.dumps(
                             full_sheet_to_dict(
                                 changelog_header,
-                                self.C.changelog,
+                                rows,
                                 include_headers=True,
                                 format_=self.C.json_format,
                             ),
@@ -848,13 +852,14 @@ class Changelog_Popup(tk.Toplevel):
             return
         from_row = min(selectedrows)
         to_row = max(selectedrows) + 1
+        rows = [tuple(r) for r in self._rows[from_row:to_row]]
         self.status_bar.change_text(f"{self.total_changes}Saving...")
         try:
             if newfile.lower().endswith(".xlsx"):
                 self.wb_ = Workbook(write_only=True)
                 ws = self.wb_.create_sheet(title="Changelog")
                 ws.append(xlsx_changelog_header(ws))
-                for row in islice(self.C.changelog, from_row, to_row):
+                for row in rows:
                     ws.append(e if e else None for e in row)
                 self.wb_.save(newfile)
                 self.try_to_close_wb()
@@ -866,14 +871,14 @@ class Changelog_Popup(tk.Toplevel):
                         lineterminator="\n",
                     )
                     writer.writerow(changelog_header)
-                    writer.writerows(islice(self.C.changelog, from_row, to_row))
+                    writer.writerows(rows)
             elif newfile.lower().endswith(".json"):
                 with open(newfile, "w", newline="") as fh:
                     fh.write(
                         json.dumps(
                             full_sheet_to_dict(
                                 changelog_header,
-                                self.C.changelog[from_row:to_row],
+                                rows,
                                 include_headers=True,
                                 format_=self.C.json_format,
                             ),
@@ -1484,8 +1489,9 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         self.C.sheet.replace_all(mapping, within=False)
         new_len = len(self.C.changelog)
         if new_len > old_len:
-            if self.C.changelog[-1][1].endswith("cells"):
-                self.status_bar.change_text(f"Replaced {new_len - old_len - 1} cells.")
+            n = self.C.changelog[-1].n
+            if n > 1:
+                self.status_bar.change_text(f"Replaced {n} cells.")
             else:
                 self.status_bar.change_text("Replaced 1 cell.")
         else:

@@ -144,7 +144,7 @@ def xlsx_changelog_header(ws):
     new_val_cell = WriteOnlyCell(ws, value="New Value")
     new_val_cell.fill = green_add_fill
     return [
-        WriteOnlyCell(ws, value="Date"),
+        WriteOnlyCell(ws, value="Date and time"),
         WriteOnlyCell(ws, value="Type"),
         WriteOnlyCell(ws, value="ID/Name/Number"),
         old_val_cell,
