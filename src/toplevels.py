@@ -1995,6 +1995,7 @@ class View_Id_Popup(tk.Toplevel):
 
     def _show_status(self, message=None):
         name = self._sheet_id()
+        self.title(f"{app_title} - {name}")
         if message:
             self.status_bar.change_text(f"ID - {name}   |   {message}")
         else:
