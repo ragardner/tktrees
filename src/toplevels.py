@@ -2096,7 +2096,7 @@ class View_Id_Popup(tk.Toplevel):
                 self.C.sheet.MT.data[y1][x1] = newtext
                 self.C.rebuild_tree()
                 self._changes_made(scroll=True)
-                return newtext
+                return self.sheetdisplay.data[x1][0]
 
         else:
             if not self.C.detail_is_valid_for_col(x1, newtext):
