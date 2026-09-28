@@ -2004,8 +2004,12 @@ class View_Id_Popup(tk.Toplevel):
         pass
 
     def sheet_begin_edit_cell(self, event=None):
-        self.unbind("<Escape>")
+        self.bind("<Escape>", self._restore_escape)
         return event.value
+
+    def _restore_escape(self, event=None):
+        self.bind("<Escape>", self.cancel)
+        return "break"
 
     def sheet_end_edit_cell(self, event=None):
         y1 = int(self.ids_rn)
