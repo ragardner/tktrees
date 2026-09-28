@@ -1955,12 +1955,9 @@ class View_Id_Popup(tk.Toplevel):
         self.sheetdisplay.set_xview(0.0)
         self.sheetdisplay.set_yview(0.0)
         self.sheetdisplay.grid(row=1, column=0, sticky="nswe")
-        self.status_bar = Status_Bar(
-            self,
-            text=f"ID - {self.C.sheet.MT.data[self.ids_rn][self.C.ic]} concise view",
-            theme=theme,
-        )
+        self.status_bar = Status_Bar(self, text="", theme=theme)
         self.status_bar.grid(row=2, column=0, sticky="nswe")
+        self._show_status()
         self.bind("<Escape>", self.cancel)
         self.enable_bindings()
         show_toplevel_chores(self, width, height)
@@ -1993,12 +1990,39 @@ class View_Id_Popup(tk.Toplevel):
     def paste(self, event=None):
         pass
 
+    def _sheet_id(self):
+        return f"{self.C.sheet.MT.data[self.ids_rn][self.C.ic]}"
+
+    def _show_status(self, message=None):
+        name = self._sheet_id()
+        if message:
+            self.status_bar.change_text(f"ID - {name}   |   {message}")
+        else:
+            self.status_bar.change_text(f"ID - {name} concise view")
+
+    def _last_edit_message(self):
+        if self.C.changelog:
+            return f"Last Edit: {self.C.changelog.last_type()}"
+        return None
+
+    def _rename_refusal(self, ID, new_name):
+        ik = ID.lower()
+        nnk = new_name.lower()
+        if ik not in self.C.nodes:
+            return "ID doesn't exist"
+        if nnk in self.C.nodes and ik != nnk:
+            return "New name already exists"
+        if not nnk:
+            return "New name cannot be empty"
+        return "New name already exists"
+
     def undo(self, event=None):
         if not self.changes_made:
             return
         self.C.undo()
         self.redo_display()
         self.changes_made -= 1
+        self._show_status(self._last_edit_message())
 
     def delete(self, event=None):
         pass
@@ -2025,13 +2049,15 @@ class View_Id_Popup(tk.Toplevel):
 
         if newtext == currentdetail or newtext is None:
             self.bind("<Escape>", self.cancel)
+            self._show_status(self._last_edit_message())
             return
         if self.C.headers[x1].type_ == "ID":
             id_ = ID
             ik = id_.lower()
             tree_sel = self.C.tree.selection() if self.C.tree.selection() else False
-            if not self.C.change_ID_name(id_, newtext):
+            if not self.C.change_ID_name(id_, newtext, errors=False):
                 self.bind("<Escape>", self.cancel)
+                self._show_status(self._rename_refusal(id_, newtext))
                 return
 
             self.C.changelog_append(
@@ -2100,11 +2126,15 @@ class View_Id_Popup(tk.Toplevel):
                 self.C.sheet.MT.data[y1][x1] = newtext
                 self.C.rebuild_tree()
                 self._changes_made(scroll=True)
-                return self.sheetdisplay.data[x1][0]
+                shown = self.sheetdisplay.data[x1][0]
+                if shown == "" and newtext != "":
+                    self._show_status("Parent set to none")
+                return shown
 
         else:
             if not self.C.detail_is_valid_for_col(x1, newtext):
                 self.bind("<Escape>", self.cancel)
+                self._show_status("Value was not in the column validation")
                 return
             self.C.snapshot_ctrl_x_v_del_key()
             self.C.vs[-1]["cells"][(y1, x1)] = f"{self.C.sheet.MT.data[y1][x1]}"
@@ -2120,6 +2150,7 @@ class View_Id_Popup(tk.Toplevel):
         self.redo_display(scroll=scroll)
         self.changes_made += 1
         self.C.C.status_bar.change_text(self.C.get_tree_editor_status_bar_text())
+        self._show_status(self._last_edit_message())
         self.bind("<Escape>", self.cancel)
 
     def enable_bindings(self, event=None):
