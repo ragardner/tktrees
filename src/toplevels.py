@@ -1942,7 +1942,7 @@ class View_Id_Popup(tk.Toplevel):
                 for c, hdr in enumerate(self.C.headers, 1)
             ]
         )
-        self.redo_display()
+        self.redo_display(fit=True)
         for c, hdr in enumerate(self.C.headers):
             if hdr.validation:
                 self.sheetdisplay.dropdown(
@@ -1962,7 +1962,7 @@ class View_Id_Popup(tk.Toplevel):
         self.enable_bindings()
         show_toplevel_chores(self, width, height)
 
-    def redo_display(self, event=None, scroll: bool = False):
+    def redo_display(self, event=None, scroll: bool = False, fit: bool = False):
         self.sheetdisplay.data_reference(
             newdataref=[[v] for v in self.C.sheet.MT.data[self.ids_rn]],
             reset_col_positions=False,
@@ -1973,7 +1973,11 @@ class View_Id_Popup(tk.Toplevel):
         for tup1, tup2 in self.C.sheet.get_highlighted_cells().items():
             if tup1[0] == self.ids_rn:
                 self.sheetdisplay.highlight_cells(row=tup1[1], column=0, bg=tup2[0], fg=tup2[1])
-        self.sheetdisplay.set_all_cell_sizes_to_text()
+        if fit:
+            self.sheetdisplay.set_all_cell_sizes_to_text()
+        else:
+            self.sheetdisplay.set_all_column_widths(only_set_if_too_small=True, redraw=False)
+            self.sheetdisplay.set_all_row_heights(only_set_if_too_small=True, redraw=False)
         self.sheetdisplay.refresh()
         self.sheetdisplay.recreate_all_selection_boxes()
         if scroll:
