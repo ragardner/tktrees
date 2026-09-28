@@ -46,7 +46,7 @@ from tksheet import (
     num2alpha as _n2a,
 )
 
-from .changelog import ChangelogLog
+from .changelog import Changelog
 from .classes import (
     Header,
     Node,
@@ -170,7 +170,7 @@ class Tree_Editor(tk.Frame):
         self.levels = defaultdict(list)
         self.row_len = 0
         self.headers = []
-        self.changelog = ChangelogLog(on_unsaved=self.increment_unsaved)
+        self.changelog = Changelog(on_unsaved=self.increment_unsaved)
         self.treecolsel = 0
         self.ic = 0
         self.tv_label_col = 0
@@ -5644,29 +5644,48 @@ class Tree_Editor(tk.Frame):
             }
         )
 
-    def snapshot_drag_cols(self, event_data):
-        if self.tree.has_focus():
-            full_new_idxs = self.tree.full_move_columns_idxs(event_data["moved"]["columns"]["data"])
+    def snapshot_drag_cols(self, event_data, log=True, move_both=False):
+        data = event_data["moved"]["columns"]["data"]
+        displayed = event_data["moved"]["columns"]["displayed"]
+        if move_both:
+            full_new_idxs = self.sheet.full_move_columns_idxs(data)
             self.sheet.mapping_move_columns(
-                event_data["moved"]["columns"]["data"],
-                event_data["moved"]["columns"]["displayed"],
+                data,
+                displayed,
+                undo=False,
+                create_selections=False,
+                redraw=False,
+            )
+            self.tree.mapping_move_columns(
+                data,
+                displayed,
+                undo=False,
+                create_selections=False,
+                redraw=False,
+            )
+        elif self.tree.has_focus():
+            full_new_idxs = self.tree.full_move_columns_idxs(data)
+            self.sheet.mapping_move_columns(
+                data,
+                displayed,
                 undo=False,
             )
         else:
-            full_new_idxs = self.sheet.full_move_columns_idxs(event_data["moved"]["columns"]["data"])
+            full_new_idxs = self.sheet.full_move_columns_idxs(data)
             self.tree.mapping_move_columns(
-                event_data["moved"]["columns"]["data"],
-                event_data["moved"]["columns"]["displayed"],
+                data,
+                displayed,
                 undo=False,
             )
-        old_locs = ",".join(f"{c}" for c in event_data["moved"]["columns"]["data"])
-        new_locs = ",".join(f"{c}" for c in event_data["moved"]["columns"]["data"].values())
-        self.changelog_append(
-            "Move columns",
-            f"{len(event_data['moved']['columns']['data'])} columns",
-            old_locs,
-            new_locs,
-        )
+        if log:
+            old_locs = ",".join(f"{c}" for c in data)
+            new_locs = ",".join(f"{c}" for c in data.values())
+            self.changelog_append(
+                "Move columns",
+                f"{len(data)} columns",
+                old_locs,
+                new_locs,
+            )
         self.ic = full_new_idxs[self.ic]
         self.pc = full_new_idxs[self.pc]
         self.headers = move_elements_by_mapping(
@@ -5721,7 +5740,7 @@ class Tree_Editor(tk.Frame):
     def snapshot_prune_changelog(self, up_to):
         self.snapshot_chore()
         opened_at = self.changelog.opened_at
-        removed = list(self.changelog.changes[: up_to + 1])
+        removed = list(self.changelog.actions[: up_to + 1])
         self.changelog_append(
             "Pruned changelog",
             f"From: {removed[0].first_stamp()} To: {removed[-1].last_stamp()}",
@@ -8695,7 +8714,7 @@ class Tree_Editor(tk.Frame):
                         }
                     }
                     if max(new_idxs.values()) < self.row_len:
-                        self.snapshot_drag_cols(event_data=event_data)
+                        self.snapshot_drag_cols(event_data=event_data, log=False, move_both=True)
                         self._import_log("Move columns", change)
                         successful.append(True)
                     else:

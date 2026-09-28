@@ -712,8 +712,7 @@ class Changelog_Popup(tk.Toplevel):
         num = len(selectedrows)
         self.start_work(f"Pruning {num} changes...")
         up_to_row = min(selectedrows)
-        ch = self._rows[up_to_row].change
-        up_to = next(i for i, c in enumerate(self.C.changelog.changes) if c is ch)
+        up_to = self.C.changelog.action_index(up_to_row)
         self.C.snapshot_prune_changelog(up_to)
         self.C.changelog.prune_through(up_to)
         self._rows = self.C.changelog.display_rows()
