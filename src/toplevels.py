@@ -2076,7 +2076,7 @@ class View_Id_Popup(tk.Toplevel):
             self.C.rns = {r[self.C.ic].lower(): i for i, r in enumerate(self.C.sheet.data)}
             self.C.redo_tree_display()
             self.C.refresh_formatting(rows=self.C.refresh_rows)
-            self.C.refresh_rows = []
+            self.C.refresh_rows = set()
             self.C.redraw_sheets()
             if tree_sel:
                 try:
