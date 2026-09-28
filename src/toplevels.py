@@ -8,7 +8,6 @@ import json
 import os
 import re
 import tkinter as tk
-import webbrowser
 from collections.abc import Callable
 from contextlib import suppress
 from itertools import islice, repeat
@@ -44,7 +43,6 @@ from .constants import (
     std_font_size,
     themes,
     top_left_icon,
-    upone_dir,
 )
 from .fill_column import (
     CELL_CHOICES,
@@ -4813,14 +4811,6 @@ class Help_Popup(tk.Toplevel):
         self.buttonframe = Frame(self, theme=theme)
         self.buttonframe.grid(row=1, column=0, rowspan=2, padx=10, pady=10, sticky="nswe")
 
-        self.open_in_browser = Button(
-            self.buttonframe,
-            text="Open in Browser",
-            style="EF.Std.TButton",
-            command=self.open_docs_in_browser,
-        )
-        self.open_in_browser.pack(side="top", pady=(2, 15), fill="x")
-
         self.basics = Button(
             self.buttonframe,
             text="Basics",
@@ -4926,13 +4916,6 @@ class Help_Popup(tk.Toplevel):
         self.textbox.focus_set()
         self.bind("<Escape>", self.cancel)
         show_toplevel_chores(self, 1199, 700)
-
-    def open_docs_in_browser(self):
-        try:
-            url = f"file://{upone_dir + 'DOCUMENTATION.html'}"
-            webbrowser.open(url)
-        except Exception:
-            pass
 
     def scrollto(self, option):
         if option == "programbasics":
