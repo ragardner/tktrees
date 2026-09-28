@@ -1980,7 +1980,9 @@ class View_Id_Popup(tk.Toplevel):
         self.sheetdisplay.refresh()
         self.sheetdisplay.recreate_all_selection_boxes()
         if scroll:
-            self.C.tree.scroll_to_item(self.sheetdisplay.data[self.C.ic][0].lower())
+            ik = self.sheetdisplay.data[self.C.ic][0].lower()
+            if self.C.tree.exists(ik):
+                self.C.tree.scroll_to_item(ik)
 
     def cut(self, event=None):
         pass
