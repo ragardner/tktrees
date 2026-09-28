@@ -4282,6 +4282,16 @@ class Settings_Popup(tk.Toplevel):
         )
         self.allow_cell_text_overflow_button.pack(side="top", anchor="nw", fill="x", pady=10)
 
+        self.username_on_changelog_dates_button = X_Checkbutton(
+            self.general,
+            text="Add username to changelog dates ",
+            style="x_button.Std.TButton",
+            command=self.toggle_username_on_changelog_dates,
+            checked=self.C.username_on_changelog_dates,
+            compound="right",
+        )
+        self.username_on_changelog_dates_button.pack(side="top", anchor="nw", fill="x", pady=10)
+
         self.layout_label = Label(self.general, text="Layout: ", font=EFB, theme=theme, anchor="nw")
         self.layout_label.pack(side="top", anchor="nw", fill="x", pady=(10, 0))
 
@@ -4621,6 +4631,10 @@ class Settings_Popup(tk.Toplevel):
     def toggle_cell_text_overflow(self):
         self.C.tree.set_options(allow_cell_overflow=self.allow_cell_text_overflow_button.get_checked())
         self.C.sheet.set_options(allow_cell_overflow=self.allow_cell_text_overflow_button.get_checked())
+
+    def toggle_username_on_changelog_dates(self):
+        self.C.username_on_changelog_dates = self.username_on_changelog_dates_button.get_checked()
+        self.C.C.save_cfg()
 
     def toggle_auto_resize_indexes(self):
         self.C.toggle_auto_resize_index(self.auto_resize_indexes_button.get_checked())

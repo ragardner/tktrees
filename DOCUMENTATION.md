@@ -285,7 +285,7 @@ The list has seven columns: date and time, type, ID (or column name), old value 
 
 One action can be several lines. A paste, a delete, a multi-cell edit, an import, or a merge writes a line per ID or cell, with `|` on the end of those types, then a summary line. Undo and prune remove the whole action. The status line is `Total changes: N (M rows)`. N is the number of actions. M is the number of lines.
 
-A new action stores one local time for every line in it, in ISO-8601 form such as `2026-09-27T15:04:05`.
+A new action stores one local time for every line in it, in ISO-8601 form such as `2026-09-27T15:04:05`. To put your operating system username after that time, go to File -> Settings and turn on Add username to changelog dates. Only dates recorded after that are changed. The switch starts off.
 
 Names and headers are whole cells. They are never packed into a sentence. An empty old or new parent means the ID is (or becomes) a top. From/To column hold the hierarchy or detail header name when the action uses one.
 

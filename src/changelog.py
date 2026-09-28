@@ -9,6 +9,7 @@ From column, To column. The type text is stored as it was passed in.
 """
 
 import datetime
+import getpass
 
 # A line whose type starts with one of these belongs to a larger action.
 _MEMBER_PREFIXES = (
@@ -28,6 +29,31 @@ _MEMBER_PREFIXES = (
 
 def action_timestamp():
     return datetime.datetime.now().replace(microsecond=0).isoformat()
+
+
+def os_username():
+    """Operating-system login, or "" when it cannot be read."""
+    try:
+        user = getpass.getuser()
+    except OSError:
+        return ""
+    if not isinstance(user, str):
+        return ""
+    user = user.strip()
+    if not user or any(ch in user for ch in "\r\n\t"):
+        return ""
+    return user
+
+
+def changelog_stamp(include_user=False):
+    """Local ISO-8601 time. With include_user, the OS login is appended."""
+    stamp = action_timestamp()
+    if not include_user:
+        return stamp
+    user = os_username()
+    if not user:
+        return stamp
+    return f"{stamp} {user}"
 
 
 def _cell(value):

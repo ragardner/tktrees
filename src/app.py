@@ -319,6 +319,7 @@ To get started once you have closed this popup, either:
             "Alternate color": self.frames["tree_edit"].tree.ops.alternate_color,
             "Auto resize row indexes": self.frames["tree_edit"].auto_resize_indexes,
             "Allow cell text overflow": self.frames["tree_edit"].tree.ops.allow_cell_overflow,
+            "Add username to changelog dates": self.frames["tree_edit"].username_on_changelog_dates,
         }
         self.check_window_size_settings()
 
@@ -357,6 +358,7 @@ To get started once you have closed this popup, either:
             "Alternate color": self.frames["tree_edit"].tree.ops.alternate_color,
             "Auto resize row indexes": self.frames["tree_edit"].auto_resize_indexes,
             "Allow cell text overflow": self.frames["tree_edit"].tree.ops.allow_cell_overflow,
+            "Add username to changelog dates": self.frames["tree_edit"].username_on_changelog_dates,
         }
 
     def save_cfg(self, event=None, get_settings=True):
@@ -391,6 +393,9 @@ To get started once you have closed this popup, either:
         if "Allow cell text overflow" in self.configsettings:
             self.frames["tree_edit"].tree.ops.allow_cell_overflow = self.configsettings["Allow cell text overflow"]
             self.frames["tree_edit"].sheet.ops.allow_cell_overflow = self.configsettings["Allow cell text overflow"]
+        self.frames["tree_edit"].username_on_changelog_dates = (
+            self.configsettings.get("Add username to changelog dates") is True
+        )
         self.theme = self.configsettings["Theme"]
         self.frames["tree_edit"].set_display_option(self.configsettings["Editor display option"])
         self.frames["tree_edit"].change_theme(self.theme, write=False)

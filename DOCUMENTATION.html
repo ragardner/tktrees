@@ -785,7 +785,7 @@
 <p>Every change you make is recorded. Open the list with View -&gt; View changelog, Export -&gt; Export specific changes, or Ctrl + L.</p>
 <p>The list has seven columns: date and time, type, ID (or column name), old value (red), new value (green), from column, to column.</p>
 <p>One action can be several lines. A paste, a delete, a multi-cell edit, an import, or a merge writes a line per ID or cell, with <code>|</code> on the end of those types, then a summary line. Undo and prune remove the whole action. The status line is <code>Total changes: N (M rows)</code>. N is the number of actions. M is the number of lines.</p>
-<p>A new action stores one local time for every line in it, in ISO-8601 form such as <code>2026-09-27T15:04:05</code>.</p>
+<p>A new action stores one local time for every line in it, in ISO-8601 form such as <code>2026-09-27T15:04:05</code>. To put your operating system username after that time, go to File -&gt; Settings and turn on Add username to changelog dates. Only dates recorded after that are changed. The switch starts off.</p>
 <p>Names and headers are whole cells. They are never packed into a sentence. An empty old or new parent means the ID is (or becomes) a top. From/To column hold the hierarchy or detail header name when the action uses one.</p>
 <p>From that window you can:</p>
 <ul>

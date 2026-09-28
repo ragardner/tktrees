@@ -46,7 +46,7 @@ from tksheet import (
     num2alpha as _n2a,
 )
 
-from .changelog import Changelog
+from .changelog import Changelog, changelog_stamp
 from .classes import (
     Header,
     Node,
@@ -170,7 +170,8 @@ class Tree_Editor(tk.Frame):
         self.levels = defaultdict(list)
         self.row_len = 0
         self.headers = []
-        self.changelog = Changelog(on_unsaved=self.increment_unsaved)
+        self.username_on_changelog_dates = False
+        self.changelog = Changelog(on_unsaved=self.increment_unsaved, now=self.changelog_now)
         self.treecolsel = 0
         self.ic = 0
         self.tv_label_col = 0
@@ -2065,6 +2066,9 @@ class Tree_Editor(tk.Frame):
                 )
             ),
         )
+
+    def changelog_now(self):
+        return changelog_stamp(self.username_on_changelog_dates)
 
     def changelog_singular(self, text):
         self.changelog.singular(text)
