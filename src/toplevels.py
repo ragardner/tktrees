@@ -4663,6 +4663,7 @@ class Settings_Popup(tk.Toplevel):
             self.C.set_display_option("50/50")
         elif "Adjustable" in layout:
             self.C.set_display_option("adjustable")
+        self.C.C.status_bar.change_text(self.C.get_tree_editor_status_bar_text())
 
     def set_treeview_indent(self, event=None):
         indent = self.indent_dropdown.get_my_value()

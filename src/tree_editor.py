@@ -2616,6 +2616,7 @@ class Tree_Editor(tk.Frame):
             elif self._50_50_bool.get():
                 self._50_50_bool.set(False)
             self.WINDOW_DIMENSIONS_CHANGED()
+            self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         elif event == "config":
             self.full_left_bool.set(False)
             self.full_right_bool.set(False)
@@ -2652,6 +2653,7 @@ class Tree_Editor(tk.Frame):
                 self.adjustable_bool.set(False)
             self.hide_adjustable_divider()
             self.WINDOW_DIMENSIONS_CHANGED()
+            self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         elif event == "config":
             self.full_left_bool.set(False)
             self.full_right_bool.set(False)
@@ -2686,6 +2688,7 @@ class Tree_Editor(tk.Frame):
             self.hide_adjustable_divider()
             self.hide_frames(r_frame=True)
             self.focus_tree()
+            self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         elif event == "config":
             self.full_left_bool.set(True)
             self.full_right_bool.set(False)
@@ -2722,6 +2725,7 @@ class Tree_Editor(tk.Frame):
             self.hide_adjustable_divider()
             self.hide_frames(l_frame=True)
             self.focus_sheet()
+            self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         elif event == "config":
             self.full_left_bool.set(False)
             self.full_right_bool.set(True)
@@ -2970,7 +2974,8 @@ class Tree_Editor(tk.Frame):
         return s
 
     def get_tree_editor_status_bar_text(self):
-        if self.tree.selected:
+        option = self.get_display_option()
+        if option != "right" and self.tree.selected:
             sels = self.tree.selection()
             box = next(reversed(self.tree.boxes))
             if box.type_ == "rows":
@@ -2984,7 +2989,7 @@ class Tree_Editor(tk.Frame):
                     tree_addition = f"|   Tree Cells: {_n2a(box.coords.from_c)}{box.coords.from_r + 2}:{_n2a(box.coords.upto_c - 1)}{box.coords.upto_r + 1}   "
         else:
             tree_addition = ""
-        if self.sheet.selected:
+        if option != "left" and self.sheet.selected:
             box = next(reversed(self.sheet.boxes))
             if box.type_ == "rows":
                 sheet_addition = f"|   Sheet Rows: {box.coords.from_r + 2}:{box.coords.upto_r + 1}   "
