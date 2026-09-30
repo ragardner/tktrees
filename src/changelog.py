@@ -3,28 +3,13 @@
 
 """The changelog.
 
-One action is one undo. Its lines are the seven cells shown in the
-changelog window: date and time, type, ID, old value, new value,
-From column, To column. The type text is stored as it was passed in.
+A group is the lines recorded for one edit. The time is stored once, on the
+group. rows() builds the seven-column rows for the Changelog window and for
+an export. App data stores the groups. The undo stack is separate.
 """
 
 import datetime
 import getpass
-
-# A line whose type starts with one of these belongs to a larger action.
-_MEMBER_PREFIXES = (
-    "Merge | ",
-    "Imported change |",
-    "Edit cell |",
-    "Delete ID from all hierarchies |",
-    "Delete ID |",
-    "Delete ID + all children |",
-    "Delete ID + all children from all hierarchies |",
-    "Cut and paste ID + children |",
-    "Copy and paste ID |",
-    "Copy and paste ID + children |",
-    "Cut and paste ID |",
-)
 
 
 def action_timestamp():
@@ -62,51 +47,68 @@ def _cell(value):
     return value if isinstance(value, str) else f"{value}"
 
 
-def _is_member(typ):
-    return typ.startswith(_MEMBER_PREFIXES) or typ.endswith(("|", "| "))
+class Line:
+    """One recorded edit. type is stored as it was passed in."""
+
+    __slots__ = ("from_col", "id", "new", "old", "to_col", "type")
+
+    def __init__(self, type, id_="", old="", new="", from_col="", to_col=""):
+        self.type = _cell(type)
+        self.id = _cell(id_)
+        self.old = _cell(old)
+        self.new = _cell(new)
+        self.from_col = _cell(from_col)
+        self.to_col = _cell(to_col)
+
+    def as_list(self):
+        return [self.type, self.id, self.old, self.new, self.from_col, self.to_col]
 
 
-def _group(typ):
-    """Which edit a type belongs to. Used when a new line arrives mid-edit, and when loading."""
-    if typ.startswith("Imported change |"):
-        return "import"
-    if typ.startswith("Merge |"):
-        return "merge"
-    return "user"
+class Group:
+    """lines are the edits. summary is the closing line, when there is one."""
 
+    __slots__ = ("lines", "summary", "time")
 
-def _seven(row):
-    cells = [_cell(c) for c in list(row)[:7]]
-    if len(cells) < 7:
-        cells.extend([""] * (7 - len(cells)))
-    return tuple(cells)
+    def __init__(self, time, lines, summary=None):
+        if not lines:
+            raise ValueError("empty group")
+        self.time = _cell(time)
+        self.lines = list(lines)
+        self.summary = summary
 
-
-class Action:
-    """One undo. rows are the seven-cell lines."""
-
-    __slots__ = ("has_summary", "rows")
-
-    def __init__(self, rows, has_summary=False):
-        if not rows:
-            raise ValueError("empty action")
-        self.rows = list(rows)
-        self.has_summary = bool(has_summary)
+    @property
+    def has_summary(self):
+        return self.summary is not None
 
     @property
     def n(self):
-        n = len(self.rows)
-        return n - 1 if self.has_summary and n else n
+        return len(self.lines)
 
     def first_stamp(self):
-        return self.rows[0][0]
+        return self.time
 
     def last_stamp(self):
-        return self.rows[-1][0]
+        return self.time
+
+    def rows(self):
+        out = [_seven(self.time, line) for line in self.lines]
+        if self.summary is not None:
+            out.append(_seven(self.time, self.summary))
+        return out
+
+    def to_save(self):
+        item = {"time": self.time, "lines": [line.as_list() for line in self.lines]}
+        if self.summary is not None:
+            item["summary"] = self.summary.as_list()
+        return item
+
+
+def _seven(time, line):
+    return (time, line.type, line.id, line.old, line.new, line.from_col, line.to_col)
 
 
 class Changelog:
-    """actions are finished undos. pending is the edit that has not finished."""
+    """actions are finished groups. pending is the edit that has not finished."""
 
     def __init__(self, on_unsaved=None, now=None):
         self.actions = []
@@ -137,24 +139,32 @@ class Changelog:
         self.pending = []
         self.actions = load_changelog(raw, warnings)
 
-    def flatten(self):
-        return [row for action in self.actions for row in action.rows]
+    def rows(self):
+        return [row for group in self.actions for row in group.rows()]
 
     def display_rows(self):
-        return self.flatten()
+        return self.rows()
 
     def session_rows(self):
-        return [row for action in self.actions[self.opened_at :] for row in action.rows]
+        return [row for group in self.actions[self.opened_at :] for row in group.rows()]
+
+    def to_save(self):
+        return [group.to_save() for group in self.actions]
 
     def last_type(self):
         if not self.actions:
             return ""
-        return self.actions[-1].rows[-1][1]
+        group = self.actions[-1]
+        if group.summary is not None:
+            return group.summary.type
+        return group.lines[-1].type
 
     def action_index(self, row_index):
         seen = 0
-        for i, action in enumerate(self.actions):
-            seen += len(action.rows)
+        for i, group in enumerate(self.actions):
+            seen += len(group.lines)
+            if group.summary is not None:
+                seen += 1
             if row_index < seen:
                 return i
         raise IndexError(row_index)
@@ -175,83 +185,94 @@ class Changelog:
         self.opened_at = opened_at
 
     def _line(self, typ, id_, old, new, from_col, to_col):
-        return ("", _cell(typ), _cell(id_), _cell(old), _cell(new), _cell(from_col), _cell(to_col))
+        return Line(typ, id_, old, new, from_col, to_col)
 
-    def _add_pending(self, typ, id_, old, new, from_col, to_col):
-        group = _group(typ)
-        if self.pending and _group(self.pending[0][1]) != group:
-            self._finish(summary=False, interrupted=True)
-        self.pending.append(self._line(typ, id_, old, new, from_col, to_col))
-
-    def _finish(self, summary=False, singular=None, interrupted=False):
-        if not self.pending:
+    def _close(self, summary=None, singular=None, lines=None):
+        if lines is None:
+            if not self.pending:
+                return None
+            lines = self.pending
             self.pending = []
-            return None
-        rows = self.pending
-        self.pending = []
-        has_summary = False
         if singular is not None:
-            last = rows[-1]
-            rows[-1] = (last[0], singular, last[2], last[3], last[4], last[5], last[6])
-        elif summary:
-            has_summary = True
-        elif interrupted:
-            # The next line belongs to a different edit. Close this one first.
-            group = _group(rows[0][1])
-            several = group in ("import", "merge") or len(rows) > 1
-            rows = [_retitle(row, group, several) for row in rows]
-            if several:
-                rows = rows + [self._line(_bare(rows[0][1]), "", "", "", "", "")]
-                has_summary = True
-        at = self.now()
-        stamped = tuple((at,) + row[1:] for row in rows)
-        action = Action(stamped, has_summary)
-        self.actions.append(action)
+            lines[-1].type = _cell(singular)
+            summary = None
+        if not lines:
+            return None
+        group = Group(self.now(), lines, summary)
+        self.actions.append(group)
         self.on_unsaved()
-        return action
+        return group
+
+    def seal(self):
+        """Close lines left open by an edit that did not finish.
+
+        append() stores its line as the summary when lines are still
+        pending, so a later edit calls this before it logs or snapshots.
+        """
+        if not self.pending:
+            return None
+        return self._close()
 
     def append(self, change, id_="", old="", new="", from_col="", to_col=""):
+        line = self._line(change, id_, old, new, from_col, to_col)
         if self.pending:
-            if _is_member(change):
-                self._add_pending(change, id_, old, new, from_col, to_col)
-                return
-            self.pending.append(self._line(change, id_, old, new, from_col, to_col))
-            self._finish(summary=True)
+            self._close(summary=line)
             return
-        if _is_member(change):
-            self._add_pending(change, id_, old, new, from_col, to_col)
-            return
-        self.pending.append(self._line(change, id_, old, new, from_col, to_col))
-        self._finish()
+        self._close(lines=[line])
 
     def append_no_unsaved(self, change, id_="", old="", new="", from_col="", to_col=""):
-        self._add_pending(change, id_, old, new, from_col, to_col)
+        self.pending.append(self._line(change, id_, old, new, from_col, to_col))
 
     def singular(self, text):
+        text = _cell(text)
         if not self.pending:
             if self.actions:
-                action = self.actions[-1]
-                last = action.rows[-1]
-                action.rows[-1] = (last[0], text, last[2], last[3], last[4], last[5], last[6])
+                group = self.actions[-1]
+                if group.summary is not None:
+                    group.summary.type = text
+                else:
+                    group.lines[-1].type = text
             self.on_unsaved()
             return
-        self._finish(singular=text)
+        self._close(singular=text)
 
     def finish_plain(self):
-        if not self.pending:
-            return None
-        return self._finish()
+        return self.seal()
 
 
-def _retitle(row, group, several):
-    typ = _bare(row[1])
-    if group == "import":
-        typ = "Imported change | " + typ
-    elif group == "merge":
-        typ = "Merge | " + typ
-    elif several:
-        typ = typ + " |"
-    return (row[0], typ, row[2], row[3], row[4], row[5], row[6])
+# Types that belong to a larger edit in a changelog saved by the previous code.
+_MEMBER_PREFIXES = (
+    "Merge | ",
+    "Imported change |",
+    "Edit cell |",
+    "Delete ID from all hierarchies |",
+    "Delete ID |",
+    "Delete ID + all children |",
+    "Delete ID + all children from all hierarchies |",
+    "Cut and paste ID + children |",
+    "Copy and paste ID |",
+    "Copy and paste ID + children |",
+    "Cut and paste ID |",
+)
+
+
+def _is_member(typ):
+    return typ.startswith(_MEMBER_PREFIXES) or typ.endswith(("|", "| "))
+
+
+def _group(typ):
+    if typ.startswith("Imported change |"):
+        return "import"
+    if typ.startswith("Merge |"):
+        return "merge"
+    return "user"
+
+
+def _pad7(row):
+    cells = [_cell(c) for c in list(row)[:7]]
+    if len(cells) < 7:
+        cells.extend([""] * (7 - len(cells)))
+    return tuple(cells)
 
 
 def _bare(typ):
@@ -267,7 +288,28 @@ def _bare(typ):
     return typ
 
 
-def _action_from_record(d):
+def _line_from_six(row):
+    cells = [_cell(c) for c in list(row)[:6]]
+    if len(cells) < 6:
+        cells.extend([""] * (6 - len(cells)))
+    return Line(*cells)
+
+
+def _group_from_saved_rows(rows, has_summary):
+    """One old seven-cell action. The group time is the first row's time."""
+    summary = None
+    lines_src = rows
+    if has_summary and len(rows) > 1:
+        lines_src = rows[:-1]
+        last = rows[-1]
+        summary = Line(last[1], last[2], last[3], last[4], last[5], last[6])
+    if not lines_src:
+        raise ValueError("empty group")
+    lines = [Line(r[1], r[2], r[3], r[4], r[5], r[6]) for r in lines_src]
+    return Group(rows[0][0], lines, summary)
+
+
+def _group_from_record(d):
     at = d["at"]
     rows = []
     for record in d["rows"]:
@@ -288,11 +330,24 @@ def _action_from_record(d):
         )
     if not rows:
         raise ValueError("empty rows")
-    return Action(rows, d.get("has_summary", False))
+    return _group_from_saved_rows(rows, d.get("has_summary", False))
+
+
+def _group_from_new(d):
+    lines = [_line_from_six(row) for row in d["lines"]]
+    if not lines:
+        raise ValueError("empty group")
+    summary = _line_from_six(d["summary"]) if d.get("summary") is not None else None
+    return Group(d.get("time", ""), lines, summary)
 
 
 def _regroup(rows):
-    actions = []
+    """Turn a previous save, a flat list of seven-cell rows, into groups.
+
+    The type text is kept, including a trailing | and an import or merge
+    prefix. An import or merge run with no closing row gets one, as before.
+    """
+    found = []
     buf = []
     buf_group = "user"
 
@@ -305,11 +360,11 @@ def _regroup(rows):
         elif summary is not None:
             buf.append(summary)
             has_summary = True
-        actions.append(Action(buf, has_summary))
+        found.append(_group_from_saved_rows(buf, has_summary))
         buf = []
 
     for row in rows:
-        cells = _seven(row)
+        cells = _pad7(row)
         typ = cells[1]
         if _is_member(typ):
             group = _group(typ)
@@ -321,10 +376,10 @@ def _regroup(rows):
         elif buf:
             close(cells)
         else:
-            actions.append(Action([cells], False))
+            found.append(_group_from_saved_rows([cells], False))
     if buf:
         close(None)
-    return actions
+    return found
 
 
 def load_changelog(raw, warnings=None):
@@ -332,8 +387,10 @@ def load_changelog(raw, warnings=None):
         return []
     try:
         first = raw[0]
+        if isinstance(first, dict) and "lines" in first:
+            return [_group_from_new(item) for item in raw]
         if isinstance(first, dict) and "rows" in first:
-            return [_action_from_record(item) for item in raw]
+            return [_group_from_record(item) for item in raw]
         if isinstance(first, (list, tuple)):
             return _regroup(raw)
     except (KeyError, TypeError, ValueError, AttributeError, IndexError):

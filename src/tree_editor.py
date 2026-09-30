@@ -2096,7 +2096,7 @@ class Tree_Editor(tk.Frame):
 
     def _import_log(self, ctyp, change):
         self.changelog_append_no_unsaved(
-            f"Imported change | {ctyp}",
+            ctyp,
             change[2],
             change[3],
             change[4],
@@ -2132,7 +2132,7 @@ class Tree_Editor(tk.Frame):
 
     def edit_cell_multiple(self, r: int, c: int, value: object) -> None:
         self.changelog_append_no_unsaved(
-            "Edit cell |",
+            "Edit cell",
             self.sheet.MT.data[r][self.ic],
             f"{self.sheet.MT.data[r][c]}",
             value,
@@ -5519,14 +5519,6 @@ class Tree_Editor(tk.Frame):
 
     def snapshot_edit_validation(self, col, validation):
         self.snapshot_chore()
-        self.changelog_append(
-            "Edit validation",
-            "",
-            f"{','.join(self.headers[col].validation)}",
-            f"{','.join(validation)}",
-            self.headers[col].name,
-        )
-        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
         self.vs.append(
             {
                 "type": "edit validation",
@@ -5535,6 +5527,14 @@ class Tree_Editor(tk.Frame):
                 "required_data": self.get_required_snapshot_data(),
             }
         )
+        self.changelog_append(
+            "Edit validation",
+            "",
+            f"{','.join(self.headers[col].validation)}",
+            f"{','.join(validation)}",
+            self.headers[col].name,
+        )
+        self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def snapshot_begin_drag_rows(self, event=None):
         self.snapshot_chore()
@@ -5756,12 +5756,6 @@ class Tree_Editor(tk.Frame):
         self.snapshot_chore()
         opened_at = self.changelog.opened_at
         removed = list(self.changelog.actions[: up_to + 1])
-        self.changelog_append(
-            "Pruned changelog",
-            f"From: {removed[0].first_stamp()} To: {removed[-1].last_stamp()}",
-            "",
-            "",
-        )
         self.vs.append(
             {
                 "type": "prune changelog",
@@ -5770,9 +5764,21 @@ class Tree_Editor(tk.Frame):
                 "required_data": self.get_required_snapshot_data(),
             }
         )
+        self.changelog_append(
+            "Pruned changelog",
+            f"From: {removed[0].first_stamp()} To: {removed[-1].last_stamp()}",
+            "",
+            "",
+        )
 
     def snapshot_auto_sort_nodes(self):
         self.snapshot_chore()
+        self.vs.append(
+            {
+                "type": "node sort",
+                "required_data": self.get_required_snapshot_data(),
+            }
+        )
         self.changelog_append(
             "Sort treeview",
             "Alphanumerically sorted order of Treeview IDs",
@@ -5780,14 +5786,10 @@ class Tree_Editor(tk.Frame):
             "",
         )
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
-        self.vs.append(
-            {
-                "type": "node sort",
-                "required_data": self.get_required_snapshot_data(),
-            }
-        )
 
     def snapshot_chore(self):
+        # Close lines still open so this edit's snapshot does not take them with it.
+        self.changelog.seal()
         self.save_info_get_saved_info()
         self.edit_menu.entryconfig(0, label=f"Undo {len(self.vs)}/30", state="normal")
 
@@ -6355,7 +6357,7 @@ class Tree_Editor(tk.Frame):
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
-                "Copy and paste ID |",
+                "Copy and paste ID",
                 iid,
                 "",
                 self.nodes[self.selected_ID.lower()].name,
@@ -6406,7 +6408,7 @@ class Tree_Editor(tk.Frame):
             iid = self.nodes[dct["id"]].name
             if self.selected_PAR == "":
                 self.changelog_append_no_unsaved(
-                    "Copy and paste ID |",
+                    "Copy and paste ID",
                     iid,
                     "",
                     "",
@@ -6415,7 +6417,7 @@ class Tree_Editor(tk.Frame):
                 )
             else:
                 self.changelog_append_no_unsaved(
-                    "Copy and paste ID |",
+                    "Copy and paste ID",
                     iid,
                     "",
                     self.nodes[self.selected_PAR.lower()].name,
@@ -6465,7 +6467,7 @@ class Tree_Editor(tk.Frame):
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
-                "Copy and paste ID |",
+                "Copy and paste ID",
                 iid,
                 "",
                 "",
@@ -6515,7 +6517,7 @@ class Tree_Editor(tk.Frame):
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
-                "Copy and paste ID + children |",
+                "Copy and paste ID + children",
                 iid,
                 "",
                 self.nodes[self.selected_ID.lower()].name,
@@ -6566,7 +6568,7 @@ class Tree_Editor(tk.Frame):
             iid = self.nodes[dct["id"]].name
             if self.selected_PAR == "":
                 self.changelog_append_no_unsaved(
-                    "Copy and paste ID + children |",
+                    "Copy and paste ID + children",
                     iid,
                     "",
                     "",
@@ -6575,7 +6577,7 @@ class Tree_Editor(tk.Frame):
                 )
             else:
                 self.changelog_append_no_unsaved(
-                    "Copy and paste ID + children |",
+                    "Copy and paste ID + children",
                     iid,
                     "",
                     self.nodes[self.selected_PAR.lower()].name,
@@ -6625,7 +6627,7 @@ class Tree_Editor(tk.Frame):
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
-                "Copy and paste ID + children |",
+                "Copy and paste ID + children",
                 iid,
                 "",
                 "",
@@ -6681,7 +6683,7 @@ class Tree_Editor(tk.Frame):
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
-                "Cut and paste ID |",
+                "Cut and paste ID",
                 iid,
                 self.nodes[dct["parent"]].name if dct["parent"] else "",
                 self.nodes[self.selected_ID.lower()].name,
@@ -6738,7 +6740,7 @@ class Tree_Editor(tk.Frame):
             iid = self.nodes[dct["id"]].name
             if self.selected_PAR == "":
                 self.changelog_append_no_unsaved(
-                    "Cut and paste ID |",
+                    "Cut and paste ID",
                     iid,
                     self.nodes[dct["parent"]].name if dct["parent"] else "",
                     "",
@@ -6747,7 +6749,7 @@ class Tree_Editor(tk.Frame):
                 )
             else:
                 self.changelog_append_no_unsaved(
-                    "Cut and paste ID |",
+                    "Cut and paste ID",
                     iid,
                     self.nodes[dct["parent"]].name if dct["parent"] else "",
                     self.nodes[self.selected_PAR.lower()].name,
@@ -6803,7 +6805,7 @@ class Tree_Editor(tk.Frame):
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
-                "Cut and paste ID |",
+                "Cut and paste ID",
                 iid,
                 self.nodes[dct["parent"]].name if dct["parent"] else "",
                 "",
@@ -6859,7 +6861,7 @@ class Tree_Editor(tk.Frame):
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
-                "Cut and paste ID + children |",
+                "Cut and paste ID + children",
                 iid,
                 self.nodes[dct["parent"]].name if dct["parent"] else "",
                 self.nodes[self.selected_ID.lower()].name,
@@ -6917,7 +6919,7 @@ class Tree_Editor(tk.Frame):
             iid = self.nodes[dct["id"]].name
             if self.selected_PAR == "":
                 self.changelog_append_no_unsaved(
-                    "Cut and paste ID + children |",
+                    "Cut and paste ID + children",
                     iid,
                     self.nodes[dct["parent"]].name if dct["parent"] else "",
                     "",
@@ -6926,7 +6928,7 @@ class Tree_Editor(tk.Frame):
                 )
             else:
                 self.changelog_append_no_unsaved(
-                    "Cut and paste ID + children |",
+                    "Cut and paste ID + children",
                     iid,
                     self.nodes[dct["parent"]].name if dct["parent"] else "",
                     self.nodes[self.selected_PAR.lower()].name,
@@ -6984,7 +6986,7 @@ class Tree_Editor(tk.Frame):
         for dct in successful:
             iid = self.nodes[dct["id"]].name
             self.changelog_append_no_unsaved(
-                "Cut and paste ID + children |",
+                "Cut and paste ID + children",
                 iid,
                 self.nodes[dct["parent"]].name if dct["parent"] else "",
                 "",
@@ -7362,7 +7364,7 @@ class Tree_Editor(tk.Frame):
             par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
             to_del = self._del_id_core(iid, to_del, snapshot=True)
             self.changelog_append_no_unsaved(
-                "Delete ID |",
+                "Delete ID",
                 self.sheet.data[self.rns[iid]][self.ic],
                 par,
                 "",
@@ -7405,7 +7407,7 @@ class Tree_Editor(tk.Frame):
                 continue
             to_del = self._del_id_all_core(iid, to_del, snapshot=True)
             self.changelog_append_no_unsaved(
-                "Delete ID from all hierarchies |",
+                "Delete ID from all hierarchies",
                 f"{self.sheet.data[self.rns[iid]][self.ic]}",
                 "",
                 "",
@@ -7436,6 +7438,7 @@ class Tree_Editor(tk.Frame):
     def del_id_orphan(self, event=None):
         if not self.selected_ID:
             return
+        self.snapshot_delete_ids()
         self.changelog_append(
             "Delete ID, orphan children",
             self.selected_ID,
@@ -7443,7 +7446,6 @@ class Tree_Editor(tk.Frame):
             "",
             self.headers[self.pc].name,
         )
-        self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
         self._del_id_orphan_core(self.selected_ID, self.selected_PAR if self.selected_PAR else "")
@@ -7498,7 +7500,7 @@ class Tree_Editor(tk.Frame):
             par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
             to_del = self._del_id_children_core(iid, to_del, snapshot=True)
             self.changelog_append_no_unsaved(
-                "Delete ID + all children |",
+                "Delete ID + all children",
                 self.sheet.data[self.rns[iid]][self.ic],
                 par,
                 "",
@@ -7547,7 +7549,7 @@ class Tree_Editor(tk.Frame):
             par = self.nodes[self.nodes[iid].ps[self.pc]].name if self.nodes[iid].ps[self.pc] else ""
             to_del = self._del_id_children_all_core(iid, to_del, snapshot=True)
             self.changelog_append_no_unsaved(
-                "Delete ID + all children from all hierarchies |",
+                "Delete ID + all children from all hierarchies",
                 self.sheet.data[self.rns[iid]][self.ic],
                 par,
                 "",
@@ -7578,13 +7580,13 @@ class Tree_Editor(tk.Frame):
     def del_id_all_orphan(self):
         if not self.selected_ID:
             return
+        self.snapshot_delete_ids()
         self.changelog_append(
             "Delete ID from all hierarchies, orphan children",
             self.selected_ID,
             "",
             "",
         )
-        self.snapshot_delete_ids()
         self.sheet.deselect("all", redraw=False)
         self.disable_paste()
         self._del_id_all_orphan_core(self.selected_ID)
@@ -8167,7 +8169,7 @@ class Tree_Editor(tk.Frame):
                 self.stop_work("Can only save .csv/.xlsx/.json file types")
                 return
             self.C.status_bar.change_text("Saving changelog...")
-            rows = self.changelog.flatten() if event == "all" else self.changelog.session_rows()
+            rows = self.changelog.rows() if event == "all" else self.changelog.session_rows()
             if event in ("all", "sheet"):
                 try:
                     if newfile.lower().endswith(".xlsx"):
@@ -8477,6 +8479,13 @@ class Tree_Editor(tk.Frame):
             self.row_len = new_row_len
             self.ic = popup.ic
             self.hiers = popup.pcols
+        if not self.new_sheet:
+            self.vs.pop()
+            self.set_undo_label()
+            self.new_sheet = []
+            self.stop_work(self.get_tree_editor_status_bar_text())
+            Error(self, "No rows found to build a tree", theme=self.C.theme)
+            return
         self.selected_ID = ""
         self.selected_PAR = ""
         self.pc = int(self.hiers[0])
@@ -8629,6 +8638,40 @@ class Tree_Editor(tk.Frame):
         equalize_sublist_lens(seq=changes, len_=row_len)
         successful = []
         excluded = 0
+        owed_id_rebuild = False
+
+        def flush_id_edits():
+            nonlocal owed_id_rebuild
+            if not owed_id_rebuild:
+                return
+            owed_id_rebuild = False
+            old_nodes = self.nodes
+            old_topnodes_order = {h: list(v) for h, v in self.topnodes_order.items()}
+            self.nodes = {}
+            self.sheet.MT.data, self.nodes = TreeBuilder().build(
+                self.sheet.MT.data,
+                self.new_sheet,
+                self.row_len,
+                self.ic,
+                self.hiers,
+                self.nodes,
+                add_warnings=False,
+                strip=not self.allow_spaces_ids_var,
+            )
+            self.new_sheet = []
+            self.fix_associate_sort_edit_cells()
+            self._restore_custom_tree_order(old_nodes, old_topnodes_order)
+            self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+
+        def continues_id_batch(ctyp, change):
+            if ctyp not in ("Edit cell", "Edit cell |"):
+                return False
+            col = self._col_index_named(change[5])
+            if col is None or self.headers[col].type_ not in ("ID", "Parent"):
+                return False
+            # This ID still has a row, so the cell can be written before the rebuild.
+            return change[2].lower() in self.rns
+
         self.snapshot_sheet()
         changes_len = len(changes)
         for changenum, change in enumerate(changes):
@@ -8644,6 +8687,8 @@ class Tree_Editor(tk.Frame):
             elif ctyp.startswith("Merge |"):
                 ctyp = ctyp.split("Merge | ")[1]
             try:
+                if not continues_id_batch(ctyp, change):
+                    flush_id_edits()
                 #  "Edit cell"
                 if ctyp == "Edit cell |" or ctyp == "Edit cell":
                     cik = change[2].lower()
@@ -8657,32 +8702,15 @@ class Tree_Editor(tk.Frame):
                     else:
                         validation_check = True
                     if cik in self.rns and self.sheet.MT.data[self.rns[cik]][col] == change[3] and validation_check:
-                        oldv = f"{self.sheet.MT.data[self.rns[cik]][col]}"
-                        newv = f"{change[4]}"
                         if self.sheet.MT.data[self.rns[cik]][col] != change[4]:
                             self._import_log("Edit cell", change)
                             self.sheet.MT.data[self.rns[cik]][col] = change[4]
-                            if oldv != newv and type_ in ("ID", "Parent"):
-                                old_nodes = self.nodes
-                                old_topnodes_order = {h: list(v) for h, v in self.topnodes_order.items()}
-                                self.nodes = {}
-                                self.sheet.MT.data, self.nodes = TreeBuilder().build(
-                                    self.sheet.MT.data,
-                                    self.new_sheet,
-                                    self.row_len,
-                                    self.ic,
-                                    self.hiers,
-                                    self.nodes,
-                                    add_warnings=False,
-                                    strip=not self.allow_spaces_ids_var,
-                                )
-                                self.new_sheet = []
-                                self.fix_associate_sort_edit_cells()
-                                self._restore_custom_tree_order(old_nodes, old_topnodes_order)
-                                self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+                            if type_ in ("ID", "Parent"):
+                                owed_id_rebuild = True
                             successful.append(True)
                         else:
                             excluded += 1
+                            successful.append(None)
                     else:
                         successful.append(False)
 
@@ -9216,14 +9244,18 @@ class Tree_Editor(tk.Frame):
                             successful.append(True)
                         else:
                             successful.append(False)
+                elif ctyp in ("Change detail column type", "Date format change"):
+                    successful.append(False)
             except Exception:
                 successful.append(False)
                 continue
-        num_successful = sum(successful)
+        flush_id_edits()
+        num_successful = sum(1 for ok in successful if ok)
+        num_failed = sum(1 for ok in successful if ok is False)
         if num_successful:
             self.changelog_append(
                 f"Imported {num_successful} changes from: {os.path.basename(fp)}",
-                f"Unsuccessful: {len(successful) - num_successful} Unnecessary: {excluded}",
+                f"Unsuccessful: {num_failed} Unnecessary: {excluded}",
                 "",
                 "",
             )
@@ -9344,6 +9376,14 @@ class Tree_Editor(tk.Frame):
                     data=self.new_sheet,
                 )
             if fmt > 0:
+                if not self.new_sheet:
+                    self.vs.pop()
+                    self.set_undo_label()
+                    self.new_sheet = []
+                    Error(self, "No applicable changes were made", theme=self.C.theme)
+                    self.stop_work(self.get_tree_editor_status_bar_text())
+                    self.focus_sheet()
+                    return
                 ns_hiers_set = set(ns_hiers)
                 ns_headers = self.fix_headers(self.new_sheet.pop(0), ns_row_len)
             ns_pcol_names = {cell.lower(): i for i, cell in enumerate(ns_headers) if i in ns_hiers_set}
@@ -9367,7 +9407,7 @@ class Tree_Editor(tk.Frame):
                     self.insert_columns_no_blank_row(num_new_dcols)
                 for num, idx in enumerate(new_dcols, 1):
                     self.changelog_append_no_unsaved(
-                        "Merge | Add new detail column",
+                        "Add new detail column",
                         ns_headers[idx],
                         f"{self.row_len + num}",
                         "Text",
@@ -9381,7 +9421,7 @@ class Tree_Editor(tk.Frame):
                             row[self.row_len + num] = self.new_sheet[ns_rn][idx]
                             if row[self.row_len + num] != "":
                                 self.changelog_append_no_unsaved(
-                                    "Merge | Edit cell",
+                                    "Edit cell",
                                     row[self.ic],
                                     "",
                                     f"{row[self.row_len + num]}",
@@ -9400,7 +9440,7 @@ class Tree_Editor(tk.Frame):
                     self.insert_columns_no_blank_row(num_new_pcols)
                 for num, idx in enumerate(new_pcols, 1):
                     self.changelog_append_no_unsaved(
-                        "Merge | Add new hierarchy column",
+                        "Add new hierarchy column",
                         ns_headers[idx],
                         f"{self.row_len + num}",
                         "",
@@ -9422,7 +9462,7 @@ class Tree_Editor(tk.Frame):
                             row[self.row_len + num] = self.new_sheet[ns_rn][idx]
                             if row[self.row_len + num] != "":
                                 self.changelog_append_no_unsaved(
-                                    "Merge | Edit cell",
+                                    "Edit cell",
                                     row[self.ic],
                                     "",
                                     f"{row[self.row_len + num]}",
@@ -9445,7 +9485,7 @@ class Tree_Editor(tk.Frame):
                             newrow = list(repeat("", self.row_len))
                             newrow[self.ic] = row[ns_ic]
                             self.changelog_append_no_unsaved(
-                                "Merge | Add ID",
+                                "Add ID",
                                 newrow[self.ic],
                                 "",
                                 "",
@@ -9458,7 +9498,7 @@ class Tree_Editor(tk.Frame):
                                     hdr_idx = os_dcol_names[name]
                                     if newrow[hdr_idx] != "":
                                         self.changelog_append_no_unsaved(
-                                            "Merge | Edit cell",
+                                            "Edit cell",
                                             newrow[self.ic],
                                             "",
                                             f"{newrow[hdr_idx]}",
@@ -9470,7 +9510,7 @@ class Tree_Editor(tk.Frame):
                                 hdr_idx = os_pcol_names[name]
                                 if newrow[hdr_idx] != "":
                                     self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
+                                        "Edit cell",
                                         newrow[self.ic],
                                         "",
                                         f"{newrow[hdr_idx]}",
@@ -9489,7 +9529,7 @@ class Tree_Editor(tk.Frame):
                             newrow = list(repeat("", self.row_len))
                             newrow[self.ic] = row[ns_ic]
                             self.changelog_append_no_unsaved(
-                                "Merge | Add ID",
+                                "Add ID",
                                 newrow[self.ic],
                                 "",
                                 "",
@@ -9501,7 +9541,7 @@ class Tree_Editor(tk.Frame):
                                 hdr_idx = idx
                                 if newrow[hdr_idx] != "":
                                     self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
+                                        "Edit cell",
                                         newrow[self.ic],
                                         "",
                                         f"{newrow[hdr_idx]}",
@@ -9514,7 +9554,7 @@ class Tree_Editor(tk.Frame):
                                     hdr_idx = os_dcol_names[name]
                                     if newrow[hdr_idx] != "":
                                         self.changelog_append_no_unsaved(
-                                            "Merge | Edit cell",
+                                            "Edit cell",
                                             newrow[self.ic],
                                             "",
                                             f"{newrow[hdr_idx]}",
@@ -9526,7 +9566,7 @@ class Tree_Editor(tk.Frame):
                                 hdr_idx = os_pcol_names[name]
                                 if newrow[hdr_idx] != "":
                                     self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
+                                        "Edit cell",
                                         newrow[self.ic],
                                         "",
                                         f"{newrow[hdr_idx]}",
@@ -9545,7 +9585,7 @@ class Tree_Editor(tk.Frame):
                             newrow = list(repeat("", self.row_len))
                             newrow[self.ic] = row[ns_ic]
                             self.changelog_append_no_unsaved(
-                                "Merge | Add ID",
+                                "Add ID",
                                 newrow[self.ic],
                                 "",
                                 "",
@@ -9557,7 +9597,7 @@ class Tree_Editor(tk.Frame):
                                 hdr_idx = idx
                                 if newrow[hdr_idx] != "":
                                     self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
+                                        "Edit cell",
                                         newrow[self.ic],
                                         "",
                                         f"{newrow[hdr_idx]}",
@@ -9570,7 +9610,7 @@ class Tree_Editor(tk.Frame):
                                     hdr_idx = os_dcol_names[name]
                                     if newrow[hdr_idx] != "":
                                         self.changelog_append_no_unsaved(
-                                            "Merge | Edit cell",
+                                            "Edit cell",
                                             newrow[self.ic],
                                             "",
                                             f"{newrow[hdr_idx]}",
@@ -9582,7 +9622,7 @@ class Tree_Editor(tk.Frame):
                                 hdr_idx = os_pcol_names[name]
                                 if newrow[hdr_idx] != "":
                                     self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
+                                        "Edit cell",
                                         newrow[self.ic],
                                         "",
                                         f"{newrow[hdr_idx]}",
@@ -9606,7 +9646,7 @@ class Tree_Editor(tk.Frame):
                             newrow = list(repeat("", self.row_len))
                             newrow[self.ic] = row[ns_ic]
                             self.changelog_append_no_unsaved(
-                                "Merge | Add ID",
+                                "Add ID",
                                 newrow[self.ic],
                                 "",
                                 "",
@@ -9618,7 +9658,7 @@ class Tree_Editor(tk.Frame):
                                 hdr_idx = idx
                                 if newrow[hdr_idx] != "":
                                     self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
+                                        "Edit cell",
                                         newrow[self.ic],
                                         "",
                                         f"{newrow[hdr_idx]}",
@@ -9630,7 +9670,7 @@ class Tree_Editor(tk.Frame):
                                 hdr_idx = idx
                                 if newrow[hdr_idx] != "":
                                     self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
+                                        "Edit cell",
                                         newrow[self.ic],
                                         "",
                                         f"{newrow[hdr_idx]}",
@@ -9643,7 +9683,7 @@ class Tree_Editor(tk.Frame):
                                     hdr_idx = os_dcol_names[name]
                                     if newrow[hdr_idx] != "":
                                         self.changelog_append_no_unsaved(
-                                            "Merge | Edit cell",
+                                            "Edit cell",
                                             newrow[self.ic],
                                             "",
                                             f"{newrow[hdr_idx]}",
@@ -9655,7 +9695,7 @@ class Tree_Editor(tk.Frame):
                                 hdr_idx = os_pcol_names[name]
                                 if newrow[hdr_idx] != "":
                                     self.changelog_append_no_unsaved(
-                                        "Merge | Edit cell",
+                                        "Edit cell",
                                         newrow[self.ic],
                                         "",
                                         f"{newrow[hdr_idx]}",
@@ -9678,7 +9718,7 @@ class Tree_Editor(tk.Frame):
                                 and row[idx] != self.new_sheet[ns_rn][ns_dcol_idx]
                             ):
                                 self.changelog_append_no_unsaved(
-                                    "Merge | Edit cell",
+                                    "Edit cell",
                                     row[self.ic],
                                     f"{row[idx]}",
                                     self.new_sheet[ns_rn][ns_dcol_idx],
@@ -9699,7 +9739,7 @@ class Tree_Editor(tk.Frame):
                             ns_pcol_idx = ns_pcol_names[name]
                             if row[idx] != self.new_sheet[ns_rn][ns_pcol_idx]:
                                 self.changelog_append_no_unsaved(
-                                    "Merge | Edit cell",
+                                    "Edit cell",
                                     row[self.ic],
                                     f"{row[idx]}",
                                     self.new_sheet[ns_rn][ns_pcol_idx],
@@ -9787,7 +9827,7 @@ class Tree_Editor(tk.Frame):
         )
         if self.save_json_with_program_data:
             d["version"] = software_version_number
-            d["changelog"] = self.changelog.flatten()
+            d["changelog"] = self.changelog.rows()
             d["program_data"] = dict_x_b32(self.get_program_data_dict())
         return d
 
@@ -9807,7 +9847,7 @@ class Tree_Editor(tk.Frame):
             for h in self.headers
         ]
         d["nodes"] = self.jsonify_nodes()
-        d["changelog"] = self.changelog.flatten()
+        d["changelog"] = self.changelog.to_save()
         d["row_heights"] = self.sheet.get_safe_row_heights()
         d["column_widths"] = self.sheet.get_column_widths()
         d["sheet_column_alignments"] = self.sheet.get_column_alignments()
@@ -9867,7 +9907,7 @@ class Tree_Editor(tk.Frame):
                 continue
         ws = wb.create_sheet(title=new_title1)
         ws.append(xlsx_changelog_header(ws))
-        for r in reversed(self.changelog.flatten()):
+        for r in reversed(self.changelog.rows()):
             ws.append(e if e else None for e in r)
 
     def write_flattened_to_workbook(self, wb, sheetnames_):

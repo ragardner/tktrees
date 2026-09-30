@@ -314,7 +314,7 @@ def csv_str_x_data(s: str, discard_empty_rows: bool = True, paste: bool = False)
         for r in csv.reader(
             io.StringIO(s),
             dialect=dialect,
-            skipinitialspace=True,
+            skipinitialspace=False,
         ):
             try:
                 data.append(r[: len(r) - next(i for i, c in enumerate(reversed(r)) if c)])
@@ -327,7 +327,7 @@ def csv_str_x_data(s: str, discard_empty_rows: bool = True, paste: bool = False)
                 csv.reader(
                     io.StringIO(s),
                     dialect=dialect,
-                    skipinitialspace=True,
+                    skipinitialspace=False,
                 )
             )
         else:

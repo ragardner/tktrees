@@ -1049,15 +1049,22 @@ class Post_Import_Changes_Popup(tk.Toplevel):
         self.sheetdisplay.data_reference(newdataref=changes, reset_col_positions=True, reset_row_positions=True)
         self.sheetdisplay.hide_columns(0)
         for i, b in enumerate(successful):
+            if b is None:
+                continue
             self.sheetdisplay.highlight(
                 self.sheetdisplay.span(i, index=True),
                 bg="#40bd59" if b else "#db7463",
                 fg="black",
             )
         self.sheetdisplay.grid(row=0, column=0, sticky="nswe")
+        unnecessary = sum(b is None for b in successful)
+        done = sum(1 for b in successful if b)
+        status = f"Successful changes: {done}/{len(successful)}"
+        if unnecessary:
+            status += f" | Unnecessary: {unnecessary}"
         self.status_bar = Status_Bar(
             self,
-            text=f"Successful changes: {sum(successful)}/{len(successful)}",
+            text=status,
             theme=theme,
         )
         self.status_bar.grid(row=1, column=0, sticky="nswe")
@@ -1215,7 +1222,7 @@ class Changelog_Popup(tk.Toplevel):
             self.stop_work("Can only save .csv/.xlsx/.json file types")
             return
         self.status_bar.change_text(f"{self.total_changes}Saving...")
-        rows = self.C.changelog.flatten()
+        rows = self.C.changelog.rows()
         try:
             if newfile.lower().endswith(".xlsx"):
                 self.wb_ = Workbook(write_only=True)
@@ -2543,6 +2550,7 @@ class View_Id_Popup(tk.Toplevel):
             else:
                 self.C.vs.pop()
                 self.C.set_undo_label()
+                self.C.snapshot_ctrl_x_v_del_key_id_par()
                 self.C.changelog_append(
                     "Edit cell",
                     ID,
@@ -2550,7 +2558,6 @@ class View_Id_Popup(tk.Toplevel):
                     f"{newtext}",
                     self.C.headers[x1].name,
                 )
-                self.C.snapshot_ctrl_x_v_del_key_id_par()
                 self.C.sheet.MT.data[y1][x1] = newtext
                 self.C.rebuild_tree()
                 self._changes_made(scroll=True)
@@ -3138,6 +3145,9 @@ class Merge_Sheets_Popup(tk.Toplevel):
             )
         ):
             self.status.change_text("Select at least one option")
+            return
+        if self.data_format_selector.flattened and not self.flattened_pcols:
+            self.status.change_text("Select hierarchy columns")
             return
         if self.format_selector_current == 0:
             if self.ic in set(self.pcols):

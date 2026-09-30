@@ -244,6 +244,11 @@ class Column_Selection(tk.Frame):
             ) = TreeBuilder().convert_indented_tree_with_header_to_normal(
                 data=self.C.frames.tree_edit.sheet.MT.data,
             )
+        if not self.C.frames.tree_edit.sheet.MT.data:
+            self.C.frames.tree_edit.sheet.MT.data = self.sheetdisplay.get_sheet_data()
+            self.C.enable_at_start()
+            toplevels.Error(self.C, "No rows found to build a tree", theme=self.C.theme)
+            return
         self.C.frames.tree_edit.ic = idcol
         self.C.frames.tree_edit.hiers = hier_cols
         self.C.frames.tree_edit.pc = hier_cols[0]
