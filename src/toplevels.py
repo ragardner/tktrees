@@ -592,6 +592,431 @@ class Export_Flattened_Popup(tk.Toplevel):
         self.USER_HAS_CLOSED_WINDOW()
 
 
+LEVEL_INDENT_FORMATS = (
+    "One detail",
+    "Multi-detail",
+    "With header",
+)
+
+
+class Export_Level_Indent_Popup(tk.Toplevel):
+    def __init__(self, C, theme="dark"):
+        tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
+        self.theme = theme
+        self.C = new_toplevel_chores(toplevel=self, parent=C, title=f"{app_title} - Level-indent sheet", resizable=True)
+        self.has_header = False
+        self.detail_off: set[int] = set()
+        self.hidden_detail_col = None
+        self.detail_shown: list[tuple[int, str]] = []
+
+        self.sheetdisplay = Sheet(
+            self,
+            theme=theme,
+            header_font=sheet_header_font,
+            outline_thickness=0,
+        )
+
+        self.menubar = tk.Menu(self, **menu_kwargs)
+        self.config(menu=self.menubar)
+
+        self.file_menu = tk.Menu(self.menubar, tearoff=0, **menu_kwargs)
+        self.menubar.add_cascade(label="File", menu=self.file_menu, **menu_kwargs)
+        self.file_menu.add_command(label="Save As", command=self.save_as, **menu_kwargs)
+
+        self.edit_menu = tk.Menu(self.menubar, tearoff=0, **menu_kwargs)
+        self.menubar.add_cascade(label="Edit", menu=self.edit_menu, **menu_kwargs)
+        self.edit_menu.add_command(
+            label="Undo",
+            command=self.sheetdisplay.undo,
+            image=self.C.icons["ICON_UNDO"],
+            accelerator="Ctrl+Z",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Redo",
+            command=self.sheetdisplay.redo,
+            image=self.C.icons["ICON_REDO"],
+            accelerator="Ctrl+Shift+Z",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Copy",
+            command=self.sheetdisplay.copy,
+            image=self.C.icons["ICON_COPY"],
+            accelerator="Ctrl+C",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Cut",
+            command=self.sheetdisplay.cut,
+            image=self.C.icons["ICON_CUT"],
+            accelerator="Ctrl+X",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Paste",
+            command=self.sheetdisplay.paste,
+            image=self.C.icons["ICON_PASTE"],
+            accelerator="Ctrl+V",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Delete",
+            command=self.sheetdisplay.delete,
+            image=self.C.icons["ICON_DEL"],
+            accelerator="Del",
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_separator()
+        self.edit_menu.add_command(
+            label="Copy Table as Tab-Separated CSV",
+            command=self.clipboard_indent,
+            image=self.C.icons["ICON_COPY"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Copy Table as Comma-Separated CSV",
+            command=self.clipboard_comma,
+            image=self.C.icons["ICON_COPY"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Copy Table as JSON",
+            command=self.clipboard_json,
+            image=self.C.icons["ICON_COPY"],
+            compound="left",
+            **menu_kwargs,
+        )
+
+        self.view_menu = tk.Menu(self.menubar, tearoff=0, **menu_kwargs)
+        self.menubar.add_cascade(label="View", menu=self.view_menu, **menu_kwargs)
+        self.show_controls_var = tk.BooleanVar(value=True)
+        self.view_menu.add_checkbutton(
+            label="Show Controls", variable=self.show_controls_var, command=self.reconfigure_panels, **menu_kwargs
+        )
+        self.show_detail_var = tk.BooleanVar(value=False)
+        self.view_menu.add_checkbutton(
+            label="Show Detail Excluder", variable=self.show_detail_var, command=self.reconfigure_panels, **menu_kwargs
+        )
+
+        self.protocol("WM_DELETE_WINDOW", self.USER_HAS_CLOSED_WINDOW)
+        self.USER_HAS_QUIT = False
+        self.wb_ = None
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=0)
+        self.grid_columnconfigure(2, weight=0)
+        self.grid_rowconfigure(0, weight=1)
+
+        self.left_frame = tk.Frame(self, bg=themes[theme].top_left_bg)
+        self.left_frame.grid_columnconfigure(0, weight=1)
+
+        self.format_label = Label(self.left_frame, text="Data Format: ", font=EFB, theme=theme, anchor="w")
+        self.format_label.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 0))
+        self.format_dropdown = Ez_Dropdown(self.left_frame, font=EFB)
+        self.format_dropdown["values"] = LEVEL_INDENT_FORMATS
+        self.format_dropdown.current(0)
+        self.format_dropdown.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
+
+        self.hier_label = Label(self.left_frame, text="Hierarchy: ", font=EFB, theme=theme, anchor="w")
+        self.hier_label.grid(row=2, column=0, sticky="ew", padx=10, pady=(10, 0))
+        self.hier_dropdown = Ez_Dropdown(self.left_frame, font=EFB)
+        self.hier_dropdown["values"] = [self.C.headers[h].name for h in self.C.hiers]
+        try:
+            hier_current = self.C.hiers.index(self.C.pc)
+        except ValueError:
+            hier_current = 0
+        self.hier_dropdown.current(hier_current)
+        self.hier_dropdown.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 10))
+
+        self.label_button = None
+        next_row = 4
+        if self.C.tv_label_col != self.C.ic:
+            self.label_button = X_Checkbutton(
+                self.left_frame,
+                text="Use treeview label  ",
+                style="x_button.Std.TButton",
+                command=self.build_sheet,
+                checked=False,
+                compound="right",
+            )
+            self.label_button.grid(row=next_row, column=0, sticky="ew", padx=10, pady=(10, 5))
+            next_row += 1
+
+        self.build_button = Button(
+            self.left_frame,
+            text=" Build sheet ",
+            style="EF.Std.TButton",
+            command=self.build_sheet,
+        )
+        self.build_button.grid(row=next_row, column=0, pady=10, padx=10, sticky="ew")
+
+        self.detail_frame = Frame(self, theme=theme)
+        self.detail_frame.grid_propagate(0)
+        self.detail_frame.grid_rowconfigure(1, weight=1)
+        self.detail_frame.grid_columnconfigure(0, weight=1)
+        self.detail_frame.grid_columnconfigure(1, weight=0)
+        self.detail_label = Label(self.detail_frame, text="Include Details:", font=EFB, theme=theme)
+        self.detail_label.grid(row=0, column=0, sticky="nsw", padx=10, pady=(10, 0))
+        self.detail_label.update_idletasks()
+        self.hide_detail_button = tk.Button(
+            self.detail_frame,
+            text="X",
+            command=lambda: (self.show_detail_var.set(False), self.reconfigure_panels()),
+            bg=themes[theme].top_left_bg,
+            fg=themes[theme].table_fg,
+            relief="flat",
+        )
+        self.hide_detail_button.grid(row=0, column=1, sticky="ne", padx=10, pady=(10, 0))
+        self.hide_detail_button.update_idletasks()
+        self.detail_col_selector = Fast_Selector(self.detail_frame, theme=theme)
+        self.detail_col_selector.grid(row=1, column=0, columnspan=2, sticky="nswe", padx=10, pady=(10, 0))
+        self.detail_catalog = [
+            (i, hdr.name) for i, hdr in enumerate(self.C.headers) if hdr.type_ not in ("ID", "Parent")
+        ]
+        self.detail_shown = list(self.detail_catalog)
+        self.detail_col_selector.load_cols([name for _, name in self.detail_shown])
+        self.detail_col_selector.bind("<ButtonRelease-1>", self.build_sheet, add="+")
+
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.extra_bindings("begin_edit_cell", self.begin_edit)
+        self.sheetdisplay.extra_bindings("end_edit_cell", self.end_edit)
+        self.sheetdisplay.grid(row=0, column=1, rowspan=8, sticky="nswe")
+
+        self.status_bar = Status_Bar(self, text="", theme=theme)
+        self.status_bar.grid(row=8, column=0, columnspan=2, sticky="nswe")
+        self.bind("<Escape>", self.cancel)
+        self.format_dropdown.bind("<<ComboboxSelected>>", self.build_sheet)
+        self.hier_dropdown.bind("<<ComboboxSelected>>", self.build_sheet)
+
+        show_toplevel_chores(self, width=1200, height=750, wait_window=False)
+        self.build_sheet()
+        self.reconfigure_panels()
+        self.wait_window()
+
+    def _label_col_to_hide(self):
+        if self.label_button is not None and self.label_button.get_checked():
+            return self.C.tv_label_col
+        return None
+
+    def _store_detail_off(self):
+        selected = set(self.detail_col_selector.get_selected_rows())
+        for row, (idx, _) in enumerate(self.detail_shown):
+            if row in selected:
+                self.detail_off.discard(idx)
+            else:
+                self.detail_off.add(idx)
+
+    def _load_detail_selector(self):
+        hide = self.hidden_detail_col
+        self.detail_shown = [(idx, name) for idx, name in self.detail_catalog if idx != hide]
+        self.detail_col_selector.load_cols([name for _, name in self.detail_shown])
+        for row, (idx, _) in enumerate(self.detail_shown):
+            if idx in self.detail_off:
+                self.detail_col_selector.deselect(row=row)
+
+    def _selected_details(self) -> tuple[list[int], list[str]]:
+        selected = set(self.detail_col_selector.get_selected_rows())
+        cols = []
+        names = []
+        for row, (idx, name) in enumerate(self.detail_shown):
+            if row in selected:
+                cols.append(idx)
+                names.append(name)
+        return cols, names
+
+    def reconfigure_panels(self):
+        self.left_frame.grid_remove()
+        self.detail_frame.grid_remove()
+        current_col = 0
+        if self.show_controls_var.get():
+            self.left_frame.grid(row=0, column=current_col, rowspan=8, sticky="nsw")
+            current_col += 1
+        if self.show_detail_var.get():
+            self.detail_frame.grid(row=0, column=current_col, rowspan=8, sticky="ns")
+            current_col += 1
+        sheet_col = current_col
+        self.sheetdisplay.grid_configure(column=sheet_col)
+        current_col += 1
+        for c in range(3):
+            self.grid_columnconfigure(c, weight=0)
+        self.grid_columnconfigure(sheet_col, weight=1)
+        self.status_bar.grid_configure(column=0, columnspan=current_col)
+        if self.show_detail_var.get():
+            width = self.detail_label.winfo_reqwidth() + self.hide_detail_button.winfo_reqwidth() + 70
+            self.detail_frame.config(width=width)
+            self.detail_col_selector.update_display()
+
+    def end_edit(self, event=None):
+        self.bind("<Escape>", self.cancel)
+
+    def begin_edit(self, event=None):
+        self.unbind("<Escape>")
+        return event.value
+
+    def start_work(self, msg=""):
+        self.status_bar.change_text(msg)
+        self.disable_widgets()
+
+    def stop_work(self, msg=""):
+        self.status_bar.change_text(msg)
+        self.enable_widgets()
+
+    def enable_widgets(self):
+        for i in range(self.menubar.index("end") + 1):
+            self.menubar.entryconfig(i, state="normal")
+        self.sheetdisplay.enable_bindings("all", "ctrl_select")
+        self.sheetdisplay.extra_bindings("begin_edit_cell", self.begin_edit)
+        self.sheetdisplay.extra_bindings("end_edit_cell", self.end_edit)
+        self.sheetdisplay.basic_bindings(True)
+        self.build_button.config(state="normal")
+        self.format_dropdown.config(state="readonly")
+        self.hier_dropdown.config(state="readonly")
+        if self.label_button is not None:
+            self.label_button.config(state="normal")
+
+    def disable_widgets(self):
+        for i in range(self.menubar.index("end") + 1):
+            self.menubar.entryconfig(i, state="disabled")
+        self.build_button.config(state="disabled")
+        self.format_dropdown.config(state="disabled")
+        self.hier_dropdown.config(state="disabled")
+        if self.label_button is not None:
+            self.label_button.config(state="disabled")
+        self.sheetdisplay.disable_bindings()
+        self.sheetdisplay.extra_bindings("begin_edit_cell", None)
+        self.sheetdisplay.extra_bindings("end_edit_cell", None)
+        self.sheetdisplay.basic_bindings(False)
+        self.update()
+
+    def try_to_close_wb(self):
+        with suppress(Exception):
+            self.wb_.close()
+        with suppress(Exception):
+            self.wb_ = None
+
+    def USER_HAS_CLOSED_WINDOW(self, callback=None):
+        self.USER_HAS_QUIT = True
+        with suppress(Exception):
+            self.try_to_close_wb()
+        self.destroy()
+
+    def _json_payload(self) -> dict:
+        rows = self.sheetdisplay.get_sheet_data()
+        if self.has_header and rows:
+            return full_sheet_to_dict(
+                rows[0],
+                rows[1:],
+                include_headers=True,
+                format_=self.C.json_format,
+            )
+        return {"records": rows}
+
+    def clipboard_json(self):
+        self.start_work("Copying to clipboard...")
+        to_clipboard(self.C.C, json.dumps(self._json_payload(), indent=4))
+        self.stop_work("Sheet successfully copied to clipboard as json!")
+
+    def clipboard_indent(self):
+        self.start_work("Copying to clipboard...")
+        s, writer = str_io_csv_writer(dialect=csv.excel_tab)
+        writer.writerows(self.sheetdisplay.get_sheet_data())
+        to_clipboard(self.C.C, s.getvalue().rstrip())
+        self.stop_work("Sheet successfully copied to clipboard (tab separated)!")
+
+    def clipboard_comma(self):
+        self.start_work("Copying to clipboard...")
+        s, writer = str_io_csv_writer(dialect=csv.excel)
+        writer.writerows(self.sheetdisplay.get_sheet_data())
+        to_clipboard(self.C.C, s.getvalue().rstrip())
+        self.stop_work("Sheet successfully copied to clipboard (comma separated)!")
+
+    def build_sheet(self, event=None):
+        hide = self._label_col_to_hide()
+        if hide != self.hidden_detail_col:
+            self._store_detail_off()
+            self.hidden_detail_col = hide
+            self._load_detail_selector()
+        fmt = self.format_dropdown.current() + 5
+        h = self.C.hiers[self.hier_dropdown.current()]
+        cols, names = self._selected_details()
+        self.has_header = fmt == 7
+        self.sheetdisplay.deselect("all")
+        rows = TreeBuilder().build_level_indent(
+            sheet=self.C.sheet.MT.data,
+            nodes=self.C.nodes,
+            ic=int(self.C.ic),
+            h=int(h),
+            detail_cols=cols,
+            detail_names=names,
+            fmt=fmt,
+            name_col=int(self.C.tv_label_col if hide is not None else self.C.ic),
+            auto_sort=bool(self.C.auto_sort_nodes_bool),
+            top_iids=list(self.C.topnodes_order.get(h, ())),
+        )
+        self.sheetdisplay.set_sheet_data(data=rows, verify=False)
+        n_items = len(rows) - (1 if self.has_header and rows else 0)
+        hier_name = self.C.headers[h].name
+        msg = f"{LEVEL_INDENT_FORMATS[fmt - 5]}. {hier_name}. {n_items} items"
+        if fmt == 5:
+            msg += f". One detail column: {names[0]}" if names else ". No detail column"
+        self.status_bar.change_text(msg)
+
+    def save_as(self):
+        previous = self.status_bar.text
+        self.start_work("Opened save dialog")
+        newfile = filedialog.asksaveasfilename(
+            parent=self,
+            title="Save as",
+            filetypes=[("Excel file", ".xlsx"), ("JSON File", ".json"), ("CSV File", ".csv"), ("TSV File", ".tsv")],
+            defaultextension=".xlsx",
+            confirmoverwrite=True,
+        )
+        if not newfile:
+            self.stop_work(previous)
+            return
+        newfile = os.path.normpath(newfile)
+        if not newfile.lower().endswith((".csv", ".xlsx", ".json", ".tsv")):
+            self.stop_work("Can only save .json/.csv/.xlsx file types")
+            return
+        self.status_bar.change_text("Saving...")
+        try:
+            if newfile.lower().endswith(".xlsx"):
+                self.wb_ = Workbook(write_only=True)
+                ws = self.wb_.create_sheet(title="Sheet1")
+                ws.freeze_panes = "A2" if self.has_header else None
+                for row in self.sheetdisplay.get_sheet_data():
+                    ws.append(row)
+                self.wb_.save(newfile)
+                self.try_to_close_wb()
+            elif newfile.lower().endswith(".json"):
+                with open(newfile, "w", newline="") as fh:
+                    fh.write(json.dumps(self._json_payload(), indent=4))
+            elif newfile.lower().endswith((".tsv", ".csv")):
+                with open(newfile, "w", newline="", encoding="utf-8") as fh:
+                    writer = csv.writer(
+                        fh,
+                        dialect=csv.excel_tab if newfile.lower().endswith(".tsv") else csv.excel,
+                        lineterminator="\n",
+                    )
+                    writer.writerows(self.sheetdisplay.get_sheet_data())
+        except Exception as error_msg:
+            self.try_to_close_wb()
+            self.stop_work(f"Error saving file: {error_msg}")
+            return
+        self.stop_work("Success! Level-indent sheet saved")
+
+    def cancel(self, event=None):
+        self.USER_HAS_CLOSED_WINDOW()
+
+
 class Post_Import_Changes_Popup(tk.Toplevel):
     def __init__(self, C, changes, successful, width=800, height=800, theme="dark"):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)

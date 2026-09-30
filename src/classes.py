@@ -23,6 +23,7 @@ from .functions import (
     output_kind,
     shift_elements_to_end,
     shift_elements_to_start,
+    sort_key,
     to_csv,
     to_json,
     to_xlsx,
@@ -708,6 +709,102 @@ class TreeBuilder:
         output = header + output
         rowlen = equalize_sublist_lens(output)
         return output, rowlen, 0, [1]
+
+    def build_level_indent(
+        self,
+        sheet: list[list[str]],
+        nodes: dict[str, Node],
+        ic: int,
+        h: int,
+        detail_cols: list[int],
+        detail_names: list[str],
+        fmt: int,
+        name_col: int,
+        auto_sort: bool,
+        top_iids: list[str],
+    ) -> list[list[str]]:
+        # 5: one detail in the cell after the ID. 6: every detail after the ID.
+        # 7: header row, IDs in fixed level columns, details in fixed columns on the right.
+        cols = list(detail_cols)
+        names = list(detail_names)
+        if len(names) < len(cols):
+            names.extend("" for _ in range(len(cols) - len(names)))
+        else:
+            names = names[: len(cols)]
+        if fmt == 5:
+            cols = cols[:1]
+            names = names[:1]
+        rns = {row[ic].lower(): i for i, row in enumerate(sheet) if ic < len(row) and row[ic]}
+        records: list[tuple[int, str, list[str]]] = []
+        max_level = 0
+        for iid, level in _level_indent_preorder(nodes, h, auto_sort, top_iids):
+            if iid not in rns:
+                continue
+            src = sheet[rns[iid]]
+            records.append((level, _sheet_cell(src, name_col), [_sheet_cell(src, c) for c in cols]))
+            max_level = max(max_level, level)
+        if fmt == 7:
+            max_level = max(max_level, 1)
+            rows = [[f"Level{i}" for i in range(max_level)] + names]
+            for level, name, details in records:
+                row = [""] * max_level
+                if 1 <= level <= max_level:
+                    row[level - 1] = name
+                row.extend(details)
+                rows.append(row)
+            return rows
+        rows = []
+        for level, name, details in records:
+            row = [""] * (level - 1)
+            row.append(name)
+            row.extend(details)
+            rows.append(row)
+        if rows:
+            equalize_sublist_lens(rows)
+        return rows
+
+
+def _sheet_cell(row: list[str], col: int) -> str:
+    if col >= len(row) or row[col] is None:
+        return ""
+    value = row[col]
+    return value if isinstance(value, str) else f"{value}"
+
+
+def _level_indent_preorder(
+    nodes: dict[str, Node],
+    h: int,
+    auto_sort: bool,
+    top_iids: list[str],
+) -> Generator[tuple[str, int]]:
+    if auto_sort:
+        with_children = []
+        without_children = []
+        for iid, node in nodes.items():
+            if node.ps[h] == "":
+                if node.cn[h]:
+                    with_children.append(iid)
+                else:
+                    without_children.append(iid)
+        tops = sorted(with_children, key=sort_key) + sorted(without_children, key=sort_key)
+    else:
+        tops = [iid for iid in top_iids if iid in nodes]
+    stack: list[tuple[str, int]] = []
+    top_iter = iter(tops)
+    while True:
+        if not stack:
+            try:
+                iid = next(top_iter)
+            except StopIteration:
+                break
+            yield iid, 1
+            stack.extend((child, 2) for child in reversed(nodes[iid].cn[h]) if child in nodes)
+        else:
+            iid, level = stack.pop()
+            if iid not in nodes:
+                continue
+            yield iid, level
+            stack.extend((child, level + 1) for child in reversed(nodes[iid].cn[h]) if child in nodes)
 
 
 class SearchResult:

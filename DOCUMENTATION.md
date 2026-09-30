@@ -279,7 +279,7 @@ Each changed cell is its own changelog row. Undo reverts the whole fill.
 
 #### Changelog
 
-Every change you make is recorded. Open the list with View -> View changelog, Export -> Export specific changes, or Ctrl + L.
+Every change you make is recorded. Open the list with View -> View changelog, Export -> Specific changes, or Ctrl + L.
 
 The list has seven columns: date and time, type, ID (or column name), old value (red), new value (green), from column, to column.
 
@@ -297,8 +297,8 @@ From that window you can:
 
 Two other export menu items skip the window:
 
-- Export file session changes: lines recorded since this file was opened. Undo drops an action out of that set. Prune moves the start of it back when earlier actions are removed.
-- Export all changes: the whole list, straight to a file
+- File session changes: lines recorded since this file was opened. Undo drops an action out of that set. Prune moves the start of it back when earlier actions are removed.
+- All changes: the whole list, straight to a file
 
 The changelog can be stored with app data, and you can also save a viewable changelog sheet (see XLSX Files). Undo does not survive closing the file, but the changelog can be saved.
 
@@ -346,7 +346,7 @@ Import -> Paste Clipboard & Overwrite Sheet replaces the whole open sheet with c
 
 #### Export flattened sheet
 
-Export -> Export flattened sheet opens a window with levels across columns. The open file is not changed.
+Export -> Flattened sheet opens a window with levels across columns. The open file is not changed.
 
 Pick which hierarchy (parent column) to flatten. Then:
 
@@ -361,6 +361,28 @@ View -> Show Detail Excluder lets you leave some detail columns out.
 File -> Save As writes .xlsx, .csv, .tsv or .json. Edit has copy as tab-separated, comma-separated or json.
 
 Saving the main file can also add a flattened sheet. That uses File -> Settings -> xlsx Flatten Settings, not this window. If you are viewing all hierarchies when you save, the first hierarchy is the one written.
+
+#### Export level-indent sheet
+
+Export -> Level-indent sheet opens a window with one item on each row, indented by how deep that item sits in the tree. The open file is not changed. The format dropdown starts on One detail.
+
+The hierarchy dropdown chooses which parent column to write. Each export is a single hierarchy, and the rows come out in the order that hierarchy shows in the tree.
+
+The text in the indented cell is the ID. If the treeview label has been set to a detail column, the window shows a Use treeview label switch, and that switch starts off. Turning it on writes that column in the indented cell and leaves the column out of the detail list. When the treeview label is already the ID column, the switch is not shown.
+
+File -> Save As writes .xlsx, .csv, .tsv, or .json. The Edit menu can copy the sheet as tab-separated text, comma-separated text, or json.
+
+**One detail**
+
+View -> Show Detail Excluder opens the list of detail columns, and every column in that list is highlighted when you first open it. This format writes only one of them, the leftmost highlighted column, in the cell after the ID. To use a column further to the right, click the columns to its left so they are no longer highlighted. The sheet has no header row. The usual json save would take that first row as the column names, which would drop the first item when you opened the file. Json for this format is the rows themselves, so the first row is still the first item.
+
+**Multi-detail**
+
+This format uses the same detail list. Every column that is still highlighted is written, from left to right, in the cells after the ID. Click a column when you want to leave it out. The sheet has no header row. Json is saved the same way as One detail, as the rows themselves, so the first row is still the first item.
+
+**With header**
+
+This format uses the same detail list. Every column that is still highlighted is written from left to right, in fixed columns to the right of the indented names, under that column's own name. Click a column when you want to leave it out. The first row of the sheet is a header, with Level0, Level1, and so on for each depth, followed by the names of the detail columns you included. Saving as json uses the json format chosen in File -> Settings.
 
 #### Tag IDs
 

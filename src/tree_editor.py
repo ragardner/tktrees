@@ -124,6 +124,7 @@ from .toplevels import (
     Enter_Sheet_Name_Popup,
     Error,
     Export_Flattened_Popup,
+    Export_Level_Indent_Popup,
     Fill_Column_Popup,
     Get_Clipboard_Data_Popup,
     Merge_Sheets_Popup,
@@ -488,24 +489,29 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.export_menu.add_command(
-            label="Export specific changes",
+            label="Specific changes",
             accelerator="Ctrl+L",
             command=lambda: self.show_changelog("specific"),
             **menu_kwargs,
         )
         self.export_menu.add_command(
-            label="Export file session changes",
+            label="File session changes",
             command=lambda: self.show_changelog("sheet"),
             **menu_kwargs,
         )
         self.export_menu.add_command(
-            label="Export all changes",
+            label="All changes",
             command=lambda: self.show_changelog("all"),
             **menu_kwargs,
         )
         self.export_menu.add_command(
-            label="Export flattened sheet",
+            label="Flattened sheet",
             command=self.export_flattened,
+            **menu_kwargs,
+        )
+        self.export_menu.add_command(
+            label="Level-indent sheet",
+            command=self.export_level_indent,
             **menu_kwargs,
         )
 
@@ -9763,6 +9769,13 @@ class Tree_Editor(tk.Frame):
         self.start_work("Flattening sheet...")
         self.new_sheet = []
         Export_Flattened_Popup(self, theme=self.C.theme)
+        self.stop_work(self.get_tree_editor_status_bar_text())
+        self.new_sheet = []
+
+    def export_level_indent(self, event=None):
+        self.start_work("Building level-indent sheet...")
+        self.new_sheet = []
+        Export_Level_Indent_Popup(self, theme=self.C.theme)
         self.stop_work(self.get_tree_editor_status_bar_text())
         self.new_sheet = []
 
