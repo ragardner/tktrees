@@ -279,7 +279,7 @@ Each changed cell is its own changelog row. Undo reverts the whole fill.
 
 #### Changelog
 
-Every change you make is recorded. Open the list with View -> View changelog, Export -> Specific changes, or Ctrl + L.
+Every change you make is recorded. Open the list with View -> Changelog, Export -> Specific changes, or Ctrl + L.
 
 The list has seven columns: date and time, type, ID (or column name), old value (red), new value (green), from column, to column.
 
@@ -304,7 +304,7 @@ The changelog can be stored with app data, and you can also save a viewable chan
 
 #### Import changes
 
-Import -> Import changes replays a saved changelog on the file you have open. Use this to apply the same edits to another file, or to replay an exported list.
+Import -> Changes replays a saved changelog on the file you have open. Use this to apply the same edits to another file, or to replay an exported list.
 
 The file must be .csv, .tsv, .xlsx, .xlsm, .xls or .json. For Excel, only the first sheet is read. The table must have exactly seven columns, the same as an exported changelog.
 

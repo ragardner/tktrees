@@ -264,21 +264,21 @@ class Tree_Editor(tk.Frame):
         self.edit_menu.add_separator()
         self.copy_clipboard_menu = tk.Menu(self.edit_menu, tearoff=0, **menu_kwargs)
         self.copy_clipboard_menu.add_command(
-            label="Copy sheet to clipboard (indent separated)",
+            label="Sheet (tab separated)",
             command=self.clipboard_sheet_indent,
             image=self.icons["ICON_COPY"],
             compound="left",
             **menu_kwargs,
         )
         self.copy_clipboard_menu.add_command(
-            label="Copy sheet to clipboard (comma separated)",
+            label="Sheet (comma separated)",
             command=self.clipboard_sheet,
             image=self.icons["ICON_COPY"],
             compound="left",
             **menu_kwargs,
         )
         self.copy_clipboard_menu.add_command(
-            label="Copy sheet to clipboard as json",
+            label="Sheet (json)",
             command=self.clipboard_sheet_json,
             image=self.icons["ICON_COPY"],
             compound="left",
@@ -356,13 +356,13 @@ class Tree_Editor(tk.Frame):
         self.view_menu = tk.Menu(self.C.menubar, tearoff=0, **menu_kwargs)
         self.C.menubar.add_cascade(label="View", menu=self.view_menu, state="disabled", **menu_kwargs)
         self.view_menu.add_command(
-            label="View changelog",
+            label="Changelog",
             accelerator="Ctrl+L",
             command=self.show_changelog,
             **menu_kwargs,
         )
         self.view_menu.add_command(
-            label="View build warnings",
+            label="Build warnings",
             command=lambda: self.show_warnings(show_regardless=True),
             **menu_kwargs,
         )
@@ -459,7 +459,7 @@ class Tree_Editor(tk.Frame):
             **menu_kwargs,
         )
         self.import_menu.add_command(
-            label="Import changes",
+            label="Changes",
             command=self.import_changes,
             image=self.icons["ICON_EDIT"],
             compound="left",
