@@ -20,7 +20,7 @@ def os_username():
     """Operating-system login, or "" when it cannot be read."""
     try:
         user = getpass.getuser()
-    except OSError:
+    except Exception:
         return ""
     if not isinstance(user, str):
         return ""
