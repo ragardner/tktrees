@@ -237,27 +237,39 @@ Conditions are text matching: the cell must contain exactly the user input. Cond
 
 #### Fill column
 
-Right click a detail column header and choose Fill column. ID and parent columns do not have this item. It writes that detail column once. It does not stay linked to the tree.
+Right click a detail column header and choose Fill column, or use Edit -> Fill column. ID and parent columns do not have this item. Fill column writes to one detail column. The cells then contain ordinary text, and they are not updated if you later change the tree.
 
-The box on the left starts empty. Text written into it is what gets written into the column's cells. Press Add to insert a token at the cursor. You can type your own words around a token. A token is replaced by the text it stands for when you press Fill column. A token with nothing to copy becomes an empty string, and the row is still written. `WIP-{parent}-A` on a top becomes `WIP--A`. A name that is not a column, or a column number past the sheet, is rejected before anything is written.
+The Column dropdown chooses which detail column is written to. If you opened the window from a column header, the dropdown starts on that column. If you opened it from the Edit menu, it starts on the detail column selected in the panel you were using, or on the leftmost detail column. If every detail column has been deleted, the Edit menu tells you that there is no detail column to fill.
+
+Only Selected, Descendants of selection, and Same level as selection are available when you open Fill column from the Edit menu. A fill opened from a column header does not include them.
+
+The text you enter is what gets written into the cells. Press Add to insert a token at the cursor. You can type your own words around a token. A token is replaced by the text it stands for when you press Fill column. A token with nothing to copy becomes an empty string, and the row is still written. `WIP-{parent}-A` on a top becomes `WIP--A`. A name that is not a column, or a column number past the sheet, is rejected before anything is written.
 
 **Which cells to fill**
 
-The first dropdown starts on "Only where this column is empty". The other choices are "Only where this column already has text" and "Every row".
+You can limit which rows are written with "Only where this column is empty", "Only where this column already has text", or "Every row". The window starts on empty cells.
 
-Only Tagged and Only Selected sit under that. Turn both on and a row has to be tagged and selected.
+Only Tagged fills tagged IDs. Only Selected fills the IDs that are selected in the tree or on the sheet. If you turn both on, a row has to be tagged and selected.
 
-Under the line, "The options here use this parent column:" sits above the parent column dropdown. The next dropdown is "Rows with or without children", "Only rows without children", or "Only rows with children". Then In this hierarchy, Depth equals, Descendants of selection, and Same level as selection. Depth 1 is the top of the tree. Descendants of selection and Same level as selection use the rows you have selected. If nothing is selected, those two fill no rows.
+In this hierarchy, Depth equals, Descendants of selection, Same level as selection, and the children choice all use one parent column. That dropdown starts on the hierarchy you are viewing. For children, you can choose "Rows with or without children", "Only rows without children", or "Only rows with children".
+
+In this hierarchy fills IDs that belong to that parent column. A blank parent cell counts as a top. An ID is skipped only when it has no link in that parent column.
+
+Depth equals fills IDs at that depth in that parent column. Depth 1 is a top. An ID with no link in that parent column is skipped.
+
+Descendants of selection fills the children of the selected IDs in that parent column. Same level as selection fills every ID at the same depth as a selected ID in that parent column. If nothing is selected, those two fill no rows.
 
 **Add words**
 
-"Adding items using the options below will insert a token that will be replaced with the text the token represents."
+The Parent column dropdown chooses the hierarchy used by `{parent}`, `{grandparent}`, `{great-grandparent}`, `{great-great-grandparent}`, `{root}`, `{path}`, and `{depth}`.
 
-Parent column: "This dropdown chooses which hierarchy the following adds use upon pressing fill." `{parent}`, `{grandparent}`, `{great-grandparent}`, `{great-great-grandparent}`, `{root}`, `{path}`, and `{depth}` use that hierarchy.
+Insert an ID or a cell copies a column from This ID, Parent, Grandparent, Great-grandparent, Great-great-grandparent, or Root.
 
-Insert an ID or a cell. "Choose where to look, what to copy, and then press Add." The first dropdown is This ID, Parent, Grandparent, Great-grandparent, Great-great-grandparent, or Root. "Choose a column to copy from." Then Add.
+Insert label, depth, or path inserts Label, Depth, or Path. Depth is the item's current depth, and 1 is a top. Path is the names from the top down, such as Animals > Cats > Lion.
 
-Insert label, depth, or path. The dropdown is Label, Depth, or Path. "Depth inserts an item's current depth, 1 being a top/root. Path is the names from the top down, such as Animals > Cats > Lion."
+Add inserts a token for the column you chose. For an ordinary header this is the name itself, such as `{Description}` or `{parent.Description}`.
+
+A few names cannot be used that way, and Add inserts the column number instead. `{parent.Notes}` already means the Notes cell on the parent row, so a header that is actually called `parent.Notes` becomes a number. The same thing happens when the header contains only a number, such as `5`, and when you choose This ID for a header named `parent`. `{5}` is column 5 on this row, and column 1 is the first column. `{parent.5}` is column 5 on the parent's row. A header such as `cost.centre` is not one of these cases, and Add inserts that name. You can type a column number yourself as well.
 
 Tokens you can type, as well as the ones Add inserts:
 
@@ -265,7 +277,7 @@ Tokens you can type, as well as the ones Add inserts:
 - `{parent}` `{grandparent}` `{great-grandparent}` `{great-great-grandparent}` `{root}` that ID, using the Parent column under Add words
 - `{Description}` this row, that column. A name with spaces is written as it is, `{Cost centre}`
 - `{parent.Description}` that column on the parent's row. The same for grandparent, great-grandparent, great-great-grandparent, and root
-- `{5}` this row, column 5. Column 1 is the first column. Add does not insert numbers; type them
+- `{5}` column 5 on this row. Column 1 is the first column
 - `{parent.5}` column 5 on the parent's row
 - `{label}` the name shown in the tree
 - `{depth}` the item's current depth, using the Parent column under Add words. 1 is a top/root

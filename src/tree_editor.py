@@ -81,7 +81,7 @@ from .constants import (
     tv_lvls_colors,
     warnings_header,
 )
-from .fill_column import FillFilters, plan_fill
+from .fill_column import FillFilters, initial_fill_column, plan_fill
 from .functions import (
     bytes_io_wb,
     convert_old_xl_to_xlsx,
@@ -325,6 +325,13 @@ class Tree_Editor(tk.Frame):
         self.edit_menu.add_command(
             label="Replace using mapping",
             command=self.replace_using_mapping,
+            image=self.icons["ICON_EDIT"],
+            compound="left",
+            **menu_kwargs,
+        )
+        self.edit_menu.add_command(
+            label="Fill column",
+            command=self.edit_fill_column,
             image=self.icons["ICON_EDIT"],
             compound="left",
             **menu_kwargs,
@@ -4770,24 +4777,58 @@ class Tree_Editor(tk.Frame):
                 selected.add(self.sheet.MT.data[r][self.ic].lower())
         return selected
 
-    def rc_fill_column(self, event=None):
-        if (col := self.rc_selected_col()) is None:
-            return
+    def _detail_column_names(self) -> list[str]:
+        return [h.name for h in self.headers if h.type_ not in ("ID", "Parent")]
+
+    def _fill_target_from_selection(self) -> str | None:
+        widget = None
+        if self.tree_has_focus:
+            widget = self.tree
+        elif self.sheet_has_focus:
+            widget = self.sheet
+        selected_type = None
+        selected_name = None
+        if widget is not None and widget.selected:
+            selected_type = widget.selected.type_
+            col = widget.selected.column
+            if isinstance(col, int) and 0 <= col < len(self.headers):
+                selected_name = self.headers[col].name
+        return initial_fill_column(self._detail_column_names(), selected_type, selected_name)
+
+    def _open_fill_column(self, target_name: str, selection_filters: bool) -> None:
         selected = self._fill_column_selected_ids()
         popup = Fill_Column_Popup(
             self,
-            self.headers[col].name,
-            [h.name for h in self.headers],
-            [self.headers[h].name for h in self.hiers],
-            self.headers[self.pc].name,
-            self.C.theme,
+            headers=[h.name for h in self.headers],
+            hier_names=[self.headers[h].name for h in self.hiers],
+            current_hier=self.headers[self.pc].name,
+            detail_names=self._detail_column_names(),
+            target_name=target_name,
+            selection_filters=selection_filters,
+            theme=self.C.theme,
         )
         if not popup.result:
             return
-        self.apply_fill_column(col, popup.result, selected)
+        self.apply_fill_column(popup.result, selected)
 
-    def apply_fill_column(self, col: int, spec: dict, selected: set[str]) -> None:
-        if col == self.ic or col in self.hiers:
+    def edit_fill_column(self, event=None):
+        if not self._detail_column_names():
+            Error(self, "There is no detail column to fill.", theme=self.C.theme)
+            return
+        target = self._fill_target_from_selection()
+        if target is None:
+            Error(self, "There is no detail column to fill.", theme=self.C.theme)
+            return
+        self._open_fill_column(target, True)
+
+    def rc_fill_column(self, event=None):
+        if (col := self.rc_selected_col()) is None:
+            return
+        self._open_fill_column(self.headers[col].name, False)
+
+    def apply_fill_column(self, spec: dict, selected: set[str]) -> None:
+        col = self._col_index_named(spec.get("target"))
+        if col is None or self.headers[col].type_ in ("ID", "Parent"):
             return
         fill_h = self._col_index_named(spec["fill_hier"])
         filter_h = self._col_index_named(spec["filter_hier"])

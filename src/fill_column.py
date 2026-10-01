@@ -111,17 +111,34 @@ def ascii_int(spec: str) -> int | None:
     return None
 
 
-def inserted_column_token(who_label: str, column_choice: str, headers: list[str]) -> str:
-    who = _WHO_TOKEN[who_label]
-    if column_choice == ID_COLUMN_CHOICE:
-        return who
-    idx = next(i for i, name in enumerate(headers) if name == column_choice)
-    name = headers[idx]
-    # A digit-only name would be read back as a column index, so Add uses the index.
-    ref = str(idx + 1) if name.lower() in RESERVED_WORDS or ascii_int(name) is not None else name
+def _body_for(who: str, ref: str) -> str:
     if who == "id":
         return ref
     return f"{who}.{ref}"
+
+
+def _reads_this_column(who: str, ref: str, idx: int, headers: list[str]) -> bool:
+    # Add keeps a header name only when parsing that token returns this column.
+    pieces, err = parse_template("{" + _body_for(who, ref) + "}", headers)
+    if err or len(pieces) != 1 or not isinstance(pieces[0], _Token):
+        return False
+    token = pieces[0]
+    if who == "id":
+        return token.kind == "col" and token.col == idx
+    if who == "root":
+        return token.kind == "root" and token.col == idx
+    return token.kind == "walk" and token.steps == _WALK_STEPS[who] and token.col == idx
+
+
+def inserted_column_token(who_label: str, column_choice: str, headers: list[str]) -> str:
+    who = _WHO_TOKEN[who_label]
+    # "(ID)" means the ID word, unless a real header has that name.
+    if column_choice == ID_COLUMN_CHOICE and column_choice not in headers:
+        return who
+    idx = next(i for i, name in enumerate(headers) if name == column_choice)
+    name = headers[idx]
+    ref = name if _reads_this_column(who, name, idx, headers) else str(idx + 1)
+    return _body_for(who, ref)
 
 
 def inserted_tree_field(field_label: str) -> str:
@@ -363,11 +380,24 @@ def _passes(
         return False
     if filters.tree_place == "has_children" and not node.cn[filter_h]:
         return False
-    if filters.depth is not None and _depth(nodes, ik, filter_h) != filters.depth:
+    if filters.depth is not None and (node.ps[filter_h] is None or _depth(nodes, ik, filter_h) != filters.depth):
         return False
     if filters.descendants and ik not in descendant_ids:
         return False
     return not (filters.same_level and ik not in level_ids)
+
+
+def initial_fill_column(
+    detail_names: list[str],
+    selected_type: str | None,
+    selected_name: str | None,
+) -> str | None:
+    # A column selection of a detail column wins. Otherwise the leftmost detail column.
+    if not detail_names:
+        return None
+    if selected_type == "columns" and selected_name in detail_names:
+        return selected_name
+    return detail_names[0]
 
 
 def plan_fill(

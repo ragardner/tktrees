@@ -3915,11 +3915,22 @@ class Add_Detail_Column_Popup(tk.Toplevel):
 
 
 class Fill_Column_Popup(tk.Toplevel):
-    def __init__(self, C, _col_name, headers, hier_names, current_hier, theme="dark"):
+    def __init__(
+        self,
+        C,
+        headers,
+        hier_names,
+        current_hier,
+        detail_names,
+        target_name,
+        selection_filters,
+        theme="dark",
+    ):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(self, C, f"{app_title} - Fill column", resizable=True)
         self.theme = theme
         self.headers = list(headers)
+        self.selection_filters = selection_filters
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.textbox = Working_Text(self, wrap="word", font=EF, theme=theme)
@@ -3941,13 +3952,20 @@ class Fill_Column_Popup(tk.Toplevel):
         self.opts.grid_columnconfigure(0, weight=1)
 
         row = 0
-        self._section(row, "Which cells to fill", top=16)
+        self._section(row, "Column", top=16)
+        row += 1
+        self.target = self._dropdown(row, detail_names, target_name)
+        row += 1
+        self._rule(row)
+        row += 1
+        self._section(row, "Which cells to fill")
         row += 1
         self.emptiness = self._dropdown(row, CELL_CHOICES, CELL_CHOICES[0])
         row += 1
         self.tagged = self._check(row, "Only Tagged")
-        row += 1
-        self.selected = self._check(row, "Only Selected")
+        if selection_filters:
+            row += 1
+            self.selected = self._check(row, "Only Selected")
         row += 1
         self._rule(row)
         row += 1
@@ -3962,16 +3980,11 @@ class Fill_Column_Popup(tk.Toplevel):
         row += 1
         self.depth_on = self._check(row, "Depth equals", with_entry=True)
         self.depth_entry = self.depth_on.entry
-        row += 1
-        self.descendants = self._check(row, "Descendants of selection")
-        row += 1
-        self.same_level = self._check(row, "Same level as selection")
-        row += 1
-        self._hint(
-            row,
-            "Depth 1 is the top of the tree. Descendants and Same level use the rows you have selected. "
-            "If nothing is selected, those two fill no rows.",
-        )
+        if selection_filters:
+            row += 1
+            self.descendants = self._check(row, "Descendants of selection")
+            row += 1
+            self.same_level = self._check(row, "Same level as selection")
         row += 1
         self._rule(row)
         row += 1
@@ -3982,8 +3995,6 @@ class Fill_Column_Popup(tk.Toplevel):
             row,
             "Adding items using the options below will insert a token that will be replaced with the text the token represents.",
         )
-        row += 1
-        self._caption(row, "Parent column")
         row += 1
         self._hint(row, "This dropdown chooses which hierarchy the following adds use upon pressing fill.")
         row += 1
@@ -4161,11 +4172,12 @@ class Fill_Column_Popup(tk.Toplevel):
             "in_hierarchy": self.in_hierarchy.get_checked(),
             "depth": depth,
             "tagged": self.tagged.get_checked(),
-            "selected": self.selected.get_checked(),
-            "descendants": self.descendants.get_checked(),
-            "same_level": self.same_level.get_checked(),
+            "selected": self.selection_filters and self.selected.get_checked(),
+            "descendants": self.selection_filters and self.descendants.get_checked(),
+            "same_level": self.selection_filters and self.same_level.get_checked(),
             "fill_hier": self.fill_hier.get_my_value(),
             "filter_hier": self.filter_hier.get_my_value(),
+            "target": self.target.get_my_value(),
         }
         self.destroy()
 
