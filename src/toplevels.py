@@ -3924,6 +3924,7 @@ class Fill_Column_Popup(tk.Toplevel):
         detail_names,
         target_name,
         selection_filters,
+        id_name,
         theme="dark",
     ):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
@@ -3966,6 +3967,21 @@ class Fill_Column_Popup(tk.Toplevel):
         if selection_filters:
             row += 1
             self.selected = self._check(row, "Only Selected")
+        row += 1
+        self._rule(row)
+        row += 1
+        self._hint(row, "Optional column for filtering by cell contents.")
+        row += 1
+        match_start = id_name if id_name in self.headers else self.headers[0]
+        self.match_column = self._dropdown(row, self.headers, match_start)
+        row += 1
+        self.cell_starts = self._check(row, "Cell starts with", with_entry=True, entry_width=16)
+        row += 1
+        self.cell_contains = self._check(row, "Cell contains", with_entry=True, entry_width=16)
+        row += 1
+        self.cell_ends = self._check(row, "Cell ends with", with_entry=True, entry_width=16)
+        row += 1
+        self.cell_exact = self._check(row, "Cell is exactly", with_entry=True, entry_width=16)
         row += 1
         self._rule(row)
         row += 1
@@ -4088,7 +4104,7 @@ class Fill_Column_Popup(tk.Toplevel):
             row=row, column=0, sticky="e", padx=18, pady=(4, 14)
         )
 
-    def _check(self, row, text, with_entry=False):
+    def _check(self, row, text, with_entry=False, entry_width=8):
         frame = Frame(self.opts, theme=self.theme)
         frame.grid(row=row, column=0, sticky="ew", padx=18, pady=8)
         button = X_Checkbutton(frame, text="", style="Std.TButton")
@@ -4096,7 +4112,7 @@ class Fill_Column_Popup(tk.Toplevel):
         button.pack(side="right")
         entry = None
         if with_entry:
-            entry = Normal_Entry(frame, font=EF, theme=self.theme, width_=8)
+            entry = Normal_Entry(frame, font=EF, theme=self.theme, width_=entry_width)
             entry.config(
                 highlightthickness=1,
                 highlightbackground=themes[self.theme].table_fg,
@@ -4165,6 +4181,18 @@ class Fill_Column_Popup(tk.Toplevel):
             if depth is None or depth < 1:
                 self._show_error("Depth must be a whole number starting at 1")
                 return
+        ok, starts_with = self._checked_match(self.cell_starts)
+        if not ok:
+            return
+        ok, contains = self._checked_match(self.cell_contains)
+        if not ok:
+            return
+        ok, ends_with = self._checked_match(self.cell_ends)
+        if not ok:
+            return
+        ok, exact = self._checked_match(self.cell_exact)
+        if not ok:
+            return
         self.result = {
             "template": template,
             "emptiness": CELL_EMPTINESS[self.emptiness.get_my_value()],
@@ -4178,8 +4206,22 @@ class Fill_Column_Popup(tk.Toplevel):
             "fill_hier": self.fill_hier.get_my_value(),
             "filter_hier": self.filter_hier.get_my_value(),
             "target": self.target.get_my_value(),
+            "match_column": self.match_column.get_my_value(),
+            "starts_with": starts_with,
+            "contains": contains,
+            "ends_with": ends_with,
+            "exact": exact,
         }
         self.destroy()
+
+    def _checked_match(self, check) -> tuple[bool, str | None]:
+        if not check.get_checked():
+            return True, None
+        text = check.entry.get().strip()
+        if text == "":
+            self._show_error("Enter the text to match")
+            return False, None
+        return True, text
 
     def cancel(self, event=None):
         self.destroy()

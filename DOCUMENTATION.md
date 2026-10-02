@@ -251,6 +251,10 @@ You can limit which rows are written with "Only where this column is empty", "On
 
 Only Tagged fills tagged IDs. Only Selected fills the IDs that are selected in the tree or on the sheet. If you turn both on, a row has to be tagged and selected.
 
+Cell is exactly, Cell starts with, Cell contains, and Cell ends with compare the cells in one column with the text you type. A dropdown lists the ID column, each parent column, and each detail column, and it starts on the ID column. That column can be different from the column Fill column writes to. Turn a check on and enter the text. If you turn a check on and leave the text blank, the window asks you to enter the text and nothing is written. A check you leave off is ignored, and text left in it has no effect. A row is written only when it matches every check you turn on and also meets the other choices under Which cells to fill. These four checks are available from the Edit menu and from a column header.
+
+Cell is exactly requires the whole cell to match. All four checks ignore capital letters. The text you type is literal, and a star or a dot is not a wildcard. Spaces at the ends of the text you type are removed. The cell is compared as it is stored, so a space in the cell still counts. A blank cell does not match, and that row is skipped. On a parent column, the cell holds that row's parent ID. The check uses that cell and no other cell in the tree.
+
 In this hierarchy, Depth equals, Descendants of selection, Same level as selection, and the children choice all use one parent column. That dropdown starts on the hierarchy you are viewing. For children, you can choose "Rows with or without children", "Only rows without children", or "Only rows with children".
 
 In this hierarchy fills IDs that belong to that parent column. A blank parent cell counts as a top. An ID is skipped only when it has no link in that parent column.

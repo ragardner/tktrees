@@ -81,7 +81,7 @@ from .constants import (
     tv_lvls_colors,
     warnings_header,
 )
-from .fill_column import FillFilters, initial_fill_column, plan_fill
+from .fill_column import CHOOSE_MATCH_COLUMN, FillFilters, initial_fill_column, match_text, plan_fill
 from .functions import (
     bytes_io_wb,
     convert_old_xl_to_xlsx,
@@ -4805,6 +4805,7 @@ class Tree_Editor(tk.Frame):
             detail_names=self._detail_column_names(),
             target_name=target_name,
             selection_filters=selection_filters,
+            id_name=self.headers[self.ic].name,
             theme=self.C.theme,
         )
         if not popup.result:
@@ -4835,6 +4836,16 @@ class Tree_Editor(tk.Frame):
         if fill_h not in self.hiers or filter_h not in self.hiers:
             Error(self, "Choose a hierarchy for the fill and for the filters", theme=self.C.theme)
             return
+        exact = match_text(spec.get("exact"))
+        starts_with = match_text(spec.get("starts_with"))
+        contains = match_text(spec.get("contains"))
+        ends_with = match_text(spec.get("ends_with"))
+        match_col = None
+        if exact or starts_with or contains or ends_with:
+            match_col = self._col_index_named(spec.get("match_column"))
+            if match_col is None:
+                Error(self, CHOOSE_MATCH_COLUMN, theme=self.C.theme)
+                return
         filters = FillFilters(
             emptiness=spec["emptiness"],
             tree_place=spec["tree_place"],
@@ -4844,6 +4855,11 @@ class Tree_Editor(tk.Frame):
             selected=spec["selected"],
             descendants=spec["descendants"],
             same_level=spec["same_level"],
+            match_col=match_col,
+            exact=exact,
+            starts_with=starts_with,
+            contains=contains,
+            ends_with=ends_with,
         )
         changes, err = plan_fill(
             rows=self.sheet.MT.data,

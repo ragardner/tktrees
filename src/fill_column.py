@@ -103,6 +103,44 @@ class FillFilters:
     selected: bool = False
     descendants: bool = False
     same_level: bool = False
+    match_col: int | None = None
+    starts_with: str | None = None
+    contains: str | None = None
+    ends_with: str | None = None
+    exact: str | None = None
+
+
+CHOOSE_MATCH_COLUMN = "Choose a column to match"
+
+
+def match_text(raw: str | None) -> str | None:
+    # A blank pattern matches every cell, so it is not a test.
+    if raw is None:
+        return None
+    text = raw.strip()
+    return text or None
+
+
+def _has_match(filters: FillFilters) -> bool:
+    return any(
+        match_text(text) is not None
+        for text in (filters.exact, filters.starts_with, filters.contains, filters.ends_with)
+    )
+
+
+def _cell_matches(value: str, filters: FillFilters) -> bool:
+    folded = value.lower()
+    exact = match_text(filters.exact)
+    if exact is not None and folded != exact.lower():
+        return False
+    starts = match_text(filters.starts_with)
+    if starts is not None and not folded.startswith(starts.lower()):
+        return False
+    contains = match_text(filters.contains)
+    if contains is not None and contains.lower() not in folded:
+        return False
+    ends = match_text(filters.ends_with)
+    return not (ends is not None and not folded.endswith(ends.lower()))
 
 
 def ascii_int(spec: str) -> int | None:
@@ -364,10 +402,13 @@ def _passes(
     selected: set[str],
     descendant_ids: set[str],
     level_ids: set[str],
+    match_cell: str,
 ) -> bool:
     if filters.emptiness == "empty" and old != "":
         return False
     if filters.emptiness == "not_empty" and old == "":
+        return False
+    if not _cell_matches(match_cell, filters):
         return False
     if filters.tagged and ik not in tagged:
         return False
@@ -417,6 +458,10 @@ def plan_fill(
     pieces, err = parse_template(template, headers)
     if err:
         return [], err
+    if _has_match(filters):
+        col = filters.match_col
+        if col is None or col < 0 or col >= len(headers):
+            return [], CHOOSE_MATCH_COLUMN
     if tagged is None:
         tagged = set()
     if selected is None:
@@ -444,6 +489,7 @@ def plan_fill(
             selected,
             descendant_ids,
             level_ids,
+            _at(cells[ik], filters.match_col),
         ):
             continue
         new = _render(pieces, nodes, ik, fill_h, cells, label_col)
