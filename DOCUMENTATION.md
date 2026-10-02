@@ -614,6 +614,8 @@ Program data is only included if Save is used as opposed to Copy to clipboard. I
 
 # BUNDLED LIBRARIES
 
+TkTrees itself is AGPL-3.0. The libraries below are unmodified copies, and each one stays under its own license.
+
 **openpyxl**
 
 - Version: 3.1.5
@@ -623,17 +625,27 @@ Program data is only included if Save is used as opposed to Copy to clipboard. I
 - Authors and copyright holders: See `openpyxl/AUTHORS.rst`
 - Note: This library is bundled to handle Excel file operations.
 
+**et_xmlfile**
+
+- Version: 2.0.0
+- Original source: https://foss.heptapod.net/openpyxl/et_xmlfile
+- License: MIT License
+- Full license text and conditions: See `et_xmlfile/LICENCE.rst`
+- Copyright: Copyright (c) 2010 openpyxl
+- Note: This library is bundled because openpyxl uses it to write xlsx files when lxml is not used.
+
 **defusedxml**
 
 - Version: 0.7.1
 - Original source: https://github.com/tiran/defusedxml
 - License: Python Software Foundation License (PSFL)
-- Full license text and conditions: See `defusedxml/LICENSE`
+- Full license text and conditions: See `defusedxml/LICENSE.txt`
 - Copyright: Copyright (c) 2013-2023 by Christian Heimes
 - Note: This library is bundled for secure XML parsing.
 
 **tksheet**
 
+- Version: 7.6.1
 - Original source: https://github.com/ragardner/tksheet
 - License: MIT License
 - Full license text and conditions: See `tksheet/LICENSE.txt`
