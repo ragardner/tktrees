@@ -8,6 +8,7 @@ import tkinter as tk
 from bisect import bisect_left
 from collections import deque
 from collections.abc import Callable, Generator, Hashable, Iterable, Iterator, Sequence
+from contextlib import suppress
 from difflib import SequenceMatcher
 from itertools import chain, islice, repeat
 from types import ModuleType
@@ -255,11 +256,12 @@ def get_data_from_clipboard(
     widget: tk.Misc,
     delimiters: str,
     lineterminator: str = "\n",
+    skipinitialspace: bool = True,
 ) -> list[list[str]]:
     data = widget.clipboard_get()
     dialect = get_csv_str_dialect(data, delimiters=delimiters)
     if dialect.delimiter in data or lineterminator in data:
-        return list(csv.reader(io.StringIO(data), dialect=dialect, skipinitialspace=True))
+        return list(csv.reader(io.StringIO(data), dialect=dialect, skipinitialspace=skipinitialspace))
     return [[data]]
 
 
@@ -356,14 +358,14 @@ def dropdown_search_function(search_for: str, data: Iterable[Any]) -> None | int
     return match_rn if match_rn is not None else fallback_rn
 
 
-def float_to_int(f: int | float) -> int | float:
+def float_to_int(f: float) -> int | float:
     if f == float("inf"):
         return f
     return int(f)
 
 
 def event_dict(
-    name: str = None,
+    name: None | str = None,
     sheet: Any = None,
     widget: tk.Canvas | None = None,
     boxes: None | dict | tuple = None,
@@ -441,7 +443,7 @@ def event_dict(
 
 
 def change_eventname(event_dict: EventDataDict, newname: str) -> EventDataDict:
-    return EventDataDict({**event_dict, **{"eventname": newname}})
+    return EventDataDict({**event_dict, "eventname": newname})
 
 
 def stored_event_dict(d: DotDict) -> DotDict:
@@ -1402,6 +1404,9 @@ def key_to_span(
                     upto_c=key[1][1],
                 )
 
+            else:
+                return f"Error, '{key}' could not be converted to span"
+
         # String key: parse various span formats
         elif isinstance(key, str):
             if not key:
@@ -1884,7 +1889,7 @@ def safe_copy(value: Any) -> Any:
             # For types that deepcopy might fail on, try shallow copy
             return copy.copy(value)
         except Exception:
-            try:
+            with suppress(Exception):
                 # For built-in immutable types, return as-is
                 if isinstance(value, (int, float, str, bool, bytes, tuple, frozenset)):
                     return value
@@ -1900,7 +1905,5 @@ def safe_copy(value: Any) -> Any:
                 # For classes
                 if isinstance(value, type):
                     return value
-            except Exception:
-                pass
             # If all copy attempts fail, return original value
             return value

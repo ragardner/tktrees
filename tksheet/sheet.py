@@ -114,8 +114,8 @@ class Sheet(tk.Frame):
         data_reference: None | Sequence[Sequence[Any]] = None,
         data: None | Sequence[Sequence[Any]] = None,
         # either (start row, end row, "rows"), (start column, end column, "rows") or
-        # (cells start row, cells start column, cells end row, cells end column, "cells")  # noqa: E501
-        startup_select: tuple[int, int, str] | tuple[int, int, int, int, str] = None,
+        # (cells start row, cells start column, cells end row, cells end column, "cells")
+        startup_select: None | tuple[int, int, str] | tuple[int, int, int, int, str] = None,
         startup_focus: bool = True,
         total_columns: int | None = None,
         total_rows: int | None = None,
@@ -144,6 +144,7 @@ class Sheet(tk.Frame):
         to_clipboard_quotechar: str = '"',
         to_clipboard_lineterminator: str = "\n",
         from_clipboard_delimiters: list[str] | str = "\t",
+        from_clipboard_skipinitialspace: bool = True,
         show_default_header_for_empty: bool = True,
         show_default_index_for_empty: bool = True,
         page_up_down_select_row: bool = True,
@@ -485,7 +486,7 @@ class Sheet(tk.Frame):
         if set_all_heights_and_widths:
             self.set_all_cell_sizes_to_text()
         if startup_select is not None:
-            try:
+            with suppress(Exception):
                 if startup_select[-1] == "cells":
                     self.MT.create_selection_box(*startup_select)
                     self.see(startup_select[0], startup_select[1])
@@ -507,8 +508,6 @@ class Sheet(tk.Frame):
                         "columns",
                     )
                     self.see(0, startup_select[0])
-            except Exception:
-                pass
         self.refresh()
         if startup_focus:
             self.MT.focus_set()
@@ -777,13 +776,13 @@ class Sheet(tk.Frame):
 
     def edit_validation(self, func: Callable | None = None) -> Sheet:
         if not isinstance(func, (Callable, None)):
-            raise ValueError("Argument must be either Callable or None.")
+            raise TypeError("Argument must be either Callable or None.")
         self.MT.edit_validation_func = func
         return self
 
     def bulk_table_edit_validation(self, func: Callable | None = None) -> Sheet:
         if not isinstance(func, (Callable, None)):
-            raise ValueError("Argument must be either Callable or None.")
+            raise TypeError("Argument must be either Callable or None.")
         self.MT.bulk_table_edit_validation_func = func
         return self
 
@@ -1050,7 +1049,7 @@ class Sheet(tk.Frame):
             key = (None, None, None, None)
         span = key_to_span(key if len(key) != 1 else key[0], self.MT.named_spans, self)
         if isinstance(span, str):
-            raise ValueError(span)
+            raise TypeError(span)
         return span
 
     def ranges_from_span(self, span: Span) -> tuple[Generator, Generator]:
@@ -2196,19 +2195,17 @@ class Sheet(tk.Frame):
         event_data = self.MT.new_event_dict("edit_table", boxes=self.MT.get_boxes())
         if within:
             iterable = chain.from_iterable(
-                (
-                    box_gen_coords(
-                        *box.coords,
-                        start_r=box.coords.from_r,
-                        start_c=box.coords.from_c,
-                        reverse=False,
-                        all_rows_displayed=self.MT.all_rows_displayed,
-                        all_cols_displayed=self.MT.all_columns_displayed,
-                        displayed_rows=self.MT.displayed_rows,
-                        displayed_cols=self.MT.displayed_columns,
-                    )
-                    for box in self.MT.selection_boxes.values()
+                box_gen_coords(
+                    *box.coords,
+                    start_r=box.coords.from_r,
+                    start_c=box.coords.from_c,
+                    reverse=False,
+                    all_rows_displayed=self.MT.all_rows_displayed,
+                    all_cols_displayed=self.MT.all_columns_displayed,
+                    displayed_rows=self.MT.displayed_rows,
+                    displayed_cols=self.MT.displayed_columns,
                 )
+                for box in self.MT.selection_boxes.values()
             )
         else:
             iterable = box_gen_coords(
@@ -2749,7 +2746,7 @@ class Sheet(tk.Frame):
 
     def popup_menu_font(self, newfont: tuple[str, int, str] | None = None) -> tuple[str, int, str]:
         if newfont:
-            self.ops.popup_menu_font = FontTuple(*(newfont[0], int(round(newfont[1])), newfont[2]))
+            self.ops.popup_menu_font = FontTuple(*(newfont[0], round(newfont[1]), newfont[2]))
         return self.ops.popup_menu_font
 
     def table_align(
@@ -3640,9 +3637,9 @@ class Sheet(tk.Frame):
 
     def unsync_scroll(self, widget: Any = None) -> Sheet:
         if widget is None:
-            for widget in self.MT.synced_scrolls:
-                if isinstance(widget, Sheet):
-                    widget.MT.synced_scrolls.discard(self)
+            for w in self.MT.synced_scrolls:
+                if isinstance(w, Sheet):
+                    w.MT.synced_scrolls.discard(self)
             self.MT.synced_scrolls = set()
         else:
             if isinstance(widget, Sheet) and self in widget.MT.synced_scrolls:
@@ -4136,9 +4133,9 @@ class Sheet(tk.Frame):
 
     def unbind_key_text_editor(self, key: str) -> Sheet:
         if key == "all":
-            for key in self.MT.text_editor_user_bound_keys:
+            for k in self.MT.text_editor_user_bound_keys:
                 with suppress(Exception):
-                    self.MT.text_editor.tktext.unbind(key)
+                    self.MT.text_editor.tktext.unbind(k)
             self.MT.text_editor_user_bound_keys = {}
         else:
             if key in self.MT.text_editor_user_bound_keys:
@@ -4479,8 +4476,8 @@ class Sheet(tk.Frame):
         cell: tuple[int, int] | None = None,
     ) -> Sheet:
         if name is not None:
-            for cell in tuple(cell for cell, bar in self.MT.progress_bars.items() if bar.name == name):
-                del self.MT.progress_bars[cell]
+            for coord in tuple(c for c, bar in self.MT.progress_bars.items() if bar.name == name):
+                del self.MT.progress_bars[coord]
         elif cell is not None:
             del self.MT.progress_bars[cell]
         return self.set_refresh_timer()
@@ -5416,8 +5413,7 @@ class Sheet(tk.Frame):
             data = []
             for rn in only_rows if only_rows is not None else range(len(self.MT.data)):
                 r = self.get_row_data(rn, get_displayed=get_displayed, only_columns=only_columns)
-                if len(r) > maxlen:
-                    maxlen = len(r)
+                maxlen = max(maxlen, len(r))
                 if get_index:
                     row = [self.RI.get_cell_data(rn, get_displayed=get_index_displayed)]
                     row.extend(r)
@@ -5521,7 +5517,7 @@ class Sheet(tk.Frame):
         keep_formatting: bool = True,
     ) -> Sheet:
         if r >= len(self.MT.data):
-            raise Exception("Row number is out of range")
+            raise IndexError("Row number is out of range")
         if not keep_formatting:
             self.MT.delete_row_format(r, clear_values=False)
         maxidx = len(self.MT.data[r]) - 1
@@ -6031,8 +6027,8 @@ class Sheet(tk.Frame):
         kwargs = get_checkbox_kwargs(*args, **kwargs)
         d = get_checkbox_dict(**kwargs)
         if isinstance(c, str) and c.lower() == "all":
-            for c in range(self.MT.total_data_cols()):
-                self._checkbox_column(c, kwargs["checked"], d)
+            for col in range(self.MT.total_data_cols()):
+                self._checkbox_column(col, kwargs["checked"], d)
         elif isinstance(c, int):
             self._checkbox_column(c, kwargs["checked"], d)
         elif is_iterable(c):
@@ -6473,7 +6469,7 @@ class Sheet(tk.Frame):
             if self.MT.dropdown.open:
                 r_, c_ = self.MT.dropdown.get_coords()
             else:
-                raise Exception("No dropdown box is currently open")
+                raise RuntimeError("No dropdown box is currently open")
         else:
             r_ = r
             c_ = c
@@ -6500,7 +6496,7 @@ class Sheet(tk.Frame):
             if self.CH.dropdown.open:
                 c_ = self.CH.dropdown.get_coords()
             else:
-                raise Exception("No dropdown box is currently open")
+                raise RuntimeError("No dropdown box is currently open")
         else:
             c_ = c
         kwargs = self.CH.get_cell_kwargs(c_, key="dropdown")
@@ -6526,7 +6522,7 @@ class Sheet(tk.Frame):
             if self.RI.current_dropdown_window is not None:
                 r_ = self.RI.current_dropdown_window.r
             else:
-                raise Exception("No dropdown box is currently open")
+                raise RuntimeError("No dropdown box is currently open")
         else:
             r_ = r
         kwargs = self.RI.get_cell_kwargs(r_, key="dropdown")

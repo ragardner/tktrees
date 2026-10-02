@@ -333,7 +333,7 @@ class FindWindow(tk.Frame):
                 return
             widget.config(highlightbackground=self.bg, highlightcolor=self.fg)
 
-    def focus_find(self, event: tk.Misc = None) -> Literal["break"]:
+    def focus_find(self, event: None | tk.Misc = None) -> Literal["break"]:
         widget = self.focus_get()
         if widget == self.tktext:
             self.tktext.select_all()
@@ -341,7 +341,7 @@ class FindWindow(tk.Frame):
             self.tktext.focus_set()
         return "break"
 
-    def focus_replace(self, event: tk.Misc = None) -> Literal["break"]:
+    def focus_replace(self, event: None | tk.Misc = None) -> Literal["break"]:
         if self.replace_enabled and not self.replace_visible:
             self.toggle_replace_window()
         widget = self.focus_get()
@@ -351,7 +351,7 @@ class FindWindow(tk.Frame):
             self.replace_tktext.focus_set()
         return "break"
 
-    def toggle_replace_window(self, event: tk.Misc = None) -> None:
+    def toggle_replace_window(self, event: None | tk.Misc = None) -> None:
         """Toggle visibility of the replace window."""
         if self.replace_visible:
             self.replace_tktext.grid_remove()

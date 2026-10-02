@@ -3,6 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterator, Sequence
+from contextlib import suppress
 from functools import partial
 from itertools import islice, repeat
 from math import ceil
@@ -444,7 +445,7 @@ class ColumnHeaders(tk.Canvas):
         if self.check_mouse_position_width_resizers(x, y) is None:
             self.rsz_w = None
         if self.width_resizing_enabled and self.rsz_w is not None:
-            x1, y1, x2, y2 = self.MT.get_canvas_visible_area()
+            _x1, y1, _x2, y2 = self.MT.get_canvas_visible_area()
             self.currently_resizing_width = True
             x = self.MT.col_positions[self.rsz_w]
             line2x = self.MT.col_positions[self.rsz_w - 1]
@@ -495,7 +496,7 @@ class ColumnHeaders(tk.Canvas):
         try_binding(self.extra_b1_press_func, event)
 
     def b1_motion(self, event: Any) -> None:
-        x1, y1, x2, y2 = self.MT.get_canvas_visible_area()
+        _x1, y1, _x2, y2 = self.MT.get_canvas_visible_area()
         if self.width_resizing_enabled and self.rsz_w is not None and self.currently_resizing_width:
             x = self.canvasx(event.x)
             size = x - self.MT.col_positions[self.rsz_w - 1]
@@ -598,7 +599,7 @@ class ColumnHeaders(tk.Canvas):
             return 0, end_col, len(self.MT.row_positions) - 1, start_col + 1, "columns"
 
     def ctrl_b1_motion(self, event: Any) -> None:
-        x1, y1, x2, y2 = self.MT.get_canvas_visible_area()
+        _x1, y1, _x2, y2 = self.MT.get_canvas_visible_area()
         if (
             self.drag_and_drop_enabled
             and self.col_selection_enabled
@@ -723,20 +724,16 @@ class ColumnHeaders(tk.Canvas):
         xcheck = self.xview()
         need_redraw = False
         if event.x > self.winfo_width() and len(xcheck) > 1 and xcheck[1] < 1:
-            try:
+            with suppress(Exception):
                 self.MT.xview_scroll(1, "units")
                 self.xview_scroll(1, "units")
-            except Exception:
-                pass
             self.fix_xview()
             self.MT.x_move_synced_scrolls("moveto", self.MT.xview()[0])
             need_redraw = True
         elif event.x < 0 and self.canvasx(self.winfo_width()) > 0 and xcheck and xcheck[0] > 0:
-            try:
+            with suppress(Exception):
                 self.xview_scroll(-1, "units")
                 self.MT.xview_scroll(-1, "units")
-            except Exception:
-                pass
             self.fix_xview()
             self.MT.x_move_synced_scrolls("moveto", self.MT.xview()[0])
             need_redraw = True
@@ -830,8 +827,7 @@ class ColumnHeaders(tk.Canvas):
             ):
                 if c > self.dragged_col.to_move[-1]:
                     c += 1
-                if c > len(self.MT.col_positions) - 1:
-                    c = len(self.MT.col_positions) - 1
+                c = min(c, len(self.MT.col_positions) - 1)
                 event_data = self.MT.new_event_dict("move_columns", state=True)
                 event_data["value"] = c
                 if try_binding(self.ch_extra_begin_drag_drop_func, event_data, "begin_move_columns"):
@@ -899,7 +895,7 @@ class ColumnHeaders(tk.Canvas):
         if columns is None:
             columns = self.MT.get_selected_cols()
         if not columns:
-            columns = list(range(0, len(self.MT.col_positions) - 1))
+            columns = list(range(len(self.MT.col_positions) - 1))
         event_data = self.MT.new_event_dict("edit_table")
         try_binding(self.MT.extra_begin_sort_cells_func, event_data)
         if key is None:
@@ -1151,10 +1147,9 @@ class ColumnHeaders(tk.Canvas):
                         th = b[3] - b[1] + 5
                     else:
                         th = default_header_height
-                    if th > h:
-                        h = th
+                    h = max(h, th)
         space_bot = self.MT.get_space_bot(0)
-        if h > space_bot and space_bot > self.MT.min_header_height:
+        if h > space_bot > self.MT.min_header_height:
             h = space_bot
         if h < self.MT.min_header_height:
             h = int(self.MT.min_header_height)
@@ -1175,11 +1170,11 @@ class ColumnHeaders(tk.Canvas):
         w = self.ops.min_column_width
         datacn = col if self.MT.all_columns_displayed else self.MT.displayed_columns[col]
         # header
-        hw, hh_ = self.get_cell_dimensions(datacn)
+        hw, _hh = self.get_cell_dimensions(datacn)
         # table
         if self.MT.data:
             if self.MT.all_rows_displayed:
-                iterable = range(*self.MT.visible_text_rows) if visible_only else range(0, len(self.MT.data))
+                iterable = range(*self.MT.visible_text_rows) if visible_only else range(len(self.MT.data))
             else:
                 if visible_only:
                     start_row, end_row = self.MT.visible_text_rows
@@ -1204,8 +1199,7 @@ class ColumnHeaders(tk.Canvas):
                         or (tw := b[2] - b[0] + 7) > w
                     ):
                         w = tw
-        if hw > w:
-            w = hw
+        w = max(w, hw)
         if only_if_too_small and w < self.MT.col_positions[col + 1] - self.MT.col_positions[col]:
             w = self.MT.col_positions[col + 1] - self.MT.col_positions[col]
         if w <= self.ops.min_column_width:
@@ -2064,8 +2058,7 @@ class ColumnHeaders(tk.Canvas):
             c = self.text_editor.column
             new_height = curr_height + self.MT.header_txt_height
             space_bot = self.MT.get_space_bot(0)
-            if new_height > space_bot:
-                new_height = space_bot
+            new_height = min(new_height, space_bot)
             if new_height != curr_height:
                 self.text_editor.window.config(height=new_height)
                 self.set_height(new_height, set_TL=True)
@@ -2099,7 +2092,7 @@ class ColumnHeaders(tk.Canvas):
             c = self.dropdown.get_coords()
             if self.text_editor.open:
                 text_editor_h = self.text_editor.window.winfo_height()
-                win_h, anchor = self.get_dropdown_height_anchor(c, text_editor_h)
+                _win_h, anchor = self.get_dropdown_height_anchor(c, text_editor_h)
             else:
                 text_editor_h = self.current_height
                 anchor = self.itemcget(self.dropdown.canvas_id, "anchor")
@@ -2147,11 +2140,9 @@ class ColumnHeaders(tk.Canvas):
             focused = self.focus_get()
         except Exception:
             focused = None
-        try:
+        with suppress(Exception):
             if focused == self.text_editor.tktext.rc_popup_menu:
                 return "break"
-        except Exception:
-            pass
         if focused is None:
             return "break"
         if event.keysym == "Escape":

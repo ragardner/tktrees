@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import tkinter as tk
+from bisect import bisect_left
 from collections import defaultdict
 from collections.abc import Callable, Generator, Hashable, Iterator, Sequence
+from contextlib import suppress
 from functools import partial
 from itertools import islice, repeat
 from math import ceil
@@ -465,7 +467,7 @@ class RowIndex(tk.Canvas):
             self.currently_resizing_height = True
             y = self.MT.row_positions[self.rsz_h]
             line2y = self.MT.row_positions[self.rsz_h - 1]
-            x1, y1, x2, y2 = self.MT.get_canvas_visible_area()
+            x1, _y1, x2, _y2 = self.MT.get_canvas_visible_area()
             self.create_resize_line(
                 0,
                 y,
@@ -514,7 +516,7 @@ class RowIndex(tk.Canvas):
         try_binding(self.extra_b1_press_func, event)
 
     def b1_motion(self, event: Any) -> None:
-        x1, y1, x2, y2 = self.MT.get_canvas_visible_area()
+        x1, _y1, x2, _y2 = self.MT.get_canvas_visible_area()
         if self.height_resizing_enabled and self.rsz_h is not None and self.currently_resizing_height:
             y = self.canvasy(event.y)
             size = y - self.MT.row_positions[self.rsz_h - 1]
@@ -557,8 +559,7 @@ class RowIndex(tk.Canvas):
                     evx = int(self.ops.max_index_width)
                 self.drag_width_resize(evx)
             else:
-                if evx < self.ops.min_column_width:
-                    evx = self.ops.min_column_width
+                evx = max(evx, self.ops.min_column_width)
                 self.drag_width_resize(evx)
         elif (
             self.drag_and_drop_enabled
@@ -568,14 +569,7 @@ class RowIndex(tk.Canvas):
             and self.rsz_w is None
             and self.dragged_row is not None
         ):
-            y = self.canvasy(event.y)
-            if y > 0:
-                self.show_drag_and_drop_indicators(
-                    self.drag_and_drop_motion(event),
-                    x1,
-                    x2,
-                    self.dragged_row.to_move,
-                )
+            self.row_drag_and_drop_motion(event, x1, x2)
         elif (
             self.MT.drag_selection_enabled and self.row_selection_enabled and self.rsz_h is None and self.rsz_w is None
         ):
@@ -613,7 +607,7 @@ class RowIndex(tk.Canvas):
             return end_row, 0, start_row + 1, len(self.MT.col_positions) - 1, "rows"
 
     def ctrl_b1_motion(self, event: Any) -> None:
-        x1, y1, x2, y2 = self.MT.get_canvas_visible_area()
+        x1, _y1, x2, _y2 = self.MT.get_canvas_visible_area()
         if (
             self.drag_and_drop_enabled
             and self.row_selection_enabled
@@ -622,14 +616,7 @@ class RowIndex(tk.Canvas):
             and self.dragged_row is not None
             and self.MT.anything_selected(exclude_cells=True, exclude_columns=True)
         ):
-            y = self.canvasy(event.y)
-            if y > 0:
-                self.show_drag_and_drop_indicators(
-                    self.drag_and_drop_motion(event),
-                    x1,
-                    x2,
-                    self.dragged_row.to_move,
-                )
+            self.row_drag_and_drop_motion(event, x1, x2)
         elif (
             self.MT.ctrl_select_enabled
             and self.row_selection_enabled
@@ -665,6 +652,32 @@ class RowIndex(tk.Canvas):
                 self.MT.main_table_redraw_grid_and_text(redraw_header=False, redraw_row_index=True)
         elif not self.MT.ctrl_select_enabled:
             self.b1_motion(event)
+
+    def event_row_outside_dragged(self, event: Any) -> bool:
+        if self.dragged_row is None:
+            return False
+        r = self.MT.identify_row(y=event.y)
+        if r is None:
+            return False
+        if r >= len(self.MT.row_positions) - 1:
+            return True
+        to_move = self.dragged_row.to_move
+        i = bisect_left(to_move, r)
+        return i == len(to_move) or to_move[i] != r
+
+    def row_drag_and_drop_motion(self, event: Any, x1: float, x2: float) -> None:
+        if self.canvasy(event.y) <= 0:
+            return
+        ypos = self.drag_and_drop_motion(event)
+        if self.event_row_outside_dragged(event):
+            self.show_drag_and_drop_indicators(
+                ypos,
+                x1,
+                x2,
+                self.dragged_row.to_move,
+            )
+        elif self.find_withtag("move_rows"):
+            self.hide_resize_and_ctrl_lines()
 
     def drag_and_drop_motion(self, event: Any) -> float:
         y = event.y
@@ -738,20 +751,16 @@ class RowIndex(tk.Canvas):
         ycheck = self.yview()
         need_redraw = False
         if event.y > self.winfo_height() and len(ycheck) > 1 and ycheck[1] < 1:
-            try:
+            with suppress(Exception):
                 self.MT.yview_scroll(1, "units")
                 self.yview_scroll(1, "units")
-            except Exception:
-                pass
             self.fix_yview()
             self.MT.y_move_synced_scrolls("moveto", self.MT.yview()[0])
             need_redraw = True
         elif event.y < 0 and self.canvasy(self.winfo_height()) > 0 and ycheck and ycheck[0] > 0:
-            try:
+            with suppress(Exception):
                 self.yview_scroll(-1, "units")
                 self.MT.yview_scroll(-1, "units")
-            except Exception:
-                pass
             self.fix_yview()
             self.MT.y_move_synced_scrolls("moveto", self.MT.yview()[0])
             need_redraw = True
@@ -833,6 +842,7 @@ class RowIndex(tk.Canvas):
             and self.rsz_w is None
             and self.dragged_row is not None
             and self.find_withtag("move_rows")
+            and self.event_row_outside_dragged(event)
         ):
             self.hide_resize_and_ctrl_lines()
             r = self.MT.identify_row(y=event.y)
@@ -848,8 +858,7 @@ class RowIndex(tk.Canvas):
             ):
                 if r > self.dragged_row.to_move[-1]:
                     r += 1
-                if r > len(self.MT.row_positions) - 1:
-                    r = len(self.MT.row_positions) - 1
+                r = min(r, len(self.MT.row_positions) - 1)
                 event_data = self.MT.new_event_dict("move_rows", state=True)
                 event_data["value"] = r
                 if try_binding(self.ri_extra_begin_drag_drop_func, event_data, "begin_move_rows"):
@@ -873,6 +882,8 @@ class RowIndex(tk.Canvas):
                         try_binding(self.ri_extra_end_drag_drop_func, event_data, "end_move_rows")
                         self.MT.sheet_modified(event_data)
         elif self.b1_pressed_loc is not None and self.rsz_w is None and self.rsz_h is None:
+            if self.dragged_row is not None and self.find_withtag("move_rows"):
+                self.hide_resize_and_ctrl_lines()
             r = self.MT.identify_row(y=event.y)
             if (
                 r is not None
@@ -913,7 +924,7 @@ class RowIndex(tk.Canvas):
             and isinstance(self.MT._row_index, list)
             and (datarn := self.MT.datarn(r)) < len(self.MT._row_index)
             and eventx
-            < (indent := self.get_iid_indent((iid := self.MT._row_index[datarn].iid))) + self.MT.index_txt_height + 4
+            < (indent := self.get_iid_indent(iid := self.MT._row_index[datarn].iid)) + self.MT.index_txt_height + 4
             and eventx >= indent + 1
         ):
             return iid
@@ -931,7 +942,7 @@ class RowIndex(tk.Canvas):
         if rows is None:
             rows = self.MT.get_selected_rows()
         if not rows:
-            rows = list(range(0, len(self.MT.row_positions) - 1))
+            rows = list(range(len(self.MT.row_positions) - 1))
         event_data = self.MT.new_event_dict("edit_table")
         try_binding(self.MT.extra_begin_sort_cells_func, event_data)
         if key is None:
@@ -1164,9 +1175,9 @@ class RowIndex(tk.Canvas):
                     iterable = range(*self.MT.visible_text_columns)
                 else:
                     if not self.MT.data or datarn >= len(self.MT.data):
-                        iterable = range(0, 0)
+                        iterable = range(0)
                     else:
-                        iterable = range(0, len(self.MT.data[datarn]))
+                        iterable = range(len(self.MT.data[datarn]))
             else:
                 if visible_only:
                     start_col, end_col = self.MT.visible_text_columns
@@ -2214,8 +2225,7 @@ class RowIndex(tk.Canvas):
             r = self.text_editor.row
             new_height = curr_height + self.MT.index_txt_height
             space_bot = self.MT.get_space_bot(r)
-            if new_height > space_bot:
-                new_height = space_bot
+            new_height = min(new_height, space_bot)
             if new_height != curr_height:
                 self.set_row_height(r, new_height)
                 self.MT.main_table_redraw_grid_and_text(True, True)
@@ -2257,7 +2267,7 @@ class RowIndex(tk.Canvas):
             r = self.dropdown.get_coords()
             if self.text_editor.open:
                 text_editor_h = self.text_editor.window.winfo_height()
-                win_h, anchor = self.get_dropdown_height_anchor(r, text_editor_h)
+                _win_h, anchor = self.get_dropdown_height_anchor(r, text_editor_h)
             else:
                 text_editor_h = self.MT.row_positions[r + 1] - self.MT.row_positions[r] + 1
                 anchor = self.itemcget(self.dropdown.canvas_id, "anchor")
@@ -2305,11 +2315,9 @@ class RowIndex(tk.Canvas):
             focused = self.focus_get()
         except Exception:
             focused = None
-        try:
+        with suppress(Exception):
             if focused == self.text_editor.tktext.rc_popup_menu:
                 return "break"
-        except Exception:
-            pass
         if focused is None:
             return "break"
         if event.keysym == "Escape":
@@ -2933,7 +2941,7 @@ class RowIndex(tk.Canvas):
                 self.PAR.hide_rows(set(data_new_idxs.values()), data_indexes=True)
             if new_loc_is_displayed:
                 self.PAR.show_rows(
-                    (r for r in data_new_idxs.values() if self.ancestors_all_open(self.MT._row_index[r].iid))
+                    r for r in data_new_idxs.values() if self.ancestors_all_open(self.MT._row_index[r].iid)
                 )
 
         yield None
@@ -3166,7 +3174,7 @@ class RowIndex(tk.Canvas):
         if exclude:
             for iid, node in tree.items():
                 if node.parent == "":
-                    row = [tree[iid]]
+                    row = [node]
                     row.extend(e for i, e in enumerate(data[data_rns[iid]]) if i not in exclude)
                     rows.append(row)
                     self.rns[iid] = ctr
@@ -3180,7 +3188,7 @@ class RowIndex(tk.Canvas):
         else:
             for iid, node in tree.items():
                 if node.parent == "":
-                    row = [tree[iid]]
+                    row = [node]
                     row.extend(data[data_rns[iid]])
                     rows.append(row)
                     self.rns[iid] = ctr
@@ -3304,7 +3312,7 @@ class RowIndex(tk.Canvas):
         if exclude:
             for iid, node in tree.items():
                 if node.parent == "":
-                    row = [tree[iid]]
+                    row = [node]
                     if iid in empty_rows:
                         row.extend(e for i, e in enumerate(empty_rows[iid]) if i not in exclude)
                     else:
@@ -3321,7 +3329,7 @@ class RowIndex(tk.Canvas):
         else:
             for iid, node in tree.items():
                 if node.parent == "":
-                    row = [tree[iid]]
+                    row = [node]
                     if iid in empty_rows:
                         row.extend(empty_rows[iid])
                     else:

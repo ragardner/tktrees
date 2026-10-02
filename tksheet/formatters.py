@@ -188,16 +188,14 @@ def formatter(
     **kwargs,
 ) -> dict:
     return {
-        **{
-            "datatypes": datatypes,
-            "format_function": format_function,
-            "to_str_function": to_str_function,
-            "invalid_value": invalid_value,
-            "nullable": nullable,
-            "pre_format_function": pre_format_function,
-            "post_format_function": post_format_function,
-            "clipboard_function": clipboard_function,
-        },
+        "datatypes": datatypes,
+        "format_function": format_function,
+        "to_str_function": to_str_function,
+        "invalid_value": invalid_value,
+        "nullable": nullable,
+        "pre_format_function": pre_format_function,
+        "post_format_function": post_format_function,
+        "clipboard_function": clipboard_function,
         **kwargs,
     }
 
@@ -321,19 +319,15 @@ class Formatter:
             return self.value
         return self.__str__()
 
-    def __eq__(self, __value: Any) -> bool:
+    def __eq__(self, value: object, /) -> bool:
         # in case of custom formatter class
         # compare the values
-        try:
-            if hasattr(__value, "value"):
-                return self.value == __value.value
-        except Exception:
-            pass
+        with suppress(Exception):
+            if hasattr(value, "value"):
+                return self.value == value.value
         # if comparing to a string, format the string and compare
-        if isinstance(__value, str):
-            try:
-                return self.value == self.format_data(__value)
-            except Exception:
-                pass
+        if isinstance(value, str):
+            with suppress(Exception):
+                return self.value == self.format_data(value)
         # if comparing to anything else, compare the values
-        return self.value == __value
+        return self.value == value

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import csv as csv
+import csv
 import io
 import tkinter as tk
 from bisect import bisect_left, bisect_right
 from collections import defaultdict, deque
 from collections.abc import Callable, Generator, Hashable, Iterator, Sequence
+from contextlib import suppress
 from functools import partial
 from itertools import accumulate, chain, filterfalse, islice, repeat
 from operator import itemgetter
@@ -691,19 +692,17 @@ class MainTable(tk.Canvas):
         event_data["selection_boxes"] = boxes
         if self.find_window.window.find_in_selection:
             iterable = chain.from_iterable(
-                (
-                    box_gen_coords(
-                        *box.coords,
-                        start_r=box.coords.from_r,
-                        start_c=box.coords.from_c,
-                        reverse=False,
-                        all_rows_displayed=self.all_rows_displayed,
-                        all_cols_displayed=self.all_columns_displayed,
-                        displayed_rows=self.displayed_rows,
-                        displayed_cols=self.displayed_columns,
-                    )
-                    for box in self.selection_boxes.values()
+                box_gen_coords(
+                    *box.coords,
+                    start_r=box.coords.from_r,
+                    start_c=box.coords.from_c,
+                    reverse=False,
+                    all_rows_displayed=self.all_rows_displayed,
+                    all_cols_displayed=self.all_columns_displayed,
+                    displayed_rows=self.displayed_rows,
+                    displayed_cols=self.displayed_columns,
                 )
+                for box in self.selection_boxes.values()
             )
         else:
             iterable = box_gen_coords(
@@ -1065,7 +1064,7 @@ class MainTable(tk.Canvas):
             self.clipboard_append(s.getvalue())
         self.update_idletasks()
         try_binding(self.extra_end_ctrl_c_func, event_data, new_name="end_ctrl_c")
-        self.PAR.emit_event("<<Copy>>", EventDataDict({**event_data, **{"eventname": "copy"}}))
+        self.PAR.emit_event("<<Copy>>", EventDataDict({**event_data, "eventname": "copy"}))
         return event_data
 
     def ctrl_c_plain(self, event=None) -> None | EventDataDict:
@@ -1111,7 +1110,7 @@ class MainTable(tk.Canvas):
             self.clipboard_append(s.getvalue())
         self.update_idletasks()
         try_binding(self.extra_end_ctrl_c_func, event_data, new_name="end_ctrl_c")
-        self.PAR.emit_event("<<Copy>>", EventDataDict({**event_data, **{"eventname": "copy"}}))
+        self.PAR.emit_event("<<Copy>>", EventDataDict({**event_data, "eventname": "copy"}))
         return event_data
 
     def ctrl_x(self, event=None, validation: bool = True) -> None | EventDataDict:
@@ -1278,6 +1277,7 @@ class MainTable(tk.Canvas):
                 widget=self,
                 delimiters=self.PAR.ops.from_clipboard_delimiters,
                 lineterminator=self.PAR.ops.to_clipboard_lineterminator,
+                skipinitialspace=self.PAR.ops.from_clipboard_skipinitialspace,
             )
         except Exception:
             return
@@ -1302,9 +1302,9 @@ class MainTable(tk.Canvas):
 
             if lastbox_numcols > new_data_numcols and not lastbox_numcols % new_data_numcols:
                 repeat_num = int(lastbox_numcols / new_data_numcols)
-                for rn, row in enumerate(data):
+                for row in data:
                     copies = [row.copy() for _ in range(repeat_num - 1)]
-                    data[rn].extend(chain.from_iterable(copies))
+                    row.extend(chain.from_iterable(copies))
                 new_data_numcols *= repeat_num
         added_rows = 0
         added_cols = 0
@@ -2017,7 +2017,13 @@ class MainTable(tk.Canvas):
                     span["from_r"], span["upto_r"] = newfrom, newupto
 
         if not undo_modification and create_selections and self.PAR.ops.treeview:
-            self.PAR.selection_set(*[self._row_index[k].iid for k in data_new_idxs.values()])
+            self.PAR.selection_set(
+                *[
+                    self._row_index[k].iid
+                    for k in data_new_idxs.values()
+                    if bisect_in(self.displayed_rows, k)
+                ]
+            )
 
         elif not undo_modification and move_heights and disp_new_idxs:
             self.set_row_positions(
@@ -2356,7 +2362,7 @@ class MainTable(tk.Canvas):
             if bottom_right_corner is None:
                 both_above = y1 < top_left_y and y2 < top_left_y
                 y1_above_y2_below = y1 < top_left_y and y2 > bottom_right_y
-                y1_above_y2_visible = y1 < top_left_y and top_left_y <= y2 <= bottom_right_y
+                y1_above_y2_visible = y1 < top_left_y <= y2 <= bottom_right_y
                 brc = not (both_above or y1_above_y2_below or y1_above_y2_visible)
             else:
                 brc = bottom_right_corner
@@ -2391,7 +2397,7 @@ class MainTable(tk.Canvas):
             if bottom_right_corner is None:
                 both_left = x1 < top_left_x and x2 < top_left_x
                 x1_left_x2_right = x1 < top_left_x and x2 > bottom_right_x
-                x1_left_x2_visible = x1 < top_left_x and top_left_x <= x2 <= bottom_right_x
+                x1_left_x2_visible = x1 < top_left_x <= x2 <= bottom_right_x
                 brc = not (both_left or x1_left_x2_right or x1_left_x2_visible)
             else:
                 brc = bottom_right_corner
@@ -2500,7 +2506,7 @@ class MainTable(tk.Canvas):
     def select_columns(self, event: Any) -> None:
         if not self.selected:
             return
-        r1, c1, r2, c2 = self.selection_boxes[self.selected.fill_iid].coords
+        _r1, c1, _r2, c2 = self.selection_boxes[self.selected.fill_iid].coords
         r, c = self.selected.row, self.selected.column
         self.set_currently_selected(
             r=r,
@@ -2511,7 +2517,7 @@ class MainTable(tk.Canvas):
     def select_rows(self, event: Any) -> None:
         if not self.selected:
             return
-        r1, c1, r2, c2 = self.selection_boxes[self.selected.fill_iid].coords
+        r1, _c1, r2, _c2 = self.selection_boxes[self.selected.fill_iid].coords
         r, c = self.selected.row, self.selected.column
         self.set_currently_selected(
             r=r,
@@ -3795,32 +3801,24 @@ class MainTable(tk.Canvas):
             xcheck = self.xview()
             ycheck = self.yview()
             if len(xcheck) > 1 and xcheck[0] > 0 and event.x < 0:
-                try:
+                with suppress(Exception):
                     self.xview_scroll(-1, "units")
                     self.CH.xview_scroll(-1, "units")
-                except Exception:
-                    pass
                 need_redraw = True
             if len(ycheck) > 1 and ycheck[0] > 0 and event.y < 0:
-                try:
+                with suppress(Exception):
                     self.yview_scroll(-1, "units")
                     self.RI.yview_scroll(-1, "units")
-                except Exception:
-                    pass
                 need_redraw = True
             if len(xcheck) > 1 and xcheck[1] < 1 and event.x > self.winfo_width():
-                try:
+                with suppress(Exception):
                     self.xview_scroll(1, "units")
                     self.CH.xview_scroll(1, "units")
-                except Exception:
-                    pass
                 need_redraw = True
             if len(ycheck) > 1 and ycheck[1] < 1 and event.y > self.winfo_height():
-                try:
+                with suppress(Exception):
                     self.yview_scroll(1, "units")
                     self.RI.yview_scroll(1, "units")
-                except Exception:
-                    pass
                 need_redraw = True
         if need_redraw:
             self.fix_views()
@@ -4105,7 +4103,7 @@ class MainTable(tk.Canvas):
     def set_table_font(self, newfont: tuple | None = None, row_heights: bool = True) -> tuple[str, int, str]:
         if newfont:
             self.check_font(newfont)
-            self.PAR.ops.table_font = FontTuple(*(newfont[0], int(round(newfont[1])), newfont[2]))
+            self.PAR.ops.table_font = FontTuple(*(newfont[0], round(newfont[1]), newfont[2]))
             old_min_row_height = int(self.min_row_height)
             old_default_row_height = int(self.get_default_row_height())
             self.set_table_font_help()
@@ -4146,7 +4144,7 @@ class MainTable(tk.Canvas):
     def set_index_font(self, newfont: tuple | None = None, row_heights: bool = True) -> tuple[str, int, str]:
         if newfont:
             self.check_font(newfont)
-            self.PAR.ops.index_font = FontTuple(*(newfont[0], int(round(newfont[1])), newfont[2]))
+            self.PAR.ops.index_font = FontTuple(*(newfont[0], round(newfont[1]), newfont[2]))
             old_min_row_height = int(self.min_row_height)
             old_default_row_height = int(self.get_default_row_height())
             self.set_index_font_help()
@@ -4173,13 +4171,7 @@ class MainTable(tk.Canvas):
                         (
                             self.min_row_height
                             if h == old_min_row_height
-                            else (
-                                default_row_height
-                                if h == old_default_row_height
-                                else self.min_row_height
-                                if h < self.min_row_height
-                                else h
-                            )
+                            else (default_row_height if h == old_default_row_height else max(h, self.min_row_height))
                         )
                         for h in self.gen_row_heights()
                     ),
@@ -4190,7 +4182,7 @@ class MainTable(tk.Canvas):
     def set_header_font(self, newfont: tuple | None = None) -> tuple[str, int, str]:
         if newfont:
             self.check_font(newfont)
-            self.PAR.ops.header_font = FontTuple(*(newfont[0], int(round(newfont[1])), newfont[2]))
+            self.PAR.ops.header_font = FontTuple(*(newfont[0], round(newfont[1]), newfont[2]))
             self.set_header_font_help()
             self.recreate_all_selection_boxes()
         return self.PAR.ops.header_font
@@ -4268,8 +4260,7 @@ class MainTable(tk.Canvas):
         datacn = self.datacn(c)
         datarn = self.datarn(r)
         tw, h = self.get_cell_dimensions(datarn, datacn)
-        if tw > w:
-            w = tw
+        w = max(w, tw)
         if h < min_rh:
             h = min_rh
         elif h > self.PAR.ops.max_row_height:
@@ -4361,7 +4352,7 @@ class MainTable(tk.Canvas):
                 max_width += sum(
                     self._overflow(
                         self.cells_cache,
-                        reversed(range(0, dispcn)),
+                        reversed(range(dispcn)),
                         datarn,
                     )
                 )
@@ -4408,19 +4399,17 @@ class MainTable(tk.Canvas):
         iterrows = range(numrows) if self.all_rows_displayed else self.displayed_rows
         if is_iterable(self._row_index):
             for datarn in iterrows:
-                w_, h = self.RI.get_cell_dimensions(datarn)
+                _w, h = self.RI.get_cell_dimensions(datarn)
                 if h < min_rh:
                     h = min_rh
                 elif h > max_row_height:
                     h = max_row_height
-                if h > rhs[datarn]:
-                    rhs[datarn] = h
+                rhs[datarn] = max(rhs[datarn], h)
         added_w_space = 1 if slim else 7
         for datacn in itercols:
             w = min_column_width if width is None else width
             hw = self.CH.get_cell_dimensions(datacn)[0]
-            if hw > w:
-                w = hw
+            w = max(w, hw)
             for datarn in iterrows:
                 if txt := self.cell_str(datarn, datacn, get_displayed=True):
                     qconf(qtxtm, text=txt, font=qfont)
@@ -4447,14 +4436,12 @@ class MainTable(tk.Canvas):
                     and "checkbox" in self.col_options[datacn]
                 ):
                     tw += qtxth
-                if tw > w:
-                    w = tw
+                w = max(w, tw)
                 if h < min_rh:
                     h = min_rh
                 elif h > max_row_height:
                     h = max_row_height
-                if h > rhs[datarn]:
-                    rhs[datarn] = h
+                rhs[datarn] = max(rhs[datarn], h)
             if w < min_column_width:
                 w = min_column_width
             elif w > max_column_width:
@@ -4951,8 +4938,7 @@ class MainTable(tk.Canvas):
                     self.fix_row_len(rn, cn - 1)
                 elif rn >= len(self.data):
                     self.fix_data_len(rn, cn - 1)
-                if rn > maxrn:
-                    maxrn = rn
+                maxrn = max(maxrn, rn)
                 self.data[rn].insert(cn, v)
         # if not hiding rows then we can extend row positions if necessary
         if add_row_positions and self.all_rows_displayed and maxrn >= len(self.row_positions) - 1:
@@ -5075,8 +5061,7 @@ class MainTable(tk.Canvas):
             if rn > len(self.data):
                 self.fix_data_len(rn - 1, cn)
             self.data.insert(rn, row)
-            if cn > maxcn:
-                maxcn = cn
+            maxcn = max(maxcn, cn)
         if isinstance(self._row_index, list) and index:
             self._row_index = insert_items(self._row_index, index, self.RI.fix_index)
         # if not hiding columns then we can extend col positions if necessary
@@ -5767,10 +5752,10 @@ class MainTable(tk.Canvas):
         self,
         r: int,
         c: int,
-        fc: int | float,
-        fr: int | float,
-        sc: int | float,
-        sr: int | float,
+        fc: float,
+        fr: float,
+        sc: float,
+        sr: float,
         sel_cells_bg: tuple[int, int, int],
         sel_cols_bg: tuple[int, int, int],
         sel_rows_bg: tuple[int, int, int],
@@ -5978,10 +5963,10 @@ class MainTable(tk.Canvas):
 
     def redraw_highlight(
         self,
-        x1: int | float,
-        y1: int | float,
-        x2: int | float,
-        y2: int | float,
+        x1: float,
+        y1: float,
+        x2: float,
+        y2: float,
         fill: str,
         outline: str,
         tags: str | tuple[str],
@@ -6220,8 +6205,8 @@ class MainTable(tk.Canvas):
         scrollpos_bot: int,
         scrollpos_left: int,
         scrollpos_right: int,
-        x_stop: int | float,
-        y_stop: int | float,
+        x_stop: float,
+        y_stop: float,
         col_pos_exists: bool,
         row_pos_exists: bool,
         can_width: int,
@@ -6603,7 +6588,7 @@ class MainTable(tk.Canvas):
         for iid in self.hidd_corners:
             self.itemconfig(iid, state="hidden")
         if self.PAR.ops.show_selected_cells_border:
-            for _, box in self.selection_boxes.items():
+            for box in self.selection_boxes.values():
                 if box.bd_iid:
                     self.tag_raise(box.bd_iid)
             if self.selected:
@@ -7255,7 +7240,7 @@ class MainTable(tk.Canvas):
                 (r, c)
                 for _, box in self.get_selection_items(cells=False, columns=False)
                 for r in range(box.coords.from_r, box.coords.upto_r)
-                for c in range(0, len(self.col_positions) - 1)
+                for c in range(len(self.col_positions) - 1)
             }
             if get_cells_as_rows:
                 return s | self.get_selected_cells()
@@ -7278,7 +7263,7 @@ class MainTable(tk.Canvas):
             s = {
                 (r, c)
                 for _, box in self.get_selection_items(cells=False, rows=False)
-                for r in range(0, len(self.row_positions) - 1)
+                for r in range(len(self.row_positions) - 1)
                 for c in range(box.coords.from_c, box.coords.upto_c)
             }
             if get_cells_as_cols:
@@ -7567,7 +7552,7 @@ class MainTable(tk.Canvas):
             r, c = self.dropdown.get_coords()
             if self.text_editor.open:
                 text_editor_h = self.text_editor.window.winfo_height()
-                win_h, anchor = self.get_dropdown_height_anchor(r, c, text_editor_h)
+                _win_h, anchor = self.get_dropdown_height_anchor(r, c, text_editor_h)
             else:
                 text_editor_h = self.row_positions[r + 1] - self.row_positions[r] + 1
                 anchor = self.itemcget(self.dropdown.canvas_id, "anchor")
@@ -7602,11 +7587,9 @@ class MainTable(tk.Canvas):
             focused = self.focus_get()
         except Exception:
             focused = None
-        try:
+        with suppress(Exception):
             if focused == self.text_editor.tktext.rc_popup_menu:
                 return "break"
-        except Exception:
-            pass
         if focused is None:
             return "break"
         if event.keysym == "Escape":
@@ -7765,7 +7748,7 @@ class MainTable(tk.Canvas):
                 )
         win_h = max(0, win_h - 1)
         sheet_h = max(0, sheet_h - 1)
-        return win_h if win_h >= sheet_h else sheet_h
+        return max(win_h, sheet_h)
 
     def get_dropdown_height_anchor(self, r: int, c: int, text_editor_h: int | None = None) -> tuple:
         win_h = 5
@@ -8170,26 +8153,26 @@ class MainTable(tk.Canvas):
     def delete_row_format(self, datarn: Literal["all"] | int = "all", clear_values: bool = False) -> None:
         itr = gen_formatted(self.row_options) if isinstance(datarn, str) and datarn.lower() == "all" else (datarn,)
         get_val = self.get_value_for_empty_cell
-        for datarn in itr:
+        for rn in itr:
             try:
-                del self.row_options[datarn]["format"]
+                del self.row_options[rn]["format"]
             except Exception:
                 continue
             if clear_values:
-                for datacn in range(len(self.data[datarn])):
-                    self.set_cell_data(datarn, datacn, get_val(datarn, datacn), expand_sheet=False)
+                for datacn in range(len(self.data[rn])):
+                    self.set_cell_data(rn, datacn, get_val(rn, datacn), expand_sheet=False)
 
     def delete_column_format(self, datacn: Literal["all"] | int = "all", clear_values: bool = False) -> None:
         itr = gen_formatted(self.col_options) if isinstance(datacn, str) and datacn.lower() == "all" else (datacn,)
         get_val = self.get_value_for_empty_cell
-        for datacn in itr:
+        for cn in itr:
             try:
-                del self.col_options[datacn]["format"]
+                del self.col_options[cn]["format"]
             except Exception:
                 continue
             if clear_values:
                 for datarn in range(len(self.data)):
-                    self.set_cell_data(datarn, datacn, get_val(datarn, datacn), expand_sheet=False)
+                    self.set_cell_data(datarn, cn, get_val(datarn, cn), expand_sheet=False)
 
     def cell_str(self, datarn: int, datacn: int, get_displayed: bool = False, **kwargs) -> str:
         """

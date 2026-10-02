@@ -322,6 +322,7 @@ def new_sheet_options() -> DotDict:
             "to_clipboard_quotechar": '"',
             "to_clipboard_lineterminator": "\n",
             "from_clipboard_delimiters": ["\t"],
+            "from_clipboard_skipinitialspace": True,
             "show_dropdown_borders": False,
             "show_default_header_for_empty": True,
             "show_default_index_for_empty": True,

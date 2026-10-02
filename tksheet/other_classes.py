@@ -37,7 +37,7 @@ DraggedRowColumn = namedtuple("DraggedRowColumn", "dragged to_move")
 
 
 class SelectionBox:
-    __slots__ = ("fill_iid", "bd_iid", "index", "header", "coords", "type_", "state")
+    __slots__ = ("bd_iid", "coords", "fill_iid", "header", "index", "state", "type_")
 
     def __init__(
         self,
@@ -45,7 +45,7 @@ class SelectionBox:
         bd_iid: int | None = None,
         index: int | None = None,
         header: int | None = None,
-        coords: tuple[int, int, int, int] = None,
+        coords: None | tuple[int, int, int, int] = None,
         type_: Literal["cells", "rows", "columns"] = "cells",
         state: Literal["normal", "hidden"] = "normal",
     ) -> None:
@@ -121,7 +121,7 @@ class DotDict(dict):
         super().__init__(*args, **kwargs)
         # Recursively turn nested dicts into DotDicts
         for key, value in self.items():
-            if type(value) is dict:  # noqa: E721
+            if type(value) is dict:
                 self[key] = DotDict(value)
 
     def __getstate__(self) -> DotDict:
@@ -131,7 +131,7 @@ class DotDict(dict):
         self.update(state)
 
     def __setitem__(self, key: Hashable, item: Any) -> None:
-        if type(item) is dict:  # noqa: E721
+        if type(item) is dict:
             super().__setitem__(key, DotDict(item))
         else:
             super().__setitem__(key, item)
@@ -155,7 +155,7 @@ class Span(dict):
         for key, item in self.items():
             if key == "data" or key == "value":
                 self["widget"].set_data(self, data=item)
-            elif type(item) is dict:  # noqa: E721
+            elif type(item) is dict:
                 self[key] = DotDict(item)
 
     def __getstate__(self) -> Span:
@@ -179,7 +179,7 @@ class Span(dict):
             self["widget"].highlight(self, fg=item)
         elif key == "align":
             self["widget"].align(self, align=item)
-        elif type(item) is dict:  # noqa: E721
+        elif type(item) is dict:
             super().__setitem__(key, DotDict(item))
         else:
             super().__setitem__(key, item)
@@ -423,7 +423,7 @@ class Span(dict):
         cols = self.columns
         return Box_nt(rows.from_, cols.from_, rows.upto_, cols.upto_)
 
-    def copy_self(self) -> "Span":
+    def copy_self(self) -> Span:
         # Create a new Span instance
         span = Span()
 
@@ -475,7 +475,7 @@ class GeneratedMouseEvent:
 
 
 class Node:
-    __slots__ = ("text", "iid", "parent", "children")
+    __slots__ = ("children", "iid", "parent", "text")
 
     def __init__(
         self,
@@ -491,7 +491,7 @@ class Node:
 
 
 class StorageBase:
-    __slots__ = ("canvas_id", "window", "open")
+    __slots__ = ("canvas_id", "open", "window")
 
     def __init__(self) -> None:
         self.canvas_id = None
@@ -560,7 +560,7 @@ class TextEditorStorage(EditorStorageBase):
 
 
 class ProgressBar:
-    __slots__ = ("bg", "fg", "name", "percent", "del_when_done")
+    __slots__ = ("bg", "del_when_done", "fg", "name", "percent")
 
     def __init__(self, bg: str, fg: str, name: Hashable, percent: int, del_when_done: bool) -> None:
         self.bg = bg
