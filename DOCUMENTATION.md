@@ -46,7 +46,7 @@ Please note:
 
 Supported file formats are:
 
-- .xlsx, .xls, .xlsm
+- .xlsx, .xlsm
 - .json JavaScript object notation where the full table is under the key 'records'
 - .csv/.tsv (comma or tab delimited)
 
@@ -318,7 +318,7 @@ The changelog can be stored with app data, and you can also save a viewable chan
 
 Import -> Changes replays a saved changelog on the file you have open. Use this to apply the same edits to another file, or to replay an exported list.
 
-The file must be .csv, .tsv, .xlsx, .xlsm, .xls or .json. For Excel, only the first sheet is read. The table must have exactly seven columns, the same as an exported changelog.
+The file must be .csv, .tsv, .xlsx, .xlsm or .json. For Excel, only the first sheet is read. The table must have exactly seven columns, the same as an exported changelog.
 
 Lines that already start with "Imported change |" or "Merge |" are treated as the action after that prefix, so you can export and import the same list again.
 
@@ -647,7 +647,7 @@ The API reads a file, flattens or unflattens it, and writes a new file. It does 
 How `TKTREES.pyw` starts:
 
 - No arguments: GUI
-- A data file path (`.xlsx`, `.xls`, `.xlsm`, `.csv`, `.tsv`, `.json`), or any existing file: GUI
+- A data file path (`.xlsx`, `.xlsm`, `.csv`, `.tsv`, `.json`), or any existing file: GUI
 - `flatten` or `unflatten` (also `--help` / `--version`): file-to-file API. Never the GUI
 - `cli`: reserved for a future interactive command line. Not available yet. Does not open the GUI
 - Anything else, including typos: error, exit `2`, does not open the GUI
@@ -660,7 +660,7 @@ python TKTREES.pyw unflatten --help
 
 If any value has spaces, quote it, e.g. `"New Sheet"`.
 
-The input file must be .xlsx, .xls, .xlsm, .csv, .tsv or .json.
+The input file must be .xlsx, .xlsm, .csv, .tsv or .json.
 
 The output file must be .csv, .tsv, .xlsx or .json. Suffix case is ignored when deciding the type (`.CSV` is csv). The filename is used as given.
 

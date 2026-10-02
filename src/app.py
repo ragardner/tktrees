@@ -508,7 +508,7 @@ To get started once you have closed this popup, either:
             else:
                 self.json_go_to_column_selection(j)
 
-        elif self.open_dict["filepath"].lower().endswith((".xlsx", ".xlsm", ".xls")):
+        elif self.open_dict["filepath"].lower().endswith((".xlsx", ".xlsm")):
             try:
                 in_mem = bytes_io_wb(self.open_dict["filepath"])
                 self.wb = load_workbook(in_mem, read_only=True, data_only=True)
@@ -548,7 +548,7 @@ To get started once you have closed this popup, either:
         else:
             Error(
                 self,
-                "Error: File must be one of these types - .xlsx, .xlsm, .xls, .csv, .tsv, .json",
+                "Error: File must be one of these types - .xlsx, .xlsm, .csv, .tsv, .json",
                 theme=self.theme,
             )
             self.create_new_at_start()
@@ -684,7 +684,7 @@ To get started once you have closed this popup, either:
             Error(self, "Filepath invalid   ", theme=self.theme)
             self.enable_at_start()
             return
-        if not fp.lower().endswith((".json", ".xlsx", ".xls", ".xlsm", ".csv", ".tsv")):
+        if not fp.lower().endswith((".json", ".xlsx", ".xlsm", ".csv", ".tsv")):
             Error(self, "Please select excel/csv/json   ", theme=self.theme)
             self.enable_at_start()
             return

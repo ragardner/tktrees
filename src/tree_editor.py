@@ -2513,7 +2513,7 @@ class Tree_Editor(tk.Frame):
         except Exception:
             Error(self, "Filepath invalid   ", theme=self.C.theme)
             return
-        if not fp.lower().endswith((".json", ".xlsx", ".xls", ".xlsm", ".csv", ".tsv")):
+        if not fp.lower().endswith((".json", ".xlsx", ".xlsm", ".csv", ".tsv")):
             Error(self, "Please select json/excel/csv   ", theme=self.C.theme)
             return
         self.disable_widgets()
@@ -8606,7 +8606,7 @@ class Tree_Editor(tk.Frame):
             Error(self, "Filepath invalid   ", theme=self.C.theme)
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
-        if not fp.lower().endswith((".tsv", ".csv", ".xls", ".xlsx", ".xlsm", ".json")):
+        if not fp.lower().endswith((".tsv", ".csv", ".xlsx", ".xlsm", ".json")):
             Error(self, "Invalid file format   ", theme=self.C.theme)
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
@@ -8656,7 +8656,7 @@ class Tree_Editor(tk.Frame):
                 Error(self, f"Error: {error_msg}", theme=self.C.theme)
                 self.stop_work(self.get_tree_editor_status_bar_text())
                 return
-        elif fp.lower().endswith((".xls", ".xlsx", ".xlsm")):
+        elif fp.lower().endswith((".xlsx", ".xlsm")):
             try:
                 wb = load_workbook(bytes_io_wb(fp), read_only=True, data_only=True)
                 ws = wb[wb.sheetnames[0]]
@@ -10133,7 +10133,7 @@ class Tree_Editor(tk.Frame):
                 successful = self.save_csv(newfile)
             elif newfile.lower().endswith(".json"):
                 successful = self.save_json(newfile)
-            elif newfile.lower().endswith((".xlsx", ".xls", ".xlsm")):
+            elif newfile.lower().endswith((".xlsx", ".xlsm")):
                 successful = self.save_workbook(newfile, self.C.open_dict["sheet"])
                 self.C.try_to_close_workbook()
         except Exception as error_msg:
@@ -10210,7 +10210,7 @@ class Tree_Editor(tk.Frame):
         self.start_work("Saving... ")
         folder = popup.result
         newfile = os.path.join(folder, os.path.basename(newfile))
-        if not newfile.lower().endswith((".csv", ".xls", ".tsv", ".xlsx", ".json", ".xlsm")):
+        if not newfile.lower().endswith((".csv", ".tsv", ".xlsx", ".json", ".xlsm")):
             Error(
                 self,
                 "Error saving file, file extension must be .csv/.xlsx/.json   ",
@@ -10226,7 +10226,7 @@ class Tree_Editor(tk.Frame):
                 matches = {}
                 for file in os.listdir(folder):
                     if (
-                        file.lower().endswith((".json", ".xlsx", ".csv", ".xls", ".xlsm", ".tsv"))
+                        file.lower().endswith((".json", ".xlsx", ".csv", ".xlsm", ".tsv"))
                         and path_without_numbers(file) == newfile_without_numbers
                     ):
                         matches[file] = path_numbers(file)
@@ -10275,7 +10275,7 @@ class Tree_Editor(tk.Frame):
                 successful = self.save_csv(newfile)
             elif newfile.lower().endswith(".json"):
                 successful = self.save_json(newfile)
-            elif newfile.lower().endswith((".xlsx", ".xls", ".xlsm")):
+            elif newfile.lower().endswith((".xlsx", ".xlsm")):
                 successful = self.save_workbook(newfile, self.C.open_dict["sheet"])
                 self.C.try_to_close_workbook()
         except Exception as error_msg:

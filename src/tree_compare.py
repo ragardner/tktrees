@@ -393,7 +393,7 @@ class Tree_Compare(tk.Frame):
             Error(self, "Filepath invalid   ", theme=self.C.theme)
             self.stop_work("Program ready")
             return
-        if not filepath.lower().endswith((".json", ".xlsx", ".xls", ".xlsm", ".csv", ".tsv")):
+        if not filepath.lower().endswith((".json", ".xlsx", ".xlsm", ".csv", ".tsv")):
             Error(self, "Please select excel/csv/json   ", theme=self.C.theme)
             self.stop_work("Program ready")
             return
@@ -519,7 +519,7 @@ class Tree_Compare(tk.Frame):
             Error(self, "Filepath invalid   ", theme=self.C.theme)
             self.stop_work("Program ready")
             return
-        if not filepath.lower().endswith((".json", ".xlsx", ".xls", ".xlsm", ".csv", ".tsv")):
+        if not filepath.lower().endswith((".json", ".xlsx", ".xlsm", ".csv", ".tsv")):
             Error(self, "Please select excel/csv/json   ", theme=self.C.theme)
             self.stop_work("Program ready")
             return

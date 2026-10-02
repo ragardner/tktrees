@@ -938,8 +938,8 @@ def tk_trees_api(
 
         # ___________ LOAD FILE AND DATA ___________________
 
-        if not input_filepath.lower().endswith((".xlsx", ".xls", ".xlsm", ".csv", ".tsv", ".json")):
-            raise Exception("Input file must be .xlsx / .xls / .xlsm / .csv / .tsv / .json")
+        if not input_filepath.lower().endswith((".xlsx", ".xlsm", ".csv", ".tsv", ".json")):
+            raise Exception("Input file must be .xlsx / .xlsm / .csv / .tsv / .json")
 
         json_format = (1, "records")
         if input_filepath.lower().endswith((".csv", ".tsv")):
@@ -947,7 +947,7 @@ def tk_trees_api(
                 temp_data = fh.read()
             sheet = csv_str_x_data(temp_data)
 
-        elif input_filepath.lower().endswith((".xlsx", ".xls", ".xlsm")):
+        elif input_filepath.lower().endswith((".xlsx", ".xlsm")):
             with open(input_filepath, "rb") as fh:
                 in_mem = io.BytesIO(fh.read())
             wb = load_workbook(in_mem, read_only=True, data_only=True)

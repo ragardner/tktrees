@@ -23,7 +23,7 @@ API_COMMANDS = frozenset({"flatten", "unflatten"})
 # file-to-file). Must never fall through to the GUI.
 CLI_COMMAND = "cli"
 
-DATA_SUFFIXES = frozenset({".xlsx", ".xls", ".xlsm", ".csv", ".tsv", ".json"})
+DATA_SUFFIXES = frozenset({".xlsx", ".xlsm", ".csv", ".tsv", ".json"})
 
 ORDER_TOP_BASE = "top-base"
 ORDER_BASE_TOP = "base-top"
@@ -139,7 +139,7 @@ def build_parser(prog: str = "TKTREES.pyw") -> argparse.ArgumentParser:
     shared.add_argument(
         "input_filepath",
         metavar="INPUT",
-        help="Input file (.xlsx, .xls, .xlsm, .csv, .tsv, .json)",
+        help="Input file (.xlsx, .xlsm, .csv, .tsv, .json)",
     )
     shared.add_argument(
         "output_filepath",

@@ -1708,7 +1708,7 @@ class Sheet_File_Load_Mixin:
         except Exception:
             self.stop_work("Error: filepath invalid")
             return
-        if not filepath.lower().endswith((".json", ".xlsx", ".xls", ".xlsm", ".csv", ".tsv")):
+        if not filepath.lower().endswith((".json", ".xlsx", ".xlsm", ".csv", ".tsv")):
             self.stop_work("Error: select json/excel/csv   ")
             return
         check = os.path.isfile(filepath)
@@ -1742,7 +1742,7 @@ class Sheet_File_Load_Mixin:
                     return
                 self.C.new_sheet = _limit_sheet_columns(self.C.new_sheet, self.load_column_limit)
 
-            elif filepath.lower().endswith((".xlsx", ".xls", ".xlsm")):
+            elif filepath.lower().endswith((".xlsx", ".xlsm")):
                 in_mem = bytes_io_wb(filepath)
                 self.wb_ = load_workbook(in_mem, read_only=True, data_only=True)
                 wbsheets = self.wb_.sheetnames
@@ -1764,7 +1764,7 @@ class Sheet_File_Load_Mixin:
             self.C.new_sheet = []
             self.stop_work(f"Error: {error_msg}")
             return
-        if not self.C.new_sheet and not filepath.lower().endswith((".xlsx", ".xls", ".xlsm")):
+        if not self.C.new_sheet and not filepath.lower().endswith((".xlsx", ".xlsm")):
             self.C.new_sheet = []
             self.stop_work("Error: File/sheet contained no data")
             return
@@ -2938,7 +2938,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         except Exception:
             self.stop_work("Error: filepath invalid", sels=True)
             return
-        if not filepath.lower().endswith((".json", ".xlsx", ".xls", ".xlsm", ".csv", ".tsv")):
+        if not filepath.lower().endswith((".json", ".xlsx", ".xlsm", ".csv", ".tsv")):
             self.stop_work("Error: select json/excel/csv   ", sels=True)
             return
         check = os.path.isfile(filepath)
@@ -2974,7 +2974,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
                 equalize_sublist_lens(self.C.new_sheet)
                 self.load_display(self.C.new_sheet[0])
                 self.stop_work("Ready to merge sheets")
-            elif filepath.lower().endswith((".xlsx", ".xls", ".xlsm")):
+            elif filepath.lower().endswith((".xlsx", ".xlsm")):
                 in_mem = bytes_io_wb(filepath)
                 self.wb_ = load_workbook(in_mem, read_only=True, data_only=True)
                 wbsheets = self.wb_.sheetnames
@@ -3023,7 +3023,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             self.C.new_sheet = []
             self.stop_work(f"Error: {error_msg}", sels=True)
             return
-        if not self.C.new_sheet and not filepath.lower().endswith((".xlsx", ".xls", ".xlsm")):
+        if not self.C.new_sheet and not filepath.lower().endswith((".xlsx", ".xlsm")):
             self.C.new_sheet = []
             self.stop_work("Error: File/sheet contained no data", sels=True)
             return

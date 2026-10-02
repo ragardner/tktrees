@@ -557,7 +557,7 @@ def to_json(
 
 
 def path_without_numbers(full_path):
-    if full_path.lower().endswith((".csv", ".xls", ".tsv")):
+    if full_path.lower().endswith((".csv", ".tsv")):
         ext = full_path[-4:]
         path = full_path[:-4]
     elif full_path.lower().endswith((".xlsx", ".json", ".xlsm")):
@@ -576,7 +576,7 @@ def path_without_numbers(full_path):
 
 
 def path_numbers(full_path):
-    if full_path.lower().endswith((".csv", ".xls", ".tsv")):
+    if full_path.lower().endswith((".csv", ".tsv")):
         path = full_path[:-4]
     elif full_path.lower().endswith((".xlsx", ".json", ".xlsm")):
         path = full_path[:-5]
@@ -593,7 +593,7 @@ def path_numbers(full_path):
 
 
 def increment_file_version(full_path):
-    if full_path.lower().endswith((".csv", ".xls", ".tsv")):
+    if full_path.lower().endswith((".csv", ".tsv")):
         ext = full_path[-4:]
         path = full_path[:-4]
     elif full_path.lower().endswith((".xlsx", ".json", ".xlsm")):
