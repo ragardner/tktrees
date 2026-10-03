@@ -44,6 +44,8 @@ rc_motion = "<B2-Motion>" if USER_OS == "darwin" else "<B3-Motion>"
 rc_release = "<ButtonRelease-2>" if USER_OS == "darwin" else "<ButtonRelease-3>"
 ctrl_button = "Command" if USER_OS == "darwin" else "Control"
 ctrl_rc_press = f"<{ctrl_button}-{rc_press[1:]}"
+# The key labeled Delete on a Mac keyboard sends BackSpace.
+mac_delete_binding = "<BackSpace>" if USER_OS == "darwin" else None
 from_clipboard_delimiters = "\t,|"
 
 software_version_number = "1.16.3"

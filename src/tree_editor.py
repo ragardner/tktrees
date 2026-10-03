@@ -64,6 +64,7 @@ from .constants import (
     ctrl_button,
     ctrl_rc_press,
     letters_icon,
+    mac_delete_binding,
     menu_kwargs,
     rc_button,
     rc_motion,
@@ -1881,6 +1882,8 @@ class Tree_Editor(tk.Frame):
             widget.bind(f"<{ctrl_button}-t>", self.tag_ids)
             widget.bind(f"<{ctrl_button}-T>", self.tag_ids)
             widget.bind("<Delete>", self.del_key)
+            if mac_delete_binding:
+                widget.bind(mac_delete_binding, self.mac_delete_key)
             widget.bind("<Double-Button-1>", self.tree_sheet_double_left)
             widget.extra_bindings(
                 [
@@ -1962,6 +1965,8 @@ class Tree_Editor(tk.Frame):
             x.unbind(f"<{ctrl_button}-x>")
             x.unbind(f"<{ctrl_button}-X>")
             x.unbind("<Delete>")
+            if mac_delete_binding:
+                x.unbind(mac_delete_binding)
             # x.disable_bindings().basic_bindings(False)
             x.unbind("<Double-Button-1>")
             x.unbind("<FocusIn>")
@@ -2336,6 +2341,11 @@ class Tree_Editor(tk.Frame):
                 self.tree.copy()
         elif self.sheet.has_focus():
             self.sheet.copy()
+
+    def mac_delete_key(self, event: object = None) -> Literal["break"]:
+        # Stop tksheet's <Key> binding from also opening a blank editor.
+        self.del_key(event)
+        return "break"
 
     def del_key(self, event: object = None) -> None:
         if self.tree.has_focus():
