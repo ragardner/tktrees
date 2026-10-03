@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-# Copyright (c) R. A. Gardner
+# Copyright (c) ragardner
 
 """Fill a detail column from a template of {tokens}."""
 

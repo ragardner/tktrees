@@ -6,7 +6,7 @@ To start the app, use Python 3.9 or newer to run the file named "TKTREES.pyw". t
 
 After starting the app or opening a file, a treeview shows the items (IDs) on the left, and their respective rows to their right. To change the view, such as to view the underlying table, go to View -> Layout or the File menu then Settings.
 
-TkTrees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
+TkTrees is licensed under AGPL-3.0 and is the copyright of ragardner.
 
 - Author: github.com/ragardner
 - Source Code: github.com/ragardner/tktrees

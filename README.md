@@ -79,7 +79,7 @@ For convenience in environments where pip is not available, this project include
 
 ## License
 
-TkTrees is licensed under AGPL-3.0 and is the copyright of R. A. Gardner.
+TkTrees is licensed under AGPL-3.0 and is the copyright of ragardner.
 
 - Author: [github.com/ragardner](https://github.com/ragardner)
 - Source: [github.com/ragardner/tktrees](https://github.com/ragardner/tktrees)
