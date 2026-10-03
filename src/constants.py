@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (c) ragardner
 
-import datetime
 import os
 import re
 import tkinter as tk
@@ -53,8 +52,7 @@ app_title = "tktrees"
 app_license = "AGPL-3.0-only"
 contact_email = "github@ragardner.simplelogin.com"
 website1 = "github.com/ragardner"
-current_year = f"{datetime.datetime.now().year}"
-app_copyright = f"Copyright © 2019-{current_year} ragardner."
+app_copyright = "Copyright © 2019 ragardner."
 contact_info = f" {software_version_full}\n {app_copyright}\n {contact_email}\n {website1}"
 about_system = "\n".join(
     (
