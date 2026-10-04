@@ -6341,12 +6341,7 @@ class Tree_Editor(tk.Frame):
         if not self.cut_children_dct:
             return
         self.snapshot_paste_id()
-        if self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]]:
-            see_iid = self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]][0]
-            select_iids = tuple(self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]])
-        else:
-            see_iid = ""
-            select_iids = ()
+        select_iids = tuple(self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]])
         success = self.cut_paste_children(
             self.cut_children_dct["id"], f"{self.selected_ID}", self.cut_children_dct["hier"]
         )
@@ -6369,21 +6364,17 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.disable_paste()
-        if see_iid:
-            self.tree.scroll_to_item(see_iid)
-            self.tree.selection_set(select_iids)
+        pasted = tuple(iid for iid in select_iids if iid in self.tree.RI.rns)
+        if pasted:
+            self.tree.scroll_to_item(pasted[0])
+            self.tree.selection_set(pasted)
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def paste_cut_children_empty(self):
         if not self.cut_children_dct:
             return
         self.snapshot_paste_id()
-        if self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]]:
-            see_iid = self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]][0]
-            select_iids = tuple(self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]])
-        else:
-            see_iid = ""
-            select_iids = ()
+        select_iids = tuple(self.nodes[self.cut_children_dct["id"]].cn[self.cut_children_dct["hier"]])
         success = self.cut_paste_children(self.cut_children_dct["id"], "", self.cut_children_dct["hier"])
         if not success:
             self.vs.pop()
@@ -6403,9 +6394,10 @@ class Tree_Editor(tk.Frame):
         self.refresh_rows = set()
         self.redraw_sheets()
         self.disable_paste()
-        if see_iid:
-            self.tree.scroll_to_item(see_iid)
-            self.tree.selection_set(select_iids)
+        pasted = tuple(iid for iid in select_iids if iid in self.tree.RI.rns)
+        if pasted:
+            self.tree.scroll_to_item(pasted[0])
+            self.tree.selection_set(pasted)
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def paste_copied_child(self):
