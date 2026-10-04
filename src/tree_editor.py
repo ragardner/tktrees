@@ -62,14 +62,13 @@ from .constants import (
     align_w_icon,
     changelog_header,
     ctrl_button,
-    ctrl_rc_press,
+    ctrl_rc_press_bindings,
     letters_icon,
     mac_delete_binding,
     menu_kwargs,
-    rc_button,
-    rc_motion,
-    rc_press,
-    rc_release,
+    rc_motion_bindings,
+    rc_press_bindings,
+    rc_release_bindings,
     remove_nrt,
     right_icon,
     search_icon,
@@ -1905,13 +1904,18 @@ class Tree_Editor(tk.Frame):
         )
         self.sheet.enable_bindings(sheet_bindings).basic_bindings(True)
         self.tree.enable_bindings(tree_bindings).basic_bindings(True)
-        self.sheet.bind(rc_release, self.sheet_rc_release)
+        for binding in rc_release_bindings:
+            self.sheet.bind(binding, self.sheet_rc_release)
         self.sheet.bind("<<SheetSelect>>", self.sheet_select_event)
         self.tree.bind("<<SheetSelect>>", self.tree_select_event)
-        self.tree.bind(rc_press, self.tree_rc_press)
-        self.tree.bind(ctrl_rc_press, lambda e: self.tree_rc_press(e, True))
-        # self.tree.bind(rc_motion, self.tree_rc_motion)
-        # self.tree.bind(rc_release, self.tree_rc_release)
+        for binding in rc_press_bindings:
+            self.tree.bind(binding, self.tree_rc_press)
+        for binding in ctrl_rc_press_bindings:
+            self.tree.bind(binding, lambda e: self.tree_rc_press(e, True))
+        # for binding in rc_motion_bindings:
+        #     self.tree.bind(binding, self.tree_rc_motion)
+        # for binding in rc_release_bindings:
+        #     self.tree.bind(binding, self.tree_rc_release)
         self.tree.bind("<FocusIn>", self.tree_focus_enter).bind("<FocusOut>", self.tree_focus_leave)
         self.sheet.bind("<FocusIn>", self.sheet_focus_enter).bind("<FocusOut>", self.sheet_focus_leave)
         self.sheet.bulk_table_edit_validation(self.tree_sheet_edit_table)
@@ -1973,7 +1977,8 @@ class Tree_Editor(tk.Frame):
             x.unbind("<FocusOut>")
         self.C.unbind(f"<{ctrl_button}-s>")
         self.C.unbind(f"<{ctrl_button}-S>")
-        self.sheet.unbind(rc_button)
+        for binding in rc_release_bindings:
+            self.sheet.unbind(binding)
         self.sheet.extra_bindings(
             [
                 ("row_index_drag_drop", None),
@@ -1981,10 +1986,14 @@ class Tree_Editor(tk.Frame):
                 ("column_header_drag_drop", None),
             ]
         )
-        self.tree.unbind(rc_press)
-        self.tree.unbind(ctrl_rc_press)
-        self.tree.unbind(rc_motion)
-        self.tree.unbind(rc_release)
+        for binding in rc_press_bindings:
+            self.tree.unbind(binding)
+        for binding in ctrl_rc_press_bindings:
+            self.tree.unbind(binding)
+        for binding in rc_motion_bindings:
+            self.tree.unbind(binding)
+        for binding in rc_release_bindings:
+            self.tree.unbind(binding)
         self.sheet_tag_id_button.config(state="disabled")
         self.sheet_tagged_ids_dropdown.config(state="disabled")
         self.sheet_tagged_ids_dropdown.unbind("<<ComboboxSelected>>")

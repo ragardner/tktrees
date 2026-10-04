@@ -26,7 +26,7 @@ from .constants import (
     checked_icon,
     ctrl_button,
     menu_kwargs,
-    rc_button,
+    rc_bindings,
     sheet_header_font,
     std_font_size,
     themes,
@@ -999,7 +999,8 @@ class Working_Text(tk.Text):
         self.rc_popup_menu.add_command(label="Copy", accelerator="Ctrl+C", command=self.copy, **menu_kwargs)
         self.rc_popup_menu.add_command(label="Paste", accelerator="Ctrl+V", command=self.paste, **menu_kwargs)
         self.bind("<1>", lambda event: self.focus_set())
-        self.bind(rc_button, self.rc)
+        for binding in rc_bindings:
+            self.bind(binding, self.rc)
         self.bind(f"<{ctrl_button}-a>", self.select_all)
         self.bind(f"<{ctrl_button}-A>", self.select_all)
 
@@ -1348,7 +1349,8 @@ class Readonly_Entry(tk.Entry):
         self.rc_popup_menu.add_command(label="Copy", accelerator="Ctrl+C", command=self.copy, **menu_kwargs)
         self.rc_popup_menu.add_command(label="Paste", accelerator="Ctrl+V", command=self.paste, **menu_kwargs)
         self.bind("<1>", lambda event: self.focus_set())
-        self.bind(rc_button, self.rc)
+        for binding in rc_bindings:
+            self.bind(binding, self.rc)
 
     def rc(self, event):
         self.focus_set()
@@ -1415,7 +1417,8 @@ class Normal_Entry(tk.Entry):
         self.rc_popup_menu.add_command(label="Copy", accelerator="Ctrl+C", command=self.copy, **menu_kwargs)
         self.rc_popup_menu.add_command(label="Paste", accelerator="Ctrl+V", command=self.paste, **menu_kwargs)
         self.bind("<1>", lambda event: self.focus_set())
-        self.bind(rc_button, self.rc)
+        for binding in rc_bindings:
+            self.bind(binding, self.rc)
         self.bind(f"<{ctrl_button}-a>", self.select_all)
         self.bind(f"<{ctrl_button}-A>", self.select_all)
 
@@ -1446,12 +1449,14 @@ class Normal_Entry(tk.Entry):
     def enable_me(self):
         self.config(state="normal")
         self.bind("<1>", lambda event: self.focus_set())
-        self.bind(rc_button, self.rc)
+        for binding in rc_bindings:
+            self.bind(binding, self.rc)
 
     def disable_me(self):
         self.config(state="disabled")
         self.unbind("<1>")
-        self.unbind(rc_button)
+        for binding in rc_bindings:
+            self.unbind(binding)
 
 
 class Readonly_Entry_With_Scrollbar(tk.Frame):

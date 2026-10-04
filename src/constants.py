@@ -38,12 +38,15 @@ USER_PYTHON_VERSION = f"{get_python_version}"
 USER_TK_VERSION = f"{tk.TkVersion}"
 USER_TCL_VERSION = f"{tk.TclVersion}"
 
-rc_button = "<2>" if USER_OS == "darwin" else "<3>"
-rc_press = "<ButtonPress-2>" if USER_OS == "darwin" else "<ButtonPress-3>"
-rc_motion = "<B2-Motion>" if USER_OS == "darwin" else "<B3-Motion>"
-rc_release = "<ButtonRelease-2>" if USER_OS == "darwin" else "<ButtonRelease-3>"
+# Aqua reports the right button as 2. X11 Tk and Tcl 8.7 report it as 3.
+# Bind both, as tksheet does. Sheet.bind treats "<2>" and "<3>" as its own
+# right-click hooks, so the tree and sheet use the ButtonPress/ButtonRelease forms.
+rc_bindings = ["<2>", "<3>"] if USER_OS == "darwin" else ["<3>"]
+rc_press_bindings = ["<ButtonPress-2>", "<ButtonPress-3>"] if USER_OS == "darwin" else ["<ButtonPress-3>"]
+rc_motion_bindings = ["<B2-Motion>", "<B3-Motion>"] if USER_OS == "darwin" else ["<B3-Motion>"]
+rc_release_bindings = ["<ButtonRelease-2>", "<ButtonRelease-3>"] if USER_OS == "darwin" else ["<ButtonRelease-3>"]
 ctrl_button = "Command" if USER_OS == "darwin" else "Control"
-ctrl_rc_press = f"<{ctrl_button}-{rc_press[1:]}"
+ctrl_rc_press_bindings = [f"<{ctrl_button}-{binding[1:]}" for binding in rc_press_bindings]
 # The key labeled Delete on a Mac keyboard sends BackSpace.
 mac_delete_binding = "<BackSpace>" if USER_OS == "darwin" else None
 from_clipboard_delimiters = "\t,|"
