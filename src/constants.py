@@ -59,7 +59,7 @@ def menu_accel(*parts: str) -> str:
 mac_delete_binding = "<BackSpace>" if USER_OS == "darwin" else None
 from_clipboard_delimiters = "\t,|"
 
-software_version_number = "1.16.3"
+software_version_number = "1.16.4"
 software_version_full = "Version: " + software_version_number
 app_title = "tktrees"
 app_license = "AGPL-3.0-only"
