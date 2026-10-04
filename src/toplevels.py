@@ -191,14 +191,6 @@ class Export_Flattened_Popup(tk.Toplevel):
             **menu_kwargs,
         )
         self.edit_menu.add_command(
-            label="Copy",
-            command=self.sheetdisplay.copy,
-            image=self.C.icons["ICON_COPY"],
-            accelerator=menu_accel("C"),
-            compound="left",
-            **menu_kwargs,
-        )
-        self.edit_menu.add_command(
             label="Paste",
             command=self.sheetdisplay.paste,
             image=self.C.icons["ICON_PASTE"],
