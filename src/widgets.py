@@ -25,6 +25,7 @@ from .constants import (
     TF,
     checked_icon,
     ctrl_button,
+    menu_accel,
     menu_kwargs,
     rc_bindings,
     sheet_header_font,
@@ -994,10 +995,10 @@ class Working_Text(tk.Text):
         if override_bg is not None:
             self.config(bg=override_bg)
         self.rc_popup_menu = tk.Menu(self, tearoff=0, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Select all", accelerator="Ctrl+A", command=self.select_all, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Cut", accelerator="Ctrl+X", command=self.cut, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Copy", accelerator="Ctrl+C", command=self.copy, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Paste", accelerator="Ctrl+V", command=self.paste, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Select all", accelerator=menu_accel("A"), command=self.select_all, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Cut", accelerator=menu_accel("X"), command=self.cut, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Copy", accelerator=menu_accel("C"), command=self.copy, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Paste", accelerator=menu_accel("V"), command=self.paste, **menu_kwargs)
         self.bind("<1>", lambda event: self.focus_set())
         for binding in rc_bindings:
             self.bind(binding, self.rc)
@@ -1344,10 +1345,10 @@ class Readonly_Entry(tk.Entry):
             self.config(width=width_)
         self.use_status_fg = use_status_fg
         self.rc_popup_menu = tk.Menu(self, tearoff=0, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Select all", accelerator="Ctrl+A", command=self.select_all, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Cut", accelerator="Ctrl+X", command=self.cut, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Copy", accelerator="Ctrl+C", command=self.copy, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Paste", accelerator="Ctrl+V", command=self.paste, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Select all", accelerator=menu_accel("A"), command=self.select_all, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Cut", accelerator=menu_accel("X"), command=self.cut, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Copy", accelerator=menu_accel("C"), command=self.copy, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Paste", accelerator=menu_accel("V"), command=self.paste, **menu_kwargs)
         self.bind("<1>", lambda event: self.focus_set())
         for binding in rc_bindings:
             self.bind(binding, self.rc)
@@ -1412,10 +1413,10 @@ class Normal_Entry(tk.Entry):
         if textvariable:
             self.config(textvariable=textvariable)
         self.rc_popup_menu = tk.Menu(self, tearoff=0, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Select all", accelerator="Ctrl+A", command=self.select_all, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Cut", accelerator="Ctrl+X", command=self.cut, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Copy", accelerator="Ctrl+C", command=self.copy, **menu_kwargs)
-        self.rc_popup_menu.add_command(label="Paste", accelerator="Ctrl+V", command=self.paste, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Select all", accelerator=menu_accel("A"), command=self.select_all, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Cut", accelerator=menu_accel("X"), command=self.cut, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Copy", accelerator=menu_accel("C"), command=self.copy, **menu_kwargs)
+        self.rc_popup_menu.add_command(label="Paste", accelerator=menu_accel("V"), command=self.paste, **menu_kwargs)
         self.bind("<1>", lambda event: self.focus_set())
         for binding in rc_bindings:
             self.bind(binding, self.rc)

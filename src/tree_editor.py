@@ -65,6 +65,7 @@ from .constants import (
     ctrl_rc_press_bindings,
     letters_icon,
     mac_delete_binding,
+    menu_accel,
     menu_kwargs,
     rc_motion_bindings,
     rc_press_bindings,
@@ -239,7 +240,7 @@ class Tree_Editor(tk.Frame):
         self.C.file.entryconfig("Save", command=self.save_)
         self.C.file.entryconfig(
             "Save as",
-            accelerator="Ctrl+Shift+S",
+            accelerator=menu_accel("Shift", "S"),
             command=self.save_as,
         )
         self.C.file.entryconfig("Save new version", command=self.save_new_vrsn)
@@ -254,7 +255,7 @@ class Tree_Editor(tk.Frame):
         )
         self.edit_menu.add_command(
             label="Undo  0/30",
-            accelerator="Ctrl+Z",
+            accelerator=menu_accel("Z"),
             state="disabled",
             command=self.undo,
             image=self.icons["ICON_UNDO"],
@@ -302,7 +303,7 @@ class Tree_Editor(tk.Frame):
         self.edit_menu.add_command(
             label="Tag/Untag IDs",
             command=self.tag_ids,
-            accelerator="Ctrl+T",
+            accelerator=menu_accel("T"),
             image=self.icons["tag"],
             compound="left",
             **menu_kwargs,
@@ -364,7 +365,7 @@ class Tree_Editor(tk.Frame):
         self.C.menubar.add_cascade(label="View", menu=self.view_menu, state="disabled", **menu_kwargs)
         self.view_menu.add_command(
             label="Changelog",
-            accelerator="Ctrl+L",
+            accelerator=menu_accel("L"),
             command=self.show_changelog,
             **menu_kwargs,
         )
@@ -388,13 +389,13 @@ class Tree_Editor(tk.Frame):
         self.view_menu.add_separator()
         self.view_menu.add_command(
             label="Expand ID",
-            accelerator="Ctrl+E",
+            accelerator=menu_accel("E"),
             command=self.expand_id,
             **menu_kwargs,
         )
         self.view_menu.add_command(
             label="Collapse ID",
-            accelerator="Ctrl+R",
+            accelerator=menu_accel("R"),
             command=self.collapse_id,
             **menu_kwargs,
         )
@@ -497,7 +498,6 @@ class Tree_Editor(tk.Frame):
         )
         self.export_menu.add_command(
             label="Specific changes",
-            accelerator="Ctrl+L",
             command=lambda: self.show_changelog("specific"),
             **menu_kwargs,
         )
@@ -732,7 +732,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_single_cell.add_command(
             label="Cut",
-            accelerator="Ctrl+X",
+            accelerator=menu_accel("X"),
             command=self.cut_key,
             image=self.icons["ICON_CUT"],
             compound="left",
@@ -740,7 +740,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_single_cell.add_command(
             label="Copy",
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             command=self.copy_key,
             image=self.icons["ICON_COPY"],
             compound="left",
@@ -748,7 +748,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_single_cell.add_command(
             label="Paste",
-            accelerator="Ctrl+V",
+            accelerator=menu_accel("V"),
             command=self.paste_key,
             image=self.icons["ICON_PASTE"],
             compound="left",
@@ -771,7 +771,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_multi_cell.add_command(
             label="Cut",
-            accelerator="Ctrl+X",
+            accelerator=menu_accel("X"),
             command=self.cut_key,
             image=self.icons["ICON_CUT"],
             compound="left",
@@ -779,7 +779,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_multi_cell.add_command(
             label="Copy",
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             command=self.copy_key,
             image=self.icons["ICON_COPY"],
             compound="left",
@@ -787,7 +787,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_multi_cell.add_command(
             label="Paste",
-            accelerator="Ctrl+V",
+            accelerator=menu_accel("V"),
             command=self.paste_key,
             image=self.icons["ICON_PASTE"],
             compound="left",
@@ -821,7 +821,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Cut",
-            accelerator="Ctrl+X",
+            accelerator=menu_accel("X"),
             command=self.cut_key,
             image=self.icons["ICON_CUT"],
             compound="left",
@@ -829,7 +829,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Copy",
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             command=self.copy_key,
             image=self.icons["ICON_COPY"],
             compound="left",
@@ -837,7 +837,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_single_col.add_command(
             label="Paste",
-            accelerator="Ctrl+V",
+            accelerator=menu_accel("V"),
             command=self.paste_key,
             image=self.icons["ICON_PASTE"],
             compound="left",
@@ -952,7 +952,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_multi_col.add_command(
             label="Cut",
-            accelerator="Ctrl+X",
+            accelerator=menu_accel("X"),
             command=self.cut_key,
             image=self.icons["ICON_CUT"],
             compound="left",
@@ -960,7 +960,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_multi_col.add_command(
             label="Copy",
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             command=self.copy_key,
             image=self.icons["ICON_COPY"],
             compound="left",
@@ -968,7 +968,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_sheet_rc_menu_multi_col.add_command(
             label="Paste",
-            accelerator="Ctrl+V",
+            accelerator=menu_accel("V"),
             command=self.paste_key,
             image=self.icons["ICON_PASTE"],
             compound="left",
@@ -1000,7 +1000,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Cut",
-            accelerator="Ctrl+X",
+            accelerator=menu_accel("X"),
             command=self.cut_ids,
             image=self.icons["ICON_CUT"],
             compound="left",
@@ -1008,7 +1008,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Copy",
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             command=self.copy_key,
             image=self.icons["ICON_COPY"],
             compound="left",
@@ -1016,7 +1016,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_rc_menu_multi_row.add_command(
             label="Paste",
-            accelerator="Ctrl+V",
+            accelerator=menu_accel("V"),
             command=self.paste_key,
             image=self.icons["ICON_PASTE"],
             compound="left",
@@ -1047,7 +1047,7 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_multi_row.add_separator()
         self.tree_rc_menu_multi_row.add_command(
             label="Tag/Untag IDs",
-            accelerator="Ctrl+T",
+            accelerator=menu_accel("T"),
             command=self.tag_ids,
             image=self.icons["tag"],
             compound="left",
@@ -1136,7 +1136,7 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_single_row_cut = tk.Menu(self.tree_rc_menu_single_row, tearoff=0, **menu_kwargs)
         self.tree_rc_menu_single_row_cut.add_command(
             label="Detach ID",
-            accelerator="Ctrl+X",
+            accelerator=menu_accel("X"),
             command=self.cut_ids,
             image=self.icons["ICON_CUT"],
             compound="left",
@@ -1159,7 +1159,7 @@ class Tree_Editor(tk.Frame):
         self.tree_rc_menu_single_row_copy = tk.Menu(self.tree_rc_menu_single_row, tearoff=0, **menu_kwargs)
         self.tree_rc_menu_single_row_copy.add_command(
             label="Copy ID",
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             command=self.copy_key,
             image=self.icons["ICON_COPY"],
             compound="left",
@@ -1304,7 +1304,7 @@ class Tree_Editor(tk.Frame):
         )
         self.tree_rc_menu_single_row.add_command(
             label="Tag/Untag ID",
-            accelerator="Ctrl+T",
+            accelerator=menu_accel("T"),
             command=self.tag_ids,
             image=self.icons["tag"],
             compound="left",
@@ -1375,7 +1375,7 @@ class Tree_Editor(tk.Frame):
         self.sheet_rc_menu_single_row = tk.Menu(self.sheet, tearoff=0, **menu_kwargs)
         self.sheet_rc_menu_single_row.add_command(
             label="Tag/Untag ID",
-            accelerator="Ctrl+T",
+            accelerator=menu_accel("T"),
             command=self.tag_ids,
             image=self.icons["tag"],
             compound="left",
@@ -1398,7 +1398,7 @@ class Tree_Editor(tk.Frame):
         self.sheet_rc_menu_single_row.add_separator()
         self.sheet_rc_menu_single_row.add_command(
             label="Clipboard",
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             command=self.copy_key,
             image=self.icons["ICON_COPY"],
             compound="left",
@@ -1406,7 +1406,7 @@ class Tree_Editor(tk.Frame):
         )
         self.sheet_rc_menu_single_row.add_command(
             label="Paste",
-            accelerator="Ctrl+V",
+            accelerator=menu_accel("V"),
             command=self.paste_key,
             image=self.icons["ICON_PASTE"],
             compound="left",
@@ -1474,7 +1474,7 @@ class Tree_Editor(tk.Frame):
         )
         self.sheet_rc_menu_multi_row.add_command(
             label="Tag/Untag IDs",
-            accelerator="Ctrl+T",
+            accelerator=menu_accel("T"),
             command=self.tag_ids,
             image=self.icons["tag"],
             compound="left",
@@ -1499,7 +1499,7 @@ class Tree_Editor(tk.Frame):
         self.sheet_rc_menu_multi_row.add_separator()
         self.sheet_rc_menu_multi_row.add_command(
             label="Clipboard",
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             command=self.copy_key,
             image=self.icons["ICON_COPY"],
             compound="left",
@@ -1507,7 +1507,7 @@ class Tree_Editor(tk.Frame):
         )
         self.sheet_rc_menu_multi_row.add_command(
             label="Paste",
-            accelerator="Ctrl+V",
+            accelerator=menu_accel("V"),
             command=self.paste_key,
             image=self.icons["ICON_PASTE"],
             compound="left",

@@ -29,6 +29,7 @@ from .constants import (
     ctrl_button,
     default_app_window_size,
     dropdown_font,
+    menu_accel,
     menu_kwargs,
     std_font_size,
     top_left_icon,
@@ -109,13 +110,13 @@ class AppGUI(tk.Tk):
         self.config(menu=self.menubar)
         self.file = tk.Menu(self.menubar, tearoff=0, **menu_kwargs)
         self.menubar.add_cascade(label="File", menu=self.file, **menu_kwargs)
-        self.file.add_command(label="New", command=self.create_new_at_start, accelerator="Ctrl+N", **menu_kwargs)
+        self.file.add_command(label="New", command=self.create_new_at_start, accelerator=menu_accel("N"), **menu_kwargs)
         self.file.add_separator()
         self.file.add_command(label="Compare sheets", command=self.compare_at_start, **menu_kwargs)
         self.file.add_separator()
-        self.file.add_command(label="Open", command=self.open_file_at_start, accelerator="Ctrl+O", **menu_kwargs)
+        self.file.add_command(label="Open", command=self.open_file_at_start, accelerator=menu_accel("O"), **menu_kwargs)
         self.file.add_separator()
-        self.file.add_command(label="Save", accelerator="Ctrl+S", state="disabled", **menu_kwargs)
+        self.file.add_command(label="Save", accelerator=menu_accel("S"), state="disabled", **menu_kwargs)
         self.file.add_command(label="Save new version", state="disabled", **menu_kwargs)
         self.file.add_separator()
         self.file.add_command(label="Save as", **menu_kwargs)

@@ -47,6 +47,14 @@ rc_motion_bindings = ["<B2-Motion>", "<B3-Motion>"] if USER_OS == "darwin" else 
 rc_release_bindings = ["<ButtonRelease-2>", "<ButtonRelease-3>"] if USER_OS == "darwin" else ["<ButtonRelease-3>"]
 ctrl_button = "Command" if USER_OS == "darwin" else "Control"
 ctrl_rc_press_bindings = [f"<{ctrl_button}-{binding[1:]}" for binding in rc_press_bindings]
+
+
+def menu_accel(*parts: str) -> str:
+    # Aqua parses Command and draws the Command symbol. Windows and X11 print this string as written.
+    prefix = "Command" if USER_OS == "darwin" else "Ctrl"
+    return "+".join((prefix, *parts))
+
+
 # The key labeled Delete on a Mac keyboard sends BackSpace.
 mac_delete_binding = "<BackSpace>" if USER_OS == "darwin" else None
 from_clipboard_delimiters = "\t,|"

@@ -37,6 +37,7 @@ from .constants import (
     ctrl_button,
     green_fill,
     lge_font_size,
+    menu_accel,
     menu_kwargs,
     mono_font,
     sheet_header_font,
@@ -161,7 +162,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             label="Undo",
             command=self.sheetdisplay.undo,
             image=self.C.icons["ICON_UNDO"],
-            accelerator="Ctrl+Z",
+            accelerator=menu_accel("Z"),
             compound="left",
             **menu_kwargs,
         )
@@ -169,7 +170,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             label="Redo",
             command=self.sheetdisplay.redo,
             image=self.C.icons["ICON_REDO"],
-            accelerator="Ctrl+Shift+Z",
+            accelerator=menu_accel("Shift", "Z"),
             compound="left",
             **menu_kwargs,
         )
@@ -177,7 +178,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             label="Copy",
             command=self.sheetdisplay.copy,
             image=self.C.icons["ICON_COPY"],
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             compound="left",
             **menu_kwargs,
         )
@@ -185,7 +186,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             label="Cut",
             command=self.sheetdisplay.cut,
             image=self.C.icons["ICON_CUT"],
-            accelerator="Ctrl+X",
+            accelerator=menu_accel("X"),
             compound="left",
             **menu_kwargs,
         )
@@ -193,7 +194,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             label="Copy",
             command=self.sheetdisplay.copy,
             image=self.C.icons["ICON_COPY"],
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             compound="left",
             **menu_kwargs,
         )
@@ -201,7 +202,7 @@ class Export_Flattened_Popup(tk.Toplevel):
             label="Paste",
             command=self.sheetdisplay.paste,
             image=self.C.icons["ICON_PASTE"],
-            accelerator="Ctrl+V",
+            accelerator=menu_accel("V"),
             compound="left",
             **menu_kwargs,
         )
@@ -629,7 +630,7 @@ class Export_Level_Indent_Popup(tk.Toplevel):
             label="Undo",
             command=self.sheetdisplay.undo,
             image=self.C.icons["ICON_UNDO"],
-            accelerator="Ctrl+Z",
+            accelerator=menu_accel("Z"),
             compound="left",
             **menu_kwargs,
         )
@@ -637,7 +638,7 @@ class Export_Level_Indent_Popup(tk.Toplevel):
             label="Redo",
             command=self.sheetdisplay.redo,
             image=self.C.icons["ICON_REDO"],
-            accelerator="Ctrl+Shift+Z",
+            accelerator=menu_accel("Shift", "Z"),
             compound="left",
             **menu_kwargs,
         )
@@ -645,7 +646,7 @@ class Export_Level_Indent_Popup(tk.Toplevel):
             label="Copy",
             command=self.sheetdisplay.copy,
             image=self.C.icons["ICON_COPY"],
-            accelerator="Ctrl+C",
+            accelerator=menu_accel("C"),
             compound="left",
             **menu_kwargs,
         )
@@ -653,7 +654,7 @@ class Export_Level_Indent_Popup(tk.Toplevel):
             label="Cut",
             command=self.sheetdisplay.cut,
             image=self.C.icons["ICON_CUT"],
-            accelerator="Ctrl+X",
+            accelerator=menu_accel("X"),
             compound="left",
             **menu_kwargs,
         )
@@ -661,7 +662,7 @@ class Export_Level_Indent_Popup(tk.Toplevel):
             label="Paste",
             command=self.sheetdisplay.paste,
             image=self.C.icons["ICON_PASTE"],
-            accelerator="Ctrl+V",
+            accelerator=menu_accel("V"),
             compound="left",
             **menu_kwargs,
         )
