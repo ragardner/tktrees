@@ -1694,12 +1694,22 @@ def del_from_options(
     coords: int | Iterator[int | tuple[int, int]] | None = None,
 ) -> dict:
     if isinstance(coords, int):
-        if coords in options and key in options[coords]:
-            del options[coords]
+        if coords in options:
+            record = options[coords]
+            if key in record:
+                if len(record) == 1:
+                    del options[coords]
+                else:
+                    del record[key]
     elif is_iterable(coords):
         for coord in coords:
-            if coord in options and key in options[coord]:
-                del options[coord]
+            if coord in options:
+                record = options[coord]
+                if key in record:
+                    if len(record) == 1:
+                        del options[coord]
+                    else:
+                        del record[key]
     else:
         for d in options.values():
             if key in d:
