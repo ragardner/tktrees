@@ -5093,7 +5093,15 @@ class Tree_Editor(tk.Frame):
         if isinstance(columns, int) and columns < 1:
             return
         if self.sheet.MT.data:
-            self.tree.insert_columns(columns, **kwargs)
+            # The displayed tree can have no rows while the sheet still has IDs.
+            # insert_columns() stores one row in that case. Keep its column
+            # bookkeeping and drop the row. Leave a sheet with no IDs on the
+            # column-position path below.
+            if self.tree.MT.total_data_rows() == 0:
+                self.tree.insert_columns(columns, **{**kwargs, "add_row_heights": False})
+                self.tree.MT.data.clear()
+            else:
+                self.tree.insert_columns(columns, **kwargs)
             self.sheet.insert_columns(columns, **kwargs)
             return
         # insert_columns() fabricates a row when there is no data; only add column positions
