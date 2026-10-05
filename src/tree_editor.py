@@ -5371,6 +5371,7 @@ class Tree_Editor(tk.Frame):
         elif new_vs["type"] == "drag cols":
             self.sheet.mapping_move_columns(new_vs["column_mapping"], undo=False)
             self.tree.mapping_move_columns(new_vs["column_mapping"], undo=False)
+            self.remap_search_result_columns(new_vs["column_mapping"])
             self.sheet.align_columns(
                 columns=new_vs["required_data"]["sheet_column_alignments"],
                 redraw=False,
@@ -5736,6 +5737,12 @@ class Tree_Editor(tk.Frame):
             self.tree.selection_set(all_iids)
         self.stop_work(self.get_tree_editor_status_bar_text())
 
+    def remap_search_result_columns(self, new_idxs: dict[int, int]) -> None:
+        for results in (self.search_results, self.sheet_search_results):
+            for result in results:
+                result.column = new_idxs[result.column]
+                result.hierarchy = new_idxs[result.hierarchy]
+
     def snapshot_begin_drag_cols(self, event=None):
         self.snapshot_chore()
         self.vs.append(
@@ -5801,6 +5808,7 @@ class Tree_Editor(tk.Frame):
             node.cn = {full_new_idxs[k]: v for k, v in node.cn.items()}
             node.ps = {full_new_idxs[k]: v for k, v in node.ps.items()}
         self.saved_info = {full_new_idxs[k]: v for k, v in self.saved_info.items()}
+        self.remap_search_result_columns(full_new_idxs)
         if not self.auto_sort_nodes_bool:
             self.topnodes_order = {full_new_idxs[k]: v for k, v in self.topnodes_order.items()}
         self.clear_copied_details()
