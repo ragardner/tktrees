@@ -5272,14 +5272,17 @@ class Tree_Editor(tk.Frame):
         self.topnodes_order = new_vs["required_data"]["topnodes_order"]
         self.saved_info = pickle.loads(new_vs["required_data"]["saved_info"])
         self.tagged_ids = new_vs["required_data"]["tagged_ids"]
-        self.sheet.align_columns(
-            columns=new_vs["required_data"]["sheet_column_alignments"],
-            redraw=False,
-        )
-        self.tree.align_columns(
-            columns=new_vs["required_data"]["sheet_column_alignments"],
-            redraw=False,
-        )
+        # A column drag's saved alignments use the pre-drag column numbers.
+        # mapping_move_columns puts those columns back, so restore alignment after it.
+        if new_vs["type"] != "drag cols":
+            self.sheet.align_columns(
+                columns=new_vs["required_data"]["sheet_column_alignments"],
+                redraw=False,
+            )
+            self.tree.align_columns(
+                columns=new_vs["required_data"]["sheet_column_alignments"],
+                redraw=False,
+            )
         self.reset_tagged_ids_dropdowns()
         self.clear_copied_details()
         self.headers = new_vs["required_data"]["headers"]
@@ -5368,6 +5371,14 @@ class Tree_Editor(tk.Frame):
         elif new_vs["type"] == "drag cols":
             self.sheet.mapping_move_columns(new_vs["column_mapping"], undo=False)
             self.tree.mapping_move_columns(new_vs["column_mapping"], undo=False)
+            self.sheet.align_columns(
+                columns=new_vs["required_data"]["sheet_column_alignments"],
+                redraw=False,
+            )
+            self.tree.align_columns(
+                columns=new_vs["required_data"]["sheet_column_alignments"],
+                redraw=False,
+            )
 
         elif new_vs["type"] == "node sort":
             ...
