@@ -5054,6 +5054,7 @@ class Tree_Editor(tk.Frame):
                 f"{col + 1}",
                 "",
             )
+        self.sheet.row_index(newindex=self.ic)
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def rc_add_hier_col(self, event=None):
@@ -5121,6 +5122,7 @@ class Tree_Editor(tk.Frame):
                 f"{col + 1}",
                 type_,
             )
+        self.sheet.row_index(newindex=self.ic)
         if snapshot:
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
