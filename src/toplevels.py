@@ -3859,7 +3859,7 @@ class Add_Hierarchy_Column_Popup(tk.Toplevel):
 
     def confirm(self, event=None):
         if self.C.allow_spaces_columns_var:
-            self.hier_name_display.get_my_value()
+            self.result = self.hier_name_display.get_my_value()
         else:
             self.result = "".join(self.hier_name_display.get_my_value().strip().split())
         self.destroy()
