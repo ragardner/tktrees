@@ -5037,6 +5037,7 @@ class Tree_Editor(tk.Frame):
         self.tv_label_col = push_n(self.tv_label_col, [col])
         self.row_len += 1
         self.adjust_hiers_add_cols(cols=[col])
+        self.clear_search_results()
         self.hiers = sorted([col] + self.hiers)
         self.headers.insert(col, Header(name, "Parent"))
         self.insert_columns_no_blank_row(idx=col, add_row_heights=False)
@@ -5112,6 +5113,7 @@ class Tree_Editor(tk.Frame):
         self.headers.insert(col, Header(name, type_))
         self.insert_columns_no_blank_row(idx=col, add_row_heights=False)
         self.adjust_hiers_add_cols(cols=[col])
+        self.clear_search_results()
         if snapshot:
             self.changelog_append(
                 "Add new detail column",
@@ -5165,6 +5167,7 @@ class Tree_Editor(tk.Frame):
             self.associate()
         self.row_len -= len(cols)
         self.adjust_hiers_del_cols(cols)
+        self.clear_search_results()
         if snapshot:
             self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
@@ -5341,6 +5344,7 @@ class Tree_Editor(tk.Frame):
                 del self.sheet.MT.data[r][c]
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
+            self.clear_search_results()
 
         elif new_vs["type"] == "del cols":
             for cn, rowdict in reversed(new_vs["cols"].items()):
@@ -5348,6 +5352,7 @@ class Tree_Editor(tk.Frame):
                     self.sheet.MT.data[rn].insert(cn, v)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
             self.refresh_formatting(dehighlight=True)
+            self.clear_search_results()
 
         elif new_vs["type"] == "edit validation":
             for rn, c in enumerate(pickle.loads(zlib.decompress(new_vs["col"]))):
@@ -5808,7 +5813,10 @@ class Tree_Editor(tk.Frame):
             node.cn = {full_new_idxs[k]: v for k, v in node.cn.items()}
             node.ps = {full_new_idxs[k]: v for k, v in node.ps.items()}
         self.saved_info = {full_new_idxs[k]: v for k, v in self.saved_info.items()}
-        self.remap_search_result_columns(full_new_idxs)
+        if self.vs[-1]["type"] == "drag cols":
+            self.remap_search_result_columns(full_new_idxs)
+        else:
+            self.clear_search_results()
         if not self.auto_sort_nodes_bool:
             self.topnodes_order = {full_new_idxs[k]: v for k, v in self.topnodes_order.items()}
         self.clear_copied_details()
@@ -8397,6 +8405,10 @@ class Tree_Editor(tk.Frame):
         self.sheet_search_dropdown["values"] = []
         self.sheet_search_displayed.set("")
         self.sheet_search_results = []
+
+    def clear_search_results(self) -> None:
+        self.reset_tree_search_dropdown()
+        self.reset_sheet_search_dropdown()
 
     def get_node_level(self, node, level=1):
         current_node = node
