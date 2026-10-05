@@ -5259,6 +5259,11 @@ class Tree_Editor(tk.Frame):
                 )
         self.redraw_sheets()
 
+    def restore_column_alignments(self, alignments: dict[int, str]) -> None:
+        for widget in (self.sheet, self.tree):
+            widget.del_align("A:", redraw=False)
+            widget.align_columns(columns=alignments, redraw=False)
+
     def undo(self, event=None):
         if self.C.working or not self.vs:
             return "break"
@@ -5277,9 +5282,10 @@ class Tree_Editor(tk.Frame):
         self.topnodes_order = new_vs["required_data"]["topnodes_order"]
         self.saved_info = pickle.loads(new_vs["required_data"]["saved_info"])
         self.tagged_ids = new_vs["required_data"]["tagged_ids"]
-        # A column drag's saved alignments use the pre-drag column numbers.
-        # mapping_move_columns puts those columns back, so restore alignment after it.
-        if new_vs["type"] != "drag cols":
+        # Saved alignments use the old column numbers. Drag, add, and delete
+        # write them after the columns are back. Add and delete clear first,
+        # because those undos put the cells back without moving the alignment.
+        if new_vs["type"] not in ("drag cols", "add col", "del cols"):
             self.sheet.align_columns(
                 columns=new_vs["required_data"]["sheet_column_alignments"],
                 redraw=False,
@@ -5412,6 +5418,9 @@ class Tree_Editor(tk.Frame):
                 rows.add(k[0])
                 cols.add(k[1])
             self.refresh_formatting(rows=rows, columns=cols)
+
+        if new_vs["type"] in ("add col", "del cols"):
+            self.restore_column_alignments(new_vs["required_data"]["sheet_column_alignments"])
 
         self.sheet.row_index(newindex=self.ic)
         self.sheet.set_column_widths(new_vs["required_data"]["sheet_col_positions"], canvas_positions=True)
