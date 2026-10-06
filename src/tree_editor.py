@@ -103,6 +103,7 @@ from .functions import (
     path_without_numbers,
     process_search_results,
     search_results_max_column_chars,
+    sheet_sort_key,
     sort_key,
     str_io_csv_writer,
     to_clipboard,
@@ -5999,9 +6000,10 @@ class Tree_Editor(tk.Frame):
                 order,
                 header,
             )
-        ak = lambda row: tuple(  # noqa: E731
-            int(c) if c.isdigit() else c.lower() for c in re.split("([0-9]+)", row[col])
-        )
+
+        def ak(row):
+            return sheet_sort_key(row[col])
+
         if order == "ASCENDING":
             self.sheet.MT.data.sort(key=ak)
         elif order == "DESCENDING":

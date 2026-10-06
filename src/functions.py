@@ -16,6 +16,8 @@ from base64 import b32decode as b32d
 from base64 import b32encode as b32e
 from collections import defaultdict
 from contextlib import suppress
+from datetime import datetime
+from decimal import Decimal
 from itertools import islice, repeat
 from math import ceil
 from sys import stderr
@@ -124,6 +126,56 @@ def write_cfg(d: dict) -> bool:
 
 def sort_key(s: str):
     return tuple(int(e) if e.isdigit() else e for e in re.split("([0-9]+)", s))
+
+
+# A whole cell that is a number, including thousands commas. ASCII digits only.
+_SHEET_NUMBER_RE = re.compile(r"-?(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(?:\.[0-9]+)?")
+# Whole-cell dates only. Slash dates are day/month/year, so 01/15/2024 stays text.
+# The first format is the changelog stamp: isoformat() with microseconds removed.
+_SHEET_DATE_FORMATS = (
+    "%Y-%m-%dT%H:%M:%S",
+    "%Y-%m-%d",
+    "%Y/%m/%d",
+    "%d/%m/%Y",
+    "%d %B %Y",
+    "%d %b %Y",
+    "%B %d, %Y",
+    "%b %d, %Y",
+)
+
+
+def _sheet_date(value: str):
+    for fmt in _SHEET_DATE_FORMATS:
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def sheet_sort_key(value: str):
+    """Order a sheet cell for Sort sheet.
+
+    Blank, then numbers, then dates, then other text. Dates are the formats
+    in _SHEET_DATE_FORMATS, including the changelog stamp. A date with no
+    time sorts as midnight. The text tuple matches the previous sheet key
+    for ordinary characters. Superscripts and other non-ASCII digits stay
+    text, so the sort cannot stop halfway.
+    """
+    if value == "":
+        return (0,)
+    if _SHEET_NUMBER_RE.fullmatch(value):
+        return (1, Decimal(value.replace(",", "")))
+    found = _sheet_date(value)
+    if found is not None:
+        return (2, found)
+    return (
+        3,
+        tuple(
+            int(piece) if piece.isascii() and piece.isdigit() else piece.lower()
+            for piece in re.split("([0-9]+)", value)
+        ),
+    )
 
 
 def case_insensitive_replace(find_, repl, text):
