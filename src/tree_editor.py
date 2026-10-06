@@ -5661,12 +5661,18 @@ class Tree_Editor(tk.Frame):
         )
 
     def snapshot_drag_rows(self, event_data):
-        self.vs[-1]["row_mapping"] = self.sheet.full_move_rows_idxs(event_data["moved"]["rows"]["data"])
-        old_locs = ",".join(f"{r}" for r in event_data["moved"]["rows"]["data"])
-        new_locs = ",".join(f"{r}" for r in event_data["moved"]["rows"]["data"].values())
+        moved = event_data["moved"]["rows"]["data"]
+        if moved and all(old == new for old, new in moved.items()):
+            if self.vs and self.vs[-1]["type"] == "drag rows":
+                self.vs.pop()
+                self.set_undo_label()
+            return
+        self.vs[-1]["row_mapping"] = self.sheet.full_move_rows_idxs(moved)
+        old_locs = ",".join(f"{r}" for r in moved)
+        new_locs = ",".join(f"{r}" for r in moved.values())
         self.changelog_append(
             "Move rows",
-            f"{len(event_data['moved']['rows']['data'])} rows",
+            f"{len(moved)} rows",
             old_locs,
             new_locs,
         )
