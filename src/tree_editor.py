@@ -7716,11 +7716,11 @@ class Tree_Editor(tk.Frame):
 
     def reselect_sheet_sel(self, boxes):
         self.sheet.deselect("all")
-        if boxes[0]:
-            self.sheet.set_currently_selected(boxes[0][0], boxes[0][1])
         for box in boxes[1]:
             r1, c1, r2, c2 = box[0]
             self.sheet.create_selection_box(r1, c1, r2, c2, box[1])
+        if boxes[0]:
+            self.sheet.set_currently_selected(boxes[0][0], boxes[0][1])
 
     def get_sheet_sel(self):
         return (
