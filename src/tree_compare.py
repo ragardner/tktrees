@@ -919,7 +919,7 @@ class Tree_Compare(tk.Frame):
                             for nx in matching_details_names:
                                 c1 = self.sheet1[self.rns1[ik]][detcold[nx][0]]
                                 c2 = row[detcold[nx][1]]
-                                if c1.lower() != c2.lower():
+                                if c1 != c2:
                                     self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
@@ -1000,7 +1000,7 @@ class Tree_Compare(tk.Frame):
                             for nx in matching_details_names:
                                 c1 = row[detcold[nx][0]]
                                 c2 = self.sheet2[self.rns2[ik]][detcold[nx][1]]
-                                if c1.lower() != c2.lower():
+                                if c1 != c2:
                                     self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
@@ -1013,7 +1013,7 @@ class Tree_Compare(tk.Frame):
                             for nx in matching_details_names:
                                 c1 = self.sheet1[self.rns1[ik]][detcold[nx][0]]
                                 c2 = row[detcold[nx][1]]
-                                if c1.lower() != c2.lower():
+                                if c1 != c2:
                                     self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
@@ -1024,7 +1024,7 @@ class Tree_Compare(tk.Frame):
                             for nx in matching_details_names:
                                 c1 = row[detcold[nx][0]]
                                 c2 = self.sheet2[self.rns2[ik]][detcold[nx][1]]
-                                if c1.lower() != c2.lower():
+                                if c1 != c2:
                                     self.report["Differences in Parents/Details of Matched IDs"].append(
                                         [f"{ID}", f"Details in column: {nx}", f"{c1}", f"{c2}"]
                                     )
