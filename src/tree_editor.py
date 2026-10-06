@@ -8115,6 +8115,14 @@ class Tree_Editor(tk.Frame):
         result = self.search_results[self.search_dropdown.current()]
         if not self.check_search_result(result):
             return
+        node = self.nodes.get(result.iid)
+        if node is None or node.ps.get(result.hierarchy) is None:
+            Error(
+                self,
+                "Search result not found, refresh the search. Data may have been modified after searching.",
+                theme=self.C.theme,
+            )
+            return
         if self.pc != result.hierarchy:
             self.switch_hier(hier=result.hierarchy)
         self.tree.scroll_to_item(result.iid, redraw=True)
