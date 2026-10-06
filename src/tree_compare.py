@@ -644,7 +644,7 @@ class Tree_Compare(tk.Frame):
             cell = heads[coln]
             if not cell:
                 cell = f"MISSING_{coln + 1}"
-                addition.append([f" - Missing header in column #{coln + 1}"])
+                addition.append(f" - Missing header in column #{coln + 1}")
             hk = cell.lower()
             tally_of_heads[hk] += 1
             if tally_of_heads[hk] > 0:
@@ -655,7 +655,7 @@ class Tree_Compare(tk.Frame):
                     hk = cell.lower()
                     x += 1
                 tally_of_heads[hk] += 1
-                addition.append([f" - Duplicate header in column #{coln + 1}"])
+                addition.append(f" - Duplicate header in column #{coln + 1}")
             heads[coln] = cell
         return heads, addition
 
