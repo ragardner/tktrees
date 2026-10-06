@@ -1896,6 +1896,7 @@ class Tree_Editor(tk.Frame):
                 ("row_index_drag_drop", self.snapshot_drag_rows),
             ]
         )
+        self.sheet.enable_bindings("row_drag_and_drop")
         self.tree.extra_bindings(
             [
                 ("begin_row_index_drag_drop", self.begin_tree_drag_drop_ids),
@@ -1986,6 +1987,7 @@ class Tree_Editor(tk.Frame):
                 ("column_header_drag_drop", None),
             ]
         )
+        self.sheet.disable_bindings("row_drag_and_drop")
         for binding in rc_press_bindings:
             self.tree.unbind(binding)
         for binding in ctrl_rc_press_bindings:
