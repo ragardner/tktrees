@@ -44,6 +44,25 @@ from .widgets import (
 )
 
 
+def _pair_column_titles(heads1, keep1, heads2, keep2):
+    # The key keeps the left sheet's spelling when the title is on the left.
+    # Indexes are appended left then right, so a shared title is [left index, right index].
+    shown_for = {}
+    paired = defaultdict(list)
+    for heads, keep in ((heads1, keep1), (heads2, keep2)):
+        for i, header in enumerate(heads):
+            if i not in keep:
+                continue
+            shown = shown_for.setdefault(header.lower(), header)
+            paired[shown].append(i)
+    return paired
+
+
+def _titles_missing_from_other(heads, keep, other_heads, other_keep):
+    other = {header.lower() for i, header in enumerate(other_heads) if i in other_keep}
+    return [header for i, header in enumerate(heads) if i in keep and header.lower() not in other]
+
+
 class Tree_Compare(tk.Frame):
     def __init__(self, parent, C):
         tk.Frame.__init__(self, parent)
@@ -731,22 +750,12 @@ class Tree_Compare(tk.Frame):
 
         parcolset1 = set(self.parent_cols1)
         parcolset2 = set(self.parent_cols2)
-        pcold = defaultdict(list)
-        for i, h in enumerate(self.heads1):
-            if i in parcolset1:
-                pcold[h].append(i)
-        for i, h in enumerate(self.heads2):
-            if i in parcolset2:
-                pcold[h].append(i)
-        detcold = defaultdict(list)
         ic_parcolset1 = {self.ic1} | parcolset1
         ic_parcolset2 = {self.ic2} | parcolset2
-        for i, h in enumerate(self.heads1):
-            if i not in ic_parcolset1:
-                detcold[h].append(i)
-        for i, h in enumerate(self.heads2):
-            if i not in ic_parcolset2:
-                detcold[h].append(i)
+        detail1 = {i for i in range(len(self.heads1)) if i not in ic_parcolset1}
+        detail2 = {i for i in range(len(self.heads2)) if i not in ic_parcolset2}
+        pcold = _pair_column_titles(self.heads1, parcolset1, self.heads2, parcolset2)
+        detcold = _pair_column_titles(self.heads1, detail1, self.heads2, detail2)
         matching_hrs_names = sorted((k for k, v in pcold.items() if len(v) > 1), key=sort_key)
         matching_details_names = sorted((k for k, v in detcold.items() if len(v) > 1), key=sort_key)
 
@@ -761,7 +770,7 @@ class Tree_Compare(tk.Frame):
             )
 
         # id column names
-        if self.heads1[self.ic1] != self.heads2[self.ic2]:
+        if self.heads1[self.ic1].lower() != self.heads2[self.ic2].lower():
             self.report["Difference in ID Column Name"].append([f"{self.sheetname_1}", f"{self.sheetname_2}"])
             self.report["Difference in ID Column Name"].append(
                 [
@@ -771,16 +780,12 @@ class Tree_Compare(tk.Frame):
             )
 
         # parent titles that exist on one sheet only, whether or not any title is shared
-        hdset1 = {h for i, h in enumerate(self.heads1) if i in parcolset1}
-        hdset2 = {h for i, h in enumerate(self.heads2) if i in parcolset2}
-        if any(h not in hdset2 for h in hdset1):
-            self.report[f"New Parent Columns {self.sheetname_1}"].extend(
-                [[f"{h}"] for h in hdset1 if h not in hdset2]
-            )
-        if any(h not in hdset1 for h in hdset2):
-            self.report[f"New Parent Columns {self.sheetname_2}"].extend(
-                [[f"{h}"] for h in hdset2 if h not in hdset1]
-            )
+        only_left = _titles_missing_from_other(self.heads1, parcolset1, self.heads2, parcolset2)
+        only_right = _titles_missing_from_other(self.heads2, parcolset2, self.heads1, parcolset1)
+        if only_left:
+            self.report[f"New Parent Columns {self.sheetname_1}"].extend([[f"{h}"] for h in only_left])
+        if only_right:
+            self.report[f"New Parent Columns {self.sheetname_2}"].extend([[f"{h}"] for h in only_right])
         if any(col_indexes[0] != col_indexes[1] for col_indexes in pcold.values() if len(col_indexes) > 1):
             self.report["Differences in Parent Column Indexes"].append(
                 [
@@ -798,16 +803,12 @@ class Tree_Compare(tk.Frame):
             )
 
         # detail titles that exist on one sheet only. Neither sheet having a detail column adds nothing.
-        hdset1 = {h for i, h in enumerate(self.heads1) if i not in ic_parcolset1}
-        hdset2 = {h for i, h in enumerate(self.heads2) if i not in ic_parcolset2}
-        if any(h not in hdset2 for h in hdset1):
-            self.report[f"New Detail Columns {self.sheetname_1}"].extend(
-                [[f"{h}"] for h in hdset1 if h not in hdset2]
-            )
-        if any(h not in hdset1 for h in hdset2):
-            self.report[f"New Detail Columns {self.sheetname_2}"].extend(
-                [[f"{h}"] for h in hdset2 if h not in hdset1]
-            )
+        only_left = _titles_missing_from_other(self.heads1, detail1, self.heads2, detail2)
+        only_right = _titles_missing_from_other(self.heads2, detail2, self.heads1, detail1)
+        if only_left:
+            self.report[f"New Detail Columns {self.sheetname_1}"].extend([[f"{h}"] for h in only_left])
+        if only_right:
+            self.report[f"New Detail Columns {self.sheetname_2}"].extend([[f"{h}"] for h in only_right])
         if any(col_indexes[0] != col_indexes[1] for col_indexes in detcold.values() if len(col_indexes) > 1):
             self.report["Differences in Detail Column Indexes"].append(
                 [
