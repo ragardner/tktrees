@@ -770,67 +770,59 @@ class Tree_Compare(tk.Frame):
                 ]
             )
 
-        # sheets have some or all matching parent column names
-        if matching_hrs_names:
-            hdset1 = {h for i, h in enumerate(self.heads1) if i in parcolset1}
-            hdset2 = {h for i, h in enumerate(self.heads2) if i in parcolset2}
-            if any(h not in hdset2 for h in hdset1):
-                self.report[f"New Parent Columns {self.sheetname_1}"].extend(
-                    [[f"{h}"] for h in hdset1 if h not in hdset2]
-                )
-            if any(h not in hdset1 for h in hdset2):
-                self.report[f"New Parent Columns {self.sheetname_2}"].extend(
-                    [[f"{h}"] for h in hdset2 if h not in hdset1]
-                )
-            if any(col_indexes[0] != col_indexes[1] for col_indexes in pcold.values() if len(col_indexes) > 1):
-                self.report["Differences in Parent Column Indexes"].append(
-                    [
-                        "NAME",
-                        f"{self.sheetname_1}",
-                        f"{self.sheetname_2}",
-                    ]
-                )
-                self.report["Differences in Parent Column Indexes"].extend(
-                    [
-                        [name, col_indexes[0], col_indexes[1]]
-                        for name, col_indexes in pcold.items()
-                        if len(col_indexes) > 1 and col_indexes[0] != col_indexes[1]
-                    ]
-                )
-        # sheets have no matching parent column names
-        else:
-            self.report["Parent Columns"].append(["Sheets have no matching parent column names."])
+        # parent titles that exist on one sheet only, whether or not any title is shared
+        hdset1 = {h for i, h in enumerate(self.heads1) if i in parcolset1}
+        hdset2 = {h for i, h in enumerate(self.heads2) if i in parcolset2}
+        if any(h not in hdset2 for h in hdset1):
+            self.report[f"New Parent Columns {self.sheetname_1}"].extend(
+                [[f"{h}"] for h in hdset1 if h not in hdset2]
+            )
+        if any(h not in hdset1 for h in hdset2):
+            self.report[f"New Parent Columns {self.sheetname_2}"].extend(
+                [[f"{h}"] for h in hdset2 if h not in hdset1]
+            )
+        if any(col_indexes[0] != col_indexes[1] for col_indexes in pcold.values() if len(col_indexes) > 1):
+            self.report["Differences in Parent Column Indexes"].append(
+                [
+                    "NAME",
+                    f"{self.sheetname_1}",
+                    f"{self.sheetname_2}",
+                ]
+            )
+            self.report["Differences in Parent Column Indexes"].extend(
+                [
+                    [name, col_indexes[0], col_indexes[1]]
+                    for name, col_indexes in pcold.items()
+                    if len(col_indexes) > 1 and col_indexes[0] != col_indexes[1]
+                ]
+            )
 
-        # sheets have some or all matching detail column names
-        if matching_details_names:
-            hdset1 = {h for i, h in enumerate(self.heads1) if i not in ic_parcolset1}
-            hdset2 = {h for i, h in enumerate(self.heads2) if i not in ic_parcolset2}
-            if any(h not in hdset2 for h in hdset1):
-                self.report[f"New Detail Columns {self.sheetname_1}"].extend(
-                    [[f"{h}"] for h in hdset1 if h not in hdset2]
-                )
-            if any(h not in hdset1 for h in hdset2):
-                self.report[f"New Detail Columns {self.sheetname_2}"].extend(
-                    [[f"{h}"] for h in hdset2 if h not in hdset1]
-                )
-            if any(col_indexes[0] != col_indexes[1] for col_indexes in detcold.values() if len(col_indexes) > 1):
-                self.report["Differences in Detail Column Indexes"].append(
-                    [
-                        "NAME",
-                        f"{self.sheetname_1}",
-                        f"{self.sheetname_2}",
-                    ]
-                )
-                self.report["Differences in Detail Column Indexes"].extend(
-                    [
-                        [name, col_indexes[0], col_indexes[1]]
-                        for name, col_indexes in detcold.items()
-                        if len(col_indexes) > 1 and col_indexes[0] != col_indexes[1]
-                    ]
-                )
-        # sheets have no matching detail column names
-        else:
-            self.report["Detail Columns"].append(["Sheets have no matching detail column names."])
+        # detail titles that exist on one sheet only. Neither sheet having a detail column adds nothing.
+        hdset1 = {h for i, h in enumerate(self.heads1) if i not in ic_parcolset1}
+        hdset2 = {h for i, h in enumerate(self.heads2) if i not in ic_parcolset2}
+        if any(h not in hdset2 for h in hdset1):
+            self.report[f"New Detail Columns {self.sheetname_1}"].extend(
+                [[f"{h}"] for h in hdset1 if h not in hdset2]
+            )
+        if any(h not in hdset1 for h in hdset2):
+            self.report[f"New Detail Columns {self.sheetname_2}"].extend(
+                [[f"{h}"] for h in hdset2 if h not in hdset1]
+            )
+        if any(col_indexes[0] != col_indexes[1] for col_indexes in detcold.values() if len(col_indexes) > 1):
+            self.report["Differences in Detail Column Indexes"].append(
+                [
+                    "NAME",
+                    f"{self.sheetname_1}",
+                    f"{self.sheetname_2}",
+                ]
+            )
+            self.report["Differences in Detail Column Indexes"].extend(
+                [
+                    [name, col_indexes[0], col_indexes[1]]
+                    for name, col_indexes in detcold.items()
+                    if len(col_indexes) > 1 and col_indexes[0] != col_indexes[1]
+                ]
+            )
 
         # sheets have no matching ids
         if not any(node in self.nodes2 for node in self.nodes1) and not any(
