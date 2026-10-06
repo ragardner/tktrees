@@ -5718,13 +5718,26 @@ class Tree_Editor(tk.Frame):
                 self.remake_topnodes_order()
             self.redo_tree_display(selections=False)
             move_to_index = self.tree.index(move_to_iid)
-            if (
-                not is_contiguous(event.moved.rows.displayed)
-                and max(moved_rows) > self.tree.data_r(event.value)
-                and min(moved_rows) < self.tree.data_r(event.value)
-            ):
-                move_to_index -= 1
-            if parik := self.get_ids_parent(index_only[0]):
+            parik = self.get_ids_parent(index_only[0])
+            siblings = self.nodes[parik].cn[self.pc] if parik else self.topnodes_order[self.pc]
+            # One slot higher only when a selected sibling sits on both sides of the
+            # drop. Removing the upper one shifts the target; a row that is not in
+            # this list, including a refused cycle, must not move the slot.
+            if not is_contiguous(event.moved.rows.displayed):
+                above = False
+                below = False
+                for iid in index_only:
+                    try:
+                        idx = siblings.index(iid)
+                    except ValueError:
+                        continue
+                    if idx < move_to_index:
+                        above = True
+                    elif idx > move_to_index:
+                        below = True
+                if above and below:
+                    move_to_index -= 1
+            if parik:
                 self.nodes[parik].cn[self.pc].insert(
                     move_to_index,
                     self.nodes[parik].cn[self.pc].pop(self.tree.index(index_only[0])),
