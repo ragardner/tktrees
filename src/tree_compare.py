@@ -796,7 +796,7 @@ class Tree_Compare(tk.Frame):
             )
             self.report["Differences in Parent Column Indexes"].extend(
                 [
-                    [name, col_indexes[0], col_indexes[1]]
+                    [name, col_indexes[0] + 1, col_indexes[1] + 1]
                     for name, col_indexes in pcold.items()
                     if len(col_indexes) > 1 and col_indexes[0] != col_indexes[1]
                 ]
@@ -819,7 +819,7 @@ class Tree_Compare(tk.Frame):
             )
             self.report["Differences in Detail Column Indexes"].extend(
                 [
-                    [name, col_indexes[0], col_indexes[1]]
+                    [name, col_indexes[0] + 1, col_indexes[1] + 1]
                     for name, col_indexes in detcold.items()
                     if len(col_indexes) > 1 and col_indexes[0] != col_indexes[1]
                 ]
