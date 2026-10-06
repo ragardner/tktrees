@@ -5713,6 +5713,12 @@ class Tree_Editor(tk.Frame):
         if successful and (not self.auto_sort_nodes_bool or index_only):
             index_only += successful
         if index_only:
+            # A parent change already snapshotted the nodes, so one Ctrl+Z undoes
+            # both the parent and this order. A same-parent move has no snapshot yet.
+            take_undo = not successful
+            was_auto = self.auto_sort_nodes_bool
+            if take_undo:
+                self.snapshot_reorder_ids()
             if self.auto_sort_nodes_bool:
                 self.auto_sort_nodes_bool = False
                 self.remake_topnodes_order()
@@ -5720,6 +5726,8 @@ class Tree_Editor(tk.Frame):
             move_to_index = self.tree.index(move_to_iid)
             parik = self.get_ids_parent(index_only[0])
             siblings = self.nodes[parik].cn[self.pc] if parik else self.topnodes_order[self.pc]
+            before_order = list(siblings)
+            order_parent = parik
             # One slot higher only when a selected sibling sits on both sides of the
             # drop. Removing the upper one shifts the target; a row that is not in
             # this list, including a refused cycle, must not move the slot.
@@ -5766,6 +5774,22 @@ class Tree_Editor(tk.Frame):
                             new_index,
                             self.topnodes_order[self.pc].pop(current_index),
                         )
+            if take_undo:
+                after_order = list(siblings)
+                if after_order == before_order and not was_auto:
+                    self.vs.pop()
+                    self.set_undo_label()
+                else:
+                    parent_name = self.nodes[order_parent].name if order_parent else ""
+                    hier_name = self.headers[self.pc].name
+                    self.changelog_append(
+                        "Reorder IDs",
+                        parent_name,
+                        ", ".join(self.nodes[iid].name for iid in before_order),
+                        ", ".join(self.nodes[iid].name for iid in after_order),
+                        hier_name,
+                        hier_name,
+                    )
         self.redo_tree_display(selections=False)
         self.redraw_sheets()
         all_iids = index_only + successful
@@ -5904,6 +5928,15 @@ class Tree_Editor(tk.Frame):
             f"From: {removed[0].first_stamp()} To: {removed[-1].last_stamp()}",
             "",
             "",
+        )
+
+    def snapshot_reorder_ids(self):
+        self.snapshot_chore()
+        self.vs.append(
+            {
+                "type": "reorder ids",
+                "required_data": self.get_required_snapshot_data(),
+            }
         )
 
     def snapshot_auto_sort_nodes(self):
@@ -8817,6 +8850,10 @@ class Tree_Editor(tk.Frame):
                 ctyp = ctyp.split("Imported change | ")[1]
             elif ctyp.startswith("Merge |"):
                 ctyp = ctyp.split("Merge | ")[1]
+            # Sibling order is not a cell change. Skip it before the ID-edit
+            # flush so a reorder line does not rebuild the tree mid-batch.
+            if ctyp == "Reorder IDs":
+                continue
             try:
                 if not continues_id_batch(ctyp, change):
                     flush_id_edits()
@@ -9442,9 +9479,22 @@ class Tree_Editor(tk.Frame):
             "Sort sheet",
         }
         applicable_changes = applicable_changes | {f"Imported change | {change}" for change in applicable_changes}
+
+        def import_row_visible(change):
+            typ = "" if len(change) < 2 or change[1] is None else str(change[1])
+            bare = typ
+            if typ.startswith("Imported change | "):
+                bare = typ.split("Imported change | ", 1)[1]
+            elif typ.startswith("Merge | "):
+                bare = typ.split("Merge | ", 1)[1]
+            # The line is not applied, so it must not take a highlight row.
+            if bare == "Reorder IDs":
+                return False
+            return typ in applicable_changes or typ.startswith("Merge | ")
+
         Post_Import_Changes_Popup(
             self,
-            [change for change in changes if change[1] in applicable_changes or change[1].startswith("Merge | ")],
+            [change for change in changes if import_row_visible(change)],
             successful,
             theme=self.C.theme,
         )
