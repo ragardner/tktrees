@@ -93,6 +93,7 @@ from .widgets import (
     Working_Text,
     Wrapped_Text_With_Find_And_Yscroll,
     X_Checkbutton,
+    row_move_kept_titles,
 )
 
 
@@ -2849,7 +2850,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
     def sheet_modified(self, event):
         self.C.new_sheet = self.sheetdisplay.MT.data
         self.sheetdisplay.refresh()
-        if "move" in event.eventname:
+        if "move" in event.eventname and not row_move_kept_titles(event):
             self.selector.set_columns(self.C.new_sheet[0])
             self.selector.detect_id_col()
             self.selector.detect_par_cols()
@@ -3233,7 +3234,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
     def sheet_modified(self, event):
         self.sheetdisplay.MT.data = self.C.new_sheet
         self.sheetdisplay.refresh()
-        if "move" in event.eventname:
+        if "move" in event.eventname and not row_move_kept_titles(event):
             self.selector.set_columns(self.C.new_sheet[0])
             self.flattened_selector.set_columns(self.C.new_sheet[0])
             self.selector.detect_id_col()

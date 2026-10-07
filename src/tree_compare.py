@@ -42,6 +42,7 @@ from .widgets import (
     Id_Parent_Column_Selector,
     Label,
     Readonly_Entry,
+    row_move_kept_titles,
 )
 
 
@@ -253,7 +254,7 @@ class Tree_Compare(tk.Frame):
             pass
 
     def sheet_modified1(self, event):
-        if "move" in event.eventname:
+        if "move" in event.eventname and not row_move_kept_titles(event):
             self.selector_1.set_columns(self.sheetdisplay1.data[0])
             self.selector_1.detect_id_col()
             self.selector_1.detect_par_cols()
@@ -262,7 +263,7 @@ class Tree_Compare(tk.Frame):
         self.sheetdisplay1.focus_set()
 
     def sheet_modified2(self, event):
-        if "move" in event.eventname:
+        if "move" in event.eventname and not row_move_kept_titles(event):
             self.selector_2.set_columns(self.sheetdisplay2.data[0])
             self.selector_2.detect_id_col()
             self.selector_2.detect_par_cols()

@@ -38,6 +38,17 @@ from .functions import (
 )
 
 
+def row_move_kept_titles(event):
+    # The first grid row holds the column titles. Later rows can move without it.
+    if event.eventname != "move_rows":
+        return False
+    rows = event.moved.rows
+    if not rows:
+        return False
+    data = rows.get("data")
+    return isinstance(data, dict) and data.get(0, 0) == 0
+
+
 class Workbook_Sheet_Selection(tk.Frame):
     def __init__(self, parent, C):
         tk.Frame.__init__(self, parent)
@@ -139,7 +150,7 @@ class Column_Selection(tk.Frame):
             pass
 
     def sheet_modified(self, event):
-        if "move" in event.eventname:
+        if "move" in event.eventname and not row_move_kept_titles(event):
             self.selector.set_columns(self.sheetdisplay.data[0])
             self.flattened_selector.set_columns(self.sheetdisplay.data[0])
             self.selector.detect_id_col()
