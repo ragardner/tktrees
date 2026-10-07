@@ -623,7 +623,7 @@ To get started once you have closed this popup, either:
     def reset_data_change_app_title(self):
         self.frames["tree_edit"].sheet.MT.data = []
         self.change_app_title(title=None)
-        if self.current_frame == "treecompare":
+        if self.current_frame == "tree_compare":
             self.frames["tree_compare"].reset()
 
     def compare_at_start(self):

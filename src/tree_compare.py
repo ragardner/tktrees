@@ -359,6 +359,8 @@ class Tree_Compare(tk.Frame):
         self.sheet_dropdown1["values"] = []
         self.sheet_dropdown_displayed1.set("")
         self.load_sheet1.config(state="disabled")
+        # enable_widgets restores this saved state when Compare is shown again.
+        self.load_sheet1_STATE = "disabled"
         self.selector_1.clear_displays()
         self.sheetdisplay1.dehighlight_cells(all_=True, redraw=False)
         self.sheetdisplay1.dehighlight_cells(canvas="row_index", all_=True, redraw=False)
@@ -388,6 +390,8 @@ class Tree_Compare(tk.Frame):
         self.sheet_dropdown2["values"] = []
         self.sheet_dropdown_displayed2.set("")
         self.load_sheet2.config(state="disabled")
+        # enable_widgets restores this saved state when Compare is shown again.
+        self.load_sheet2_STATE = "disabled"
         self.selector_2.clear_displays()
         self.sheetdisplay1.dehighlight_cells(all_=True, redraw=False)
         self.sheetdisplay1.dehighlight_cells(canvas="row_index", all_=True, redraw=False)
