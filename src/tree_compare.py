@@ -403,11 +403,11 @@ class Tree_Compare(tk.Frame):
             if not confirm.boolean:
                 return
         self.start_work("Loading...   ")
-        self.reset_1(False)
         filepath = filedialog.askopenfilename(parent=self.C, title="Select file")
         if not filepath:
             self.stop_work("Program ready")
             return
+        self.reset_1(False)
         try:
             filepath = os.path.normpath(filepath)
         except Exception:
@@ -529,11 +529,11 @@ class Tree_Compare(tk.Frame):
             if not confirm.boolean:
                 return
         self.start_work("Loading...   ")
-        self.reset_2(False)
         filepath = filedialog.askopenfilename(parent=self.C, title="Select file")
         if not filepath:
             self.stop_work("Program ready")
             return
+        self.reset_2(False)
         try:
             filepath = os.path.normpath(filepath)
         except Exception:
