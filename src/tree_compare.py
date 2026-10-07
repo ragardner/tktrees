@@ -712,7 +712,7 @@ class Tree_Compare(tk.Frame):
         self.report_header = f"Comparison report for:  {self.filename_1}  and  {self.filename_2}"
         self.heads1, addition1 = self.heads_comparison(self.sheetdisplay1.data[0].copy(), 1, [])
         self.sheet1, self.nodes1, addition1, self.rns1 = TreeBuilder().build(
-            input_sheet=self.sheetdisplay1.data,
+            input_sheet=[row[:] for row in self.sheetdisplay1.data],
             output_sheet=self.sheet1,
             row_len=self.row_len1,
             ic=self.ic1,
@@ -728,7 +728,7 @@ class Tree_Compare(tk.Frame):
         )
         self.heads2, addition2 = self.heads_comparison(self.sheetdisplay2.data[0].copy(), 2, [])
         self.sheet2, self.nodes2, addition2, self.rns2 = TreeBuilder().build(
-            input_sheet=self.sheetdisplay2.data,
+            input_sheet=[row[:] for row in self.sheetdisplay2.data],
             output_sheet=self.sheet2,
             row_len=self.row_len2,
             ic=self.ic2,
