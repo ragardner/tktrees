@@ -300,6 +300,9 @@ class Id_Parent_Column_Selector(tk.Frame):
         self.headers = headers
         self.id_col = None
         self.par_cols = set()
+        # True after a cell pass already chose the parent columns. The following
+        # detect_par_cols call keeps that choice instead of reading the sheet again.
+        self._values_chosen = False
         self.id_col_display = Readonly_Entry_With_Scrollbar(self, font=EFB, theme=theme)
         self.id_col_display.set_my_value("ID:")
         if show_disp_1:
@@ -374,7 +377,7 @@ class Id_Parent_Column_Selector(tk.Frame):
         if show_disp_1:
             self.detect_id_col_button.grid(row=2, column=0, padx=2, pady=2, sticky="ns")
         self.detect_par_cols_button = Button(
-            self, text="Detect parent columns", style="BF.Std.TButton", command=self.detect_par_cols
+            self, text="Detect parent columns", style="BF.Std.TButton", command=self.user_detect_par_cols
         )
         if show_disp_2:
             self.detect_par_cols_button.grid(row=2, column=1, padx=2, pady=2, sticky="ns")
@@ -410,15 +413,86 @@ class Id_Parent_Column_Selector(tk.Frame):
     def detect_id_col(self):
         if len(self.id_col_selection.MT.data) <= 1:
             return
+        self._values_chosen = False
+        # Exact "id", then a separate word, then a title that starts with "id".
+        # Valid and Width contain those letters and are not ID columns.
+        exact = word = prefix = None
         for i, e in enumerate(self.headers):
-            if not e:
+            if not e or not e[0]:
                 continue
             x = e[0].lower().strip()
-            if x == "id" or x.startswith("id") or "id" in x:
-                self.set_id_col(i)
+            if not x:
+                continue
+            if x == "id":
+                exact = i
+                break
+            parts = x.replace("_", " ").replace("-", " ").split()
+            if word is None and "id" in parts:
+                word = i
+            if prefix is None and x.startswith("id"):
+                prefix = i
+        for chosen in (exact, word, prefix):
+            if chosen is not None:
+                self.set_id_col(chosen)
                 return
+        if self._choose_id_and_parents_from_cells():
+            self._values_chosen = True
+            return
         if isinstance(self.sheet, list) and self.sheet:
             self.set_id_col(0)
+
+    def _choose_id_and_parents_from_cells(self):
+        # One read of the data rows. A parent column's filled cells are a smaller
+        # set of the ID column's cells. The ID is the column most others come from.
+        sheet = self.sheet
+        if sheet is None or isinstance(sheet, list) or len(sheet.data) <= 1:
+            return False
+        ncols = sheet.total_columns()
+        if ncols < 2:
+            return False
+        values = [set() for _ in range(ncols)]
+        for row in islice(sheet.data, 1, None):
+            for c, cell in enumerate(row):
+                if c >= ncols:
+                    break
+                text = cell.strip().lower()
+                if text:
+                    values[c].add(text)
+        best = None
+        best_score = (-1, 0, 0)
+        for i, id_values in enumerate(values):
+            id_len = len(id_values)
+            if id_len < 2:
+                continue
+            found = 0
+            for p, par_values in enumerate(values):
+                par_len = len(par_values)
+                if p != i and par_len and par_len < id_len and par_values <= id_values:
+                    found += 1
+            if not found:
+                continue
+            score = (found, -id_len, -i)
+            if score > best_score:
+                best_score = score
+                best = i
+        if best is None:
+            return True
+        id_values = values[best]
+        parents = [
+            p
+            for p, par_values in enumerate(values)
+            if p != best and par_values and par_values <= id_values
+        ]
+        self.set_id_col(best)
+        if parents:
+            self.set_par_cols(parents)
+        return True
+
+    def user_detect_par_cols(self):
+        # The button looks again. A load calls detect_id_col and detect_par_cols
+        # together, and that second call must not read the sheet a second time.
+        self._values_chosen = False
+        self.detect_par_cols()
 
     def detect_par_cols(self):
         if len(self.par_col_selection.MT.data) <= 1:
@@ -428,26 +502,52 @@ class Id_Parent_Column_Selector(tk.Frame):
             if not e:
                 continue
             x = e[0].lower().strip()
-            if x.startswith("parent"):
+            # The same column cannot be the ID and a parent.
+            if i != self.id_col and x.startswith("parent"):
                 parent_cols.append(i)
         if parent_cols:
+            self._values_chosen = False
             self.set_par_cols(parent_cols)
-        elif self.sheet is not None and len(self.sheet.data) > 1:
+            return
+        if self._values_chosen:
+            self._values_chosen = False
+            return
+        if not isinstance(self.id_col, int):
+            self.detect_id_col()
+            if self._values_chosen:
+                self._values_chosen = False
+                return
             if not isinstance(self.id_col, int):
-                self.detect_id_col()
-                if not isinstance(self.id_col, int):
-                    return
-            ids = {r[self.id_col].lower().rstrip() for r in self.sheet.data if len(r) > self.id_col}
-            ids.add("")
-            for c in range(self.sheet.total_columns()):
-                if (
-                    c != self.id_col
-                    and any(r[c].rstrip() for r in islice(self.sheet.data, 1, None) if len(r) > c)
-                    and all(r[c].lower() in ids for r in islice(self.sheet.data, 1, None) if len(r) > c)
-                ):
-                    parent_cols.append(c)
-            if parent_cols:
-                self.set_par_cols(parent_cols)
+                return
+        id_col = self.id_col
+        if self.sheet is None or len(self.sheet.data) <= 1:
+            return
+        ids = {
+            r[id_col].strip().lower()
+            for r in islice(self.sheet.data, 1, None)
+            if len(r) > id_col
+        }
+        ids.add("")
+        # One pass per column. Stop at the first value that is not an ID.
+        for c in range(self.sheet.total_columns()):
+            if c == id_col:
+                continue
+            saw_value = False
+            matched = True
+            for r in islice(self.sheet.data, 1, None):
+                if len(r) <= c:
+                    continue
+                cell = r[c].strip().lower()
+                if not cell:
+                    continue
+                if cell not in ids:
+                    matched = False
+                    break
+                saw_value = True
+            if matched and saw_value:
+                parent_cols.append(c)
+        if parent_cols:
+            self.set_par_cols(parent_cols)
 
     def id_col_selection_B1(self, event=None):
         if event:
@@ -472,6 +572,7 @@ class Id_Parent_Column_Selector(tk.Frame):
     def clear_displays(self):
         self.headers = [[]]
         self.id_col = None
+        self._values_chosen = False
         self.id_col_selection.deselect("all")
         self.id_col_display.set_my_value("ID: ")
         self.par_cols = set()
