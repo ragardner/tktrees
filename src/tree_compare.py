@@ -25,6 +25,7 @@ from .functions import (
     csv_str_x_data,
     get_json_format,
     get_json_from_file,
+    json_saved_id_parent_cols,
     json_to_sheet,
     sort_key,
     ws_x_data,
@@ -449,7 +450,7 @@ class Tree_Compare(tk.Frame):
                     Error(self, "File contains no data   ", theme=self.C.theme)
                     self.stop_work("Program ready")
                     return
-                self.load_display1()
+                self.load_display1(*json_saved_id_parent_cols(j))
                 self.stop_work("Program ready")
             else:
                 in_mem = bytes_io_wb(filepath)
@@ -570,7 +571,7 @@ class Tree_Compare(tk.Frame):
                     Error(self, "File contains no data   ", theme=self.C.theme)
                     self.stop_work("Program ready")
                     return
-                self.load_display2()
+                self.load_display2(*json_saved_id_parent_cols(j))
                 self.stop_work("Program ready")
             else:
                 in_mem = bytes_io_wb(filepath)

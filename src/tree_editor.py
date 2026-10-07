@@ -95,6 +95,7 @@ from .functions import (
     get_json_format,
     get_json_from_file,
     increment_file_version,
+    json_saved_id_parent_cols,
     json_to_sheet,
     level_to_color,
     new_info_storage,
@@ -8593,8 +8594,11 @@ class Tree_Editor(tk.Frame):
             self.stop_work(self.get_tree_editor_status_bar_text())
             return
         try:
+            saved_cols = (None, None)
             if data.startswith("{") and data.endswith("}"):
-                self.new_sheet = json_to_sheet(json.loads(data))
+                j = json.loads(data)
+                self.new_sheet = json_to_sheet(j)
+                saved_cols = json_saved_id_parent_cols(j)
             else:
                 self.new_sheet = csv_str_x_data(data)
         except Exception as error_msg:
@@ -8614,6 +8618,8 @@ class Tree_Editor(tk.Frame):
             cols=self.new_sheet[0],
             row_len=new_row_len,
             theme=self.C.theme,
+            idcol=saved_cols[0],
+            parcols=saved_cols[1],
         )
         if not popup.result:
             self.new_sheet = []

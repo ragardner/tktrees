@@ -66,6 +66,7 @@ from .functions import (
     full_sheet_to_dict,
     get_json_format,
     get_json_from_file,
+    json_saved_id_parent_cols,
     json_to_sheet,
     str_io_csv_writer,
     to_clipboard,
@@ -2881,8 +2882,11 @@ class Merge_Sheets_Popup(tk.Toplevel):
             self.stop_work(f"Error: Error getting clipboard data: {error_msg}", sels=True)
             return
         try:
+            saved_cols = (None, None)
             if temp_data.startswith("{") and temp_data.endswith("}"):
-                self.C.new_sheet = json_to_sheet(json.loads(temp_data))
+                j = json.loads(temp_data)
+                self.C.new_sheet = json_to_sheet(j)
+                saved_cols = json_saved_id_parent_cols(j)
             else:
                 self.C.new_sheet = csv_str_x_data(temp_data)
         except Exception as error_msg:
@@ -2894,7 +2898,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         equalize_sublist_lens(self.C.new_sheet)
         self.ic = None
         self.pcols = []
-        self.load_display(self.C.new_sheet[0])
+        self.load_display(self.C.new_sheet[0], *saved_cols)
         self.stop_work("Select ID column and Parent columns")
         self.sheetdisplay.deselect("all")
         self.sheetdisplay.data_reference(
@@ -2965,7 +2969,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
                     self.select_sheet_button.config(state="disabled")
                     return
                 equalize_sublist_lens(self.C.new_sheet)
-                self.load_display(self.C.new_sheet[0])
+                self.load_display(self.C.new_sheet[0], *json_saved_id_parent_cols(j))
                 self.stop_work("Ready to merge sheets")
             elif filepath.lower().endswith((".xlsx", ".xlsm")):
                 in_mem = bytes_io_wb(filepath)
@@ -3157,7 +3161,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
 
 
 class Get_Clipboard_Data_Popup(tk.Toplevel):
-    def __init__(self, C, cols, row_len, theme="dark"):
+    def __init__(self, C, cols, row_len, theme="dark", idcol=None, parcols=None):
         tk.Toplevel.__init__(self, C, width="1", height="1", bg=themes[theme].top_left_bg)
         self.C = new_toplevel_chores(
             self,
@@ -3203,8 +3207,12 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.sheetdisplay.data_reference(newdataref=self.C.new_sheet, redraw=True)
         self.sheetdisplay.grid(row=0, column=1, rowspan=4, sticky="nswe")
 
-        self.selector.detect_id_col()
-        self.selector.detect_par_cols()
+        if idcol is not None and parcols is not None:
+            self.selector.set_id_col(idcol)
+            self.selector.set_par_cols(parcols)
+        else:
+            self.selector.detect_id_col()
+            self.selector.detect_par_cols()
 
         self.status = Status_Bar(self, text="Select ID and Parent columns", theme=theme)
         self.status.grid(row=3, column=0, sticky="we")

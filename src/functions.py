@@ -455,6 +455,22 @@ def get_json_format(j):
     return None
 
 
+def json_saved_id_parent_cols(j):
+    # (None, None) when this is not app data, or the app data has no ID type.
+    # The caller then keeps the title guess. A JSON file has no sheet list to fall back to.
+    fmt = get_json_format(j)
+    if not fmt or fmt[0] != "program_data":
+        return None, None
+    try:
+        headers = b32_x_dict(j["program_data"])["headers"]
+        idcol = next((c for c, h in enumerate(headers) if h["type"] == "ID"), None)
+        if idcol is None:
+            return None, None
+        return idcol, [c for c, h in enumerate(headers) if h["type"] == "Parent"]
+    except Exception:
+        return None, None
+
+
 def json_to_sheet(
     j,
     format_=1,
