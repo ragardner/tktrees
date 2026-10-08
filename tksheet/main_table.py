@@ -2358,7 +2358,7 @@ class MainTable(tk.Canvas):
         top_left_x, top_left_y, bottom_right_x, bottom_right_y = vis_info["visible_region"]
         x1, y1, x2, y2 = vis_info["cell_coords"]
         # y scroll
-        if not check_cell_visibility or (check_cell_visibility and not yvis) and len(self.row_positions) > 1:
+        if (not check_cell_visibility or (check_cell_visibility and not yvis)) and len(self.row_positions) > 1:
             if bottom_right_corner is None:
                 both_above = y1 < top_left_y and y2 < top_left_y
                 y1_above_y2_below = y1 < top_left_y and y2 > bottom_right_y
@@ -2393,7 +2393,7 @@ class MainTable(tk.Canvas):
                     self.set_yviews(*args, redraw=False)
                     need_y_redraw = True
         # x scroll
-        if not check_cell_visibility or (check_cell_visibility and not xvis) and len(self.col_positions) > 1:
+        if (not check_cell_visibility or (check_cell_visibility and not xvis)) and len(self.col_positions) > 1:
             if bottom_right_corner is None:
                 both_left = x1 < top_left_x and x2 < top_left_x
                 x1_left_x2_right = x1 < top_left_x and x2 > bottom_right_x
