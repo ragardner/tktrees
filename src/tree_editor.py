@@ -669,6 +669,14 @@ class Tree_Editor(tk.Frame):
             max_undos=0,
         )
         self.sheet.pack(side="right", fill="both", expand=True)
+        self._tree_zoom_in = self.tree.MT.zoom_in
+        self._sheet_zoom_in = self.sheet.MT.zoom_in
+        self._tree_zoom_out = self.tree.MT.zoom_out
+        self._sheet_zoom_out = self.sheet.MT.zoom_out
+        self.tree.MT.zoom_in = self.zoom_in
+        self.tree.MT.zoom_out = self.zoom_out
+        self.sheet.MT.zoom_in = self.zoom_in
+        self.sheet.MT.zoom_out = self.zoom_out
 
         # buttons for top right frame
         # tag ID
@@ -8397,12 +8405,12 @@ class Tree_Editor(tk.Frame):
         self.C.status_bar.change_text(self.get_tree_editor_status_bar_text())
 
     def zoom_in(self, event=None):
-        self.tree.zoom_in()
-        self.sheet.zoom_in()
+        self._tree_zoom_in(event)
+        self._sheet_zoom_in(event)
 
     def zoom_out(self, event=None):
-        self.tree.zoom_out()
-        self.sheet.zoom_out()
+        self._tree_zoom_out(event)
+        self._sheet_zoom_out(event)
 
     def expand_id(self, event=None):
         if current := self.tree.selected:
