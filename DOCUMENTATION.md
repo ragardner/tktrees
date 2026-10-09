@@ -428,7 +428,9 @@ Load a file, paste from the clipboard, or type in the mini table. Delete IDs and
 
 Edit -> Replace using mapping. Two columns: find (not case sensitive) and replace with.
 
-The Replace in dropdown chooses which rows are changed. It starts on All hierarchies, and that choice changes the whole sheet. A hierarchy name changes only the rows that belong to that parent column. An ID in two hierarchies is one row, so a change to that row shows in both.
+The Replace in dropdown chooses which rows are changed. It starts on All hierarchies. The Columns list shows every column. Every row starts turned on, and a turned-on row is included in the replace. Click a row, or drag across rows, to turn columns off.
+
+All hierarchies with every column turned on changes the whole sheet. A hierarchy name changes only the rows that belong to that parent column, and only in the columns that are turned on. An ID in two hierarchies is one row, so a change to that row shows in both.
 
 Load a file, paste from the clipboard, or type in the mini table. After you click Replace, the status line says how many cells changed.
 

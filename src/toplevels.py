@@ -1833,18 +1833,26 @@ def rows_in_hierarchy(nodes, rns, hier: int) -> set[int]:
     return rows
 
 
-def apply_replace_mapping(sheet, mapping, rows: set[int] | None) -> None:
-    # rows is None for every row. An empty set changes nothing.
+def apply_replace_mapping(
+    sheet,
+    mapping,
+    rows: set[int] | None,
+    cols: set[int] | None = None,
+) -> None:
+    # rows is None for every row. cols is None for every column.
+    # An empty set changes nothing.
     # The per-cell check is removed when the replace finishes.
-    if rows is not None and not rows:
+    if (rows is not None and not rows) or (cols is not None and not cols):
         return
     previous = sheet.MT.edit_validation_func
-    if rows is None:
+    if rows is None and cols is None:
         sheet.replace_all(mapping, within=False)
         return
 
     def keep(event):
-        if event.row not in rows:
+        if rows is not None and event.row not in rows:
+            return None
+        if cols is not None and event.column not in cols:
             return None
         if previous is not None:
             return previous(event)
@@ -1938,18 +1946,47 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         self.hier_dropdown.bind("<<ComboboxSelected>>", self._show_scope)
         self.hier_dropdown.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="ew")
 
+        self.col_label = Label(
+            self.options_frame,
+            text="Columns",
+            font=EFB,
+            theme=theme,
+            anchor="w",
+        )
+        self.col_label.grid(row=3, column=0, padx=10, pady=(0, 5), sticky="we")
+        self.col_selector = Fast_Selector(self.options_frame, theme=theme)
+        self.col_selector.load_cols([h.name for h in self.C.headers])
+        self.col_selector.bind("<ButtonRelease-1>", self._show_scope)
+        self.col_selector.grid(row=4, column=0, padx=10, pady=(0, 8), sticky="ew")
+        self._size_column_list()
+
         self.confirm_button = Button(
             self.options_frame,
             text="Replace",
             style="EF.Std.TButton",
             command=self.replace,
         )
-        self.confirm_button.grid(row=3, column=0, padx=50, pady=(20, 5), sticky="we")
+        self.confirm_button.grid(row=5, column=0, padx=50, pady=(12, 5), sticky="we")
 
         self.bind("<Escape>", self.cancel)
         self.bind(f"<{ctrl_button}-z>", self.C.undo)
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
-        show_toplevel_chores(self, self, self, wait_window=False)
+        self.update_idletasks()
+        show_toplevel_chores(
+            self,
+            width=self.winfo_reqwidth(),
+            height=self.winfo_reqheight() + 40,
+            wait_window=False,
+        )
+        self.col_selector.update_display()
+        self._size_column_list()
+
+    def _size_column_list(self) -> None:
+        self.col_selector.update_idletasks()
+        positions = self.col_selector.MT.row_positions
+        content = int(positions[-1]) + 2 if len(positions) > 1 else 72
+        self.col_selector.grid_propagate(False)
+        self.col_selector.config(width=240, height=min(220, max(content, 36)))
 
     def _chosen_hierarchy(self) -> int | None:
         index = self.hier_dropdown.current()
@@ -1957,10 +1994,40 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
             return None
         return self.C.hiers[index - 1]
 
+    def _chosen_columns(self) -> set[int] | None:
+        # None means every column. A turned-on row is that sheet column.
+        all_cols = set(range(len(self.C.headers)))
+        selected = set(self.col_selector.get_selected_rows()) & all_cols
+        if selected == all_cols:
+            return None
+        return selected
+
+    def _column_phrase(self) -> str | None:
+        chosen = self._chosen_columns()
+        if chosen is None:
+            return None
+        names = [self.C.headers[c].name for c in sorted(chosen)]
+        if not names:
+            return "0 columns"
+        off = [h.name for i, h in enumerate(self.C.headers) if i not in chosen]
+        if len(off) == 1 and len(names) > 1:
+            return f"all columns except {off[0]}"
+        if len(names) == 1:
+            return f"the {names[0]} column"
+        if len(names) == 2:
+            return f"the {names[0]} and {names[1]} columns"
+        return f"{len(names)} columns"
+
     def _scope_text(self) -> str:
+        cols = self._column_phrase()
         if self._chosen_hierarchy() is None:
-            return "Find & replace all in the whole sheet, case insensitive"
-        return f"Find & replace in rows belonging to {self.hier_dropdown.get_my_value()}, case insensitive"
+            if cols is None:
+                return "Find & replace all in the whole sheet, case insensitive"
+            return f"Find & replace in {cols}, case insensitive"
+        name = self.hier_dropdown.get_my_value()
+        if cols is None:
+            return f"Find & replace in rows belonging to {name}, case insensitive"
+        return f"Find & replace in rows belonging to {name}, in {cols}, case insensitive"
 
     def _show_scope(self, event=None) -> None:
         self.status_bar.change_text(self._scope_text())
@@ -1973,7 +2040,7 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         old_len = len(self.C.changelog)
         hier = self._chosen_hierarchy()
         rows = None if hier is None else rows_in_hierarchy(self.C.nodes, self.C.rns, hier)
-        apply_replace_mapping(self.C.sheet, mapping, rows)
+        apply_replace_mapping(self.C.sheet, mapping, rows, self._chosen_columns())
         new_len = len(self.C.changelog)
         if new_len > old_len:
             n = self.C.changelog[-1].n
