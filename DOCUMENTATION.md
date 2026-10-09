@@ -426,7 +426,9 @@ Load a file, paste from the clipboard, or type in the mini table. Delete IDs and
 
 #### Replace using mapping
 
-Edit -> Replace using mapping. Two columns: find (not case sensitive) and replace with. It runs on the whole sheet.
+Edit -> Replace using mapping. Two columns: find (not case sensitive) and replace with.
+
+The Replace in dropdown chooses which rows are changed. It starts on All hierarchies, and that choice changes the whole sheet. A hierarchy name changes only the rows that belong to that parent column. An ID in two hierarchies is one row, so a change to that row shows in both.
 
 Load a file, paste from the clipboard, or type in the mini table. After you click Replace, the status line says how many cells changed.
 

@@ -1824,6 +1824,39 @@ class Sheet_File_Load_Mixin:
         self.USER_HAS_CLOSED_WINDOW()
 
 
+def rows_in_hierarchy(nodes, rns, hier: int) -> set[int]:
+    rows = set()
+    for iid, node in nodes.items():
+        ps = node.ps
+        if hier in ps and ps[hier] is not None and iid in rns:
+            rows.add(rns[iid])
+    return rows
+
+
+def apply_replace_mapping(sheet, mapping, rows: set[int] | None) -> None:
+    # rows is None for every row. An empty set changes nothing.
+    # The per-cell check is removed when the replace finishes.
+    if rows is not None and not rows:
+        return
+    previous = sheet.MT.edit_validation_func
+    if rows is None:
+        sheet.replace_all(mapping, within=False)
+        return
+
+    def keep(event):
+        if event.row not in rows:
+            return None
+        if previous is not None:
+            return previous(event)
+        return event.value
+
+    sheet.MT.edit_validation_func = keep
+    try:
+        sheet.replace_all(mapping, within=False)
+    finally:
+        sheet.MT.edit_validation_func = previous
+
+
 class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
     load_column_limit = 2
 
@@ -1838,7 +1871,7 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         self.grid_rowconfigure(2, weight=1)
 
         self.status_bar = Readonly_Entry_With_Scrollbar(self, theme=theme, use_status_fg=True)
-        self.status_bar.change_text(text="Find & replace all in whole sheet, case insenitive")
+        self.status_bar.change_text(text="Find & replace all in the whole sheet, case insensitive")
         self.status_bar.my_entry.config(relief="flat", font=("Calibri", std_font_size))
         self.status_bar.grid(row=4, column=0, columnspan=2, sticky="we")
 
@@ -1891,18 +1924,46 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         )
         self.clipboard_button.grid(row=0, column=0, padx=10, pady=(10, 20), sticky="nswe")
 
+        self.hier_label = Label(
+            self.options_frame,
+            text="Replace in",
+            font=EFB,
+            theme=theme,
+            anchor="w",
+        )
+        self.hier_label.grid(row=1, column=0, padx=10, pady=(0, 5), sticky="we")
+        self.hier_dropdown = Ez_Dropdown(self.options_frame, font=EF)
+        self.hier_dropdown["values"] = ["All hierarchies", *[self.C.headers[h].name for h in self.C.hiers]]
+        self.hier_dropdown.current(0)
+        self.hier_dropdown.bind("<<ComboboxSelected>>", self._show_scope)
+        self.hier_dropdown.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="ew")
+
         self.confirm_button = Button(
             self.options_frame,
             text="Replace",
             style="EF.Std.TButton",
             command=self.replace,
         )
-        self.confirm_button.grid(row=3, column=0, padx=50, pady=(40, 5), sticky="we")
+        self.confirm_button.grid(row=3, column=0, padx=50, pady=(20, 5), sticky="we")
 
         self.bind("<Escape>", self.cancel)
         self.bind(f"<{ctrl_button}-z>", self.C.undo)
         self.bind(f"<{ctrl_button}-Z>", self.C.undo)
         show_toplevel_chores(self, self, self, wait_window=False)
+
+    def _chosen_hierarchy(self) -> int | None:
+        index = self.hier_dropdown.current()
+        if index <= 0 or index > len(self.C.hiers):
+            return None
+        return self.C.hiers[index - 1]
+
+    def _scope_text(self) -> str:
+        if self._chosen_hierarchy() is None:
+            return "Find & replace all in the whole sheet, case insensitive"
+        return f"Find & replace in rows belonging to {self.hier_dropdown.get_my_value()}, case insensitive"
+
+    def _show_scope(self, event=None) -> None:
+        self.status_bar.change_text(self._scope_text())
 
     def replace(self):
         self.status_bar.change_text("Loading...")
@@ -1910,7 +1971,9 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         self.update()
         mapping = {r[0].lower(): r[1] for r in self.sheetdisplay.get_sheet_data() if r[0] or r[1]}
         old_len = len(self.C.changelog)
-        self.C.sheet.replace_all(mapping, within=False)
+        hier = self._chosen_hierarchy()
+        rows = None if hier is None else rows_in_hierarchy(self.C.nodes, self.C.rns, hier)
+        apply_replace_mapping(self.C.sheet, mapping, rows)
         new_len = len(self.C.changelog)
         if new_len > old_len:
             n = self.C.changelog[-1].n
