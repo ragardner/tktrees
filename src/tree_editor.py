@@ -8741,6 +8741,7 @@ class Tree_Editor(tk.Frame):
         self.refresh_formatting(dehighlight=True)
         self.redo_tree_display()
         self.refresh_dropdowns()
+        self.clear_search_results()
         self.changelog_append(
             "Overwrite sheet with clipboard data",
             "",
