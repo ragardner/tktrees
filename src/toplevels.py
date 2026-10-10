@@ -3362,7 +3362,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.bind("<Escape>", self.cancel)
 
     def sheet_modified(self, event):
-        self.sheetdisplay.MT.data = self.C.new_sheet
+        self.C.new_sheet = self.sheetdisplay.MT.data
         self.sheetdisplay.refresh()
         if "move" in event.eventname and not row_move_kept_titles(event):
             self.selector.set_columns(self.C.new_sheet[0])
