@@ -8641,6 +8641,13 @@ class Tree_Editor(tk.Frame):
                 return
         self.C.status_bar.change_text("Building tree...")
         self.snapshot_sheet("full overwrite")
+        # The snapshot has already pickled saved_info. Copy the open ids into new
+        # dicts so the new hierarchies do not share those objects.
+        open_ids_by_name = {
+            self.headers[h].name: dict.fromkeys(self.saved_info[h].opens)
+            for h in self.hiers
+            if h in self.saved_info
+        }
         self.C.status_bar.change_text("Loading...   ")
         self.C.disable_at_start()
         self.warnings = []
@@ -8692,20 +8699,32 @@ class Tree_Editor(tk.Frame):
         new_headers[self.ic].type_ = "ID"
         for h in self.hiers:
             new_headers[h].type_ = "Parent"
-        existing_headers = {h.name: i for i, h in enumerate(self.headers)}
-        existing_col_alignments = {
-            self.headers[c].name: align for c, align in self.sheet.get_column_alignments().items()
-        }
+        # Same name and the same type. A detail column chosen as ID or Parent
+        # does not keep its dropdown, conditional formatting, or alignment.
+        existing_headers = {h.name: h for h in self.headers}
+        alignments_by_name = {}
+        if popup.keep_column_settings:
+            for column, align in self.sheet.get_column_alignments().items():
+                if column < len(self.headers):
+                    alignments_by_name[self.headers[column].name] = align
 
         self.tree.reset()
         self.sheet.reset()
 
-        for h in new_headers:
-            if h.name in existing_headers and h.type_ == self.headers[existing_headers[h.name]].type_:
-                h.formatting = self.headers[existing_headers[h.name]].formatting
-            if h.name in existing_col_alignments:
-                self.tree.align_columns(existing_headers[h.name], existing_col_alignments[h.name])
-                self.sheet.align_columns(existing_headers[h.name], existing_col_alignments[h.name])
+        if popup.keep_column_settings:
+            for i, h in enumerate(new_headers):
+                if h.name not in existing_headers:
+                    continue
+                old = existing_headers[h.name]
+                if h.type_ != old.type_:
+                    continue
+                h.formatting = [tuple(rule) for rule in old.formatting]
+                if h.type_ == "Text":
+                    h.validation = old.validation.copy()
+                if h.name in alignments_by_name:
+                    align = alignments_by_name[h.name]
+                    self.tree.align_columns(i, align, redraw=False)
+                    self.sheet.align_columns(i, align, redraw=False)
 
         self.headers = new_headers
         self.sheet.MT.data = self.new_sheet
@@ -8731,6 +8750,15 @@ class Tree_Editor(tk.Frame):
         )
         self.new_sheet = []
         self.fix_associate_sort(startup=True)
+        for h in self.hiers:
+            if self.headers[h].name not in open_ids_by_name:
+                continue
+            kept_open = {}
+            for iid in open_ids_by_name[self.headers[h].name]:
+                if iid not in self.nodes or self.nodes[iid].ps[h] is None:
+                    continue
+                kept_open[iid] = None
+            self.saved_info[h].opens = kept_open
         self.set_headers()
         self.refresh_hier_dropdown(self.hiers.index(self.pc))
         self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}

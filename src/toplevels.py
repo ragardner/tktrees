@@ -3336,7 +3336,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.sheetdisplay.bind("<<SheetModified>>", self.sheet_modified)
         self.sheetdisplay.headers(newheaders=0)
         self.sheetdisplay.data_reference(newdataref=self.C.new_sheet, redraw=True)
-        self.sheetdisplay.grid(row=0, column=1, rowspan=4, sticky="nswe")
+        self.sheetdisplay.grid(row=0, column=1, rowspan=5, sticky="nswe")
 
         if idcol is not None and parcols is not None:
             self.selector.set_id_col(idcol)
@@ -3345,11 +3345,32 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
             self.selector.detect_id_col()
             self.selector.detect_par_cols()
 
+        self.keep_settings_row = Frame(self, theme=theme)
+        self.keep_settings_row.grid(row=3, column=0, sticky="ew", padx=10, pady=(8, 8))
+        self.keep_column_settings_button = X_Checkbutton(
+            self.keep_settings_row,
+            text="",
+            style="Std.TButton",
+            checked=True,
+        )
+        self.keep_column_settings_button.configure(width=0, padding=0)
+        self.keep_column_settings_button.pack(side="right")
+        self.keep_settings_label = Label(
+            self.keep_settings_row,
+            "Keep settings for matching columns",
+            EF,
+            theme=theme,
+            anchor="w",
+        )
+        self.keep_settings_label.pack(side="left", fill="x", expand=True)
+        self.keep_settings_label.bind("<Button-1>", self.keep_column_settings_button.B1)
+        self.keep_settings_row.bind("<Button-1>", self.keep_column_settings_button.B1)
         self.status = Status_Bar(self, text="Select ID and Parent columns", theme=theme)
-        self.status.grid(row=3, column=0, sticky="we")
+        self.status.grid(row=4, column=0, sticky="we")
         self.result = False
         self.ic = None
         self.pcols = []
+        self.keep_column_settings = True
         self.bind("<Escape>", self.cancel)
         self.flattened_mode_toggle()
         show_toplevel_chores(self, height=600)
@@ -3412,6 +3433,7 @@ class Get_Clipboard_Data_Popup(tk.Toplevel):
         self.flattened_pcols = self.flattened_selector.get_par_cols()
         self.flattened = self.data_format_selector.flattened
         self.format_selector_current = self.data_format_selector.format_selector_current()
+        self.keep_column_settings = self.keep_column_settings_button.get_checked()
         self.C.new_sheet = self.sheetdisplay.get_sheet_data()
         if self.flattened:
             if not self.flattened_pcols:
