@@ -9633,6 +9633,12 @@ class Tree_Editor(tk.Frame):
                 cell.lower(): i for i, cell in enumerate(ns_headers) if i not in ns_hiers_set and i != ns_ic
             }
             os_header_names = {h.name.lower() for h in self.headers}
+            if not self.allow_spaces_ids_var:
+                id_parent_cols = {ns_ic, *ns_hiers}
+                for row in self.new_sheet:
+                    for col in id_parent_cols:
+                        if col < len(row) and isinstance(row[col], str):
+                            row[col] = "".join(row[col].strip().split())
             ns_rns = {row[ns_ic].lower(): i for i, row in enumerate(self.new_sheet)}
             shared_ids = {i: ik for ik, i in self.rns.items() if ik in ns_rns}
             os_pcol_names = {h.name.lower(): i for i, h in enumerate(self.headers) if h.type_ == "Parent"}
