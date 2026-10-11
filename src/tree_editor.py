@@ -9985,16 +9985,28 @@ class Tree_Editor(tk.Frame):
                         ns_rn = ns_rns[shared_ids[rn]]
                         for name, idx in shared_pcols.items():
                             ns_pcol_idx = ns_pcol_names[name]
-                            if row[idx] != self.new_sheet[ns_rn][ns_pcol_idx]:
-                                self.changelog_append_no_unsaved(
-                                    "Edit cell",
-                                    row[self.ic],
-                                    f"{row[idx]}",
-                                    self.new_sheet[ns_rn][ns_pcol_idx],
-                                    self.headers[idx].name,
-                                )
-                                changes_made += 1
-                                row[idx] = self.new_sheet[ns_rn][ns_pcol_idx]
+                            new_parent = self.new_sheet[ns_rn][ns_pcol_idx]
+                            if row[idx] != new_parent:
+                                if (
+                                    not popup.add_new_ids
+                                    and isinstance(new_parent, str)
+                                    and new_parent
+                                    and new_parent.lower() not in self.rns
+                                ):
+                                    self.warnings.append(
+                                        f" - ID ({new_parent}) does not exist. Parent edit for "
+                                        f"{row[self.ic]} in {self.headers[idx].name} was not applied"
+                                    )
+                                else:
+                                    self.changelog_append_no_unsaved(
+                                        "Edit cell",
+                                        row[self.ic],
+                                        f"{row[idx]}",
+                                        f"{new_parent}",
+                                        self.headers[idx].name,
+                                    )
+                                    changes_made += 1
+                                    row[idx] = new_parent
                     self.sheet.MT.data[rn] = row
 
             if rows_to_insert:
@@ -10038,6 +10050,7 @@ class Tree_Editor(tk.Frame):
             else:
                 self.vs.pop()
                 self.set_undo_label()
+                self.show_warnings("n/a - Data imported from: " + popup.file_opened, popup.sheet_opened)
                 Error(self, "No applicable changes were made", theme=self.C.theme)
             self.stop_work(self.get_tree_editor_status_bar_text())
             self.focus_sheet()
