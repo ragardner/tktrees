@@ -9711,16 +9711,28 @@ class Tree_Editor(tk.Frame):
                     if rn in shared_ids:
                         ns_rn = ns_rns[shared_ids[rn]]
                         for num, idx in enumerate(new_pcols):
-                            row[self.row_len + num] = self.new_sheet[ns_rn][idx]
-                            if row[self.row_len + num] != "":
-                                self.changelog_append_no_unsaved(
-                                    "Edit cell",
-                                    row[self.ic],
-                                    "",
-                                    f"{row[self.row_len + num]}",
-                                    self.headers[self.row_len + num].name,
+                            new_parent = self.new_sheet[ns_rn][idx]
+                            if (
+                                not popup.add_new_ids
+                                and isinstance(new_parent, str)
+                                and new_parent
+                                and new_parent.lower() not in self.rns
+                            ):
+                                self.warnings.append(
+                                    f" - ID ({new_parent}) does not exist. Parent edit for "
+                                    f"{row[self.ic]} in {self.headers[self.row_len + num].name} was not applied"
                                 )
-                                changes_made += 1
+                            else:
+                                row[self.row_len + num] = new_parent
+                                if row[self.row_len + num] != "":
+                                    self.changelog_append_no_unsaved(
+                                        "Edit cell",
+                                        row[self.ic],
+                                        "",
+                                        f"{row[self.row_len + num]}",
+                                        self.headers[self.row_len + num].name,
+                                    )
+                                    changes_made += 1
                     self.sheet.MT.data[rn] = row
                 self.row_len += num_new_pcols
 
