@@ -4710,13 +4710,17 @@ class Tree_Editor(tk.Frame):
         if self.auto_sort_nodes_bool:
             return
         for iid, node in self.nodes.items():
-            old = old_nodes.get(iid)
+            if iid not in old_nodes:
+                continue
+            old = old_nodes[iid]
             if old is None:
                 continue
             for h, new_cn in node.cn.items():
                 if not new_cn:
                     continue
-                old_cn = old.cn.get(h) or []
+                if h not in old.cn:
+                    continue
+                old_cn = old.cn[h]
                 if not old_cn:
                     continue
                 new_set = set(new_cn)
@@ -4724,7 +4728,8 @@ class Tree_Editor(tk.Frame):
                 node.cn[h] = [c for c in old_cn if c in new_set] + [c for c in new_cn if c not in old_set]
         self.topnodes_order = {}
         for h in self.hiers:
-            self.topnodes_order[h] = self._topnodes_order_matching_ps(h, old_topnodes_order.get(h, []))
+            old_order = old_topnodes_order[h] if h in old_topnodes_order else []
+            self.topnodes_order[h] = self._topnodes_order_matching_ps(h, old_order)
 
     def _topnodes_order_matching_ps(self, h: int, old_order: list[str]) -> list[str]:
         current_tops = {iid for iid, n in self.nodes.items() if n.ps[h] == ""}
@@ -8644,9 +8649,7 @@ class Tree_Editor(tk.Frame):
         # The snapshot has already pickled saved_info. Copy the open ids into new
         # dicts so the new hierarchies do not share those objects.
         open_ids_by_name = {
-            self.headers[h].name: dict.fromkeys(self.saved_info[h].opens)
-            for h in self.hiers
-            if h in self.saved_info
+            self.headers[h].name: dict.fromkeys(self.saved_info[h].opens) for h in self.hiers if h in self.saved_info
         }
         self.C.status_bar.change_text("Loading...   ")
         self.C.disable_at_start()
