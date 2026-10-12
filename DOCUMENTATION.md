@@ -348,9 +348,10 @@ You can open a file, paste from the clipboard, or type in the sheet on the right
 
 Options (on unless you turn them off):
 
-- Add new IDs: IDs that are not in the open file are added
+- Add new rows: IDs that are not in the open file are added as rows.
 - Add new detail columns / Add new parent columns: columns whose names are not already in the open file are added. New detail columns are Text.
-- Overwrite details / Overwrite parents: for IDs that exist in both, copy values from columns with the same name
+- Overwrite details / Overwrite parents: for IDs that exist in both, copy values from columns with the same name.
+- Add new parent ids: When enabled, IDs that exist only in the parent columns of the merge data (and have no row of their own) are added as new rows in the sheet.
 
 IDs and column names are matched without caring about case. A detail is only written if it is valid for that column's type. After the merge the tree is rebuilt, so parent values on new IDs are applied then.
 

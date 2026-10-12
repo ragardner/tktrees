@@ -2822,14 +2822,24 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.options_frame = Frame(self.l_frame, theme=theme)
         self.options_frame.grid(row=3, column=1, sticky="nswe")
 
-        self.add_new_ids_button = X_Checkbutton(
+        self.add_new_rows_button = X_Checkbutton(
             self.options_frame,
-            text="Add new IDs",
+            text="Add new rows",
             style="x_button.Std.TButton",
             compound="right",
             checked=True,
         )
-        self.add_new_ids_button.grid(row=0, column=0, padx=10, pady=5, sticky="we")
+        self.add_new_rows_button.grid(row=0, column=0, padx=10, pady=5, sticky="we")
+        self.add_new_rows_button.bind("<1>", self._add_new_rows_pressed, add="+")
+        self.add_new_parent_ids_button = X_Checkbutton(
+            self.options_frame,
+            text="Add new parent ids",
+            style="x_button.Std.TButton",
+            compound="right",
+            checked=True,
+        )
+        self.add_new_parent_ids_button.grid(row=1, column=0, padx=10, pady=5, sticky="we")
+        self.add_new_parent_ids_button.bind("<1>", self._add_new_parent_ids_pressed, add="+")
         self.add_new_dcols_button = X_Checkbutton(
             self.options_frame,
             text="Add new detail columns",
@@ -2837,7 +2847,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             compound="right",
             checked=True,
         )
-        self.add_new_dcols_button.grid(row=1, column=0, padx=10, pady=5, sticky="we")
+        self.add_new_dcols_button.grid(row=2, column=0, padx=10, pady=5, sticky="we")
         self.add_new_pcols_button = X_Checkbutton(
             self.options_frame,
             text="Add new parent columns",
@@ -2845,7 +2855,8 @@ class Merge_Sheets_Popup(tk.Toplevel):
             compound="right",
             checked=True,
         )
-        self.add_new_pcols_button.grid(row=2, column=0, padx=10, pady=5, sticky="we")
+        self.add_new_pcols_button.grid(row=3, column=0, padx=10, pady=5, sticky="we")
+        self.add_new_pcols_button.bind("<1>", self._add_new_pcols_pressed, add="+")
         self.overwrite_details_button = X_Checkbutton(
             self.options_frame,
             text="Overwrite details",
@@ -2853,7 +2864,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             compound="right",
             checked=True,
         )
-        self.overwrite_details_button.grid(row=3, column=0, padx=10, pady=5, sticky="we")
+        self.overwrite_details_button.grid(row=4, column=0, padx=10, pady=5, sticky="we")
         self.overwrite_parents_button = X_Checkbutton(
             self.options_frame,
             text="Overwrite parents",
@@ -2861,7 +2872,8 @@ class Merge_Sheets_Popup(tk.Toplevel):
             compound="right",
             checked=True,
         )
-        self.overwrite_parents_button.grid(row=4, column=0, padx=10, pady=5, sticky="we")
+        self.overwrite_parents_button.grid(row=5, column=0, padx=10, pady=5, sticky="we")
+        self.overwrite_parents_button.bind("<1>", self._overwrite_parents_pressed, add="+")
 
         self.button_frame = Frame(self.l_frame, theme=theme)
         self.button_frame.grid(row=4, column=0, columnspan=2, sticky="e")
@@ -2878,11 +2890,12 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.status = Status_Bar(self.l_frame, text="Note: Opening files resets current merge sheet", theme=theme)
         self.status.grid(row=5, column=0, columnspan=2, sticky="ew")
         self.result = False
-        self.add_new_ids = True
+        self.add_new_rows = True
         self.add_new_dcols = False
         self.add_new_pcols = False
         self.overwrite_details = False
         self.overwrite_parents = False
+        self.add_new_parent_ids = True
         self.file_opened = ""
         self.sheet_opened = "n/a"
         self.row_len = 0
@@ -2901,7 +2914,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
             style="BF.Std.TButton",
             command=self.toggle_left_panel,
         )
-        self.toggle_left_button.grid(row=5, column=0, padx=10, pady=10, sticky="e")
+        self.toggle_left_button.grid(row=6, column=0, padx=10, pady=10, sticky="e")
 
         self.toggle_left_button2 = Button(
             self.r_frame,
@@ -3208,7 +3221,8 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.open_file_button.config(state="normal")
         self.sheet_dropdown.config(state="readonly")
         self.selector.enable_me()
-        self.add_new_ids_button.config(state="normal")
+        self.add_new_rows_button.config(state="normal")
+        self.add_new_parent_ids_button.config(state="normal")
         self.add_new_dcols_button.config(state="normal")
         self.add_new_pcols_button.config(state="normal")
         self.overwrite_details_button.config(state="normal")
@@ -3228,7 +3242,8 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.sheet_dropdown.config(state="disabled")
         self.select_sheet_button.config(state="disabled")
         self.selector.disable_me()
-        self.add_new_ids_button.config(state="disabled")
+        self.add_new_rows_button.config(state="disabled")
+        self.add_new_parent_ids_button.config(state="disabled")
         self.add_new_dcols_button.config(state="disabled")
         self.add_new_pcols_button.config(state="disabled")
         self.overwrite_details_button.config(state="disabled")
@@ -3250,12 +3265,53 @@ class Merge_Sheets_Popup(tk.Toplevel):
         self.select_sheet_button.config(state="disabled")
         self.selector.clear_displays()
 
+    def _parent_write_enabled(self):
+        return (
+            self.add_new_rows_button.get_checked()
+            or self.overwrite_parents_button.get_checked()
+            or self.add_new_pcols_button.get_checked()
+        )
+
+    def _clear_parent_ids_if_no_parent_write(self):
+        if self._parent_write_enabled():
+            return
+        self.add_new_parent_ids_button.set_checked(False)
+
+    def _add_new_rows_pressed(self, event=None):
+        # X_Checkbutton.B1 already toggled Add new rows on this click.
+        if "normal" not in str(self.add_new_rows_button["state"]):
+            return
+        self._clear_parent_ids_if_no_parent_write()
+
+    def _overwrite_parents_pressed(self, event=None):
+        # X_Checkbutton.B1 already toggled Overwrite parents on this click.
+        if "normal" not in str(self.overwrite_parents_button["state"]):
+            return
+        self._clear_parent_ids_if_no_parent_write()
+
+    def _add_new_pcols_pressed(self, event=None):
+        # X_Checkbutton.B1 already toggled Add new parent columns on this click.
+        if "normal" not in str(self.add_new_pcols_button["state"]):
+            return
+        self._clear_parent_ids_if_no_parent_write()
+
+    def _add_new_parent_ids_pressed(self, event=None):
+        # X_Checkbutton.B1 already toggled Add new parent ids on this click.
+        if "normal" not in str(self.add_new_parent_ids_button["state"]):
+            return
+        if not self.add_new_parent_ids_button.get_checked():
+            return
+        if self._parent_write_enabled():
+            return
+        self.overwrite_parents_button.set_checked(True)
+
     def confirm(self, event=None):
-        self.add_new_ids = self.add_new_ids_button.get_checked()
+        self.add_new_rows = self.add_new_rows_button.get_checked()
         self.add_new_dcols = self.add_new_dcols_button.get_checked()
         self.add_new_pcols = self.add_new_pcols_button.get_checked()
         self.overwrite_details = self.overwrite_details_button.get_checked()
         self.overwrite_parents = self.overwrite_parents_button.get_checked()
+        self.add_new_parent_ids = self.add_new_parent_ids_button.get_checked()
         self.ic = self.selector.get_id_col()
         self.pcols = self.selector.get_par_cols()
         self.flattened_pcols = self.flattened_selector.get_par_cols()
@@ -3267,7 +3323,7 @@ class Merge_Sheets_Popup(tk.Toplevel):
         if all(
             x is False
             for x in (
-                self.add_new_ids,
+                self.add_new_rows,
                 self.add_new_dcols,
                 self.add_new_pcols,
                 self.overwrite_details,

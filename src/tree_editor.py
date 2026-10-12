@@ -9712,11 +9712,13 @@ class Tree_Editor(tk.Frame):
                         ns_rn = ns_rns[shared_ids[rn]]
                         for num, idx in enumerate(new_pcols):
                             new_parent = self.new_sheet[ns_rn][idx]
+                            parent_key = ""
+                            if not popup.add_new_parent_ids and isinstance(new_parent, str):
+                                parent_key = new_parent.lower()
                             if (
-                                not popup.add_new_ids
-                                and isinstance(new_parent, str)
-                                and new_parent
-                                and new_parent.lower() not in self.rns
+                                parent_key
+                                and parent_key not in self.rns
+                                and (not popup.add_new_rows or parent_key not in ns_rns)
                             ):
                                 self.warnings.append(
                                     f" - ID ({new_parent}) does not exist. Parent edit for "
@@ -9736,10 +9738,10 @@ class Tree_Editor(tk.Frame):
                     self.sheet.MT.data[rn] = row
                 self.row_len += num_new_pcols
 
-            # add any new ids
+            # add any new rows from the ID column
             # AND if add new detail columns then add the details for those ids
             # AND if add new parent columns then add the parents for those ids
-            if popup.add_new_ids:
+            if popup.add_new_rows:
                 new_ids = {ik for ik in ns_rns if ik not in self.rns and ik}
                 shared_dcols = tuple(name for name in os_dcol_names if name in ns_dcol_names)
                 shared_pcols = tuple(name for name in os_pcol_names if name in ns_pcol_names)
@@ -9770,17 +9772,31 @@ class Tree_Editor(tk.Frame):
                                         )
                                         changes_made += 1
                             for name in shared_pcols:
-                                newrow[os_pcol_names[name]] = row[ns_pcol_names[name]]
+                                new_parent = row[ns_pcol_names[name]]
                                 hdr_idx = os_pcol_names[name]
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Edit cell",
-                                        newrow[self.ic],
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                        self.headers[hdr_idx].name,
+                                parent_key = ""
+                                if not popup.add_new_parent_ids and isinstance(new_parent, str):
+                                    parent_key = new_parent.lower()
+                                if (
+                                    parent_key
+                                    and parent_key not in self.rns
+                                    and (not popup.add_new_rows or parent_key not in ns_rns)
+                                ):
+                                    self.warnings.append(
+                                        f" - ID ({new_parent}) does not exist. Parent edit for "
+                                        f"{newrow[self.ic]} in {self.headers[hdr_idx].name} was not applied"
                                     )
-                                    changes_made += 1
+                                else:
+                                    newrow[hdr_idx] = new_parent
+                                    if newrow[hdr_idx] != "":
+                                        self.changelog_append_no_unsaved(
+                                            "Edit cell",
+                                            newrow[self.ic],
+                                            "",
+                                            f"{newrow[hdr_idx]}",
+                                            self.headers[hdr_idx].name,
+                                        )
+                                        changes_made += 1
                             rows_to_insert.append(newrow)
                 elif popup.add_new_dcols and not popup.add_new_pcols:
                     new_dcol_indexes = {
@@ -9826,17 +9842,31 @@ class Tree_Editor(tk.Frame):
                                         )
                                         changes_made += 1
                             for name in shared_pcols:
-                                newrow[os_pcol_names[name]] = row[ns_pcol_names[name]]
+                                new_parent = row[ns_pcol_names[name]]
                                 hdr_idx = os_pcol_names[name]
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Edit cell",
-                                        newrow[self.ic],
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                        self.headers[hdr_idx].name,
+                                parent_key = ""
+                                if not popup.add_new_parent_ids and isinstance(new_parent, str):
+                                    parent_key = new_parent.lower()
+                                if (
+                                    parent_key
+                                    and parent_key not in self.rns
+                                    and (not popup.add_new_rows or parent_key not in ns_rns)
+                                ):
+                                    self.warnings.append(
+                                        f" - ID ({new_parent}) does not exist. Parent edit for "
+                                        f"{newrow[self.ic]} in {self.headers[hdr_idx].name} was not applied"
                                     )
-                                    changes_made += 1
+                                else:
+                                    newrow[hdr_idx] = new_parent
+                                    if newrow[hdr_idx] != "":
+                                        self.changelog_append_no_unsaved(
+                                            "Edit cell",
+                                            newrow[self.ic],
+                                            "",
+                                            f"{newrow[hdr_idx]}",
+                                            self.headers[hdr_idx].name,
+                                        )
+                                        changes_made += 1
                             rows_to_insert.append(newrow)
                 elif popup.add_new_pcols and not popup.add_new_dcols:
                     new_pcol_indexes = {
@@ -9857,17 +9887,31 @@ class Tree_Editor(tk.Frame):
                             )
                             changes_made += 1
                             for idx, colname in new_pcol_indexes.items():
-                                newrow[idx] = row[ns_pcol_names[colname]]
+                                new_parent = row[ns_pcol_names[colname]]
                                 hdr_idx = idx
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Edit cell",
-                                        newrow[self.ic],
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                        self.headers[hdr_idx].name,
+                                parent_key = ""
+                                if not popup.add_new_parent_ids and isinstance(new_parent, str):
+                                    parent_key = new_parent.lower()
+                                if (
+                                    parent_key
+                                    and parent_key not in self.rns
+                                    and (not popup.add_new_rows or parent_key not in ns_rns)
+                                ):
+                                    self.warnings.append(
+                                        f" - ID ({new_parent}) does not exist. Parent edit for "
+                                        f"{newrow[self.ic]} in {self.headers[hdr_idx].name} was not applied"
                                     )
-                                    changes_made += 1
+                                else:
+                                    newrow[idx] = new_parent
+                                    if newrow[hdr_idx] != "":
+                                        self.changelog_append_no_unsaved(
+                                            "Edit cell",
+                                            newrow[self.ic],
+                                            "",
+                                            f"{newrow[hdr_idx]}",
+                                            self.headers[hdr_idx].name,
+                                        )
+                                        changes_made += 1
                             for name in shared_dcols:
                                 if self.detail_is_valid_for_col(os_dcol_names[name], row[ns_dcol_names[name]]):
                                     newrow[os_dcol_names[name]] = row[ns_dcol_names[name]]
@@ -9882,17 +9926,31 @@ class Tree_Editor(tk.Frame):
                                         )
                                         changes_made += 1
                             for name in shared_pcols:
-                                newrow[os_pcol_names[name]] = row[ns_pcol_names[name]]
+                                new_parent = row[ns_pcol_names[name]]
                                 hdr_idx = os_pcol_names[name]
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Edit cell",
-                                        newrow[self.ic],
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                        self.headers[hdr_idx].name,
+                                parent_key = ""
+                                if not popup.add_new_parent_ids and isinstance(new_parent, str):
+                                    parent_key = new_parent.lower()
+                                if (
+                                    parent_key
+                                    and parent_key not in self.rns
+                                    and (not popup.add_new_rows or parent_key not in ns_rns)
+                                ):
+                                    self.warnings.append(
+                                        f" - ID ({new_parent}) does not exist. Parent edit for "
+                                        f"{newrow[self.ic]} in {self.headers[hdr_idx].name} was not applied"
                                     )
-                                    changes_made += 1
+                                else:
+                                    newrow[hdr_idx] = new_parent
+                                    if newrow[hdr_idx] != "":
+                                        self.changelog_append_no_unsaved(
+                                            "Edit cell",
+                                            newrow[self.ic],
+                                            "",
+                                            f"{newrow[hdr_idx]}",
+                                            self.headers[hdr_idx].name,
+                                        )
+                                        changes_made += 1
                             rows_to_insert.append(newrow)
                 elif popup.add_new_pcols and popup.add_new_dcols:
                     new_dcol_indexes = {
@@ -9930,17 +9988,31 @@ class Tree_Editor(tk.Frame):
                                     )
                                     changes_made += 1
                             for idx, colname in new_pcol_indexes.items():
-                                newrow[idx] = row[ns_pcol_names[colname]]
+                                new_parent = row[ns_pcol_names[colname]]
                                 hdr_idx = idx
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Edit cell",
-                                        newrow[self.ic],
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                        self.headers[hdr_idx].name,
+                                parent_key = ""
+                                if not popup.add_new_parent_ids and isinstance(new_parent, str):
+                                    parent_key = new_parent.lower()
+                                if (
+                                    parent_key
+                                    and parent_key not in self.rns
+                                    and (not popup.add_new_rows or parent_key not in ns_rns)
+                                ):
+                                    self.warnings.append(
+                                        f" - ID ({new_parent}) does not exist. Parent edit for "
+                                        f"{newrow[self.ic]} in {self.headers[hdr_idx].name} was not applied"
                                     )
-                                    changes_made += 1
+                                else:
+                                    newrow[idx] = new_parent
+                                    if newrow[hdr_idx] != "":
+                                        self.changelog_append_no_unsaved(
+                                            "Edit cell",
+                                            newrow[self.ic],
+                                            "",
+                                            f"{newrow[hdr_idx]}",
+                                            self.headers[hdr_idx].name,
+                                        )
+                                        changes_made += 1
                             for name in shared_dcols:
                                 if self.detail_is_valid_for_col(os_dcol_names[name], row[ns_dcol_names[name]]):
                                     newrow[os_dcol_names[name]] = row[ns_dcol_names[name]]
@@ -9955,17 +10027,31 @@ class Tree_Editor(tk.Frame):
                                         )
                                         changes_made += 1
                             for name in shared_pcols:
-                                newrow[os_pcol_names[name]] = row[ns_pcol_names[name]]
+                                new_parent = row[ns_pcol_names[name]]
                                 hdr_idx = os_pcol_names[name]
-                                if newrow[hdr_idx] != "":
-                                    self.changelog_append_no_unsaved(
-                                        "Edit cell",
-                                        newrow[self.ic],
-                                        "",
-                                        f"{newrow[hdr_idx]}",
-                                        self.headers[hdr_idx].name,
+                                parent_key = ""
+                                if not popup.add_new_parent_ids and isinstance(new_parent, str):
+                                    parent_key = new_parent.lower()
+                                if (
+                                    parent_key
+                                    and parent_key not in self.rns
+                                    and (not popup.add_new_rows or parent_key not in ns_rns)
+                                ):
+                                    self.warnings.append(
+                                        f" - ID ({new_parent}) does not exist. Parent edit for "
+                                        f"{newrow[self.ic]} in {self.headers[hdr_idx].name} was not applied"
                                     )
-                                    changes_made += 1
+                                else:
+                                    newrow[hdr_idx] = new_parent
+                                    if newrow[hdr_idx] != "":
+                                        self.changelog_append_no_unsaved(
+                                            "Edit cell",
+                                            newrow[self.ic],
+                                            "",
+                                            f"{newrow[hdr_idx]}",
+                                            self.headers[hdr_idx].name,
+                                        )
+                                        changes_made += 1
                             rows_to_insert.append(newrow)
 
             # overwrite details for same ids with shared detail columns
@@ -10003,11 +10089,13 @@ class Tree_Editor(tk.Frame):
                             ns_pcol_idx = ns_pcol_names[name]
                             new_parent = self.new_sheet[ns_rn][ns_pcol_idx]
                             if row[idx] != new_parent:
+                                parent_key = ""
+                                if not popup.add_new_parent_ids and isinstance(new_parent, str):
+                                    parent_key = new_parent.lower()
                                 if (
-                                    not popup.add_new_ids
-                                    and isinstance(new_parent, str)
-                                    and new_parent
-                                    and new_parent.lower() not in self.rns
+                                    parent_key
+                                    and parent_key not in self.rns
+                                    and (not popup.add_new_rows or parent_key not in ns_rns)
                                 ):
                                     self.warnings.append(
                                         f" - ID ({new_parent}) does not exist. Parent edit for "
