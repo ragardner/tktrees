@@ -61,6 +61,7 @@ from .functions import (
     b32_x_dict,
     bytes_io_wb,
     center,
+    clipboard_json_loads,
     csv_str_x_data,
     equalize_sublist_lens,
     full_sheet_to_dict,
@@ -1660,8 +1661,9 @@ class Sheet_File_Load_Mixin:
             return
         try:
             self.status_bar.change_text("Loading...")
-            if temp_data.startswith("{") and temp_data.endswith("}"):
-                self.C.new_sheet = json_to_sheet(json.loads(temp_data))
+            j = clipboard_json_loads(temp_data)
+            if j is not None:
+                self.C.new_sheet = json_to_sheet(j)
             else:
                 self.C.new_sheet = csv_str_x_data(temp_data)
         except Exception as error_msg:
@@ -3014,8 +3016,8 @@ class Merge_Sheets_Popup(tk.Toplevel):
             return
         try:
             saved_cols = (None, None)
-            if temp_data.startswith("{") and temp_data.endswith("}"):
-                j = json.loads(temp_data)
+            j = clipboard_json_loads(temp_data)
+            if j is not None:
                 self.C.new_sheet = json_to_sheet(j)
                 saved_cols = json_saved_id_parent_cols(j)
             else:

@@ -85,6 +85,7 @@ from .constants import (
 from .fill_column import CHOOSE_MATCH_COLUMN, FillFilters, initial_fill_column, match_text, plan_fill
 from .functions import (
     bytes_io_wb,
+    clipboard_json_loads,
     convert_old_xl_to_xlsx,
     create_cell_align_selector_menu,
     csv_str_x_data,
@@ -8608,8 +8609,8 @@ class Tree_Editor(tk.Frame):
             return
         try:
             saved_cols = (None, None)
-            if data.startswith("{") and data.endswith("}"):
-                j = json.loads(data)
+            j = clipboard_json_loads(data)
+            if j is not None:
                 self.new_sheet = json_to_sheet(j)
                 saved_cols = json_saved_id_parent_cols(j)
             else:

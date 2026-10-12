@@ -455,6 +455,14 @@ def get_json_format(j):
     return None
 
 
+def clipboard_json_loads(data: str):
+    # Strip only this copy. Callers pass the original text to the CSV reader.
+    text = data.strip()
+    if text.startswith("{") and text.endswith("}"):
+        return json.loads(text)
+    return None
+
+
 def json_saved_id_parent_cols(j):
     # (None, None) when this is not app data, or the app data has no ID type.
     # The caller then keeps the title guess. A JSON file has no sheet list to fall back to.
