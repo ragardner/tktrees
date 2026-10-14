@@ -3440,6 +3440,278 @@ class Tree_Editor(tk.Frame):
                 info.theights[nnk] = info.theights.pop(ik)
         return True
 
+    def _id_text(self, text) -> str:
+        # Same spaces rule as Rename_Id_Popup.confirm.
+        if text is None:
+            return ""
+        text = str(text)
+        if self.allow_spaces_ids_var:
+            return text
+        return "".join(text.strip().split())
+
+    def _rename_pairs(self, rows):
+        # One entry per ID: (old_key, new_key, old_display, new_display).
+        # A blank find is ignored. Repeated rows for one ID count once.
+        # An ID given two different new texts is left out, including an empty
+        # text beside a real one. Two IDs given the same new name are both
+        # left out. A new name that is still an ID is kept here;
+        # _run_id_renames skips it if that ID never moves.
+        requested = 0
+        missing = 0
+        already = 0
+        seen_missing = set()
+        intentions = {}
+        order = []
+        displays = {}
+        for row in rows:
+            find = self._id_text(row[0] if row else "")
+            if not find:
+                continue
+            old_key = find.lower()
+            if old_key not in self.nodes:
+                if old_key in seen_missing:
+                    continue
+                seen_missing.add(old_key)
+                missing += 1
+                requested += 1
+                continue
+            new_text = self._id_text(row[1] if row and len(row) > 1 else "")
+            if old_key not in intentions:
+                intentions[old_key] = {new_text}
+                order.append(old_key)
+                displays[old_key] = self.nodes[old_key].name
+                requested += 1
+                continue
+            intentions[old_key].add(new_text)
+        pairs = []
+        for old_key in order:
+            texts = intentions[old_key]
+            if len(texts) != 1:
+                continue
+            new_text = next(iter(texts))
+            old_display = displays[old_key]
+            if not new_text:
+                continue
+            if new_text == old_display:
+                already += 1
+                continue
+            pairs.append((old_key, new_text.lower(), old_display, new_text))
+        by_new = {}
+        for item in pairs:
+            by_new.setdefault(item[1], []).append(item[0])
+        blocked = {old_key for old_keys in by_new.values() if len(old_keys) > 1 for old_key in old_keys}
+        pairs = [item for item in pairs if item[0] not in blocked]
+        return pairs, requested, missing, already
+
+    def _rename_row_marks(self, rows, done):
+        # True: that row's ID was renamed to that new name.
+        # False: the row was not applied. None: a blank find, left plain.
+        applied = {(old_key, new_display) for old_key, _new_key, _old_display, new_display in done}
+        marks = []
+        for row in rows:
+            find = self._id_text(row[0] if row else "")
+            if not find:
+                marks.append(None)
+                continue
+            new_text = self._id_text(row[1] if row and len(row) > 1 else "")
+            marks.append((find.lower(), new_text) in applied)
+        return marks
+
+    def _rename_status(self, renamed, requested, missing, already) -> str:
+        if renamed == 0:
+            text = "Nothing was renamed."
+        elif renamed == 1 and requested == 1:
+            text = "Renamed 1 ID."
+        else:
+            text = f"Renamed {renamed}/{requested} IDs."
+        extra = []
+        if missing == 1:
+            extra.append("1 was not on the sheet")
+        elif missing:
+            extra.append(f"{missing} were not on the sheet")
+        if already == 1:
+            extra.append("1 was already that name")
+        elif already:
+            extra.append(f"{already} were already that name")
+        if extra:
+            text = text + " " + ". ".join(extra) + "."
+        return text
+
+    def _restore_rename_id_cells(self, id_cells):
+        # The node tree is already the pre-rename copy. Write the ID cells
+        # first so rns can find every child, including one that was renamed.
+        rows = set()
+        for row_n, old_name in id_cells:
+            self.sheet.MT.data[row_n][self.ic] = old_name
+            rows.add(row_n)
+        self.rns = {row[self.ic].lower(): index for index, row in enumerate(self.sheet.data)}
+        cols = {self.ic}
+        for _row_n, old_name in id_cells:
+            ik = old_name.lower()
+            node = self.nodes[ik]
+            for hier, children in node.cn.items():
+                if not children:
+                    continue
+                cols.add(hier)
+                for child in children:
+                    child_row = self.rns[child]
+                    self.sheet.MT.data[child_row][hier] = node.name
+                    rows.add(child_row)
+        self.refresh_formatting(rows=rows, columns=cols)
+
+    def _abort_rename_ids(self):
+        held = self.vs[-1]
+        required = held["required_data"]
+        self.nodes = pickle.loads(required["nodes"])
+        self.topnodes_order = required["topnodes_order"]
+        self.saved_info = pickle.loads(required["saved_info"])
+        self.tagged_ids = set(required["tagged_ids"])
+        self._restore_rename_id_cells(held["ids"])
+        self.vs.pop()
+        self.set_undo_label()
+
+    def _run_id_renames(self, pairs):
+        # pairs: (old_key, new_key, old_display, new_display).
+        # Rename a row when its new name is free, then try the rest again,
+        # so Mid -> Base can run before Top -> Mid. A swap stays waiting and
+        # is left as it is. One undo entry is taken before the first change.
+        # snapshot=False so each call does not add its own undo. errors=False
+        # so a refusal does not open an Error window over the Replace popup.
+        # Returns the rows that were renamed, [] when none were, or None
+        # when a call failed and the undo entry was dropped.
+        pending = list(pairs)
+        # Two rows that want one new name are both left out. The retry below
+        # would otherwise give that name to whichever row it reached first.
+        by_new = {}
+        for item in pending:
+            by_new.setdefault(item[1].lower(), []).append(item)
+        pending = [item for item in pending if len(by_new[item[1].lower()]) == 1]
+        done = []
+        while pending:
+            waiting = []
+            moved = False
+            for old_key, new_key, old_display, new_display in pending:
+                if new_key != old_key and new_key in self.nodes:
+                    waiting.append((old_key, new_key, old_display, new_display))
+                    continue
+                row_n = self.rns[old_key]
+                old_name = self.nodes[old_key].name
+                if not done:
+                    self.snapshot_chore()
+                    self.vs.append(
+                        {
+                            "type": "rename ids",
+                            "ids": [(row_n, old_name)],
+                            "required_data": self.get_required_snapshot_data(),
+                        }
+                    )
+                else:
+                    self.vs[-1]["ids"].append((row_n, old_name))
+                try:
+                    ok = self.change_ID_name(old_display, new_display, snapshot=False, errors=False)
+                except Exception:
+                    self._abort_rename_ids()
+                    raise
+                if not ok:
+                    self._abort_rename_ids()
+                    return None
+                done.append((old_key, new_key, old_display, new_display))
+                moved = True
+            if not moved:
+                break
+            pending = waiting
+        if not done:
+            return []
+        renamed = {old_key: new_key for old_key, new_key, _old_display, _new_display in done if old_key != new_key}
+        if renamed:
+            moved_tags = {renamed[ik] if ik in renamed else ik for ik in self.tagged_ids}
+            self.tagged_ids.clear()
+            self.tagged_ids.update(moved_tags)
+        self.rns = {row[self.ic].lower(): index for index, row in enumerate(self.sheet.data)}
+        return done
+
+    def _log_renames(self, pairs):
+        # snapshot_chore has already sealed any pending lines. One ID uses
+        # the same call as a single rename. Several IDs stay one group.
+        if len(pairs) == 1:
+            _old_key, _new_key, old_display, new_display = pairs[0]
+            self.changelog_append("Rename ID", old_display, old_display, new_display)
+            return
+        for _old_key, _new_key, old_display, new_display in pairs:
+            self.changelog_append_no_unsaved("Rename ID", old_display, old_display, new_display)
+        self.changelog_finish()
+
+    def _refresh_after_rename(self, pairs, old_selection):
+        renamed = {old_key: new_key for old_key, new_key, _old_display, _new_display in pairs}
+        self.disable_paste()
+        rows = set()
+        cols = {self.ic}
+        widest = {}
+        for _old_key, new_key, _old_display, new_display in pairs:
+            row_n = self.rns[new_key]
+            rows.add(row_n)
+            if self.ic not in widest or len(new_display) > widest[self.ic][0]:
+                widest[self.ic] = (len(new_display), row_n)
+            for hier, children in self.nodes[new_key].cn.items():
+                if not children:
+                    continue
+                cols.add(hier)
+                if hier not in widest or len(new_display) > widest[hier][0]:
+                    widest[hier] = (len(new_display), self.rns[children[0]])
+                for child in children:
+                    rows.add(self.rns[child])
+        self.reset_tagged_ids_dropdowns()
+        self.rehighlight_tagged_ids()
+        self.refresh_formatting(rows=rows, columns=cols)
+        self.redo_tree_display()
+        for col, (_length, row_n) in widest.items():
+            self.sheet.set_cell_size_to_text(row_n, col, only_set_if_too_small=True)
+            self.tree_set_cell_size_to_text(row_n, col)
+        new_selection = []
+        for iid in old_selection:
+            key = f"{iid}".lower()
+            if key in renamed:
+                new_selection.append(renamed[key])
+            elif self.tree.exists(key):
+                new_selection.append(key)
+        if new_selection:
+            try:
+                self.tree.selection_set(tuple(new_selection))
+                self.tree.scroll_to_item(new_selection[0])
+            except Exception:
+                pass
+        elif not old_selection:
+            self.move_tree_pos()
+        self.refresh_rows = set()
+        self.redraw_sheets()
+
+    def rename_mapped_ids(self, rows) -> tuple[str, list]:
+        pairs, requested, missing, already = self._rename_pairs(rows)
+        if not pairs:
+            return (
+                self._rename_status(0, requested, missing, already),
+                self._rename_row_marks(rows, []),
+            )
+        old_selection = list(self.tree.selection())
+        self.start_work("Renaming IDs...", outside_treeframe=True)
+        try:
+            done = self._run_id_renames(pairs)
+            if not done:
+                if done is None:
+                    self.redraw_sheets()
+                return (
+                    self._rename_status(0, requested, missing, already),
+                    self._rename_row_marks(rows, []),
+                )
+            self._log_renames(done)
+            self._refresh_after_rename(done, old_selection)
+            return (
+                self._rename_status(len(done), requested, missing, already),
+                self._rename_row_marks(rows, done),
+            )
+        finally:
+            self.stop_work(self.get_tree_editor_status_bar_text(), outside_treeframe=True)
+
     def cut_paste(
         self,
         ID,
@@ -5349,6 +5621,9 @@ class Tree_Editor(tk.Frame):
             self.sheet.MT.data[new_vs["ikrow"][0]][self.ic] = new_vs["ikrow"][2]
             self.refresh_formatting(rows=rows, columns=cols)
             self.rns = {r[self.ic].lower(): i for i, r in enumerate(self.sheet.data)}
+
+        elif new_vs["type"] == "rename ids":
+            self._restore_rename_id_cells(new_vs["ids"])
 
         elif new_vs["type"] == "paste id":
             rows = set()

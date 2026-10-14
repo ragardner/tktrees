@@ -174,7 +174,7 @@ Use the Hierarchy dropdown at the top of the tree. Each parent column is a diffe
 
 #### Finding an ID or detail
 
-Use the Find box at the top of the tree or the sheet. Choose whether to search for an ID or a detail. Tree results are only for the hierarchy you are viewing. Search is not case sensitive.
+Use the Find box at the top of the tree or the sheet. Choose whether to search for an ID or a detail. A tree search lists a match for every hierarchy that ID belongs to, and choosing a result opens that hierarchy. Search is not case sensitive.
 
 When the tree or sheet has focus, Ctrl + F opens a find and replace window. This searches the cells you can see, and can also replace text. Ctrl + H shows the replace box if it is hidden.
 
@@ -377,7 +377,7 @@ View -> Show Detail Excluder lets you leave some detail columns out.
 
 File -> Save As writes .xlsx, .csv, .tsv or .json. Edit has copy as tab-separated, comma-separated or json.
 
-Saving the main file can also add a flattened sheet. That uses File -> Settings -> xlsx Flatten Settings, not this window. If you are viewing all hierarchies when you save, the first hierarchy is the one written.
+Saving the main file can also add a flattened sheet. That uses File -> Settings -> xlsx Flatten Settings, not this window. The sheet is the hierarchy you are viewing.
 
 #### Export level-indent sheet
 
@@ -401,43 +401,77 @@ This format uses the same detail list. Every column that is still highlighted is
 
 This format uses the same detail list. Every column that is still highlighted is written from left to right, in fixed columns to the right of the indented names, under that column's own name. Click a column when you want to leave it out. The first row of the sheet is a header, with Level0, Level1, and so on for each depth, followed by the names of the detail columns you included. Saving as json uses the json format chosen in File -> Settings.
 
-#### Tag IDs
-
-Edit -> Tag/Untag IDs, Ctrl + T, or the Tag ID button. Works on the current selection in the tree or the sheet. Tagging the same ID again removes the tag.
-
-Tagged IDs get an orange mark on the row index and appear in the dropdowns at the top. Pick one to jump to it. If that ID is in more than one hierarchy, you choose which.
-
-Tags are stored with app data when you save .xlsx or .json.
-
-Edit -> Clear all tagged IDs cannot be undone.
-
 #### Check IDs using list
 
-Edit -> Check IDs using list. One column of terms. Empty cells are ignored.
+Edit -> Check IDs using list. A cell with no text is ignored. A cell that contains only spaces is still a term.
 
-Find IDs and Find Details control which main-sheet cells are searched. At least one of those stays on. Exact Match requires a full cell match; otherwise the term can appear anywhere in the cell. All matching is not case sensitive. Parent columns are not searched.
+You can type the list, open a file, or use Get data from clipboard. A .csv, .tsv, or .json file loads directly. An Excel file loads its first sheet, and Load sheet loads another sheet from that file. Only the first column is used, and a header row counts as a term. Get data from clipboard splits on tabs, commas, and pipes. Pasting into the table splits on tabs only.
 
-Load a file, paste from the clipboard, or type in the mini table. Check tests whether each term is in the sheet. Tag, if on, also adds matches to tagged IDs (it does not untag). After Check, terms that exist are green at the top, terms that do not are red below. Empty rows stay at the bottom. The status line says how many terms matched, and if Tag is on how many IDs were tagged, for example `8/12 terms matched` or `8/12 terms matched, 15 IDs tagged`.
+Find IDs looks through the ID column of every row on the sheet. Find Details looks through detail columns. Parent columns are left out of both, and Find Details leaves out the ID column. At least one of Find IDs and Find Details stays on.
+
+With Exact Match off, the term can appear anywhere in the cell. With it on, the whole cell must equal the term. Capital letters are ignored either way. The same term on two rows counts as two terms.
+
+With Tag on, Check tags the ID of every row that matched. A tag that is already there stays on. One term can match many rows, so the number of IDs can be higher than the number of terms. IDs that already had a tag are included in that count.
+
+Check leaves the sheet as it is, apart from those tags. Terms that were found move to the top and turn green. Terms that were not found turn red beneath them. Empty rows stay at the bottom with no color. The status line is like `8/12 terms matched` or `8/12 terms matched, 15 IDs tagged`. If there is nothing to look for, it says `No terms to search`. Loading a new list clears the green and red marks.
 
 #### Delete IDs using list
 
-Edit -> Delete IDs using list. One column of IDs. Empty cells are ignored.
+Edit -> Delete IDs using list. A cell with no text is ignored. Names are matched without capital letters, and the same ID on two rows counts once.
 
-Load a file, paste from the clipboard, or type in the mini table. Delete IDs and Delete IDs + children use the hierarchy you are viewing. Delete IDs all hierarchies removes the listed IDs everywhere. There is no list version of delete IDs + children from all hierarchies; that stays on the tree right-click menu, where you can see which descendants you are removing. After a delete, the status line says how many of the listed IDs were deleted, for example `5/10 ids deleted`.
+You can type the list, open a file, or use Get data from clipboard. A .csv, .tsv, or .json file loads directly. An Excel file loads its first sheet, and Load sheet loads another sheet from that file. Only the first column is used, and a header row counts as an ID. Get data from clipboard splits on tabs, commas, and pipes. Pasting into the table splits on tabs only.
+
+Allow spaces in ID names, under File -> Settings, changes how a name is read. With it off, spaces in the cell are removed, so `O a k` is read as Oak. With it on, spaces at the ends of the cell are removed and spaces inside the name are kept.
+
+Delete IDs and Delete IDs + children use the hierarchy you are viewing.
+
+Delete IDs removes each listed ID from that hierarchy. The IDs directly under it stay, and they move up under the parent it had. If Base is under Mid and Mid is under Top, deleting Mid leaves Base under Top. If Mid was a top, Base becomes a top.
+
+Delete IDs + children removes each listed ID and every ID under it in that hierarchy, including IDs further down the branch.
+
+In both cases, an ID that also belongs to another hierarchy stays on the sheet and is removed from this hierarchy only. An ID that belonged only to this hierarchy is removed from the sheet. An ID that is not in the hierarchy you are viewing is skipped.
+
+Delete IDs all hierarchies removes each listed ID from every hierarchy and deletes its row. In each hierarchy, the IDs that were under it move up in the same way. An ID that is not on the sheet is skipped.
+
+Deleting an ID and the IDs under it from every hierarchy is on the tree right-click menu: Delete IDs + children, all hierarchies.
+
+The status line counts the listed IDs, for example `5/10 ids deleted`. IDs that were not in the list are outside that count. One undo restores the whole delete. If none of the listed IDs could be deleted, nothing is added to the undo list.
 
 #### Replace using mapping
 
-Edit -> Replace using mapping. Two columns: find (not case sensitive) and replace with.
+Edit -> Replace using mapping. Capital letters are ignored, and the replacement is written as you typed it.
 
-The Replace in dropdown chooses which rows are changed. It starts on All hierarchies. The Columns list shows every column. Every row starts turned on, and a turned-on row is included in the replace. Click a row, or drag across rows, to turn columns off.
+The find text can sit anywhere in the cell, and only that text is replaced. In `Oak`, a find of `a` changes the `a` and leaves the `O` and the `k`. An empty replacement removes the text that was found. Each cell is compared with its original text. If more than one row matches that cell, the last of those rows is the one written. An empty find replaces empty cells. If several rows have an empty find, the last of them is used. A row with both cells empty is ignored.
 
-All hierarchies with every column turned on changes the whole sheet. A hierarchy name changes only the rows that belong to that parent column, and only in the columns that are turned on. An ID in two hierarchies is one row, so a change to that row shows in both.
+Replace in chooses which rows are changed, and it starts on All hierarchies. The Columns list includes every column on the sheet, including the ID column and the parent columns. Every column starts included. Turn a column off to leave it out. If every column is off, nothing is changed.
 
-Load a file, paste from the clipboard, or type in the mini table. After you click Replace, the status line says how many cells changed.
+All hierarchies with every column included changes the whole sheet. A hierarchy name changes only the rows that belong to that parent column, and only in the columns that are still included. A blank parent cell counts as a top and is included. An ID with no link in that parent column is skipped. An ID that belongs to two hierarchies is one row, so a change to that row shows in both.
+
+The status line says how many cells changed, for example `Replaced 12 cells.` If nothing matched, it says `Could not find anything to replace.` If anything was replaced, one undo puts those cells back.
+
+You can type the list, open a file, or use Get data from clipboard. A .csv, .tsv, or .json file loads directly. An Excel file loads its first sheet, and Load sheet loads another sheet from that file. Only the first two columns are used, and a header row counts as a normal row. Get data from clipboard splits on tabs, commas, and pipes. Pasting into the table splits on tabs only.
+
+**Rename IDs**
+
+Rename IDs is directly under All hierarchies. It renames the listed IDs, and each find has to be the whole ID.
+
+A blank find is ignored. A find that is not an ID is left unchanged. An empty new name is left unchanged. An ID listed with two different new names is left unchanged. If Top is given both Oak and Elm, Top stays as it is. Two IDs given the same new name are both left unchanged, even when another row is leaving that name. A swap is left unchanged, such as Top to Mid and Mid to Top. A loop is left unchanged, such as Top to Mid, Mid to Base, and Base back to Top. Other rows in the list can still be renamed.
+
+If one ID is given a name that another row is leaving, and the name it moves to is free, those rows are renamed. The order of the rows does not matter. Mid to Base, Base to Oak, and Top to Mid all go through. Parent cells that named the old ID show the new name. A tag on a renamed ID stays with the new name. Changing only the capitals, such as Top to top, is still a rename.
+
+Allow spaces in ID names, under File -> Settings, decides how spaces are read. With it off, spaces in the find and the new name are removed, in the same way as renaming a single ID. A cell that contains only spaces is then treated as blank. With it on, the text is kept as you typed it.
+
+The same ID with the same new name on two rows counts as one ID. If it is renamed, both rows turn green.
+
+If the list has one ID and that ID is renamed, the status line says `Renamed 1 ID.` Otherwise it says how many were renamed, such as `Renamed 3/3 IDs.` If none were renamed, it says `Nothing was renamed.` It can also say that an ID was not on the sheet, or was already that name. A row left because the new name was still taken is only marked in red.
+
+Rows that were renamed turn green, and rows that were not turn red. A blank find stays plain. Choosing another entry in Replace in clears the marks, and so does loading a new list. The marks come back the next time you rename.
+
+One undo puts the renamed IDs back. A click that renames nothing is not added to the undo list.
 
 #### Save new version
 
-File -> Save new version writes a new file next to the current one (you pick the folder). It looks for other files with the same name and a number on the end, then uses a higher number. If the name has no number, one is added.
+File -> Save new version writes a new file next to the current one (letting you pick the folder). It looks for other files with the same name and a number on the end, then uses a higher number. If the name has no number, one is added.
 
 This still writes a new file. It does not update an old Excel workbook in place. See XLSX Files.
 
@@ -449,14 +483,14 @@ In the tree panel:
 
 1. Find: Clicking the find button will attempt to find either an ID or detail.
     - This depends on which is selected in the drop-down box on the right of "Find".
-    - The drop-down box below the Find button will display any results found within the CURRENTLY viewed hierarchy.
+    - The drop-down box below the Find button lists a match for every hierarchy that ID belongs to. Choosing a result from another hierarchy switches to it.
     - All finds are not case sensitive, including "exact match".
 2. Hierarchy: This is the drop-down box where you can select which parent column/hierarchy to view.
-3. Tag ID: tags the selection. Tagged IDs show up in the dropdown next to the button. See Guides -> Tag IDs.
+3. Tag ID: tags the selection. Tagged IDs show up in the dropdown next to the button.
 
 In the sheet panel:
 
-- Tagged IDs (Ctrl + T): same tagging as in the tree. See Guides -> Tag IDs.
+- Tagged IDs (Ctrl + T): same tagging as in the tree.
 - Find: Works the same way that the Find button for the Tree panel works except it searches the sheet instead.
 
 ---
@@ -477,8 +511,8 @@ To detach or copy an ID between different hierarchies:
 ID Deletion:
 
 - Pressing the Delete key on multiple selections will work the same way, except performing a Delete immediately. The delete key uses the typical Delete ID function, not deleting its children.
-- In the tree panel there are 5 delete ID options. Delete ID only removes the ID from the hierarchy you're currently viewing IF the ID occurs in another hierarchy, if it does not then it totally removes the ID.
-- Del all of ID totally removes the ID. Del ID+children is the same as Delete ID but for every child and child of that child and so on recursively under the selected ID.
+- Delete ID removes the ID from the hierarchy you are viewing. If that was its only hierarchy, the row is removed.
+- Delete ID all hierarchies removes the ID everywhere. Delete ID + children does the same as Delete ID for that ID and every ID under it. Delete ID + children, all hierarchies does that in every hierarchy. Delete ID, orphan children, and Delete ID all hierarchies, orphan children, leave those children as tops.
 
 Editing cells:
 
@@ -522,7 +556,7 @@ When loading a file saved with program data the sheet and changelog in the progr
 
 To disable saving with program data go to File -> Settings -> xlsx save options -> Save with app data.
 
-You can also add a viewable changelog sheet, a tree sheet, and a flattened sheet for the currently viewed hierarchy. If viewing all hierarchies when saving then the first hierarchy will be saved.
+You can also add a viewable changelog sheet, a tree sheet, and a flattened sheet. The flattened sheet is the hierarchy you are viewing. The tree sheet includes every hierarchy.
 
 When comparing or merging if the workbook contains program data then it will take precedence, else a sheet will need to be selected to load data.
 

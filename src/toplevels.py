@@ -1943,7 +1943,17 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         )
         self.hier_label.grid(row=1, column=0, padx=10, pady=(0, 5), sticky="we")
         self.hier_dropdown = Ez_Dropdown(self.options_frame, font=EF)
-        self.hier_dropdown["values"] = ["All hierarchies", *[self.C.headers[h].name for h in self.C.hiers]]
+        # Rename IDs sits under All hierarchies so it is visible when the
+        # list opens. The stored label cannot match "All hierarchies" or a
+        # hierarchy name: ttk reports current() as the first value with that text.
+        self._rename_label = self._rename_item_label()
+        self._rename_ui = False
+        self._column_list_settle = None
+        self.hier_dropdown["values"] = [
+            "All hierarchies",
+            self._rename_label,
+            *[self.C.headers[h].name for h in self.C.hiers],
+        ]
         self.hier_dropdown.current(0)
         self.hier_dropdown.bind("<<ComboboxSelected>>", self._show_scope)
         self.hier_dropdown.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="ew")
@@ -1990,11 +2000,59 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         self.col_selector.grid_propagate(False)
         self.col_selector.config(width=240, height=min(220, max(content, 36)))
 
+    def _set_column_list_shown(self, shown: bool) -> None:
+        # grid_remove does not redraw. Putting the sheet back does, unless the
+        # scrollbars stay out of that first resize: the canvas is briefly a
+        # few pixels narrower than the columns, and the two bars then take turns.
+        if self._column_list_settle is not None:
+            self.after_cancel(self._column_list_settle)
+            self._column_list_settle = None
+        if shown:
+            self.col_selector.xscroll_disabled = True
+            self.col_selector.yscroll_disabled = True
+            self.col_label.grid(row=3, column=0, padx=10, pady=(0, 5), sticky="we")
+            self.col_selector.grid(row=4, column=0, padx=10, pady=(0, 8), sticky="ew")
+            self._column_list_settle = self.after(10, self._settle_column_list)
+        else:
+            self.col_label.grid_remove()
+            self.col_selector.grid_remove()
+
+    def _settle_column_list(self) -> None:
+        self._column_list_settle = None
+        try:
+            mapped = self.col_selector.winfo_ismapped()
+        except tk.TclError:
+            return
+        if not mapped:
+            return
+        self.col_selector.xscroll_disabled = False
+        self.col_selector.yscroll_disabled = False
+        self.col_selector.MT.main_table_redraw_grid_and_text(True, True)
+
+    def _rename_item_label(self) -> str:
+        taken = {"All hierarchies"}
+        for hier in self.C.hiers:
+            taken.add(self.C.headers[hier].name)
+        label = "Rename IDs"
+        number = 2
+        while label in taken:
+            label = f"Rename IDs ({number})"
+            number += 1
+        return label
+
+    def _rename_mode(self) -> bool:
+        return self.hier_dropdown.get_my_value() == self._rename_label
+
     def _chosen_hierarchy(self) -> int | None:
-        index = self.hier_dropdown.current()
-        if index <= 0 or index > len(self.C.hiers):
+        # values: All hierarchies, Rename IDs, then one entry per hierarchy.
+        # Callers must check _rename_mode() first. Forgetting that check
+        # text-replaces every row, because this returns None for the rename item.
+        if self._rename_mode():
             return None
-        return self.C.hiers[index - 1]
+        hier_at = self.hier_dropdown.current() - 2
+        if hier_at < 0 or hier_at >= len(self.C.hiers):
+            return None
+        return self.C.hiers[hier_at]
 
     def _chosen_columns(self) -> set[int] | None:
         # None means every column. A turned-on row is that sheet column.
@@ -2021,6 +2079,8 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         return f"{len(names)} columns"
 
     def _scope_text(self) -> str:
+        if self._rename_mode():
+            return "Rename listed IDs. Each find cell must be the whole ID. Columns are not used."
         cols = self._column_phrase()
         if self._chosen_hierarchy() is None:
             if cols is None:
@@ -2032,9 +2092,30 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         return f"Find & replace in rows belonging to {name}, in {cols}, case insensitive"
 
     def _show_scope(self, event=None) -> None:
+        # Column clicks also call this. Rewrite the mapping sheet only when
+        # the mode actually changes.
+        renaming = self._rename_mode()
+        if renaming != self._rename_ui:
+            self._rename_ui = renaming
+            # config, not change_text. change_text runs update_idletasks, and
+            # idling while this sheet is being mapped or unmapped never returns.
+            self.confirm_button.config(text="Rename" if renaming else "Replace")
+            self._set_column_list_shown(not renaming)
+            if not renaming:
+                self._clear_rename_marks()
+            if renaming:
+                self.sheetdisplay.headers(["ID", "New name"], reset_col_positions=False)
+            else:
+                self.sheetdisplay.headers(
+                    ["Find (case in-sensitive)", "Replace With"],
+                    reset_col_positions=False,
+                )
         self.status_bar.change_text(self._scope_text())
 
     def replace(self):
+        if self._rename_mode():
+            self._rename_ids()
+            return
         self.status_bar.change_text("Loading...")
         self.confirm_button.grid_remove()
         self.update()
@@ -2053,6 +2134,60 @@ class Replace_Popup(Sheet_File_Load_Mixin, tk.Toplevel):
         else:
             self.status_bar.change_text("Could not find anything to replace.")
         self.confirm_button.grid()
+
+    def _rename_ids(self):
+        # Copy the rows before update(). update() processes events, and the
+        # mapping sheet is still editable while the button is coming off screen.
+        rows = [list(row) for row in self.sheetdisplay.get_sheet_data()]
+        self.status_bar.change_text("Renaming...")
+        self.confirm_button.grid_remove()
+        self.update()
+        try:
+            report, marks = self.C.rename_mapped_ids(rows)
+            self.status_bar.change_text(report)
+            self._paint_rename_marks(marks)
+        finally:
+            self.confirm_button.grid()
+
+    # Same row colors as the changelog: green applied, red left as it was.
+    _rename_green = "#40bd59"
+    _rename_red = "#db7463"
+
+    def _paint_rename_marks(self, marks) -> None:
+        self.sheetdisplay.dehighlight_rows("all", redraw=False)
+        green = [i for i, mark in enumerate(marks) if mark is True]
+        red = [i for i, mark in enumerate(marks) if mark is False]
+        if green:
+            self.sheetdisplay.highlight_rows(
+                rows=green,
+                bg=self._rename_green,
+                fg="black",
+                redraw=False,
+            )
+        if red:
+            self.sheetdisplay.highlight_rows(
+                rows=red,
+                bg=self._rename_red,
+                fg="black",
+                redraw=False,
+            )
+        self.sheetdisplay.refresh()
+
+    def _clear_rename_marks(self) -> None:
+        self.sheetdisplay.dehighlight_rows("all", redraw=False)
+        self.sheetdisplay.refresh()
+
+    def get_clipboard_data(self, event=None):
+        super().get_clipboard_data(event)
+        self._clear_rename_marks()
+
+    def open_file(self):
+        super().open_file()
+        self._clear_rename_marks()
+
+    def select_sheet(self, event=None):
+        super().select_sheet(event)
+        self._clear_rename_marks()
 
 
 class Delete_Ids_Using_List_Popup(Sheet_File_Load_Mixin, tk.Toplevel):

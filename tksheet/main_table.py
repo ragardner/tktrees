@@ -2018,11 +2018,7 @@ class MainTable(tk.Canvas):
 
         if not undo_modification and create_selections and self.PAR.ops.treeview:
             self.PAR.selection_set(
-                *[
-                    self._row_index[k].iid
-                    for k in data_new_idxs.values()
-                    if bisect_in(self.displayed_rows, k)
-                ]
+                *[self._row_index[k].iid for k in data_new_idxs.values() if bisect_in(self.displayed_rows, k)]
             )
 
         elif not undo_modification and move_heights and disp_new_idxs:
@@ -6077,32 +6073,64 @@ class MainTable(tk.Canvas):
         return False
 
     def _manage_scroll_bars(self, can_height: float, can_width: float) -> None:
-        if (
-            self.PAR.ops.auto_resize_row_index is not True
-            and can_width >= self.col_positions[-1] + self.PAR.ops.empty_horizontal
-            and self.PAR.xscroll_showing
-        ):
+        # Outer size is the canvas plus any bar that is up. A bar this call
+        # removes does not count, or the two bars take turns on a sheet that fits.
+        content_w = self.col_positions[-1] + self.PAR.ops.empty_horizontal
+        content_h = self.row_positions[-1] + self.PAR.ops.empty_vertical
+        x_on = self.PAR.xscroll_showing
+        y_on = self.PAR.yscroll_showing
+        if not x_on and not y_on and content_w <= can_width and content_h <= can_height:
+            return
+        x_taken = self.PAR.xscroll.winfo_height() if x_on else 0
+        if x_on and x_taken <= 1:
+            x_taken = self.PAR.xscroll.winfo_reqheight()
+            x_taken = max(x_taken, 1)
+        y_taken = self.PAR.yscroll.winfo_width() if y_on else 0
+        if y_on and y_taken <= 1:
+            y_taken = self.PAR.yscroll.winfo_reqwidth()
+            y_taken = max(y_taken, 1)
+        need_x = content_w > can_width + y_taken
+        need_y = content_h > can_height + x_taken
+        x_will_show = False
+        if not self.PAR.xscroll_disabled:
+            if need_x:
+                x_will_show = x_on or can_height > 40
+            elif x_on and self.PAR.ops.auto_resize_row_index is True:
+                x_will_show = True
+        if x_will_show:
+            # Room under the horizontal bar if it stays, or if it is added now.
+            if x_on:
+                x_room = can_height
+            else:
+                x_req = self.PAR.xscroll.winfo_reqheight()
+                x_req = max(x_req, 1)
+                x_room = can_height - x_req
+            if content_h > x_room:
+                need_y = True
+        y_will_show = not self.PAR.yscroll_disabled and need_y and (y_on or can_width > 40)
+        if y_will_show:
+            if y_on:
+                y_room = can_width
+            else:
+                y_req = self.PAR.yscroll.winfo_reqwidth()
+                y_req = max(y_req, 1)
+                y_room = can_width - y_req
+            if content_w > y_room:
+                need_x = True
+        if need_x:
+            if not x_on and not self.PAR.xscroll_disabled and can_height > 40:
+                self.PAR.xscroll.grid()
+                self.PAR.xscroll_showing = True
+        elif x_on and self.PAR.ops.auto_resize_row_index is not True:
             self.PAR.xscroll.grid_remove()
             self.PAR.xscroll_showing = False
-        elif (
-            can_width < self.col_positions[-1] + self.PAR.ops.empty_horizontal
-            and not self.PAR.xscroll_showing
-            and not self.PAR.xscroll_disabled
-            and can_height > 40
-        ):
-            self.PAR.xscroll.grid()
-            self.PAR.xscroll_showing = True
-        if can_height >= self.row_positions[-1] + self.PAR.ops.empty_vertical and self.PAR.yscroll_showing:
+        if need_y:
+            if not y_on and not self.PAR.yscroll_disabled and can_width > 40:
+                self.PAR.yscroll.grid()
+                self.PAR.yscroll_showing = True
+        elif y_on:
             self.PAR.yscroll.grid_remove()
             self.PAR.yscroll_showing = False
-        elif (
-            can_height < self.row_positions[-1] + self.PAR.ops.empty_vertical
-            and not self.PAR.yscroll_showing
-            and not self.PAR.yscroll_disabled
-            and can_width > 40
-        ):
-            self.PAR.yscroll.grid()
-            self.PAR.yscroll_showing = True
 
     def _overflow(
         self,

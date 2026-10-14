@@ -85,13 +85,23 @@ class Column_Selection(tk.Frame):
         self.grid_rowconfigure(3, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        self.cont_ = Button(
+        # Same green as the parent column selector. Right padding matches the controls below.
+        self.cont_outline = tk.Frame(
             self,
+            background="#648748",
+            highlightbackground="#648748",
+            highlightcolor="#648748",
+            highlightthickness=2,
+            bd=0,
+        )
+        self.cont_ = Button(
+            self.cont_outline,
             text="Build tree ",
             style="TF.Std.TButton",
             command=self.try_to_build_tree,
         )
-        self.cont_.grid(row=0, column=0, padx=20, pady=10, sticky="w")
+        self.cont_.pack()
+        self.cont_outline.grid(row=0, column=0, padx=(20, 5), pady=10, sticky="e")
 
         self.sheet_selector = Workbook_Sheet_Selection(parent=self, C=C)
         self.sheet_selector.grid(row=1, column=0, padx=(20, 5), pady=5, sticky="nswe")
