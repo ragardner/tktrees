@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Hashable
 from platform import system as get_os
-from typing import Hashable
 
 USER_OS: str = f"{get_os()}".lower()
 ctrl_key: str = "Command" if USER_OS == "darwin" else "Control"
